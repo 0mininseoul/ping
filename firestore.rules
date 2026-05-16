@@ -5,6 +5,90 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isOpenRoomJoin() {
+      return resource.data.status == "open"
+             && !(request.auth.uid in resource.data.memberUids)
+             && resource.data.memberUids.size() == 1
+             && request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(["memberUids", "memberNicknames", "status"])
+             && request.resource.data.memberUids.size() == 2
+             && request.resource.data.memberUids.hasAll(resource.data.memberUids)
+             && request.resource.data.memberUids.hasAll([request.auth.uid])
+             && request.resource.data.status == "full"
+             && request.resource.data.memberNicknames.diff(resource.data.memberNicknames)
+                .addedKeys().hasOnly([request.auth.uid])
+             && request.resource.data.memberNicknames.diff(resource.data.memberNicknames)
+                .addedKeys().hasAll([request.auth.uid])
+             && request.resource.data.memberNicknames.diff(resource.data.memberNicknames)
+                .changedKeys().size() == 0
+             && request.resource.data.memberNicknames.diff(resource.data.memberNicknames)
+                .removedKeys().size() == 0
+             && request.resource.data.memberNicknames[request.auth.uid] is string;
+    }
+
+    function preservesRoomIdentity() {
+      return request.resource.data.ownerUid == resource.data.ownerUid
+             && request.resource.data.createdAt == resource.data.createdAt;
+    }
+
+    function isOwnerRename() {
+      return request.auth.uid == resource.data.ownerUid
+             && request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(["name", "searchableName"])
+             && request.resource.data.name is string
+             && request.resource.data.searchableName is string;
+    }
+
+    function isMemberLeave() {
+      return request.auth.uid in resource.data.memberUids
+             && request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(["memberUids", "memberNicknames", "status"])
+             && request.resource.data.memberUids.size() == resource.data.memberUids.size() - 1
+             && resource.data.memberUids.hasAll(request.resource.data.memberUids)
+             && !(request.auth.uid in request.resource.data.memberUids)
+             && request.resource.data.memberNicknames.diff(resource.data.memberNicknames)
+                .removedKeys().hasOnly([request.auth.uid])
+             && request.resource.data.memberNicknames.diff(resource.data.memberNicknames)
+                .addedKeys().size() == 0
+             && request.resource.data.memberNicknames.diff(resource.data.memberNicknames)
+                .changedKeys().size() == 0
+             && request.resource.data.status == "open";
+    }
+
+    function roomForMessage() {
+      return get(/databases/$(db)/documents/rooms/$(request.resource.data.roomId));
+    }
+
+    function isValidMessageCreate() {
+      return request.resource.data.keys().hasOnly([
+               "roomId", "senderUid", "receiverUid", "senderNickname", "videoUrl",
+               "durationMs", "mirrorPosition", "status", "createdAt", "expiresAt"
+             ])
+             && request.auth.uid == request.resource.data.senderUid
+             && request.resource.data.status == "uploaded"
+             && request.resource.data.durationMs == 2000
+             && request.resource.data.senderNickname is string
+             && request.resource.data.videoUrl is string
+             && request.resource.data.videoUrl.matches(
+                  "^gs://gen-lang-client-0974295904[.]firebasestorage[.]app/videos/"
+                  + request.auth.uid
+                  + "/[A-Za-z0-9-]+[.]mp4$"
+                )
+             && request.resource.data.mirrorPosition.keys().hasOnly(["xRatio", "yRatio"])
+             && request.resource.data.mirrorPosition.xRatio is number
+             && request.resource.data.mirrorPosition.yRatio is number
+             && request.resource.data.mirrorPosition.xRatio >= 0
+             && request.resource.data.mirrorPosition.xRatio <= 1
+             && request.resource.data.mirrorPosition.yRatio >= 0
+             && request.resource.data.mirrorPosition.yRatio <= 1
+             && request.resource.data.roomId is string
+             && request.resource.data.receiverUid is string
+             && roomForMessage().data.status == "full"
+             && request.resource.data.senderUid in roomForMessage().data.memberUids
+             && request.resource.data.receiverUid in roomForMessage().data.memberUids
+             && request.resource.data.senderUid != request.resource.data.receiverUid;
+    }
+
     match /users/{userId} {
       allow read: if signedIn();
       allow write: if signedIn() && request.auth.uid == userId;
@@ -19,20 +103,19 @@ service cloud.firestore {
                     && request.auth.uid in request.resource.data.memberUids
                     && request.resource.data.memberUids.size() == 1;
       allow update: if signedIn()
-                    && (request.auth.uid in resource.data.memberUids
-                        || request.auth.uid == resource.data.ownerUid)
-                    && request.resource.data.memberUids.size() <= 2;
+                    && preservesRoomIdentity()
+                    && ((isOwnerRename() || isMemberLeave())
+                        || isOpenRoomJoin());
     }
 
     match /messages/{messageId} {
       allow read: if signedIn()
                   && request.auth.uid in [resource.data.senderUid, resource.data.receiverUid];
       allow create: if signedIn()
-                    && request.auth.uid == request.resource.data.senderUid
-                    && request.resource.data.durationMs == 2000;
+                    && isValidMessageCreate();
       allow update: if signedIn()
                     && request.auth.uid == resource.data.receiverUid
-                    && request.resource.data.diff(resource.data).changedKeys().hasOnly(["status"])
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status"])
                     && request.resource.data.status == "seen";
     }
 

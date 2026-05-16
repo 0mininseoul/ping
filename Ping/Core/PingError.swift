@@ -7,6 +7,7 @@ enum PingError: LocalizedError {
     case noRecipients
     case messageIdMissing
     case invalidStorageURL
+    case roomUnavailable
 
     var errorDescription: String? {
         switch self {
@@ -22,6 +23,8 @@ enum PingError: LocalizedError {
             return "메시지 ID가 없습니다."
         case .invalidStorageURL:
             return "영상 다운로드 URL이 올바르지 않습니다."
+        case .roomUnavailable:
+            return "룸에 참여할 수 없습니다."
         }
     }
 }

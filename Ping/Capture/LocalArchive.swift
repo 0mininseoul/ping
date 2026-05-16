@@ -1,9 +1,31 @@
 import Foundation
 
 enum LocalArchive {
+    static let localSaveEnabledKey = "ping.storage.localSaveEnabled"
+
+    static var localSaveEnabled: Bool {
+        get {
+            if UserDefaults.standard.object(forKey: localSaveEnabledKey) == nil {
+                return true
+            }
+            return UserDefaults.standard.bool(forKey: localSaveEnabledKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: localSaveEnabledKey)
+        }
+    }
+
     static func documentsRoot() -> URL {
-        let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-        return documents.appendingPathComponent("Ping", isDirectory: true)
+        let preferred = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Documents", isDirectory: true)
+            .appendingPathComponent("Ping", isDirectory: true)
+
+        if canUseDirectory(preferred) {
+            return preferred
+        }
+
+        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        return support.appendingPathComponent("Ping", isDirectory: true)
     }
 
     static func ensureFolders() {
@@ -40,5 +62,14 @@ enum LocalArchive {
     private static func safeFileComponent(_ value: String) -> String {
         let illegal = CharacterSet(charactersIn: "/:\\?%*|\"<>")
         return value.components(separatedBy: illegal).joined(separator: "_")
+    }
+
+    private static func canUseDirectory(_ url: URL) -> Bool {
+        do {
+            try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+            return true
+        } catch {
+            return false
+        }
     }
 }

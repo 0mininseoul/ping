@@ -17,6 +17,7 @@ final class LocalNotificationCenter: NSObject, UNUserNotificationCenterDelegate 
     }
 
     var onViewMessage: ((String) -> Void)?
+    var onOpenInvitations: (() -> Void)?
     var onAcceptInvitation: ((String) -> Void)?
     var onRejectInvitation: ((String) -> Void)?
 
@@ -72,7 +73,7 @@ final class LocalNotificationCenter: NSObject, UNUserNotificationCenterDelegate 
     func notifyIncomingMessage(senderNickname: String, messageId: String) {
         let content = UNMutableNotificationContent()
         content.title = "\(senderNickname)님이 영상을 보냈습니다"
-        content.sound = .default
+        content.sound = notificationSound()
         content.categoryIdentifier = Category.incomingMessage.rawValue
         content.userInfo = ["messageId": messageId]
 
@@ -89,7 +90,7 @@ final class LocalNotificationCenter: NSObject, UNUserNotificationCenterDelegate 
         let content = UNMutableNotificationContent()
         content.title = "\(invitation.fromNickname)님이 룸에 초대했습니다"
         content.body = invitation.roomName
-        content.sound = .default
+        content.sound = notificationSound()
         content.categoryIdentifier = Category.incomingInvitation.rawValue
         content.userInfo = ["inviteId": inviteId]
 
@@ -115,7 +116,8 @@ final class LocalNotificationCenter: NSObject, UNUserNotificationCenterDelegate 
                 if let messageId = info["messageId"] as? String {
                     onViewMessage?(messageId)
                 } else if let inviteId = info["inviteId"] as? String {
-                    onAcceptInvitation?(inviteId)
+                    _ = inviteId
+                    onOpenInvitations?()
                 }
             case Action.acceptInvite.rawValue:
                 if let inviteId = info["inviteId"] as? String {
@@ -138,5 +140,14 @@ final class LocalNotificationCenter: NSObject, UNUserNotificationCenterDelegate 
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
         completionHandler([.banner, .sound])
+    }
+
+    private func notificationSound() -> UNNotificationSound? {
+        switch PingNotificationSound.current {
+        case .systemDefault:
+            return .default
+        case .none:
+            return nil
+        }
     }
 }

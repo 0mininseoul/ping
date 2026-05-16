@@ -20,7 +20,7 @@ final class MessageService {
         guard !fullRooms.isEmpty else { throw PingError.noRecipients }
 
         let sharedVideoId = UUID().uuidString
-        let videoURL = try await storage.uploadVideo(
+        let videoStoragePath = try await storage.uploadVideo(
             localURL: input.localVideoURL,
             senderUid: input.senderUid,
             messageId: sharedVideoId
@@ -41,7 +41,7 @@ final class MessageService {
                 "senderUid": input.senderUid,
                 "receiverUid": receiverUid,
                 "senderNickname": input.senderNickname,
-                "videoUrl": videoURL,
+                "videoUrl": videoStoragePath,
                 "durationMs": 2000,
                 "mirrorPosition": [
                     "xRatio": input.mirrorPosition.xRatio,

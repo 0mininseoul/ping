@@ -4,6 +4,7 @@ import SwiftUI
 @MainActor
 final class PlaybackWindow: NSWindow {
     static let size = NSSize(width: 200, height: 200)
+    var pingWindowId = UUID()
 
     init(videoURL: URL, atScreenPoint origin: NSPoint, onFinish: @escaping () -> Void) {
         super.init(

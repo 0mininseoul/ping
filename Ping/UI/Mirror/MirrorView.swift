@@ -19,7 +19,7 @@ struct MirrorView: View {
             CameraPreviewView(session: camera.session)
                 .clipShape(Circle())
 
-            if appState.sendMode == .allPartners, case .idle = viewModel.state {
+            if showsRainbowBorder {
                 RainbowBorder(lineWidth: 2)
             } else {
                 Circle().strokeBorder(borderColor, lineWidth: borderWidth)
@@ -126,7 +126,14 @@ struct MirrorView: View {
     }
 
     private func startRecording() async {
-        guard case .idle = viewModel.state else { return }
+        switch viewModel.state {
+        case .idle:
+            break
+        case .failed:
+            viewModel.reset()
+        case .recording, .uploading:
+            return
+        }
 
         let targets: [Room]
         switch appState.sendMode {
@@ -178,6 +185,17 @@ struct MirrorView: View {
     private func currentRoom() -> Room? {
         guard let selectedRoomId else { return appState.defaultRoom }
         return appState.rooms.first(where: { $0.id == selectedRoomId }) ?? appState.defaultRoom
+    }
+
+    private var showsRainbowBorder: Bool {
+        switch viewModel.state {
+        case .idle:
+            return appState.sendMode == .allPartners
+        case .uploading:
+            return true
+        case .recording, .failed:
+            return false
+        }
     }
 
     private var borderColor: Color {

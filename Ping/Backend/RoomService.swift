@@ -76,7 +76,7 @@ final class RoomService {
         let database = try db
         let roomRef = database.collection("rooms").document(roomId)
 
-        _ = try await database.runTransaction { transaction, errorPointer -> Any? in
+        let didJoin = try await database.runTransaction { transaction, errorPointer -> Any? in
             let snapshot: DocumentSnapshot
             do {
                 snapshot = try transaction.getDocument(roomRef)
@@ -85,9 +85,9 @@ final class RoomService {
                 return nil
             }
 
-            guard var data = snapshot.data() else { return nil }
+            guard var data = snapshot.data() else { return false }
             var memberUids = data["memberUids"] as? [String] ?? []
-            guard memberUids.count < 2 || memberUids.contains(uid) else { return nil }
+            guard memberUids.count < 2 || memberUids.contains(uid) else { return false }
 
             if !memberUids.contains(uid) {
                 memberUids.append(uid)
@@ -100,8 +100,10 @@ final class RoomService {
             data["status"] = memberUids.count == 2 ? RoomStatus.full.rawValue : RoomStatus.open.rawValue
 
             transaction.setData(data, forDocument: roomRef)
-            return nil
-        }
+            return true
+        } as? Bool ?? false
+
+        guard didJoin else { throw PingError.roomUnavailable }
 
         try await database.collection("users").document(uid).updateData([
             "rooms": FieldValue.arrayUnion([roomId]),
