@@ -1,0 +1,76 @@
+name: Ping
+options:
+  bundleIdPrefix: com.youngminpark.ping
+  deploymentTarget:
+    macOS: "26.0"
+  developmentLanguage: ko
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MACOSX_DEPLOYMENT_TARGET: "26.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    PRODUCT_NAME: Ping
+    ENABLE_HARDENED_RUNTIME: YES
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGN_IDENTITY: "-"
+
+packages:
+  Firebase:
+    url: https://github.com/firebase/firebase-ios-sdk
+    from: "11.0.0"
+  KeyboardShortcuts:
+    url: https://github.com/sindresorhus/KeyboardShortcuts
+    from: "2.0.0"
+
+targets:
+  Ping:
+    type: application
+    platform: macOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: Ping
+    resources:
+      - path: Resources
+        optional: true
+    info:
+      path: Ping/Info.plist
+      properties:
+        LSUIElement: true
+        LSMinimumSystemVersion: "26.0"
+        CFBundleName: Ping
+        CFBundleDisplayName: Ping
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        NSCameraUsageDescription: "Ping은 2초 영상 메시지 촬영을 위해 카메라를 사용합니다."
+        NSMicrophoneUsageDescription: "Ping은 영상 메시지의 음성 녹음을 위해 마이크를 사용합니다."
+    entitlements:
+      path: Ping.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.device.camera: true
+        com.apple.security.device.microphone: true
+        com.apple.security.network.client: true
+        com.apple.security.files.user-selected.read-write: true
+    dependencies:
+      - package: Firebase
+        product: FirebaseAuth
+      - package: Firebase
+        product: FirebaseFirestore
+      - package: Firebase
+        product: FirebaseFirestoreSwift
+      - package: Firebase
+        product: FirebaseStorage
+      - package: KeyboardShortcuts
+
+  PingTests:
+    type: bundle.unit-test
+    platform: macOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: PingTests
+    dependencies:
+      - target: Ping
