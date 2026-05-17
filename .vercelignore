@@ -1,4 +1,7 @@
 *
+!.vercel/
+!.vercel/output/
+!.vercel/output/**
 !web/
 !web/**
 web/.DS_Store
