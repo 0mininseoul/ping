@@ -38,7 +38,7 @@ export default function Hero({ downloadUrl, version }: HeroProps) {
               <span className="font-mono tracking-tight">Option + P</span>
             </div>
 
-            <h1 className="mb-5 text-balance text-[clamp(2.6rem,6.2vw,5.4rem)] font-bold leading-[1.02]">
+            <h1 className="mb-5 overflow-visible pb-[0.05em] text-balance text-[clamp(2.6rem,6.2vw,5.4rem)] font-bold leading-[1.1]">
               <SplitText
                 as="span"
                 text="보고 싶을 때,"

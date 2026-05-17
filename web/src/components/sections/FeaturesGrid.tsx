@@ -58,7 +58,7 @@ export default function FeaturesGrid() {
             FEATURES
           </p>
           <h2 className="text-balance text-[clamp(2rem,4.4vw,3.6rem)] leading-[1.05]">
-            기능을 줄였더니, 메시지가 더 빠르게 도착했습니다.
+            언제 어디서든, 쉽고 빠르게.
           </h2>
         </ScrollFloat>
 
