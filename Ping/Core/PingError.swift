@@ -1,8 +1,9 @@
 import Foundation
 
 enum PingError: LocalizedError {
-    case firebaseConfigurationMissing
-    case firestoreUnavailable
+    case supabaseConfigurationMissing
+    case supabaseUnavailable
+    case supabaseRequestFailed(statusCode: Int, message: String)
     case currentUserMissing
     case noRecipients
     case messageIdMissing
@@ -13,10 +14,12 @@ enum PingError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .firebaseConfigurationMissing:
-            return "Resources/GoogleService-Info.plist가 없어 Firebase를 시작할 수 없습니다."
-        case .firestoreUnavailable:
-            return "Firestore가 아직 준비되지 않았습니다."
+        case .supabaseConfigurationMissing:
+            return "Resources/Supabase.plist가 없어 Supabase를 시작할 수 없습니다."
+        case .supabaseUnavailable:
+            return "Supabase 클라이언트가 아직 준비되지 않았습니다."
+        case let .supabaseRequestFailed(statusCode, message):
+            return "Supabase 요청이 실패했습니다. (\(statusCode)) \(message)"
         case .currentUserMissing:
             return "현재 사용자 정보가 없습니다."
         case .noRecipients:

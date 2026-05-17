@@ -23,6 +23,12 @@ Resources/GoogleService-Info.plist
 firebase-debug.log
 .firebase/
 
+# Supabase
+Resources/Supabase.plist
+supabase/.branches/
+supabase/.temp/
+
 # DMG artifacts
 *.dmg
+!web/public/downloads/*.dmg
 dist/

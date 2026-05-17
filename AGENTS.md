@@ -23,7 +23,7 @@
 
 ## 1. 프로젝트 개요
 
-**Ping** — macOS 26 Tahoe 전용 2초 영상 메시지 메뉴바 앱. Option+P로 즉시 카메라 원형 거울이 뜨고, Enter로 정확히 2초 녹화하여 Firebase 경유로 파트너에게 전송. 수신자는 발신자가 지정한 위치에 그대로 2초간 재생.
+**Ping** — macOS 26 Tahoe 전용 2초 영상 메시지 메뉴바 앱. Option+P로 즉시 카메라 원형 거울이 뜨고, Enter로 정확히 2초 녹화하여 Supabase 경유로 파트너에게 전송. 수신자는 발신자가 지정한 위치에 그대로 2초간 재생.
 
 ### 핵심 문서 (반드시 모두 읽고 작업 시작)
 1. **`PING_PROJECT_SPECIFICATION.md`** — 기능/아키텍처/보안 명세 (v2.0)
@@ -40,21 +40,16 @@
 
 ### Bundle ID — `com.youngminpark.ping.Ping`
 - `project.yml` → `options.bundleIdPrefix: com.youngminpark.ping` + target 이름 `Ping`
-- Firebase 콘솔 Apple platforms 앱 등록 시 입력값
-- `Resources/GoogleService-Info.plist` 내부 `BUNDLE_ID` 필드
 
-**Bundle ID 한 곳이 어긋나면 Firebase Auth가 런타임에 실패하고 빌드는 통과하므로 디버깅이 매우 어렵습니다.**
+Bundle ID는 macOS 권한과 앱 식별의 기준이므로 임의 변경하지 마세요.
 
-### Firebase Project ID — `gen-lang-client-0974295904`
-플랜의 `ping-mvp` 는 예시일 뿐, **사용자가 실제 생성한 Firebase 프로젝트 ID를 사용해야 합니다.** 다음 위치에 동일하게 들어갑니다:
-- `firebase.json` (firebase CLI가 자동 관리)
-- `.firebaserc` (firebase CLI가 자동 관리)
-- 모든 `firebase deploy --project <ID>` 명령
+### Supabase 설정
+현재 구현은 Firebase가 아니라 Supabase Free 플랜 기준입니다. 앱 런타임에는 `Resources/Supabase.plist`가 필요하고, 이 파일은 git에 커밋하지 않습니다. 형식은 `Resources/Supabase.example.plist`를 따릅니다.
 
-임의로 `ping-mvp` 로 되돌리지 마세요.
+Supabase CLI 작업은 `npx supabase`로 수행합니다. 새 계정/프로젝트에 링크하려면 `npx supabase login --no-browser` 또는 `npx supabase link --project-ref <ref>`가 필요합니다.
 
-### Spark 요금제 저장소
-현재 프로젝트는 Spark 요금제입니다. 2024년 10월 30일 이후 생성된 Firebase Storage 기본 버킷은 Blaze 요금제가 필요하므로 **Firebase Storage를 사용하지 않습니다**. 영상은 Firestore `videoChunks/{videoId}/chunks/{index}`에 512KB 단위로 저장하고 `messages.videoUrl`은 `firestore-chunks://{senderUid}/{videoId}` 형식을 사용합니다. Firestore TTL도 Spark 무료 한도에 포함되지 않으므로 서버 TTL 대신 앱 실행 시 best-effort cleanup을 수행합니다.
+### Supabase Free 저장소
+영상은 Supabase Storage의 비공개 `ping-videos` 버킷에 `<senderUid>/<videoId>.mp4` 경로로 저장합니다. 테이블/RLS/RPC/Storage 정책은 `supabase/migrations/20260517000100_create_ping_backend.sql`이 단일 진실 출처입니다. 서버 예약 작업 없이 앱 실행 시 `ping_cleanup_expired_data()` RPC로 만료 데이터를 best-effort 정리합니다.
 
 ### App 버전 — `0.1.0`
 - `project.yml` → `settings.base.MARKETING_VERSION`
@@ -72,7 +67,7 @@ xcode-select -p                    # /Applications/Xcode.app/Contents/Developer 
 xcodebuild -version                # Xcode 16.0+ (Swift 6 컴파일러 포함)
 swift --version                    # Swift 6.0+
 brew install xcodegen create-dmg   # 누락 시 즉시 설치
-npm install -g firebase-tools      # firebase CLI
+npx supabase --version             # Supabase CLI
 ```
 
 ### 빌드/실행 사이클
@@ -119,14 +114,11 @@ ping/
 │   └── plans/                       # 구현 플랜
 ├── project.yml                      # XcodeGen 스펙 — 직접 .xcodeproj 편집 금지
 ├── Package.swift                    # SPM 명시 필요 시
-├── firebase.json                    # firebase CLI 관리
-├── firestore.rules                  # 직접 편집
-├── storage.rules                    # Spark에서는 deny-all 보관용, firebase.json 배포 대상 아님
-├── firestore.indexes.json           # 직접 편집
+├── supabase/                        # Supabase CLI config + migrations
 ├── Ping.entitlements                # 직접 편집 또는 project.yml 동기화
 ├── Ping/                            # 앱 소스 (자세한 구조는 spec 참조)
 ├── PingTests/                       # 단위 테스트
-├── Resources/                       # 앱 번들 리소스 (Assets, GoogleService-Info.plist 등)
+├── Resources/                       # 앱 번들 리소스 (Assets, Supabase.example.plist 등)
 ├── design/mockups/                  # frontend-design 산출물 (HTML/CSS)
 ├── scripts/
 │   └── build-release.sh             # Release 빌드 + ad-hoc 서명 + DMG
@@ -136,15 +128,15 @@ ping/
 
 ### 절대 하지 말 것
 - **`Ping.xcodeproj` 직접 편집 금지** — XcodeGen이 매번 재생성합니다. `project.yml` 만 수정하세요.
-- **`Resources/GoogleService-Info.plist` 를 git에 commit하지 마세요** — `.gitignore`에 이미 등록됨.
-- **Firebase 콘솔 작업이 필요한 단계는 사용자에게 명시적으로 요청하세요** — 자동화 불가입니다.
+- **`Resources/Supabase.plist` 를 git에 commit하지 마세요** — `.gitignore`에 이미 등록됨.
+- **Supabase 원격 프로젝트 링크/로그인이 필요한 단계는 사용자에게 명시적으로 요청하세요** — 새 계정 인증이 필요할 수 있습니다.
 
 ---
 
 ## 5. 코드 스타일
 
 - **Swift 6 strict concurrency**. `@MainActor` 명시, actor isolation 위반 시 컴파일러 경고 무시하지 말 것.
-- **async/await 우선**. Firebase 콜백은 모두 async wrapper로 감쌈.
+- **async/await 우선**. Supabase 통신은 `URLSession` REST/RPC wrapper로 통일.
 - **`@ObservableObject`** for SwiftUI view models. `@Observable` macro 도 가능하나 본 프로젝트는 ObservableObject 통일.
 - **파일당 한 책임**. 100줄 넘어가면 분리 고려.
 - **주석 최소화**. WHY 만 적고 WHAT 은 코드로 표현. 한국어 주석 OK.
@@ -152,13 +144,13 @@ ping/
 
 ---
 
-## 6. Firebase 권장 사항
+## 6. Supabase 권장 사항
 
 - **Anonymous Auth 만 사용** — 이메일/소셜 로그인 추가 금지 (v0.2 이후).
-- **Cloud Functions 없음** — 모든 로직은 클라이언트 + Firestore 보안 규칙.
-- **Spark 호환 cleanup** — `messages` 24h, `videoChunks` 24h, `invitations` 7d 만료값을 저장하고 앱 실행 시 클라이언트가 best-effort로 삭제.
-- **보안 규칙 변경 시 즉시 deploy**: `firebase deploy --only firestore:rules,firestore:indexes --project gen-lang-client-0974295904`.
-- **인덱스 누락 에러는 무시하지 말 것** — Firestore가 에러 메시지에 인덱스 생성 URL을 제공하므로 클릭하여 만들고 `firestore.indexes.json` 에도 반영.
+- **Edge Functions 없음** — 무료 플랜 유지와 단순성을 위해 클라이언트 + Postgres RPC + RLS로 처리.
+- **Storage는 비공개 버킷** — `ping-videos` 객체는 소유자 prefix 업로드, 메시지 sender/receiver 읽기 정책으로 제한.
+- **마이그레이션 변경 시 즉시 적용**: `npx supabase db push`.
+- **RPC 인자 이름을 Swift 호출과 맞출 것** — PostgREST named args라 SQL 인자명 변경은 런타임 오류로 이어집니다.
 
 ---
 
@@ -190,8 +182,8 @@ Day 4 Task 4.3 에서 임시 EmptyView로 윈도우를 만든 뒤 `contentView` 
 ### CameraManager는 단일 인스턴스
 `AVCaptureSession` 을 여러 번 만들면 카메라 충돌이 발생합니다. AppDelegate가 보유한 **단일 `CameraManager` 인스턴스를 MirrorView에 주입** 하세요.
 
-### Firestore listener의 race condition
-`observeIncoming` 의 첫 emit이 "기존 모든 메시지"를 한 번에 던지므로 앱 시작 직후 모든 이전 메시지에 대해 알림이 발생할 수 있습니다. `change.type == .added` 필터만으로는 부족하고, **앱 시작 시점 이후 생성된 메시지인지 `createdAt` 으로 한 번 더 게이팅**해야 합니다. (Day 4 구현 시 주의)
+### Supabase polling의 중복 알림
+현재 MVP는 Supabase Realtime 대신 2초 polling으로 `messages`/`rooms`/`invitations`를 읽습니다. `observeIncoming`은 세션 내 `yieldedIds`와 앱 전역 `notifiedMessageIds`로 중복 알림을 막으므로 이 방어를 제거하지 마세요.
 
 ### Sandbox + 글로벌 단축키
 `KeyboardShortcuts` 는 Sandbox 안에서 동작합니다. 만약 단축키가 안 잡히면 entitlements 의 `com.apple.security.app-sandbox` 를 의심하기 전에 **시스템 설정 → 개인정보 보호 및 보안 → 입력 모니터링** 권한을 먼저 확인하세요.
@@ -200,14 +192,14 @@ Day 4 Task 4.3 에서 임시 EmptyView로 윈도우를 만든 뒤 `contentView` 
 
 ## 9. 자주 묻는 질문
 
-**Q: 빌드는 되는데 Firebase가 동작 안 합니다.**
-A: 1) `GoogleService-Info.plist` 가 `Resources/` 에 있는지, 2) 그 파일의 `BUNDLE_ID` 가 빌드된 앱의 Bundle ID와 일치하는지, 3) Firebase 콘솔에서 Anonymous Auth 가 활성화됐는지 확인.
+**Q: 빌드는 되는데 Supabase가 동작 안 합니다.**
+A: 1) `Resources/Supabase.plist` 가 있는지, 2) `SUPABASE_URL`/`SUPABASE_ANON_KEY`가 맞는지, 3) Supabase Dashboard에서 Anonymous sign-ins가 활성화됐는지, 4) `npx supabase db push`가 적용됐는지 확인.
 
 **Q: `.glassEffect()` 가 unknown identifier 라고 합니다.**
 A: Xcode Command Line Tools 가 macOS 26 SDK를 포함하지 않은 구버전입니다. Xcode 16+ 를 설치하거나 `xcode-select` 로 경로를 바꾸세요. **API를 다른 것으로 교체하지 마세요.**
 
-**Q: 단위 테스트에서 Firebase import 가 안 됩니다.**
-A: `project.yml` 의 `PingTests` target에 Firebase 패키지 의존성을 추가하거나, `@testable import Ping` 만 쓰고 Firebase 직접 import는 피하세요.
+**Q: 단위 테스트에서 네트워크 요청이 나갑니다.**
+A: `AppDelegate`는 `XCTestConfigurationFilePath` 환경에서 bootstrap을 건너뜁니다. 이 방어를 유지하세요.
 
 **Q: `xcodegen generate` 후 빌드가 깨집니다.**
 A: 1) `xcodebuild clean` 후 재빌드, 2) `.swiftpm/` 및 `Ping.xcodeproj` 삭제 후 재생성, 3) `Package.resolved` 가 stale 가능하므로 삭제.
@@ -225,7 +217,7 @@ A: ad-hoc 서명이라 정상입니다. **우클릭 → 열기 → 다시 열기
 - [ ] `docs/superpowers/plans/2026-05-17-ping-mvp.md` 의 해당 Day/Task 읽음
 - [ ] 본 `AGENTS.md` 의 "절대 하지 말 것" 4가지 숙지
 - [ ] `git status` 깨끗한가? 또는 어디까지 진행됐는가?
-- [ ] 사용자가 Firebase 프로젝트를 만들었는가? Project ID, Bundle ID 확인됨?
-- [ ] 필수 도구(xcodegen, create-dmg, firebase) 모두 설치됨?
+- [ ] 사용자가 Supabase 프로젝트를 만들었는가? Project URL, anon key, project ref 확인됨?
+- [ ] 필수 도구(xcodegen, create-dmg, npx supabase) 모두 설치됨?
 
 준비 OK면 플랜의 해당 Task부터 진행하세요.

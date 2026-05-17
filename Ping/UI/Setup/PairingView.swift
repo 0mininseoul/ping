@@ -1,14 +1,31 @@
+import AppKit
 import SwiftUI
 
 struct PairingView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     @ObservedObject var viewModel: PairingViewModel
-    var onComplete: (String, String?) -> Void
+    var onComplete: (OnboardingCompletion) -> Void
 
+    @StateObject private var roomSearchViewModel: RoomSearchViewModel
     @FocusState private var focusedField: Field?
+    @FocusState private var joinSearchFocused: Bool
+    private let excludingUid: String?
 
-    private enum Field {
+    private enum Field: Equatable {
         case nickname
         case roomName
+    }
+
+    init(
+        viewModel: PairingViewModel,
+        excludingUid: String? = nil,
+        onComplete: @escaping (OnboardingCompletion) -> Void
+    ) {
+        self.viewModel = viewModel
+        self.onComplete = onComplete
+        self.excludingUid = excludingUid
+        _roomSearchViewModel = StateObject(wrappedValue: RoomSearchViewModel(excludingUid: excludingUid))
     }
 
     var body: some View {
@@ -23,8 +40,12 @@ struct PairingView: View {
                     permissionsStep
                 case .nickname:
                     nicknameStep
-                case .firstRoom:
-                    firstRoomStep
+                case .connectionChoice:
+                    connectionChoiceStep
+                case .createRoom:
+                    createRoomStep
+                case .joinRoom:
+                    joinRoomStep
                 case .done:
                     doneStep
                 }
@@ -34,31 +55,52 @@ struct PairingView: View {
         .padding(28)
         .frame(width: 480, height: 600)
         .background {
-            Rectangle()
-                .fill(Color(nsColor: .windowBackgroundColor))
-                .overlay(alignment: .top) {
-                    Rectangle()
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    Color.accentColor.opacity(0.18),
-                                    Color.green.opacity(0.10),
-                                    Color.clear
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(height: 280)
-                }
+            onboardingBackground
+        }
+        .task {
+            await viewModel.refreshPermissionStates()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            Task { await viewModel.refreshPermissionStates() }
         }
     }
 
+    private var onboardingBackground: some View {
+        ZStack(alignment: .top) {
+            PingDesign.Surface.windowBase
+
+            LinearGradient(
+                colors: [
+                    PingDesign.Surface.backgroundWashLeading,
+                    PingDesign.Surface.backgroundWashTrailing,
+                    Color.clear
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            RadialGradient(
+                colors: [
+                    PingDesign.Surface.radialHighlight,
+                    PingDesign.Surface.radialHighlight.opacity(0.18),
+                    Color.clear
+                ],
+                center: .topTrailing,
+                startRadius: 20,
+                endRadius: 380
+            )
+        }
+        .ignoresSafeArea()
+    }
+
     private var header: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: 12) {
             HStack {
-                Text("Ping")
-                    .font(PingFont.title)
+                HStack(spacing: 6) {
+                    headerLogo
+                    Text("Ping")
+                        .font(PingFont.wordmark)
+                }
                 Spacer()
                 Text("\(viewModel.step.rawValue + 1) / \(PairingViewModel.Step.allCases.count)")
                     .font(PingFont.caption)
@@ -66,11 +108,29 @@ struct PairingView: View {
                     .monospacedDigit()
             }
 
-            ProgressView(value: viewModel.progress)
-                .controlSize(.small)
-                .tint(.accentColor)
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(PingDesign.Surface.progressTrack)
+                    Capsule()
+                        .fill(PingDesign.ColorToken.accent)
+                        .frame(width: max(0, proxy.size.width * viewModel.progress))
+                        .animation(reduceMotion ? nil : PingDesign.Motion.progressGauge, value: viewModel.progress)
+                }
+            }
+            .frame(height: 5)
         }
         .padding(.bottom, 24)
+    }
+
+    private var headerLogo: some View {
+        Image("HeaderLogo")
+            .resizable()
+            .interpolation(.high)
+            .scaledToFit()
+            .frame(width: 38, height: 38)
+            .pingShadow(PingDesign.Shadow.chip)
+            .accessibilityHidden(true)
     }
 
     private var welcomeStep: some View {
@@ -85,11 +145,11 @@ struct PairingView: View {
             }
 
             VStack(spacing: 10) {
-                Text("2초 영상으로 바로 답하기")
+                Text(OnboardingCopy.welcomeHeadline)
                     .font(PingFont.display)
                     .multilineTextAlignment(.center)
 
-                Text("Option+P를 누르면 원형 거울이 열리고, Enter로 짧은 Ping을 보냅니다.")
+                Text(OnboardingCopy.welcomeSubtitle)
                     .font(PingFont.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -112,107 +172,116 @@ struct PairingView: View {
     }
 
     private var permissionsStep: some View {
-        VStack(spacing: 18) {
-            VStack(spacing: 8) {
-                Text("필수 권한 허용")
-                    .font(PingFont.display)
-                Text("카메라와 마이크는 전송에, 알림은 수신 Ping 확인에 필요합니다.")
-                    .font(PingFont.body)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+        VStack(spacing: 0) {
+            stepHeading(
+                title: "필수 권한 허용",
+                subtitle: "카메라와 마이크는 보내기에, 알림은 받은 Ping 확인에 필요합니다."
+            )
+            .padding(.bottom, 22)
 
-            VStack(spacing: 12) {
+            VStack(spacing: 10) {
                 permissionRow(
                     title: "카메라",
                     detail: "원형 거울 미리보기와 녹화",
                     icon: "camera.fill",
-                    granted: viewModel.cameraGranted
+                    granted: viewModel.cameraGranted,
+                    blocked: viewModel.cameraPermission.needsSystemSettings
                 ) {
-                    Task { await viewModel.requestCamera() }
+                    if viewModel.cameraPermission.needsSystemSettings {
+                        viewModel.openSystemPermissionSettings(for: .camera)
+                    } else {
+                        Task { await viewModel.requestCamera() }
+                    }
                 }
 
                 permissionRow(
                     title: "마이크",
                     detail: "2초 영상의 음성 녹음",
                     icon: "mic.fill",
-                    granted: viewModel.audioGranted
+                    granted: viewModel.audioGranted,
+                    blocked: viewModel.audioPermission.needsSystemSettings
                 ) {
-                    Task { await viewModel.requestAudio() }
+                    if viewModel.audioPermission.needsSystemSettings {
+                        viewModel.openSystemPermissionSettings(for: .audio)
+                    } else {
+                        Task { await viewModel.requestAudio() }
+                    }
                 }
 
                 permissionRow(
                     title: "알림",
                     detail: "상대가 보낸 Ping 배너 표시",
                     icon: "bell.badge.fill",
-                    granted: viewModel.notificationGranted
+                    granted: viewModel.notificationGranted,
+                    blocked: viewModel.notificationPermission.needsSystemSettings
                 ) {
-                    Task { await viewModel.requestNotifications() }
+                    if viewModel.notificationPermission.needsSystemSettings {
+                        viewModel.openSystemPermissionSettings(for: .notifications)
+                    } else {
+                        Task { await viewModel.requestNotifications() }
+                    }
                 }
             }
+            .padding(.bottom, 14)
 
-            if let error = viewModel.errorMessage {
-                errorText(error)
+            if let notice = viewModel.permissionNotice {
+                permissionNoticeView(notice)
+            } else if let error = viewModel.errorMessage {
+                inlineMessage(error)
             }
 
-            Spacer()
+            Spacer(minLength: 14)
 
-            VStack(spacing: 10) {
-                GlassButton(
-                    viewModel.isRequestingPermissions ? "요청 중..." : "권한 한 번에 요청",
-                    isPrimary: false
-                ) {
-                    Task { await viewModel.requestAllPermissions() }
+            HStack(spacing: 10) {
+                GlassButton("이전") {
+                    viewModel.back()
                 }
-                .disabled(viewModel.isRequestingPermissions)
-                .opacity(viewModel.isRequestingPermissions ? 0.55 : 1)
 
-                primaryButton("다음", enabled: viewModel.canProceedFromPermissions) {
-                    viewModel.next()
+                Spacer()
+
+                if viewModel.canProceedFromPermissions {
+                    primaryButton("다음", enabled: true) {
+                        viewModel.next()
+                    }
+                } else if viewModel.permissionNotice != nil {
+                    GlassButton("시스템 설정 열기", isPrimary: true) {
+                        viewModel.openSystemPermissionSettings()
+                    }
+                } else {
+                    GlassButton(
+                        viewModel.isRequestingPermissions ? "요청 중..." : "권한 한 번에 요청",
+                        isPrimary: true
+                    ) {
+                        Task { await viewModel.requestAllPermissions() }
+                    }
+                    .disabled(viewModel.isRequestingPermissions)
+                    .opacity(viewModel.isRequestingPermissions ? 0.55 : 1)
                 }
             }
+            .frame(maxWidth: .infinity)
         }
     }
 
     private var nicknameStep: some View {
         VStack(spacing: 20) {
-            VStack(spacing: 8) {
-                Text("닉네임 설정")
-                    .font(PingFont.display)
-                Text("룸 검색과 초대 알림에 표시됩니다.")
-                    .font(PingFont.body)
-                    .foregroundStyle(.secondary)
-            }
+            stepHeading(
+                title: "닉네임 설정",
+                subtitle: "룸 검색과 초대 알림에 표시됩니다."
+            )
 
-            GlassPanel {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("닉네임")
-                        .font(PingFont.label)
-                        .foregroundStyle(.secondary)
-
-                    TextField("예: 박영민", text: $viewModel.nickname)
-                        .textFieldStyle(.plain)
-                        .font(PingFont.title)
-                        .focused($focusedField, equals: .nickname)
-                        .onSubmit { viewModel.next() }
-
-                    HStack {
-                        Text(viewModel.nicknameValidationMessage ?? " ")
-                            .font(PingFont.caption)
-                            .foregroundStyle(viewModel.canProceedFromNickname ? Color.secondary : Color.yellow)
-                        Spacer()
-                        Text("\(viewModel.trimmedNickname.count)/24")
-                            .font(PingFont.caption)
-                            .foregroundStyle(.secondary)
-                            .monospacedDigit()
-                    }
-                }
-                .padding(16)
-            }
+            onboardingTextField(
+                label: "닉네임",
+                placeholder: "예: 박영민",
+                text: $viewModel.nickname,
+                field: .nickname,
+                message: nicknameFieldMessage,
+                count: "\(viewModel.trimmedNickname.count)/24",
+                isWarning: nicknameFieldIsWarning,
+                onSubmit: { viewModel.next() }
+            )
 
             if let error = viewModel.errorMessage {
-                errorText(error)
+                inlineMessage(error)
             }
 
             Spacer()
@@ -226,51 +295,117 @@ struct PairingView: View {
         .onAppear { focusedField = .nickname }
     }
 
-    private var firstRoomStep: some View {
-        VStack(spacing: 20) {
-            VStack(spacing: 8) {
-                Text("첫 룸 만들기")
-                    .font(PingFont.display)
-                Text("상대가 들어올 1:1 룸 이름을 정하세요. 나중에 룸 찾기에서 만들어도 됩니다.")
-                    .font(PingFont.body)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
+    private var connectionChoiceStep: some View {
+        VStack(spacing: 18) {
+            stepHeading(
+                title: "어떻게 시작할까요?",
+                subtitle: "룸을 만들거나 상대가 만든 룸에 참여할 수 있습니다."
+            )
+            .padding(.bottom, 6)
+
+            VStack(spacing: 12) {
+                connectionChoiceButton(
+                    title: "룸 생성하기",
+                    detail: "상대를 초대할 1:1 룸을 먼저 만듭니다.",
+                    icon: "plus.message.fill",
+                    action: viewModel.chooseCreateRoom
+                )
+
+                connectionChoiceButton(
+                    title: "룸 참여하기",
+                    detail: "상대가 만든 열린 룸을 검색해서 들어갑니다.",
+                    icon: "person.2.wave.2.fill",
+                    action: viewModel.chooseJoinRoom
+                )
             }
 
-            GlassPanel {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("룸 이름")
-                        .font(PingFont.label)
-                        .foregroundStyle(.secondary)
-
-                    TextField("예: \(viewModel.trimmedNickname) ↔ 김나영", text: $viewModel.roomName)
-                        .textFieldStyle(.plain)
-                        .font(PingFont.title)
-                        .focused($focusedField, equals: .roomName)
-                        .onSubmit { viewModel.next() }
-
-                    Text("선택 사항")
-                        .font(PingFont.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(16)
-            }
+            secondaryLaterButton
 
             Spacer()
 
             footerButtons(showBack: true) {
-                HStack(spacing: 10) {
-                    GlassButton("나중에") {
-                        viewModel.skipFirstRoom()
-                    }
-                    GlassButton("계속", isPrimary: true) {
-                        viewModel.next()
-                    }
+                EmptyView()
+            }
+        }
+    }
+
+    private var createRoomStep: some View {
+        VStack(spacing: 20) {
+            stepHeading(
+                title: "룸 생성하기",
+                subtitle: "상대가 들어올 1:1 룸 이름을 정하세요."
+            )
+
+            onboardingTextField(
+                label: "룸 이름",
+                placeholder: "",
+                text: $viewModel.roomName,
+                field: .roomName,
+                message: roomNameFieldMessage,
+                count: nil,
+                isWarning: roomNameFieldIsWarning,
+                onSubmit: { viewModel.completeCreateRoom() }
+            )
+
+            Spacer()
+
+            footerButtons(showBack: true) {
+                primaryButton("룸 만들기", enabled: viewModel.canProceedFromCreateRoom) {
+                    viewModel.completeCreateRoom()
                 }
             }
         }
         .onAppear { focusedField = .roomName }
+    }
+
+    private var joinRoomStep: some View {
+        VStack(spacing: 18) {
+            stepHeading(
+                title: "룸 참여하기",
+                subtitle: "상대가 만든 열린 룸 이름을 검색하세요."
+            )
+            .padding(.bottom, 4)
+
+            joinSearchField
+
+            if let error = roomSearchViewModel.errorMessage {
+                inlineMessage(error)
+            }
+
+            joinRoomResults
+
+            Spacer(minLength: 0)
+
+            footerButtons(showBack: true) {
+                EmptyView()
+            }
+        }
+        .onAppear {
+            roomSearchViewModel.updateExcludingUid(excludingUid ?? AppState.shared.currentUser?.id)
+            joinSearchFocused = true
+        }
+    }
+
+    private var nicknameFieldMessage: String {
+        if viewModel.trimmedNickname.isEmpty {
+            return "24자 이내로 표시됩니다."
+        }
+        return viewModel.nicknameValidationMessage ?? "좋습니다."
+    }
+
+    private var nicknameFieldIsWarning: Bool {
+        !viewModel.trimmedNickname.isEmpty && !viewModel.canProceedFromNickname
+    }
+
+    private var roomNameFieldMessage: String {
+        if viewModel.trimmedRoomName.isEmpty {
+            return "초대받은 사람이 확인할 수 있는 이름입니다."
+        }
+        return "이 이름으로 1:1 룸을 만듭니다."
+    }
+
+    private var roomNameFieldIsWarning: Bool {
+        !viewModel.trimmedRoomName.isEmpty && !viewModel.canProceedFromCreateRoom
     }
 
     private var doneStep: some View {
@@ -280,54 +415,240 @@ struct PairingView: View {
             GlassPanel(shape: .circle) {
                 Image(systemName: "checkmark")
                     .font(.system(size: 44, weight: .bold))
-                    .foregroundStyle(.green)
+                    .foregroundStyle(PingDesign.ColorToken.success)
                     .frame(width: 112, height: 112)
             }
 
             VStack(spacing: 10) {
                 Text("설정 완료")
                     .font(PingFont.display)
-                Text("메뉴바의 Ping 아이콘과 Option+P 단축키로 바로 사용할 수 있습니다.")
+                Text(doneSubtitle)
                     .font(PingFont.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
+                    .lineSpacing(3)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            if let roomName = viewModel.completionPayload?.firstRoomName {
-                setupChip(roomName, icon: "person.2.fill")
+            setupChip(doneChipText, icon: doneChipIcon)
+
+            if let error = viewModel.errorMessage {
+                inlineMessage(error)
             }
 
             Spacer()
 
             footerButtons(showBack: true) {
-                GlassButton("Ping 시작", isPrimary: true) {
+                GlassButton(doneButtonTitle, isPrimary: true) {
+                    guard !viewModel.isCompleting else { return }
                     guard let payload = viewModel.completionPayload else {
-                        viewModel.step = .nickname
+                        viewModel.step = .connectionChoice
                         return
                     }
-                    onComplete(payload.nickname, payload.firstRoomName)
+                    onComplete(payload)
                 }
+                .disabled(viewModel.isCompleting)
+                .opacity(viewModel.isCompleting ? 0.58 : 1)
             }
         }
     }
 
-    private func permissionRow(
+    private var doneSubtitle: String {
+        switch viewModel.completionPayload?.action {
+        case .createRoom:
+            return "룸을 만들고 바로 초대 화면을 엽니다."
+        case .joinRoom:
+            return "선택한 룸에 참여한 뒤 바로 사용할 수 있습니다."
+        case .later:
+            return "메뉴바의 내 룸에서 언제든 룸을 만들거나 참여할 수 있습니다."
+        case nil:
+            return "메뉴바의 Ping 아이콘과 Option+P 단축키로 바로 사용할 수 있습니다."
+        }
+    }
+
+    private var doneChipText: String {
+        switch viewModel.completionPayload?.action {
+        case .createRoom(let name):
+            return name
+        case .joinRoom(let room):
+            return room.name
+        case .later:
+            return "나중에 설정"
+        case nil:
+            return "준비 중"
+        }
+    }
+
+    private var doneChipIcon: String {
+        switch viewModel.completionPayload?.action {
+        case .joinRoom:
+            return "person.2.fill"
+        case .later:
+            return "clock"
+        case .createRoom, nil:
+            return "plus.message.fill"
+        }
+    }
+
+    private var doneButtonTitle: String {
+        if viewModel.isCompleting {
+            return "처리 중..."
+        }
+
+        switch viewModel.completionPayload?.action {
+        case .createRoom:
+            return "룸 만들고 초대하기"
+        case .joinRoom:
+            return "룸 참여하고 시작"
+        case .later:
+            return "Ping 시작"
+        case nil:
+            return "계속"
+        }
+    }
+
+    private var secondaryLaterButton: some View {
+        Button {
+            viewModel.deferRoomSetup()
+        } label: {
+            Text("나중에 하기")
+                .font(PingFont.caption)
+                .foregroundStyle(Color.secondary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var joinSearchField: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.secondary)
+
+            TextField("룸 이름 검색", text: $roomSearchViewModel.query)
+                .textFieldStyle(.plain)
+                .font(PingFont.body)
+                .focused($joinSearchFocused)
+                .onSubmit { roomSearchViewModel.searchNow() }
+
+            if roomSearchViewModel.isSearching {
+                ProgressView()
+                    .controlSize(.small)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background {
+            RoundedRectangle(cornerRadius: PingDesign.Radius.row, style: .continuous)
+                .fill(joinSearchFocused ? PingDesign.Surface.inputFieldFocusedFill : PingDesign.Surface.inputFieldFill)
+                .overlay {
+                    RoundedRectangle(cornerRadius: PingDesign.Radius.row, style: .continuous)
+                        .strokeBorder(
+                            joinSearchFocused
+                                ? PingDesign.ColorToken.accent.opacity(0.44)
+                                : PingDesign.Surface.hairline,
+                            lineWidth: 1
+                        )
+                }
+        }
+    }
+
+    @ViewBuilder private var joinRoomResults: some View {
+        let query = roomSearchViewModel.query.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        ScrollView {
+            LazyVStack(spacing: 10) {
+                if query.isEmpty {
+                    emptyJoinRooms("룸 이름을 입력하세요")
+                } else if roomSearchViewModel.roomResults.isEmpty && !roomSearchViewModel.isSearching {
+                    emptyJoinRooms("열린 룸이 없습니다")
+                } else {
+                    ForEach(roomSearchViewModel.roomResults) { room in
+                        joinRoomResult(room)
+                    }
+                }
+            }
+            .padding(.vertical, 2)
+        }
+        .frame(maxHeight: 190)
+    }
+
+    private func joinRoomResult(_ room: Room) -> some View {
+        Button {
+            viewModel.selectRoomForJoin(room)
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "person.2.fill")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(PingDesign.ColorToken.accent)
+                    .frame(width: 28)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(room.name)
+                        .font(PingFont.body)
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                    Text("방장: \(room.memberNicknames[room.ownerUid] ?? "알 수 없음")")
+                        .font(PingFont.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+
+                Spacer()
+
+                Image(systemName: "arrow.right.circle.fill")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(PingDesign.ColorToken.accent)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background {
+                RoundedRectangle(cornerRadius: PingDesign.Radius.row, style: .continuous)
+                    .fill(PingDesign.Surface.rowFill)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: PingDesign.Radius.row, style: .continuous)
+                            .strokeBorder(PingDesign.Surface.strongHairline, lineWidth: 0.8)
+                    }
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func emptyJoinRooms(_ message: String) -> some View {
+        VStack(spacing: 8) {
+            Image(systemName: "tray")
+                .font(.system(size: 22, weight: .medium))
+                .foregroundStyle(.secondary)
+            Text(message)
+                .font(PingFont.body)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 28)
+    }
+
+    private func connectionChoiceButton(
         title: String,
         detail: String,
         icon: String,
-        granted: Bool,
-        request: @escaping () -> Void
+        action: @escaping () -> Void
     ) -> some View {
-        GlassPanel {
-            HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.system(size: 18, weight: .semibold))
-                    .frame(width: 28)
+        Button(action: action) {
+            HStack(spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: PingDesign.Radius.iconTile, style: .continuous)
+                        .fill(PingDesign.ColorToken.accent.opacity(0.11))
+                    Image(systemName: icon)
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(PingDesign.ColorToken.accent)
+                }
+                .frame(width: 46, height: 46)
 
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(title)
-                        .font(PingFont.body)
+                        .font(PingFont.title)
+                        .foregroundStyle(.primary)
                     Text(detail)
                         .font(PingFont.caption)
                         .foregroundStyle(.secondary)
@@ -335,17 +656,86 @@ struct PairingView: View {
 
                 Spacer()
 
-                if granted {
-                    Label("허용됨", systemImage: "checkmark.circle.fill")
-                        .font(PingFont.label)
-                        .foregroundStyle(.green)
-                } else {
-                    GlassButton("허용") {
-                        request()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.secondary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background {
+                RoundedRectangle(cornerRadius: PingDesign.Radius.panel, style: .continuous)
+                    .fill(PingDesign.Surface.rowFill)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: PingDesign.Radius.panel, style: .continuous)
+                            .strokeBorder(PingDesign.Surface.strongHairline, lineWidth: 0.8)
                     }
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func permissionRow(
+        title: String,
+        detail: String,
+        icon: String,
+        granted: Bool,
+        blocked: Bool = false,
+        request: @escaping () -> Void
+    ) -> some View {
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: PingDesign.Radius.iconTile, style: .continuous)
+                    .fill(granted ? PingDesign.ColorToken.success.opacity(0.16) : PingDesign.ColorToken.accent.opacity(0.10))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: PingDesign.Radius.iconTile, style: .continuous)
+                            .strokeBorder(PingDesign.Surface.hairline, lineWidth: 0.7)
+                    }
+
+                Image(systemName: icon)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(granted ? PingDesign.ColorToken.success : Color.primary.opacity(0.82))
+            }
+            .frame(width: 44, height: 44)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(PingFont.body)
+                    .foregroundStyle(Color.primary.opacity(0.90))
+                Text(detail)
+                    .font(PingFont.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            if granted {
+                HStack(spacing: 5) {
+                    Image(systemName: "checkmark.circle.fill")
+                    Text("허용됨")
+                }
+                .font(PingFont.label)
+                .foregroundStyle(PingDesign.ColorToken.success)
+            } else {
+                GlassButton(blocked ? "설정" : "허용") {
+                    request()
                 }
             }
-            .padding(14)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background {
+            RoundedRectangle(cornerRadius: PingDesign.Radius.row, style: .continuous)
+                .fill(PingDesign.Surface.rowFill)
+                .overlay {
+                    RoundedRectangle(cornerRadius: PingDesign.Radius.row, style: .continuous)
+                        .strokeBorder(PingDesign.Surface.hairline, lineWidth: 0.8)
+                }
+                .overlay {
+                    RoundedRectangle(cornerRadius: PingDesign.Radius.row, style: .continuous)
+                        .inset(by: 1)
+                        .strokeBorder(PingDesign.Surface.strongHairline.opacity(0.48), lineWidth: 0.6)
+                }
+                .pingShadow(PingDesign.Shadow.control)
         }
     }
 
@@ -358,6 +748,8 @@ struct PairingView: View {
                 GlassButton("이전") {
                     viewModel.back()
                 }
+                .disabled(viewModel.isCompleting)
+                .opacity(viewModel.isCompleting ? 0.55 : 1)
             }
             Spacer()
             trailing()
@@ -370,30 +762,176 @@ struct PairingView: View {
             .opacity(enabled ? 1 : 0.45)
     }
 
-    private func setupChip(_ label: String, icon: String) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.system(size: 11, weight: .semibold))
-            Text(label)
-                .font(PingFont.caption)
+    private func onboardingTextField(
+        label: String,
+        placeholder: String,
+        text: Binding<String>,
+        field: Field,
+        message: String,
+        count: String?,
+        isWarning: Bool,
+        onSubmit: @escaping () -> Void
+    ) -> some View {
+        let isFocused = focusedField == field
+
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(label)
+                    .font(PingFont.label)
+                    .foregroundStyle(Color.primary.opacity(0.72))
+
+                if field == .roomName {
+                    Text("필수")
+                        .font(PingFont.caption)
+                        .foregroundStyle(PingDesign.ColorToken.accent.opacity(0.90))
+                }
+            }
+
+            TextField(placeholder, text: text)
+                .textFieldStyle(.plain)
+                .font(.system(size: 21, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color.primary.opacity(0.90))
                 .lineLimit(1)
-                .minimumScaleFactor(0.75)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 11)
+                .frame(height: 52)
+                .background {
+                    inputFieldSurface(isFocused: isFocused)
+                }
+                .focused($focusedField, equals: field)
+                .onSubmit(onSubmit)
+
+            HStack(alignment: .firstTextBaseline) {
+                Text(message)
+                    .font(PingFont.caption)
+                    .foregroundStyle(isWarning ? PingDesign.Status.warning : Color.secondary)
+
+                Spacer()
+
+                if let count {
+                    Text(count)
+                        .font(PingFont.caption)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                }
+            }
+            .frame(height: 18)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
+        .padding(18)
         .background {
-            Capsule()
-                .glassEffect()
+            onboardingInputCard(isFocused: isFocused)
+        }
+        .animation(reduceMotion ? nil : PingDesign.Motion.buttonHover, value: isFocused)
+    }
+
+    private func onboardingInputCard(isFocused: Bool) -> some View {
+        RoundedRectangle(cornerRadius: 22, style: .continuous)
+            .fill(PingDesign.Surface.inputCardFill)
+            .overlay {
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .strokeBorder(
+                        isFocused
+                            ? PingDesign.ColorToken.accent.opacity(0.28)
+                            : PingDesign.Surface.strongHairline,
+                        lineWidth: 0.8
+                    )
+            }
+    }
+
+    private func inputFieldSurface(isFocused: Bool) -> some View {
+        RoundedRectangle(cornerRadius: 14, style: .continuous)
+            .fill(isFocused ? PingDesign.Surface.inputFieldFocusedFill : PingDesign.Surface.inputFieldFill)
+            .overlay {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(
+                        isFocused
+                            ? PingDesign.ColorToken.accent.opacity(0.48)
+                            : PingDesign.Surface.hairline,
+                        lineWidth: isFocused ? 1.1 : 0.8
+                    )
+            }
+            .animation(reduceMotion ? nil : PingDesign.Motion.buttonHover, value: isFocused)
+    }
+
+    private func stepHeading(title: String, subtitle: String) -> some View {
+        VStack(spacing: 8) {
+            Text(title)
+                .font(PingFont.display)
+                .multilineTextAlignment(.center)
+            Text(subtitle)
+                .font(PingFont.body)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func permissionNoticeView(_ notice: PermissionNotice) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "gearshape.fill")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(PingDesign.Status.warning)
+                .frame(width: 20, height: 20)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(notice.title)
+                    .font(PingFont.label)
+                    .foregroundStyle(Color.primary.opacity(0.88))
+                Text(notice.message)
+                    .font(PingFont.caption)
+                    .foregroundStyle(.secondary)
+                    .lineSpacing(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(PingDesign.Status.warningFill)
                 .overlay {
-                    Capsule().strokeBorder(Color.white.opacity(0.28), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .strokeBorder(PingDesign.Status.warningStroke, lineWidth: 0.8)
                 }
         }
     }
 
-    private func errorText(_ message: String) -> some View {
+    private func setupChip(_ label: String, icon: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Color.primary.opacity(0.76))
+            Text(label)
+                .font(PingFont.caption)
+                .foregroundStyle(Color.primary.opacity(0.80))
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+        }
+        .padding(.horizontal, 11)
+        .padding(.vertical, 6)
+        .background {
+            Capsule()
+                .fill(PingDesign.Surface.chipFill)
+                .overlay {
+                    Capsule()
+                        .strokeBorder(PingDesign.Surface.strongHairline, lineWidth: 0.8)
+                }
+                .overlay {
+                    Capsule()
+                        .inset(by: 1)
+                        .strokeBorder(PingDesign.Surface.hairline, lineWidth: 0.6)
+                }
+                .pingShadow(PingDesign.Shadow.chip)
+        }
+    }
+
+    private func inlineMessage(_ message: String) -> some View {
         Text(message)
             .font(PingFont.caption)
-            .foregroundStyle(Color.yellow)
+            .foregroundStyle(PingDesign.Status.warning)
             .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)
     }
@@ -401,6 +939,6 @@ struct PairingView: View {
 
 #if DEBUG
 #Preview("Pairing") {
-    PairingView(viewModel: PairingViewModel()) { _, _ in }
+    PairingView(viewModel: PairingViewModel()) { _ in }
 }
 #endif

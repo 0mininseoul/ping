@@ -2,11 +2,33 @@
 
 2초 영상 메시지 macOS 전용 앱. Option+P 한 번으로 친구에게 보낸다.
 
-## Firebase 설정
+## Supabase 설정
 
-이 앱에는 Firebase Admin SDK 비공개 키가 필요하지 않다. Firebase Console에서 Apple 앱을 Bundle ID `com.youngminpark.ping.Ping`로 등록한 뒤 `GoogleService-Info.plist`를 내려받아 `Resources/GoogleService-Info.plist`에 둔다. 이 파일은 git에 커밋되지 않는다.
+이 앱은 Supabase Anonymous Auth, Postgres RPC, 비공개 Storage 버킷 `ping-videos`를 사용한다. Supabase 프로젝트의 Project URL과 anon public key를 `Resources/Supabase.plist`에 넣는다. 이 파일은 git에 커밋되지 않는다.
 
-현재 Firebase 프로젝트가 Spark 요금제라 Firebase Storage와 Firestore TTL은 사용하지 않는다. 2초 영상은 Firestore의 `videoChunks` 문서/서브컬렉션에 512KB 단위로 나눠 저장한다. 메시지는 `videoId`로 해당 청크 manifest를 검증하며, 만료된 문서는 읽기 차단 후 앱 실행 시 클라이언트가 best-effort로 정리한다. `storage.rules`는 향후 Blaze 전환 전까지 전체 거부 상태로 보관하며 `firebase.json` 배포 대상에서는 제외한다.
+```bash
+cp Resources/Supabase.example.plist Resources/Supabase.plist
+```
+
+`Resources/Supabase.plist`:
+
+```xml
+<key>SUPABASE_URL</key>
+<string>https://YOUR_PROJECT_REF.supabase.co</string>
+<key>SUPABASE_ANON_KEY</key>
+<string>YOUR_SUPABASE_ANON_KEY</string>
+<key>PING_INVITE_BASE_URL</key>
+<string>https://ping-0mininseoul.vercel.app</string>
+```
+
+스키마는 `supabase/migrations/20260517000100_create_ping_backend.sql`에 있다. 원격 프로젝트에 연결한 뒤 적용한다.
+
+```bash
+npx supabase link --project-ref YOUR_PROJECT_REF
+npx supabase db push
+```
+
+Supabase Dashboard의 Authentication 설정에서 Anonymous sign-ins가 켜져 있어야 한다.
 
 ## 설치
 
@@ -23,6 +45,7 @@
 - Esc: 취소.
 - Tab / 1~9: 파트너 전환.
 - 0 또는 A: 전체 파트너에게 동시 발송.
+- 내 룸 > 링크 복사: 앱을 아직 설치하지 않은 상대에게 초대 링크를 보낸다.
 
 ## 시스템 요구사항
 

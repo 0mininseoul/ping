@@ -11,8 +11,11 @@ final class CameraManager: ObservableObject {
     @Published var lastError: String?
 
     private var configured = false
+    private var audioConfigured = false
 
     func start() async {
+        guard !Task.isCancelled else { return }
+
         if configured {
             if !session.isRunning {
                 session.startRunning()
@@ -24,6 +27,8 @@ final class CameraManager: ObservableObject {
     }
 
     func configure() async {
+        guard !Task.isCancelled else { return }
+
         guard !configured else {
             if !session.isRunning {
                 session.startRunning()
@@ -32,12 +37,11 @@ final class CameraManager: ObservableObject {
         }
 
         let cameraGranted = await AVCaptureDevice.requestAccess(for: .video)
+        guard !Task.isCancelled else { return }
         guard cameraGranted else {
             lastError = "카메라 권한이 필요합니다."
             return
         }
-
-        _ = await AVCaptureDevice.requestAccess(for: .audio)
 
         session.beginConfiguration()
         session.sessionPreset = .hd1920x1080
@@ -50,12 +54,6 @@ final class CameraManager: ObservableObject {
             return
         }
 
-        if let audio = AVCaptureDevice.default(for: .audio),
-           let audioInput = try? AVCaptureDeviceInput(device: audio),
-           session.canAddInput(audioInput) {
-            session.addInput(audioInput)
-        }
-
         session.addInput(cameraInput)
 
         if session.canAddOutput(movieOutput) {
@@ -65,9 +63,36 @@ final class CameraManager: ObservableObject {
         configureFrameRate(for: camera)
         session.commitConfiguration()
 
+        guard !Task.isCancelled else { return }
+
         configured = true
         isReady = true
         session.startRunning()
+    }
+
+    func prepareAudioForRecording() async {
+        guard !audioConfigured, !Task.isCancelled else { return }
+
+        if session.inputs.contains(where: { input in
+            input.ports.contains { $0.mediaType == .audio }
+        }) {
+            audioConfigured = true
+            return
+        }
+
+        let audioGranted = await AVCaptureDevice.requestAccess(for: .audio)
+        guard audioGranted, !Task.isCancelled else { return }
+
+        guard let audio = AVCaptureDevice.default(for: .audio),
+              let audioInput = try? AVCaptureDeviceInput(device: audio),
+              session.canAddInput(audioInput) else {
+            return
+        }
+
+        session.beginConfiguration()
+        session.addInput(audioInput)
+        session.commitConfiguration()
+        audioConfigured = true
     }
 
     func stop() {

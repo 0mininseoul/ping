@@ -1,51 +1,76 @@
-@preconcurrency import FirebaseFirestore
 import Foundation
 
 @MainActor
 final class InvitationService {
-    private var db: Firestore { get throws { try FirebaseClient.shared.requireDB() } }
+    private let client: SupabaseClient
+    private let pollingIntervalNanoseconds: UInt64 = 2_000_000_000
+
+    init(client: SupabaseClient = .shared) {
+        self.client = client
+    }
 
     func send(fromUid: String, fromNickname: String, toUid: String, roomId: String, roomName: String) async throws {
-        let ref = try db.collection("invitations").document()
-        try await ref.setData([
-            "fromUid": fromUid,
-            "toUid": toUid,
-            "roomId": roomId,
-            "fromNickname": fromNickname,
-            "roomName": roomName,
-            "createdAt": FieldValue.serverTimestamp(),
-            "expiresAt": Date().addingTimeInterval(7 * 24 * 60 * 60)
+        let _: String = try await client.rpcValue("ping_send_invitation", body: [
+            "to_uid": toUid,
+            "room_uuid": roomId,
+            "from_nickname": fromNickname,
+            "room_name_text": roomName
         ])
     }
 
     func observeIncoming(uid: String) -> AsyncStream<[Invitation]> {
         AsyncStream { continuation in
-            Task { @MainActor in
-                do {
-                    let listener = try db.collection("invitations")
-                        .whereField("toUid", isEqualTo: uid)
-                        .whereField("expiresAt", isGreaterThan: Date())
-                        .addSnapshotListener { snapshot, _ in
-                            let invites = snapshot?.documents.compactMap { try? $0.data(as: Invitation.self) } ?? []
-                            continuation.yield(invites)
-                        }
-                    continuation.onTermination = { _ in listener.remove() }
-                } catch {
-                    continuation.yield([])
-                    continuation.finish()
+            let task = Task { @MainActor in
+                while !Task.isCancelled {
+                    do {
+                        let invitations: [Invitation] = try await client.rpcArray("ping_incoming_invitations")
+                        continuation.yield(invitations)
+                    } catch {
+                        continuation.yield([])
+                    }
+
+                    try? await Task.sleep(nanoseconds: pollingIntervalNanoseconds)
                 }
+
+                continuation.finish()
             }
+
+            continuation.onTermination = { _ in task.cancel() }
         }
     }
 
     func accept(invitation: Invitation, myUid: String, myNickname: String, roomService: RoomService) async throws {
-        try await roomService.joinRoom(roomId: invitation.roomId, uid: myUid, nickname: myNickname)
-        if let inviteId = invitation.id {
-            try await db.collection("invitations").document(inviteId).delete()
-        }
+        guard let inviteId = invitation.id else { return }
+
+        try await client.rpcVoid("ping_accept_invitation", body: [
+            "invitation_uuid": inviteId,
+            "nickname_text": myNickname
+        ])
     }
 
     func reject(inviteId: String) async throws {
-        try await db.collection("invitations").document(inviteId).delete()
+        try await client.rpcVoid("ping_reject_invitation", body: [
+            "invitation_uuid": inviteId
+        ])
+    }
+
+    func createInviteLink(roomId: String) async throws -> InviteLink {
+        let links: [InviteLink] = try await client.rpcArray("ping_create_invite_link", body: [
+            "room_uuid": roomId
+        ])
+
+        guard let link = links.first else { throw PingError.supabaseUnavailable }
+        return link
+    }
+
+    @discardableResult
+    func acceptInviteLink(token: String, nickname: String) async throws -> Room {
+        let rooms: [Room] = try await client.rpcArray("ping_accept_invite_link", body: [
+            "invite_token": token,
+            "nickname_text": nickname
+        ])
+
+        guard let room = rooms.first else { throw PingError.roomUnavailable }
+        return room
     }
 }

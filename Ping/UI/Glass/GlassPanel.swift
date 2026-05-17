@@ -9,7 +9,7 @@ struct GlassPanel<Content: View>: View {
     let shape: PanelShape
     let content: () -> Content
 
-    init(shape: PanelShape = .rect(cornerRadius: 16), @ViewBuilder content: @escaping () -> Content) {
+    init(shape: PanelShape = .rect(cornerRadius: PingDesign.Radius.panel), @ViewBuilder content: @escaping () -> Content) {
         self.shape = shape
         self.content = content
     }
@@ -20,20 +20,30 @@ struct GlassPanel<Content: View>: View {
                 switch shape {
                 case .rect(let radius):
                     RoundedRectangle(cornerRadius: radius, style: .continuous)
-                        .glassEffect()
+                        .fill(PingDesign.Surface.panelFill)
                         .overlay {
                             RoundedRectangle(cornerRadius: radius, style: .continuous)
-                                .strokeBorder(Color.white.opacity(0.30), lineWidth: 1)
+                                .strokeBorder(PingDesign.Surface.hairline, lineWidth: 0.8)
+                        }
+                        .overlay {
+                            RoundedRectangle(cornerRadius: radius, style: .continuous)
+                                .inset(by: 1)
+                                .strokeBorder(PingDesign.Surface.strongHairline.opacity(0.64), lineWidth: 0.6)
                         }
                 case .circle:
                     Circle()
-                        .glassEffect()
+                        .fill(PingDesign.Surface.circleFill)
                         .overlay {
-                            Circle().strokeBorder(Color.white.opacity(0.30), lineWidth: 1)
+                            Circle().strokeBorder(PingDesign.Surface.strongHairline, lineWidth: 0.8)
+                        }
+                        .overlay {
+                            Circle()
+                                .inset(by: 1)
+                                .strokeBorder(PingDesign.Surface.hairline, lineWidth: 0.6)
                         }
                 }
             }
-            .shadow(color: .black.opacity(0.15), radius: 24, x: 0, y: 16)
+            .pingShadow(PingDesign.Shadow.panel)
     }
 }
 

@@ -1,43 +1,41 @@
-@preconcurrency import FirebaseFirestore
 import Foundation
 
 @MainActor
 final class UserService {
-    private var db: Firestore { get throws { try FirebaseClient.shared.requireDB() } }
+    private let client: SupabaseClient
+
+    init(client: SupabaseClient = .shared) {
+        self.client = client
+    }
 
     func upsert(uid: String, nickname: String) async throws {
-        try await db.collection("users").document(uid).setData([
-            "nickname": nickname,
-            "searchableNickname": SearchableText.normalize(nickname),
-            "rooms": FieldValue.arrayUnion([]),
-            "createdAt": FieldValue.serverTimestamp()
-        ], merge: true)
+        let normalized = SearchableText.normalize(nickname)
+        _ = try await client.rpcArray("ping_upsert_profile", body: [
+            "nickname_text": nickname,
+            "searchable_nickname_text": normalized
+        ]) as [PingUser]
     }
 
     func get(uid: String) async throws -> PingUser? {
-        let snapshot = try await db.collection("users").document(uid).getDocument()
-        return try? snapshot.data(as: PingUser.self)
+        let users: [PingUser] = try await client.rpcArray("ping_get_profile", body: [
+            "target_uid": uid
+        ])
+        return users.first
     }
 
     func searchByNicknamePrefix(_ prefix: String, excluding excludeUid: String?) async throws -> [PingUser] {
         let normalized = SearchableText.normalize(prefix)
         guard !normalized.isEmpty else { return [] }
 
-        let end = normalized + "\u{f8ff}"
-        let snapshot = try await db.collection("users")
-            .whereField("searchableNickname", isGreaterThanOrEqualTo: normalized)
-            .whereField("searchableNickname", isLessThan: end)
-            .limit(to: 20)
-            .getDocuments()
-
-        return snapshot.documents
-            .compactMap { try? $0.data(as: PingUser.self) }
-            .filter { $0.id != excludeUid }
+        let users: [PingUser] = try await client.rpcArray("ping_search_profiles", body: [
+            "search_prefix": normalized
+        ])
+        return users.filter { $0.id != excludeUid }
     }
 
     func updateLastUsedRoom(uid: String, roomId: String) async throws {
-        try await db.collection("users").document(uid).updateData([
-            "lastUsedRoomId": roomId
+        try await client.rpcVoid("ping_update_last_used_room", body: [
+            "room_uuid": roomId
         ])
     }
 }

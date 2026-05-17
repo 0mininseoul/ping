@@ -7,7 +7,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var mirrorWindow: MirrorWindow?
     private var onboardingWindow: OnboardingWindow?
     private var roomManagerWindow: RoomManagerWindow?
+    private var settingsWindow: SettingsWindow?
     private var playbackWindows: [PlaybackWindow] = []
+    private var playbackCache: [String: URL] = [:]
+    private var playbackPrefetchTasks: [String: Task<URL, Error>] = [:]
 
     private let appState = AppState.shared
     private let camera = CameraManager()
@@ -24,58 +27,51 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var roomObserverTask: Task<Void, Never>?
     private var invitationObserverTask: Task<Void, Never>?
     private var incomingMessageTask: Task<Void, Never>?
+    private var bootstrapTask: Task<Void, Never>?
+    private var cameraStartTask: Task<Void, Never>?
+    private var pendingInviteToken: String?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        PingAppearanceMode.applyCurrent()
+        LocalArchive.migrateLegacyPreferencesIfNeeded()
         LocalArchive.ensureFolders()
         setupStatusBar()
         setupNotifications()
         setupHotkey()
 
-        Task { await bootstrapFirebase() }
+        if !ProcessInfo.processInfo.isRunningUnitTests {
+            startBootstrapTaskIfNeeded()
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        bootstrapTask?.cancel()
         roomObserverTask?.cancel()
         invitationObserverTask?.cancel()
         incomingMessageTask?.cancel()
+        cameraStartTask?.cancel()
         camera.stop()
+    }
+
+    func application(_ application: NSApplication, open urls: [URL]) {
+        guard let token = urls.compactMap(PingInviteLink.token(from:)).first else {
+            return
+        }
+
+        acceptInviteLink(token: token)
     }
 
     private func setupStatusBar() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         let menuIcon = NSImage(named: "MenuBarIcon")
             ?? NSImage(systemSymbolName: "circle.dotted.circle", accessibilityDescription: "Ping")
-        menuIcon?.isTemplate = true
+        menuIcon?.isTemplate = false
+        menuIcon?.size = NSSize(width: 18, height: 18)
         item.button?.image = menuIcon
+        item.button?.imageScaling = .scaleProportionallyDown
 
-        let menu = NSMenu()
-
-        let status = NSMenuItem(title: "Ping", action: nil, keyEquivalent: "")
-        status.isEnabled = false
-        menu.addItem(status)
-
-        let partner = NSMenuItem(title: "파트너: 없음", action: nil, keyEquivalent: "")
-        partner.tag = 1001
-        partner.isEnabled = false
-        menu.addItem(partner)
-        menu.addItem(NSMenuItem.separator())
-
-        let send = NSMenuItem(title: "영상 보내기", action: #selector(toggleMirrorAction), keyEquivalent: "")
-        send.target = self
-        menu.addItem(send)
-
-        let rooms = NSMenuItem(title: "내 룸…", action: #selector(showRoomManager), keyEquivalent: "")
-        rooms.target = self
-        menu.addItem(rooms)
-
-        let settings = NSMenuItem(title: "설정…", action: #selector(showSettings), keyEquivalent: ",")
-        settings.target = self
-        menu.addItem(settings)
-        menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: "종료", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
-
-        item.menu = menu
+        item.menu = StatusMenuBuilder.makeMenu(target: self)
         statusItem = item
     }
 
@@ -99,40 +95,77 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func setupHotkey() {
-        HotkeyManager.shared.register { [weak self] in
-            self?.toggleMirror()
-        }
+        HotkeyManager.shared.register(
+            onPress: { [weak self] in
+                self?.toggleMirror()
+            },
+            onAppearanceToggle: { [weak self] in
+                self?.toggleAppearanceMode()
+            }
+        )
     }
 
-    private func bootstrapFirebase() async {
+    private func bootstrapBackend() async {
         do {
-            let uid = try await FirebaseClient.shared.bootstrap()
+            let uid = try await SupabaseClient.shared.bootstrap()
             let existing = try await userService.get(uid: uid)
 
             if let existing {
                 try await userService.upsert(uid: uid, nickname: existing.nickname)
                 appState.currentUser = try await userService.get(uid: uid) ?? existing
-                startObservers(uid: uid)
+                startObservers(uid: uid, opensRoomManagerWhenEmpty: !roomSetupWasDeferred)
                 runCleanup(uid: uid)
                 updateMenuPartner()
+                consumePendingInviteTokenIfAvailable()
             } else {
                 showOnboarding(uid: uid)
             }
         } catch {
             appState.backendStatusMessage = error.localizedDescription
-            NSLog("Firebase bootstrap failed: \(error)")
+            NSLog("Backend bootstrap failed: \(error)")
+            showSetupError(error)
         }
     }
 
-    private func startObservers(uid: String) {
+    private func startBootstrapTaskIfNeeded() {
+        guard bootstrapTask == nil else { return }
+
+        bootstrapTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            await self.bootstrapBackend()
+            self.bootstrapTask = nil
+        }
+    }
+
+    private func consumePendingInviteTokenIfAvailable() {
+        guard let token = pendingInviteToken else { return }
+
+        pendingInviteToken = nil
+        acceptInviteLink(token: token)
+    }
+
+    private func startObservers(uid: String, opensRoomManagerWhenEmpty: Bool = true) {
         roomObserverTask?.cancel()
         invitationObserverTask?.cancel()
         incomingMessageTask?.cancel()
 
         roomObserverTask = Task { @MainActor in
+            var didHandleInitialSnapshot = false
+
             for await rooms in roomService.observeMyRooms(uid: uid) {
                 appState.rooms = rooms
+                if !rooms.isEmpty {
+                    UserDefaults.standard.set(false, forKey: PingPreferenceKeys.roomSetupDeferred)
+                }
                 updateMenuPartner()
+
+                if !didHandleInitialSnapshot {
+                    didHandleInitialSnapshot = true
+
+                    if opensRoomManagerWhenEmpty, rooms.isEmpty, onboardingWindow == nil {
+                        showRoomManager()
+                    }
+                }
             }
         }
 
@@ -152,6 +185,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 guard let id = message.id, shouldNotify(messageId: id, message: message) else {
                     continue
                 }
+                prefetchMessageVideo(message)
                 rememberNotifiedMessage(id)
                 LocalNotificationCenter.shared.notifyIncomingMessage(
                     senderNickname: message.senderNickname,
@@ -161,8 +195,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    private var roomSetupWasDeferred: Bool {
+        UserDefaults.standard.bool(forKey: PingPreferenceKeys.roomSetupDeferred)
+    }
+
     @objc private func toggleMirrorAction() {
         toggleMirror()
+    }
+
+    @objc private func toggleAppearanceModeAction() {
+        toggleAppearanceMode()
+    }
+
+    private func toggleAppearanceMode() {
+        PingAppearanceMode.toggleLightDark()
     }
 
     private func toggleMirror() {
@@ -192,11 +238,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         mirrorViewModel.reset()
+        startCameraForMirrorPresentation()
         mirrorWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
 
+    private func startCameraForMirrorPresentation() {
+        cameraStartTask?.cancel()
+        cameraStartTask = Task {
+            guard !Task.isCancelled else { return }
+            await camera.start()
+        }
+    }
+
     private func closeMirrorWindow() {
+        cameraStartTask?.cancel()
+        cameraStartTask = nil
         mirrorWindow?.savePosition()
         mirrorWindow?.orderOut(nil)
         camera.stop()
@@ -209,10 +266,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let localVideoURL: URL
-        if LocalArchive.localSaveEnabled {
+        let shouldRemoveLocalVideoAfterSend: Bool
+        if LocalArchive.saveSentEnabled {
             let storedURL: URL
             if targets.count == 1, let room = targets.first {
-                storedURL = LocalArchive.sentURL(to: partnerName(in: room))
+                storedURL = LocalArchive.sentURL(to: archiveName(for: room))
             } else {
                 storedURL = LocalArchive.allPartnersSentURL()
             }
@@ -223,19 +281,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             try FileManager.default.moveItem(at: tempURL, to: storedURL)
             localVideoURL = storedURL
+            shouldRemoveLocalVideoAfterSend = false
         } else {
             localVideoURL = tempURL
+            shouldRemoveLocalVideoAfterSend = true
         }
 
-        try await messageService.send(.init(
-            rooms: targets,
-            localVideoURL: localVideoURL,
-            mirrorPosition: position,
-            senderUid: senderUid,
-            senderNickname: currentUser.nickname
-        ))
+        do {
+            try await messageService.send(.init(
+                rooms: targets,
+                localVideoURL: localVideoURL,
+                mirrorPosition: position,
+                senderUid: senderUid,
+                senderNickname: currentUser.nickname
+            ))
+        } catch {
+            if shouldRemoveLocalVideoAfterSend {
+                try? FileManager.default.removeItem(at: localVideoURL)
+            }
+            throw error
+        }
 
-        if !LocalArchive.localSaveEnabled {
+        if shouldRemoveLocalVideoAfterSend {
             try? FileManager.default.removeItem(at: localVideoURL)
         }
     }
@@ -245,19 +312,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return room.memberNicknames.first(where: { $0.key != myUid })?.value ?? "demo"
     }
 
+    private func archiveName(for room: Room) -> String {
+        guard let myUid = appState.currentUser?.id else { return room.name }
+        let otherNames = room.memberUids
+            .filter { $0 != myUid }
+            .compactMap { room.memberNicknames[$0] }
+
+        if otherNames.count == 1 {
+            return otherNames[0]
+        }
+
+        return room.name
+    }
+
     private func playMessage(messageId: String) {
         Task { @MainActor in
             do {
                 guard let message = try await messageService.get(messageId: messageId) else { return }
-                let localURL: URL
-                if LocalArchive.localSaveEnabled {
-                    LocalArchive.ensureFolders()
-                    localURL = LocalArchive.receivedURL(from: message.senderNickname)
-                } else {
-                    localURL = FileManager.default.temporaryDirectory
-                        .appendingPathComponent("ping-received-\(UUID().uuidString).mp4")
-                }
-                try await storageService.downloadVideo(from: message.videoUrl, to: localURL)
+                let localURL = try await cachedVideoURL(for: message)
 
                 let screen = NSScreen.main?.visibleFrame ?? .zero
                 let center = ScreenCoordinates.denormalize(position: message.mirrorPosition, in: screen)
@@ -272,8 +344,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let window = PlaybackWindow(videoURL: localURL, atScreenPoint: origin) { [weak self] in
                     Task { @MainActor in
                         try? await self?.messageService.markSeen(messageId: messageId)
-                        if !LocalArchive.localSaveEnabled {
+                        if !LocalArchive.saveReceivedEnabled {
                             try? FileManager.default.removeItem(at: localURL)
+                            self?.playbackCache[messageId] = nil
                         }
                         self?.playbackWindows.removeAll { $0.pingWindowId == windowId }
                     }
@@ -287,28 +360,171 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    private func prefetchMessageVideo(_ message: VideoMessage) {
+        guard let messageId = message.id,
+              playbackCache[messageId] == nil,
+              playbackPrefetchTasks[messageId] == nil else {
+            return
+        }
+
+        let task = Task { @MainActor [weak self] () throws -> URL in
+            guard let self else { throw CancellationError() }
+            return try await self.downloadMessageVideo(message)
+        }
+        playbackPrefetchTasks[messageId] = task
+
+        Task { @MainActor [weak self] in
+            do {
+                let url = try await task.value
+                self?.playbackCache[messageId] = url
+            } catch {
+                NSLog("Video prefetch failed: \(error)")
+            }
+            self?.playbackPrefetchTasks[messageId] = nil
+        }
+    }
+
+    private func cachedVideoURL(for message: VideoMessage) async throws -> URL {
+        guard let messageId = message.id else {
+            return try await downloadMessageVideo(message)
+        }
+
+        if let cachedURL = playbackCache[messageId],
+           FileManager.default.fileExists(atPath: cachedURL.path) {
+            return cachedURL
+        }
+
+        if let prefetchTask = playbackPrefetchTasks[messageId] {
+            let url = try await prefetchTask.value
+            playbackCache[messageId] = url
+            return url
+        }
+
+        let url = try await downloadMessageVideo(message)
+        playbackCache[messageId] = url
+        return url
+    }
+
+    private func downloadMessageVideo(_ message: VideoMessage) async throws -> URL {
+        let localURL = playbackLocalURL(for: message)
+        if FileManager.default.fileExists(atPath: localURL.path) {
+            return localURL
+        }
+
+        if LocalArchive.saveReceivedEnabled {
+            LocalArchive.ensureFolders()
+        }
+        try await storageService.downloadVideo(from: message.videoUrl, to: localURL)
+        return localURL
+    }
+
+    private func playbackLocalURL(for message: VideoMessage) -> URL {
+        if LocalArchive.saveReceivedEnabled {
+            return LocalArchive.receivedURL(from: message.senderNickname, date: message.createdAt ?? Date())
+        }
+
+        let fileName = message.id ?? UUID().uuidString
+        return FileManager.default.temporaryDirectory
+            .appendingPathComponent("ping-received-\(fileName).mp4")
+    }
+
+    @objc private func showInitialSetupAction() {
+        showInitialSetup()
+    }
+
+    private func showInitialSetup() {
+        if let onboardingWindow {
+            onboardingWindow.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+
+        if let uid = appState.currentUser?.id ?? SupabaseClient.shared.currentUid {
+            showOnboarding(uid: uid)
+            return
+        }
+
+        Task { @MainActor in
+            do {
+                let uid = try await SupabaseClient.shared.bootstrap()
+                showOnboarding(uid: uid)
+            } catch {
+                appState.backendStatusMessage = error.localizedDescription
+                NSLog("Setup bootstrap failed: \(error)")
+                showSetupError(error)
+            }
+        }
+    }
+
+    private func showSetupError(_ error: Error) {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "Ping 초기 설정을 열 수 없습니다"
+        alert.informativeText = error.localizedDescription
+        alert.addButton(withTitle: "확인")
+        NSApp.activate(ignoringOtherApps: true)
+        alert.runModal()
+    }
+
     private func showOnboarding(uid: String) {
+        if let onboardingWindow {
+            onboardingWindow.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+
         let viewModel = PairingViewModel()
-        let view = PairingView(viewModel: viewModel) { [weak self] nickname, firstRoomName in
+        let view = PairingView(viewModel: viewModel, excludingUid: uid) { [weak self] completion in
             Task { @MainActor in
                 guard let self else { return }
+                guard !viewModel.isCompleting else { return }
+                viewModel.isCompleting = true
+                viewModel.errorMessage = nil
                 do {
-                    try await self.userService.upsert(uid: uid, nickname: nickname)
+                    try await self.userService.upsert(uid: uid, nickname: completion.nickname)
                     self.appState.currentUser = try await self.userService.get(uid: uid)
 
-                    if let firstRoomName, !firstRoomName.isEmpty {
+                    let shouldOpenInviteSearch: Bool
+                    switch completion.action {
+                    case .createRoom(let roomName):
+                        UserDefaults.standard.set(false, forKey: PingPreferenceKeys.roomSetupDeferred)
                         _ = try await self.roomService.createRoom(
-                            name: firstRoomName,
+                            name: roomName,
                             ownerUid: uid,
-                            ownerNickname: nickname
+                            ownerNickname: completion.nickname
                         )
+                        shouldOpenInviteSearch = true
+                    case .joinRoom(let room):
+                        UserDefaults.standard.set(false, forKey: PingPreferenceKeys.roomSetupDeferred)
+                        if let roomId = room.id {
+                            try await self.roomService.joinRoom(
+                                roomId: roomId,
+                                uid: uid,
+                                nickname: completion.nickname
+                            )
+                        }
+                        shouldOpenInviteSearch = false
+                    case .later:
+                        UserDefaults.standard.set(true, forKey: PingPreferenceKeys.roomSetupDeferred)
+                        shouldOpenInviteSearch = false
                     }
 
-                    self.startObservers(uid: uid)
+                    self.startObservers(
+                        uid: uid,
+                        opensRoomManagerWhenEmpty: completion.action != .later
+                    )
                     self.runCleanup(uid: uid)
                     self.onboardingWindow?.close()
                     self.onboardingWindow = nil
+                    if let token = self.pendingInviteToken {
+                        self.pendingInviteToken = nil
+                        self.acceptInviteLink(token: token)
+                    } else if shouldOpenInviteSearch {
+                        self.presentRoomManager(initialTab: .search, searchInitialTab: .users)
+                    }
                 } catch {
+                    viewModel.isCompleting = false
+                    viewModel.errorMessage = error.localizedDescription
                     self.appState.backendStatusMessage = error.localizedDescription
                 }
             }
@@ -320,11 +536,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func showRoomManager() {
+        presentRoomManager()
+    }
+
+    private func presentRoomManager(
+        initialTab: RoomManagerTab = .rooms,
+        searchInitialTab: RoomSearchTab = .rooms
+    ) {
+        let needsSpecificTab = initialTab != .rooms || searchInitialTab != .rooms
+        if let roomManagerWindow, !roomManagerWindow.isVisible || needsSpecificTab {
+            roomManagerWindow.close()
+            self.roomManagerWindow = nil
+        }
+
         if roomManagerWindow == nil {
             let view = RoomManagerView(
                 appState: appState,
                 roomService: roomService,
                 invitationService: invitationService,
+                initialTab: initialTab,
+                searchInitialTab: searchInitialTab,
+                onCopyInviteLink: { [weak self] room in
+                    self?.copyInviteLink(for: room)
+                },
+                onJoinInviteLink: { [weak self] token in
+                    self?.acceptInviteLink(token: token)
+                },
                 onInvite: { [weak self] user in
                     self?.handleInvite(user: user)
                 }
@@ -337,7 +574,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func showSettings() {
-        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        if settingsWindow == nil {
+            settingsWindow = SettingsWindow(rootView: SettingsView().environmentObject(appState))
+        }
+
+        settingsWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
 
@@ -370,6 +611,72 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    private func copyInviteLink(for room: Room) {
+        guard let roomId = room.id else { return }
+
+        Task {
+            do {
+                let link = try await invitationService.createInviteLink(roomId: roomId)
+                let url = PingInviteLink.url(for: link.token).absoluteString
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(url, forType: .string)
+                showTransientAlert(
+                    title: "초대 링크를 복사했습니다",
+                    message: "상대가 앱을 설치한 뒤 이 링크를 열면 룸에 참여할 수 있습니다.\n\n\(url)"
+                )
+            } catch {
+                appState.backendStatusMessage = error.localizedDescription
+                showTransientAlert(title: "초대 링크를 만들 수 없습니다", message: error.localizedDescription)
+            }
+        }
+    }
+
+    private func acceptInviteLink(token: String) {
+        guard let currentUser = appState.currentUser else {
+            pendingInviteToken = token
+            startBootstrapTaskIfNeeded()
+            return
+        }
+
+        Task {
+            do {
+                let room = try await invitationService.acceptInviteLink(
+                    token: token,
+                    nickname: currentUser.nickname
+                )
+                insertOrReplaceRoom(room)
+                showTransientAlert(title: "룸에 참여했습니다", message: "\(room.name)에 참여했습니다.")
+                showRoomManager()
+            } catch {
+                appState.backendStatusMessage = error.localizedDescription
+                showTransientAlert(title: "초대 링크를 사용할 수 없습니다", message: error.localizedDescription)
+            }
+        }
+    }
+
+    private func insertOrReplaceRoom(_ room: Room) {
+        if let roomId = room.id,
+           let index = appState.rooms.firstIndex(where: { $0.id == roomId }) {
+            appState.rooms[index] = room
+        } else {
+            appState.rooms.append(room)
+        }
+
+        appState.rooms.sort { lhs, rhs in
+            lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
+        }
+        updateMenuPartner()
+    }
+
+    private func showTransientAlert(title: String, message: String) {
+        let alert = NSAlert()
+        alert.messageText = title
+        alert.informativeText = message
+        alert.addButton(withTitle: "확인")
+        NSApp.activate(ignoringOtherApps: true)
+        alert.runModal()
+    }
+
     private func acceptInvitation(inviteId: String) {
         guard let invitation = appState.pendingInvitations.first(where: { $0.id == inviteId }),
               let currentUser = appState.currentUser,
@@ -396,7 +703,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func updateMenuPartner() {
         guard let menu = statusItem?.menu,
-              let item = menu.item(withTag: 1001) else {
+              let item = menu.item(withTag: StatusMenuBuilder.partnerItemTag) else {
             return
         }
 
@@ -446,5 +753,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 NSLog("Cleanup failed: \(error)")
             }
         }
+    }
+}
+
+private extension ProcessInfo {
+    var isRunningUnitTests: Bool {
+        environment["XCTestConfigurationFilePath"] != nil
     }
 }

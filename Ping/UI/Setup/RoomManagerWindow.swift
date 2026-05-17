@@ -19,33 +19,44 @@ final class RoomManagerWindow: NSWindow {
     }
 }
 
+enum RoomManagerTab: Hashable {
+    case rooms
+    case search
+}
+
 struct RoomManagerView: View {
     @ObservedObject var appState: AppState
     var roomService: RoomService
     var invitationService: InvitationService
     var onJoinRoom: ((Room) -> Void)?
+    var onCopyInviteLink: (Room) -> Void
+    var onJoinInviteLink: (String) -> Void
     var onInvite: (PingUser) -> Void
 
-    @State private var selectedTab: RoomManagerTab = .rooms
+    @State private var selectedTab: RoomManagerTab
     @StateObject private var searchViewModel: RoomSearchViewModel
-
-    private enum RoomManagerTab: Hashable {
-        case rooms
-        case search
-    }
+    private let searchInitialTab: RoomSearchTab
 
     init(
         appState: AppState,
         roomService: RoomService,
         invitationService: InvitationService,
+        initialTab: RoomManagerTab = .rooms,
+        searchInitialTab: RoomSearchTab = .rooms,
         onJoinRoom: ((Room) -> Void)? = nil,
+        onCopyInviteLink: @escaping (Room) -> Void = { _ in },
+        onJoinInviteLink: @escaping (String) -> Void = { _ in },
         onInvite: @escaping (PingUser) -> Void
     ) {
         self.appState = appState
         self.roomService = roomService
         self.invitationService = invitationService
         self.onJoinRoom = onJoinRoom
+        self.onCopyInviteLink = onCopyInviteLink
+        self.onJoinInviteLink = onJoinInviteLink
         self.onInvite = onInvite
+        self.searchInitialTab = searchInitialTab
+        _selectedTab = State(initialValue: initialTab)
         _searchViewModel = StateObject(
             wrappedValue: RoomSearchViewModel(excludingUid: appState.currentUser?.id)
         )
@@ -61,7 +72,10 @@ struct RoomManagerView: View {
                 RoomListView(
                     appState: appState,
                     roomService: roomService,
-                    onRename: renameRoom
+                    onRename: renameRoom,
+                    onCopyInviteLink: onCopyInviteLink,
+                    onCreateRoom: createRoom,
+                    onFindRoom: { selectedTab = .search }
                 )
             }
             .tabItem {
@@ -72,8 +86,10 @@ struct RoomManagerView: View {
             RoomSearchView(
                 viewModel: searchViewModel,
                 appState: appState,
+                initialTab: searchInitialTab,
                 onJoinRoom: joinRoom,
-                onInviteUser: onInvite
+                onInviteUser: onInvite,
+                onJoinInviteLink: onJoinInviteLink
             )
             .tabItem {
                 Label("룸 찾기", systemImage: "magnifyingglass")
@@ -162,6 +178,31 @@ struct RoomManagerView: View {
         }
     }
 
+    private func createRoom() {
+        guard let currentUser = appState.currentUser,
+              let uid = currentUser.id,
+              appState.rooms.count < RoomLimits.maxRoomsPerUser,
+              let roomName = promptForRoomName(currentName: ""),
+              !roomName.isEmpty else {
+            return
+        }
+
+        Task { @MainActor in
+            do {
+                let createdRoom = try await roomService.createRoom(
+                    name: roomName,
+                    ownerUid: uid,
+                    ownerNickname: currentUser.nickname
+                )
+                insertOrReplaceRoom(createdRoom)
+                UserDefaults.standard.set(false, forKey: PingPreferenceKeys.roomSetupDeferred)
+                selectedTab = .rooms
+            } catch {
+                appState.backendStatusMessage = error.localizedDescription
+            }
+        }
+    }
+
     private func renameRoom(_ room: Room) {
         guard room.ownerUid == appState.currentUser?.id,
               let roomId = room.id,
@@ -174,17 +215,45 @@ struct RoomManagerView: View {
         Task { @MainActor in
             do {
                 try await roomService.renameRoom(roomId: roomId, newName: newName)
+                renameLocalRoom(roomId: roomId, newName: newName)
             } catch {
                 appState.backendStatusMessage = error.localizedDescription
             }
         }
     }
 
+    private func insertOrReplaceRoom(_ room: Room) {
+        if let roomId = room.id,
+           let index = appState.rooms.firstIndex(where: { $0.id == roomId }) {
+            appState.rooms[index] = room
+        } else {
+            appState.rooms.append(room)
+        }
+
+        sortRooms()
+    }
+
+    private func renameLocalRoom(roomId: String, newName: String) {
+        guard let index = appState.rooms.firstIndex(where: { $0.id == roomId }) else {
+            return
+        }
+
+        appState.rooms[index].name = newName
+        appState.rooms[index].searchableName = SearchableText.normalize(newName)
+        sortRooms()
+    }
+
+    private func sortRooms() {
+        appState.rooms.sort { lhs, rhs in
+            lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
+        }
+    }
+
     private func promptForRoomName(currentName: String) -> String? {
         let alert = NSAlert()
-        alert.messageText = "룸 이름 변경"
-        alert.informativeText = "새 룸 이름을 입력하세요."
-        alert.addButton(withTitle: "변경")
+        alert.messageText = currentName.isEmpty ? "룸 만들기" : "룸 이름 변경"
+        alert.informativeText = currentName.isEmpty ? "새 룸 이름을 입력하세요." : "새 룸 이름을 입력하세요."
+        alert.addButton(withTitle: currentName.isEmpty ? "만들기" : "변경")
         alert.addButton(withTitle: "취소")
 
         let input = NSTextField(string: currentName)
