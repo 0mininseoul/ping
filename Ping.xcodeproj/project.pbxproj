@@ -16,7 +16,7 @@
 		3A42A12F85CF34A4D5F2F7CD /* OnboardingWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 050A0147A7508D00A8E2DE3B /* OnboardingWindow.swift */; };
 		3B5117F35AEE41A4224D9837 /* StorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0323B3DFE22413AC6BB3627D /* StorageService.swift */; };
 		3E8747EC3C02819DE0808A7E /* GlassButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8841413A695A3C64F0B3F247 /* GlassButton.swift */; };
-		3F281D7BAAC12DAA86E5E838 /* FirebaseFirestoreSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 9F111344C75F0F2FB27DA115 /* FirebaseFirestoreSwift */; };
+		3F281D7BAAC12DAA86E5E838 /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 124F74B5C81D2AD5BA394E96 /* KeyboardShortcuts */; };
 		4933DD31B57294089191AC57 /* SearchableText.swift in Sources */ = {isa = PBXBuildFile; fileRef = E917296A7C45B0DEF90EEB1C /* SearchableText.swift */; };
 		503D2F33E720C8E32DE485AD /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0B62D708A5A8B647FB677E8 /* AppDelegate.swift */; };
 		55964F9C1885CA8604192FDC /* CameraManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 727042FF4263267EEFA18D20 /* CameraManager.swift */; };
@@ -33,9 +33,7 @@
 		86FC0DE057AA315B2F2E87AB /* MirrorViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E89232F1FE943FF8CE229F13 /* MirrorViewModel.swift */; };
 		8998769E27D9629FBA3B8388 /* SettingsScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0046D5141DDF76BC6DD5F048 /* SettingsScene.swift */; };
 		89CA5CAC17D1B7BEC031CBF5 /* InvitationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E744CF82AF7E6266CD82F92 /* InvitationService.swift */; };
-		8AC87CEEE4256606FE2769A7 /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 124F74B5C81D2AD5BA394E96 /* KeyboardShortcuts */; };
 		8B5A766E6D79F4D8014F7AB4 /* MirrorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23C125D42D4715B503E6E707 /* MirrorView.swift */; };
-		9C4C4DD9C26BCF7B4DF7F0D5 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 50E6020185FEE5113D3EDC3E /* FirebaseStorage */; };
 		9E54DAAC10053EE98C5670CF /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72E17B6A6D89179C56491009 /* AppState.swift */; };
 		A35216D4802F7669D7CEE926 /* RoomSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B5BE5E27DBD69263538CCD7 /* RoomSearchView.swift */; };
 		A548B41AA3E0A501424B712B /* PairingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B86EF836E41F27EB9EA7504 /* PairingView.swift */; };
@@ -46,11 +44,13 @@
 		BE3551EEFED3B34395960150 /* ScreenCoordinatesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DB8EE7896F96DFAC0EFCA86 /* ScreenCoordinatesTests.swift */; };
 		C26014C3EE2AB59B7360E901 /* HotkeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6D978D1D0ADEFE94F8E2D9D /* HotkeyManager.swift */; };
 		C8F5DFDF85C7FB8849C58310 /* FirebaseClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 873B35EC7757CC6321110826 /* FirebaseClient.swift */; };
+		CBA9098946084A74F1DDD04C /* CleanupService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 196AE189C92F647078653279 /* CleanupService.swift */; };
 		CD48671985ADE8C6B4831F9B /* LocalArchive.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB469BD2ECF2AC4459C1A4D1 /* LocalArchive.swift */; };
 		D12F7E997BB6376FEF3F220D /* CameraPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 880D2B3F583FCC9102608E19 /* CameraPreviewView.swift */; };
 		D554E57BED49035560D4AE74 /* PlaybackWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01290226E3F8D2ED2E2FA6AC /* PlaybackWindow.swift */; };
 		D94A00EE205AF8CCF9BE4393 /* RoomListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CD854FC545A367784978698 /* RoomListView.swift */; };
 		DF64AE4C1BA57CB52E98AC20 /* InvitationCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD69BFAD0704FB61C435A68E /* InvitationCard.swift */; };
+		E13DC4726E837B9456AF2859 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 38C7B41AC566CD880C3BB9BD /* Assets.xcassets */; };
 		E4C44F790AB4501AE2D9B4DD /* PingError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62D2F7B67DB16ADA6741BD44 /* PingError.swift */; };
 		E5098E32A2ACA9ED9F8A2939 /* RoomService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BB81E537D50111710D5B182 /* RoomService.swift */; };
 		F9F01F4FE990F1A34D5E5FCF /* RainbowBorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97150E02C17DE9AEBD26BF13 /* RainbowBorder.swift */; };
@@ -74,8 +74,10 @@
 		050A0147A7508D00A8E2DE3B /* OnboardingWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingWindow.swift; sourceTree = "<group>"; };
 		06B4B9E0137AD6A34F151BF2 /* VideoRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoRecorder.swift; sourceTree = "<group>"; };
 		0DB8EE7896F96DFAC0EFCA86 /* ScreenCoordinatesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenCoordinatesTests.swift; sourceTree = "<group>"; };
+		196AE189C92F647078653279 /* CleanupService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleanupService.swift; sourceTree = "<group>"; };
 		23C125D42D4715B503E6E707 /* MirrorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MirrorView.swift; sourceTree = "<group>"; };
 		260A034212C7DCDAE4B05B4E /* UserService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserService.swift; sourceTree = "<group>"; };
+		38C7B41AC566CD880C3BB9BD /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		3A06C0316F0F1AFE5297BE0C /* PartnerPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PartnerPicker.swift; sourceTree = "<group>"; };
 		4CD854FC545A367784978698 /* RoomListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomListView.swift; sourceTree = "<group>"; };
 		5B86EF836E41F27EB9EA7504 /* PairingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingView.swift; sourceTree = "<group>"; };
@@ -123,9 +125,7 @@
 			files = (
 				7035C7FE65C8AC75092F13FB /* FirebaseAuth in Frameworks */,
 				B6A11640F9C354B97F970881 /* FirebaseFirestore in Frameworks */,
-				3F281D7BAAC12DAA86E5E838 /* FirebaseFirestoreSwift in Frameworks */,
-				9C4C4DD9C26BCF7B4DF7F0D5 /* FirebaseStorage in Frameworks */,
-				8AC87CEEE4256606FE2769A7 /* KeyboardShortcuts in Frameworks */,
+				3F281D7BAAC12DAA86E5E838 /* KeyboardShortcuts in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -161,6 +161,7 @@
 			isa = PBXGroup;
 			children = (
 				C0B62D708A5A8B647FB677E8 /* AppDelegate.swift */,
+				38C7B41AC566CD880C3BB9BD /* Assets.xcassets */,
 				B5C8F83E9CBB7B5717E22773 /* Info.plist */,
 				F7DD9D4337004D4575FF0FC3 /* PingApp.swift */,
 				7694D112F2E7ACAD351B6DFF /* Backend */,
@@ -184,6 +185,7 @@
 		7694D112F2E7ACAD351B6DFF /* Backend */ = {
 			isa = PBXGroup;
 			children = (
+				196AE189C92F647078653279 /* CleanupService.swift */,
 				873B35EC7757CC6321110826 /* FirebaseClient.swift */,
 				5E744CF82AF7E6266CD82F92 /* InvitationService.swift */,
 				E8EEA4E1E7817FF473236F52 /* MessageService.swift */,
@@ -314,6 +316,7 @@
 			buildConfigurationList = 278B05766CC8B8E71A6B2837 /* Build configuration list for PBXNativeTarget "Ping" */;
 			buildPhases = (
 				C255A03EFDA6B3F9699390D9 /* Sources */,
+				0FD94EF7FCF9100B594CBECD /* Resources */,
 				9D05FB8D8D7F0319FEB6F66B /* Frameworks */,
 			);
 			buildRules = (
@@ -324,8 +327,6 @@
 			packageProductDependencies = (
 				B821675F056391567B44238F /* FirebaseAuth */,
 				009E04DD1E1E4C3FC7549ABD /* FirebaseFirestore */,
-				9F111344C75F0F2FB27DA115 /* FirebaseFirestoreSwift */,
-				50E6020185FEE5113D3EDC3E /* FirebaseStorage */,
 				124F74B5C81D2AD5BA394E96 /* KeyboardShortcuts */,
 			);
 			productName = Ping;
@@ -373,6 +374,17 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		0FD94EF7FCF9100B594CBECD /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E13DC4726E837B9456AF2859 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		2E9C98A9747EABEAAB8E9E48 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -393,6 +405,7 @@
 				9E54DAAC10053EE98C5670CF /* AppState.swift in Sources */,
 				55964F9C1885CA8604192FDC /* CameraManager.swift in Sources */,
 				D12F7E997BB6376FEF3F220D /* CameraPreviewView.swift in Sources */,
+				CBA9098946084A74F1DDD04C /* CleanupService.swift in Sources */,
 				C8F5DFDF85C7FB8849C58310 /* FirebaseClient.swift in Sources */,
 				3E8747EC3C02819DE0808A7E /* GlassButton.swift in Sources */,
 				81CF775CFAC24B82B2F8043A /* GlassChip.swift in Sources */,
@@ -700,16 +713,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 84AB79F3D2E263AAFDDC843A /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */;
 			productName = KeyboardShortcuts;
-		};
-		50E6020185FEE5113D3EDC3E /* FirebaseStorage */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = D8D2A4EA1DA0B2825093D35D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseStorage;
-		};
-		9F111344C75F0F2FB27DA115 /* FirebaseFirestoreSwift */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = D8D2A4EA1DA0B2825093D35D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseFirestoreSwift;
 		};
 		B821675F056391567B44238F /* FirebaseAuth */ = {
 			isa = XCSwiftPackageProductDependency;

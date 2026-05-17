@@ -45,17 +45,16 @@
 
 **Bundle ID 한 곳이 어긋나면 Firebase Auth가 런타임에 실패하고 빌드는 통과하므로 디버깅이 매우 어렵습니다.**
 
-### Firebase Project ID — `<YOUR_FIREBASE_PROJECT_ID>` (placeholder)
+### Firebase Project ID — `gen-lang-client-0974295904`
 플랜의 `ping-mvp` 는 예시일 뿐, **사용자가 실제 생성한 Firebase 프로젝트 ID를 사용해야 합니다.** 다음 위치에 동일하게 들어갑니다:
 - `firebase.json` (firebase CLI가 자동 관리)
 - `.firebaserc` (firebase CLI가 자동 관리)
 - 모든 `firebase deploy --project <ID>` 명령
-- `gsutil` 명령의 버킷 URL: `gs://<ID>.firebasestorage.app/`
 
-사용자에게 처음 한 번 물어보고 그 값을 모든 곳에 일관되게 적용하세요. 임의로 `ping-mvp` 로 두지 마세요.
+임의로 `ping-mvp` 로 되돌리지 마세요.
 
-### Storage 버킷 도메인
-Firebase가 2024년 이후 생성된 프로젝트는 `<projectId>.firebasestorage.app`, 이전은 `<projectId>.appspot.com` 을 사용합니다. **확실하지 않으면 Firebase 콘솔 Storage 페이지에서 정확한 버킷 URL을 확인하고 그 값을 사용하세요.**
+### Spark 요금제 저장소
+현재 프로젝트는 Spark 요금제입니다. 2024년 10월 30일 이후 생성된 Firebase Storage 기본 버킷은 Blaze 요금제가 필요하므로 **Firebase Storage를 사용하지 않습니다**. 영상은 Firestore `videoChunks/{videoId}/chunks/{index}`에 512KB 단위로 저장하고 `messages.videoUrl`은 `firestore-chunks://{senderUid}/{videoId}` 형식을 사용합니다. Firestore TTL도 Spark 무료 한도에 포함되지 않으므로 서버 TTL 대신 앱 실행 시 best-effort cleanup을 수행합니다.
 
 ### App 버전 — `0.1.0`
 - `project.yml` → `settings.base.MARKETING_VERSION`
@@ -74,7 +73,6 @@ xcodebuild -version                # Xcode 16.0+ (Swift 6 컴파일러 포함)
 swift --version                    # Swift 6.0+
 brew install xcodegen create-dmg   # 누락 시 즉시 설치
 npm install -g firebase-tools      # firebase CLI
-brew install --cask google-cloud-sdk   # gsutil (Storage Lifecycle 설정용)
 ```
 
 ### 빌드/실행 사이클
@@ -123,7 +121,7 @@ ping/
 ├── Package.swift                    # SPM 명시 필요 시
 ├── firebase.json                    # firebase CLI 관리
 ├── firestore.rules                  # 직접 편집
-├── storage.rules                    # 직접 편집
+├── storage.rules                    # Spark에서는 deny-all 보관용, firebase.json 배포 대상 아님
 ├── firestore.indexes.json           # 직접 편집
 ├── Ping.entitlements                # 직접 편집 또는 project.yml 동기화
 ├── Ping/                            # 앱 소스 (자세한 구조는 spec 참조)
@@ -158,8 +156,8 @@ ping/
 
 - **Anonymous Auth 만 사용** — 이메일/소셜 로그인 추가 금지 (v0.2 이후).
 - **Cloud Functions 없음** — 모든 로직은 클라이언트 + Firestore 보안 규칙.
-- **TTL/Lifecycle 로 자동 삭제** — `messages` 24h, `invitations` 7d, Storage 영상 24h.
-- **보안 규칙 변경 시 즉시 deploy**: `firebase deploy --only firestore:rules,storage:rules --project <PROJECT_ID>`.
+- **Spark 호환 cleanup** — `messages` 24h, `videoChunks` 24h, `invitations` 7d 만료값을 저장하고 앱 실행 시 클라이언트가 best-effort로 삭제.
+- **보안 규칙 변경 시 즉시 deploy**: `firebase deploy --only firestore:rules,firestore:indexes --project gen-lang-client-0974295904`.
 - **인덱스 누락 에러는 무시하지 말 것** — Firestore가 에러 메시지에 인덱스 생성 URL을 제공하므로 클릭하여 만들고 `firestore.indexes.json` 에도 반영.
 
 ---
@@ -228,6 +226,6 @@ A: ad-hoc 서명이라 정상입니다. **우클릭 → 열기 → 다시 열기
 - [ ] 본 `AGENTS.md` 의 "절대 하지 말 것" 4가지 숙지
 - [ ] `git status` 깨끗한가? 또는 어디까지 진행됐는가?
 - [ ] 사용자가 Firebase 프로젝트를 만들었는가? Project ID, Bundle ID 확인됨?
-- [ ] 필수 도구(xcodegen, create-dmg, firebase, gsutil) 모두 설치됨?
+- [ ] 필수 도구(xcodegen, create-dmg, firebase) 모두 설치됨?
 
 준비 OK면 플랜의 해당 Task부터 진행하세요.

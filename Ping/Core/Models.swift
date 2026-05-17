@@ -1,5 +1,5 @@
 import Foundation
-import FirebaseFirestore
+@preconcurrency import FirebaseFirestore
 
 struct MirrorPosition: Codable, Equatable, Hashable {
     var xRatio: Double
@@ -73,6 +73,7 @@ struct VideoMessage: Codable, Identifiable, Hashable {
     var senderUid: String
     var receiverUid: String
     var senderNickname: String
+    var videoId: String
     var videoUrl: String
     var durationMs: Int
     var mirrorPosition: MirrorPosition

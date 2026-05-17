@@ -1,5 +1,7 @@
 # Ping — 실시간 2초 영상 메시지 macOS 앱 기획서 (v2.0)
 
+> 2026-05-17 구현 메모: 현재 Firebase 프로젝트 `gen-lang-client-0974295904`는 Spark 요금제입니다. 2024년 10월 30일 이후 Firebase Storage 기본 버킷은 Blaze 요금제가 필요하고, Firestore TTL deletes도 무료 한도에 포함되지 않습니다. MVP 구현은 Firebase Storage/Firestore TTL 대신 Firestore `videoChunks` 청크 저장과 클라이언트 best-effort cleanup을 사용합니다.
+
 ## 📋 프로젝트 개요
 
 ### 프로젝트 이름
@@ -164,7 +166,7 @@ macOS 표준 Settings 윈도우(`Settings` SwiftUI Scene), 5개 탭으로 구성
 - **비디오 코덱**: H.264.
 - **오디오**: AAC, 44.1kHz, 스테레오.
 - **컨테이너**: MP4.
-- **예상 파일 크기**: 약 4~8MB (Storage 업로드 상한 20MB).
+- **예상 파일 크기**: 약 4~8MB (Firestore 청크 저장 상한 16MB).
 
 #### 촬영 중 UX
 - **시각적 피드백**: 빨간 보더 + 우측 상단 카운트다운.
@@ -175,12 +177,12 @@ macOS 표준 Settings 윈도우(`Settings` SwiftUI Scene), 5개 탭으로 구성
 #### 백엔드 아키텍처
 - **인증**: Firebase Anonymous Authentication.
 - **데이터베이스**: Cloud Firestore (실시간 listener 기반).
-- **파일 저장소**: Firebase Cloud Storage.
+- **파일 저장소**: Cloud Firestore `videoChunks` 청크 저장. Spark 요금제에서는 Firebase Cloud Storage를 사용하지 않음.
 - **푸시 알림 인프라 없음**: APNs/FCM 미사용. 메뉴바 상주 앱이 Firestore listener로 새 메시지를 감지하면 `UNUserNotificationCenter`로 로컬 알림 발생 → macOS 알림 배너는 푸시 알림과 동일하게 우측 상단에 표시.
 - **Cloud Functions 없음**: 모든 로직은 클라이언트 측 + Firestore 보안 규칙으로 처리.
 
 #### Firebase 비용
-- **Spark 플랜(무료)** 안에서 모두 동작. 두 사용자 트래픽 기준 무료 한도(Firestore 50K reads/일, Storage 5GB)의 1% 미만 사용.
+- **Spark 플랜(무료)** 안에서 모두 동작. 두 사용자 트래픽 기준 Firestore 무료 한도(50K reads/일, 20K writes/일, 1GB 저장) 안에서 동작하도록 영상은 16MB 이하로 제한.
 - 신용카드 등록 불필요. Apple Developer Program 가입 불필요.
 
 #### Firestore 스키마
@@ -206,12 +208,13 @@ messages/{messageId}/
   senderUid: "{uid}"
   receiverUid: "{partnerUid}"
   senderNickname: "박영민"                  # denormalized for receiver convenience
-  videoUrl: "gs://.../videos/{senderUid}/{messageId}.mp4"
+  videoId: "{videoId}"
+  videoUrl: "firestore-chunks://{senderUid}/{videoId}"
   durationMs: 2000
   mirrorPosition: { xRatio: 0.78, yRatio: 0.62 }   # 0.0~1.0 정규화 좌표
   status: "uploaded" | "seen"
   createdAt: serverTimestamp
-  expiresAt: serverTimestamp + 24h         # Firestore TTL 정책으로 자동 삭제
+  expiresAt: serverTimestamp + 24h         # 클라이언트 cleanup 기준
 
 invitations/{inviteId}/
   fromUid: "{senderUid}"
@@ -220,7 +223,23 @@ invitations/{inviteId}/
   fromNickname: "박영민"
   roomName: "박영민 ↔ 김나영"
   createdAt: serverTimestamp
-  expiresAt: serverTimestamp + 7d          # TTL 자동 삭제
+  expiresAt: serverTimestamp + 7d          # 클라이언트 cleanup 기준
+
+videoChunks/{videoId}/
+  ownerUid: "{senderUid}"
+  authorizedUids: ["{senderUid}", "{receiverUid}", ...]
+  chunkCount: 1..32
+  byteCount: 1..16777216
+  contentType: "video/mp4"
+  createdAt: serverTimestamp
+  expiresAt: now + 24h
+
+videoChunks/{videoId}/chunks/{index}/
+  ownerUid: "{senderUid}"
+  index: 0..31
+  data: "{base64 512KB raw chunk}"
+  createdAt: serverTimestamp
+  expiresAt: now + 24h
 ```
 
 #### Firestore 보안 규칙
@@ -266,39 +285,26 @@ service cloud.firestore {
 }
 ```
 
-#### Cloud Storage 보안 규칙
-```javascript
-rules_version = '2';
-service firebase.storage {
-  match /b/{bucket}/o {
-    match /videos/{senderUid}/{messageId} {
-      // 업로드: 본인만, 20MB 상한
-      allow write: if request.auth.uid == senderUid
-                   && request.resource.size < 20 * 1024 * 1024;
-      // 다운로드: 인증된 사용자 (메시지 문서 권한으로 한 번 더 게이팅)
-      allow read: if request.auth != null;
-    }
-  }
-}
-```
+#### 영상 청크 보안 규칙
+`firestore.rules`는 `videoChunks` manifest와 `chunks` 서브컬렉션을 별도로 검증한다. 업로드는 `ownerUid == request.auth.uid`, `authorizedUids` 포함, 32개 청크/16MB 이하, `video/mp4`만 허용한다. 읽기는 owner 또는 `authorizedUids` 멤버에게만 허용하고, 삭제는 만료 후 owner만 가능하다.
 
 #### 데이터 자동 삭제 (TTL/Lifecycle)
 | 데이터 | 보관 기간 | 삭제 방식 |
 |---|---|---|
-| Storage 영상 파일 | 24시간 | Firebase Storage Lifecycle Rule (`age > 1day → delete`) |
-| Firestore `messages` 문서 | 24시간 | Firestore TTL 정책 (`expiresAt` 필드) |
-| Firestore `invitations` | 7일 | Firestore TTL 정책 (`expiresAt` 필드) |
+| Firestore `videoChunks` 및 `chunks` | 24시간 | 앱 실행 시 owner 클라이언트가 best-effort 삭제 |
+| Firestore `messages` 문서 | 24시간 | 앱 실행 시 sender/receiver 클라이언트가 best-effort 삭제 |
+| Firestore `invitations` | 7일 | 앱 실행 시 receiver 클라이언트가 best-effort 삭제 |
 | 로컬 영상 (`~/Documents/Ping/`) | 무제한 | 사용자가 직접 관리 |
 
-> Cloud Functions 없이 Firebase 콘솔 설정만으로 자동 삭제됩니다.
+> Spark 요금제에서는 서버 TTL 없이 클라이언트 cleanup으로 처리합니다. 앱이 오랫동안 실행되지 않으면 서버 문서가 더 오래 남을 수 있습니다.
 
 #### 송신 플로우
 1. Option+P → 거울 등장 → 파트너 선택 → Enter.
 2. 2초 녹화 → 로컬 임시 파일 (`~/Documents/Ping/sent/{timestamp}_to_{nickname}.mp4`) 저장.
-3. Firebase Storage에 영상 업로드 (`videos/{myUid}/{messageId}.mp4`).
+3. Firestore `videoChunks`에 영상을 512KB base64 청크로 업로드.
 4. 업로드 완료 시 Firestore `messages` 문서 생성.
    - **단일 파트너**: 메시지 1개 생성.
-   - **전체 발송**: 영상은 한 번만 업로드, 각 룸별로 `messages` 문서를 N개 생성 (Storage 중복 없음).
+   - **전체 발송**: 영상은 한 번만 업로드, 각 룸별로 `messages` 문서를 N개 생성 (청크 중복 없음).
 5. 거울 윈도우 fade-out & 닫힘. **별도 안내 문구 표시 없음.**
 
 #### 수신 플로우
@@ -405,7 +411,7 @@ received/2026-05-17_14-32-18_from_박영민.mp4
 | AVFoundation | 카메라 캡처 및 비디오 인코딩 |
 | KeyboardShortcuts (SPM) | 글로벌 단축키 |
 | UserNotifications | macOS 로컬 알림 |
-| Firebase SDK (firebase-ios-sdk) | Auth + Firestore + Storage |
+| Firebase SDK (firebase-ios-sdk) | Auth + Firestore |
 | ServiceManagement (`SMAppService`) | 로그인 시 자동 시작 |
 
 ### 아키텍처 패턴
@@ -575,7 +581,7 @@ $ create-dmg --volname "Ping Installer" \
 
 ### Day 1 — 프로젝트 스캐폴딩 & 글래스 디자인 시스템
 - `project.yml` 작성 → XcodeGen 으로 `.xcodeproj` 생성.
-- Firebase 콘솔: 프로젝트 생성, Apple platforms 앱 등록, `GoogleService-Info.plist` 다운로드, Anonymous Auth 활성화, Firestore/Storage 활성화, TTL 정책 설정.
+- Firebase 콘솔: 프로젝트 생성, Apple platforms 앱 등록, `GoogleService-Info.plist` 다운로드, Anonymous Auth 활성화, Firestore 활성화.
 - SPM으로 `firebase-ios-sdk`, `KeyboardShortcuts` 추가.
 - `AppDelegate`에서 `NSStatusItem` 메뉴바 아이콘 표시.
 - **frontend-design 스킬**로 글래스모피즘 디자인 시스템 HTML mockup 생성 (거울/재생창/룸 카드/검색 결과/설정 패널).
@@ -593,9 +599,9 @@ $ create-dmg --volname "Ping Installer" \
 ### Day 3 — Firebase 백엔드 통합
 - `FirebaseClient`: Anonymous Auth → `users/{uid}` 문서 upsert.
 - `RoomService.createRoom`, `searchRooms(prefix:)`, `searchUsers(prefix:)`, `joinRoom(transaction)`, `sendInvitation`, `acceptInvitation`.
-- `MessageService.send(toRoomIds:, videoURL:, mirrorPosition:)` — Storage 업로드 후 룸별 메시지 문서 N개 생성.
+- `MessageService.send(toRoomIds:, videoURL:, mirrorPosition:)` — Firestore 청크 업로드 후 룸별 메시지 문서 N개 생성.
 - `MessageService.observeIncoming()` — AsyncStream으로 새 메시지 emit.
-- Firestore 보안 규칙 배포 (`firebase deploy --only firestore:rules,storage`).
+- Firestore 보안 규칙 배포 (`firebase deploy --only firestore:rules,firestore:indexes`).
 - CLI 통합 테스트: 두 anonymous 세션이 같은 룸에 가입 → 메시지 1건 송수신.
 
 ### Day 4 — 송수신 end-to-end + 로컬 알림 + 재생창
@@ -668,7 +674,7 @@ $ create-dmg --volname "Ping Installer" \
 
 ### 데이터 보호
 - 전송 암호화: Firebase 기본 TLS.
-- 서버 영상은 24시간 후 자동 삭제 (Storage Lifecycle + Firestore TTL).
+- 서버 영상은 만료값을 저장하고 앱 실행 시 best-effort cleanup으로 삭제.
 - 로컬 영상은 사용자 디바이스에서만 영구 저장.
 - Firebase 보안 규칙으로 송신자/수신자만 메시지 접근.
 - 검색은 닉네임/룸 이름 prefix만 허용 — 전체 사용자 디렉터리 노출 X.
@@ -709,9 +715,7 @@ $ create-dmg --volname "Ping Installer" \
 ### Firebase
 - [Firebase Apple Platforms Setup](https://firebase.google.com/docs/ios/setup)
 - [Firestore iOS Guide](https://firebase.google.com/docs/firestore/quickstart)
-- [Cloud Storage iOS Guide](https://firebase.google.com/docs/storage/ios/start)
 - [Firestore Security Rules](https://firebase.google.com/docs/firestore/security/get-started)
-- [Firestore TTL Policies](https://firebase.google.com/docs/firestore/ttl)
 
 ### 오픈소스
 - [KeyboardShortcuts (Sindre Sorhus)](https://github.com/sindresorhus/KeyboardShortcuts)

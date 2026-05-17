@@ -1,7 +1,7 @@
 import Foundation
 import FirebaseAuth
 import FirebaseCore
-import FirebaseFirestore
+@preconcurrency import FirebaseFirestore
 
 @MainActor
 final class FirebaseClient: ObservableObject {

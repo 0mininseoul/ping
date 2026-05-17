@@ -60,10 +60,6 @@ targets:
         product: FirebaseAuth
       - package: Firebase
         product: FirebaseFirestore
-      - package: Firebase
-        product: FirebaseFirestoreSwift
-      - package: Firebase
-        product: FirebaseStorage
       - package: KeyboardShortcuts
 
   PingTests:

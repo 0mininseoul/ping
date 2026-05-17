@@ -107,31 +107,33 @@ final class LocalNotificationCenter: NSObject, UNUserNotificationCenterDelegate 
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
-        let info = response.notification.request.content.userInfo
         let actionIdentifier = response.actionIdentifier
+        let info = response.notification.request.content.userInfo
+        let messageId = info["messageId"] as? String
+        let inviteId = info["inviteId"] as? String
 
         Task { @MainActor in
             switch actionIdentifier {
             case Action.viewMessage.rawValue, UNNotificationDefaultActionIdentifier:
-                if let messageId = info["messageId"] as? String {
+                if let messageId {
                     onViewMessage?(messageId)
-                } else if let inviteId = info["inviteId"] as? String {
+                } else if let inviteId {
                     _ = inviteId
                     onOpenInvitations?()
                 }
             case Action.acceptInvite.rawValue:
-                if let inviteId = info["inviteId"] as? String {
+                if let inviteId {
                     onAcceptInvitation?(inviteId)
                 }
             case Action.rejectInvite.rawValue:
-                if let inviteId = info["inviteId"] as? String {
+                if let inviteId {
                     onRejectInvitation?(inviteId)
                 }
             default:
                 break
             }
-            completionHandler()
         }
+        completionHandler()
     }
 
     nonisolated func userNotificationCenter(

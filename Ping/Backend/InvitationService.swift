@@ -1,4 +1,4 @@
-import FirebaseFirestore
+@preconcurrency import FirebaseFirestore
 import Foundation
 
 @MainActor
@@ -24,6 +24,7 @@ final class InvitationService {
                 do {
                     let listener = try db.collection("invitations")
                         .whereField("toUid", isEqualTo: uid)
+                        .whereField("expiresAt", isGreaterThan: Date())
                         .addSnapshotListener { snapshot, _ in
                             let invites = snapshot?.documents.compactMap { try? $0.data(as: Invitation.self) } ?? []
                             continuation.yield(invites)

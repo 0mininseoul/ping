@@ -6,7 +6,7 @@ final class PlaybackWindow: NSWindow {
     static let size = NSSize(width: 200, height: 200)
     var pingWindowId = UUID()
 
-    init(videoURL: URL, atScreenPoint origin: NSPoint, onFinish: @escaping () -> Void) {
+    init(videoURL: URL, atScreenPoint origin: NSPoint, onFinish: @escaping @MainActor @Sendable () -> Void) {
         super.init(
             contentRect: NSRect(origin: origin, size: Self.size),
             styleMask: [.borderless],
@@ -45,13 +45,15 @@ final class PlaybackWindow: NSWindow {
         }
     }
 
-    private func fadeOutAndClose(_ done: @escaping () -> Void) {
+    private func fadeOutAndClose(_ done: @escaping @MainActor @Sendable () -> Void) {
         NSAnimationContext.runAnimationGroup({ context in
             context.duration = 0.30
             animator().alphaValue = 0
-        }, completionHandler: {
-            self.orderOut(nil)
-            done()
+        }, completionHandler: { [weak self] in
+            Task { @MainActor in
+                self?.orderOut(nil)
+                done()
+            }
         })
     }
 }

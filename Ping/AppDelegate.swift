@@ -17,6 +17,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let roomService = RoomService()
     private let invitationService = InvitationService()
     private let storageService = StorageService()
+    private let cleanupService = CleanupService()
     private let appStartTime = Date()
     private let notifiedMessageIdsKey = "ping.notifications.notifiedMessageIds"
 
@@ -44,8 +45,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func setupStatusBar() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        item.button?.image = NSImage(systemSymbolName: "circle.dotted.circle", accessibilityDescription: "Ping")
-        item.button?.image?.isTemplate = true
+        let menuIcon = NSImage(named: "MenuBarIcon")
+            ?? NSImage(systemSymbolName: "circle.dotted.circle", accessibilityDescription: "Ping")
+        menuIcon?.isTemplate = true
+        item.button?.image = menuIcon
 
         let menu = NSMenu()
 
@@ -111,6 +114,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 try await userService.upsert(uid: uid, nickname: existing.nickname)
                 appState.currentUser = try await userService.get(uid: uid) ?? existing
                 startObservers(uid: uid)
+                runCleanup(uid: uid)
                 updateMenuPartner()
             } else {
                 showOnboarding(uid: uid)
@@ -298,6 +302,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     }
 
                     self.startObservers(uid: uid)
+                    self.runCleanup(uid: uid)
                     self.onboardingWindow?.close()
                     self.onboardingWindow = nil
                 } catch {
@@ -428,5 +433,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         var ids = Array(set)
         ids = Array(ids.suffix(300))
         UserDefaults.standard.set(ids, forKey: notifiedMessageIdsKey)
+    }
+
+    private func runCleanup(uid: String) {
+        Task { @MainActor in
+            do {
+                try await cleanupService.run(uid: uid)
+            } catch {
+                NSLog("Cleanup failed: \(error)")
+            }
+        }
     }
 }

@@ -1,4 +1,4 @@
-import FirebaseFirestore
+@preconcurrency import FirebaseFirestore
 import Foundation
 
 @MainActor
@@ -20,13 +20,18 @@ final class MessageService {
         guard !fullRooms.isEmpty else { throw PingError.noRecipients }
 
         let sharedVideoId = UUID().uuidString
+        let receiverUids = fullRooms.compactMap { room in
+            room.memberUids.first(where: { $0 != input.senderUid })
+        }
+        let expiresAt = Date().addingTimeInterval(24 * 60 * 60)
         let videoStoragePath = try await storage.uploadVideo(
             localURL: input.localVideoURL,
             senderUid: input.senderUid,
-            messageId: sharedVideoId
+            messageId: sharedVideoId,
+            authorizedUids: receiverUids,
+            expiresAt: expiresAt
         )
 
-        let expiresAt = Date().addingTimeInterval(24 * 60 * 60)
         let batch = try db.batch()
 
         for room in fullRooms {
@@ -41,6 +46,7 @@ final class MessageService {
                 "senderUid": input.senderUid,
                 "receiverUid": receiverUid,
                 "senderNickname": input.senderNickname,
+                "videoId": sharedVideoId,
                 "videoUrl": videoStoragePath,
                 "durationMs": 2000,
                 "mirrorPosition": [
@@ -67,6 +73,7 @@ final class MessageService {
                     let listener = try db.collection("messages")
                         .whereField("receiverUid", isEqualTo: uid)
                         .whereField("status", isEqualTo: MessageStatus.uploaded.rawValue)
+                        .whereField("expiresAt", isGreaterThan: Date())
                         .addSnapshotListener { snapshot, _ in
                             guard let changes = snapshot?.documentChanges else { return }
                             for change in changes where change.type == .added {

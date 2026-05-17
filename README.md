@@ -6,6 +6,8 @@
 
 이 앱에는 Firebase Admin SDK 비공개 키가 필요하지 않다. Firebase Console에서 Apple 앱을 Bundle ID `com.youngminpark.ping.Ping`로 등록한 뒤 `GoogleService-Info.plist`를 내려받아 `Resources/GoogleService-Info.plist`에 둔다. 이 파일은 git에 커밋되지 않는다.
 
+현재 Firebase 프로젝트가 Spark 요금제라 Firebase Storage와 Firestore TTL은 사용하지 않는다. 2초 영상은 Firestore의 `videoChunks` 문서/서브컬렉션에 512KB 단위로 나눠 저장한다. 메시지는 `videoId`로 해당 청크 manifest를 검증하며, 만료된 문서는 읽기 차단 후 앱 실행 시 클라이언트가 best-effort로 정리한다. `storage.rules`는 향후 Blaze 전환 전까지 전체 거부 상태로 보관하며 `firebase.json` 배포 대상에서는 제외한다.
+
 ## 설치
 
 1. `Ping-v0.1.0.dmg`를 더블클릭해 마운트한다.

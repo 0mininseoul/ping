@@ -3,7 +3,7 @@ import AVKit
 
 struct PlaybackView: NSViewRepresentable {
     let url: URL
-    let onFinish: () -> Void
+    let onFinish: @MainActor @Sendable () -> Void
 
     func makeNSView(context: Context) -> PlayerNSView {
         let view = PlayerNSView()
@@ -16,8 +16,7 @@ struct PlaybackView: NSViewRepresentable {
     final class PlayerNSView: NSView {
         private var player: AVPlayer?
         private var playerLayer: AVPlayerLayer?
-        private var observer: NSObjectProtocol?
-        private var onFinish: (() -> Void)?
+        nonisolated(unsafe) private var observer: NSObjectProtocol?
 
         override init(frame frameRect: NSRect) {
             super.init(frame: frameRect)
@@ -29,8 +28,7 @@ struct PlaybackView: NSViewRepresentable {
             setup()
         }
 
-        func configure(url: URL, onFinish: @escaping () -> Void) {
-            self.onFinish = onFinish
+        func configure(url: URL, onFinish: @escaping @MainActor @Sendable () -> Void) {
             let item = AVPlayerItem(url: url)
             let player = AVPlayer(playerItem: item)
             self.player = player
@@ -41,12 +39,15 @@ struct PlaybackView: NSViewRepresentable {
             self.layer?.addSublayer(layer)
             self.playerLayer = layer
 
+            let finish = onFinish
             observer = NotificationCenter.default.addObserver(
                 forName: .AVPlayerItemDidPlayToEndTime,
                 object: item,
                 queue: .main
-            ) { [weak self] _ in
-                self?.onFinish?()
+            ) { _ in
+                Task { @MainActor in
+                    finish()
+                }
             }
 
             player.play()

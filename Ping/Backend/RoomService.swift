@@ -1,4 +1,4 @@
-import FirebaseFirestore
+@preconcurrency import FirebaseFirestore
 import Foundation
 
 @MainActor
@@ -75,35 +75,20 @@ final class RoomService {
     func joinRoom(roomId: String, uid: String, nickname: String) async throws {
         let database = try db
         let roomRef = database.collection("rooms").document(roomId)
+        let snapshot = try await roomRef.getDocument()
+        let memberUids = snapshot.data()?["memberUids"] as? [String] ?? []
 
-        let didJoin = try await database.runTransaction { transaction, errorPointer -> Any? in
-            let snapshot: DocumentSnapshot
-            do {
-                snapshot = try transaction.getDocument(roomRef)
-            } catch {
-                errorPointer?.pointee = error as NSError
-                return nil
-            }
+        guard memberUids.count < 2 || memberUids.contains(uid) else {
+            throw PingError.roomUnavailable
+        }
 
-            guard var data = snapshot.data() else { return false }
-            var memberUids = data["memberUids"] as? [String] ?? []
-            guard memberUids.count < 2 || memberUids.contains(uid) else { return false }
-
-            if !memberUids.contains(uid) {
-                memberUids.append(uid)
-            }
-
-            var nicknames = data["memberNicknames"] as? [String: String] ?? [:]
-            nicknames[uid] = nickname
-            data["memberUids"] = memberUids
-            data["memberNicknames"] = nicknames
-            data["status"] = memberUids.count == 2 ? RoomStatus.full.rawValue : RoomStatus.open.rawValue
-
-            transaction.setData(data, forDocument: roomRef)
-            return true
-        } as? Bool ?? false
-
-        guard didJoin else { throw PingError.roomUnavailable }
+        if !memberUids.contains(uid) {
+            try await roomRef.updateData([
+                "memberUids": FieldValue.arrayUnion([uid]),
+                "memberNicknames.\(uid)": nickname,
+                "status": RoomStatus.full.rawValue
+            ])
+        }
 
         try await database.collection("users").document(uid).updateData([
             "rooms": FieldValue.arrayUnion([roomId]),
@@ -115,27 +100,11 @@ final class RoomService {
         let database = try db
         let roomRef = database.collection("rooms").document(roomId)
 
-        _ = try await database.runTransaction { transaction, errorPointer -> Any? in
-            let snapshot: DocumentSnapshot
-            do {
-                snapshot = try transaction.getDocument(roomRef)
-            } catch {
-                errorPointer?.pointee = error as NSError
-                return nil
-            }
-
-            guard var data = snapshot.data() else { return nil }
-            let memberUids = (data["memberUids"] as? [String] ?? []).filter { $0 != uid }
-            var nicknames = data["memberNicknames"] as? [String: String] ?? [:]
-            nicknames.removeValue(forKey: uid)
-
-            data["memberUids"] = memberUids
-            data["memberNicknames"] = nicknames
-            data["status"] = memberUids.count < 2 ? RoomStatus.open.rawValue : RoomStatus.full.rawValue
-
-            transaction.setData(data, forDocument: roomRef)
-            return nil
-        }
+        try await roomRef.updateData([
+            "memberUids": FieldValue.arrayRemove([uid]),
+            "memberNicknames.\(uid)": FieldValue.delete(),
+            "status": RoomStatus.open.rawValue
+        ])
 
         try await database.collection("users").document(uid).updateData([
             "rooms": FieldValue.arrayRemove([roomId])
