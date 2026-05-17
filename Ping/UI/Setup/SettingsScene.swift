@@ -3,6 +3,23 @@ import KeyboardShortcuts
 import ServiceManagement
 import SwiftUI
 
+@MainActor
+final class SettingsWindow: NSWindow {
+    init<Content: View>(rootView: Content) {
+        super.init(
+            contentRect: NSRect(x: 0, y: 0, width: 560, height: 400),
+            styleMask: [.titled, .closable, .miniaturizable],
+            backing: .buffered,
+            defer: false
+        )
+
+        title = "설정"
+        contentView = NSHostingView(rootView: rootView)
+        isReleasedWhenClosed = false
+        center()
+    }
+}
+
 struct SettingsView: View {
     @State private var selection: SettingsTab = .general
 
@@ -46,6 +63,9 @@ private struct GeneralSettingsView: View {
     @AppStorage(PingPreferenceKeys.notificationSound)
     private var notificationSound = PingNotificationSound.systemDefault.rawValue
 
+    @AppStorage(PingPreferenceKeys.appearanceMode)
+    private var appearanceMode = PingAppearanceMode.system.rawValue
+
     @State private var autoLaunchEnabled = Self.isAutoLaunchEnabled()
     @State private var autoLaunchStatusText = Self.autoLaunchStatusText()
     @State private var autoLaunchError: String?
@@ -56,68 +76,70 @@ private struct GeneralSettingsView: View {
 
     var body: some View {
         SettingsPane {
-            Form {
-                Section {
-                    Toggle("로그인 시 자동 시작", isOn: $autoLaunchEnabled)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    settingsGroup("앱") {
+                        settingRow(
+                            title: "로그인 시 자동 시작",
+                            subtitle: autoLaunchError ?? autoLaunchStatusText,
+                            subtitleColor: autoLaunchError == nil ? .secondary : .red
+                        ) {
+                            Toggle("", isOn: $autoLaunchEnabled)
+                                .labelsHidden()
+                        }
                         .onChange(of: autoLaunchEnabled) { _, newValue in
                             updateAutoLaunch(newValue)
                         }
+                    }
 
-                    Text(autoLaunchError ?? autoLaunchStatusText)
-                        .font(PingFont.caption)
-                        .foregroundStyle(autoLaunchError == nil ? Color.secondary : Color.red)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
+                    settingsGroup("알림과 화면") {
+                        settingRow(title: "알림 소리", subtitle: "수신 알림 배너에 사용할 소리입니다.") {
+                            Picker("알림 소리", selection: $notificationSound) {
+                                ForEach(PingNotificationSound.allCases) { sound in
+                                    Text(sound.title).tag(sound.rawValue)
+                                }
+                            }
+                            .labelsHidden()
+                            .pickerStyle(.segmented)
+                            .frame(width: 160)
+                        }
 
-                Section {
-                    HStack(alignment: .firstTextBaseline, spacing: 12) {
-                        Text("알림 소리")
-                            .frame(width: 96, alignment: .trailing)
-                            .foregroundStyle(.secondary)
+                        Divider()
+                            .opacity(0.45)
+                            .padding(.leading, 148)
 
-                        Picker("알림 소리", selection: $notificationSound) {
-                            ForEach(PingNotificationSound.allCases) { sound in
-                                Text(sound.title).tag(sound.rawValue)
+                        settingRow(title: "테마", subtitle: "메뉴 막대 단축키로도 바꿀 수 있습니다.") {
+                            Picker("테마", selection: $appearanceMode) {
+                                ForEach(PingAppearanceMode.allCases) { mode in
+                                    Text(mode.title).tag(mode.rawValue)
+                                }
+                            }
+                            .labelsHidden()
+                            .pickerStyle(.segmented)
+                            .frame(width: 220)
+                        }
+                    }
+
+                    settingsGroup("프로필") {
+                        settingRow(
+                            title: "닉네임",
+                            subtitle: nicknameHelperText,
+                            subtitleColor: nicknameError == nil ? .secondary : .red
+                        ) {
+                            HStack(spacing: 10) {
+                                TextField("닉네임", text: $nicknameDraft)
+                                    .textFieldStyle(.roundedBorder)
+                                    .onSubmit(saveNickname)
+                                    .disabled(appState.currentUser?.id == nil || isSavingNickname)
+                                    .frame(width: 220)
+
+                                Button("저장", action: saveNickname)
+                                    .disabled(!canSaveNickname)
                             }
                         }
-                        .labelsHidden()
-                        .pickerStyle(.segmented)
-                        .frame(width: 160)
-                    }
-                } footer: {
-                    Text("수신 알림 배너에 사용할 소리입니다.")
-                        .font(PingFont.caption)
-                }
-
-                Section {
-                    HStack(alignment: .firstTextBaseline, spacing: 12) {
-                        Text("닉네임")
-                            .frame(width: 96, alignment: .trailing)
-                            .foregroundStyle(.secondary)
-
-                        TextField("닉네임", text: $nicknameDraft)
-                            .textFieldStyle(.roundedBorder)
-                            .onSubmit(saveNickname)
-                            .disabled(appState.currentUser?.id == nil || isSavingNickname)
-
-                        Button("저장", action: saveNickname)
-                            .disabled(!canSaveNickname)
-                    }
-
-                    if let nicknameError {
-                        Text(nicknameError)
-                            .font(PingFont.caption)
-                            .foregroundStyle(Color.red)
-                    } else if let nicknameStatus {
-                        Text(nicknameStatus)
-                            .font(PingFont.caption)
-                            .foregroundStyle(.secondary)
-                    } else if appState.currentUser?.id == nil {
-                        Text("사용자 설정이 끝나면 닉네임을 바꿀 수 있습니다.")
-                            .font(PingFont.caption)
-                            .foregroundStyle(.secondary)
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .topLeading)
             }
         }
         .onAppear {
@@ -127,6 +149,77 @@ private struct GeneralSettingsView: View {
         .onChange(of: appState.currentUser?.nickname) { _, newValue in
             nicknameDraft = newValue ?? ""
         }
+        .onChange(of: appearanceMode) { _, newValue in
+            (PingAppearanceMode(rawValue: newValue) ?? .system).apply()
+        }
+    }
+
+    private var nicknameHelperText: String {
+        if let nicknameError {
+            return nicknameError
+        }
+
+        if let nicknameStatus {
+            return nicknameStatus
+        }
+
+        if appState.currentUser?.id == nil {
+            return "사용자 설정이 끝나면 닉네임을 바꿀 수 있습니다."
+        }
+
+        return "룸 검색과 초대 알림에 표시됩니다."
+    }
+
+    private func settingsGroup<Content: View>(
+        _ title: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(PingFont.caption)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 2)
+
+            VStack(spacing: 0) {
+                content()
+            }
+            .background {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(PingDesign.Surface.panelFill)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .strokeBorder(PingDesign.Surface.strongHairline.opacity(0.42), lineWidth: 0.8)
+                    }
+            }
+        }
+    }
+
+    private func settingRow<Control: View>(
+        title: String,
+        subtitle: String?,
+        subtitleColor: Color = .secondary,
+        @ViewBuilder control: () -> Control
+    ) -> some View {
+        HStack(alignment: .center, spacing: 16) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(PingFont.label)
+                    .foregroundStyle(Color.primary.opacity(0.88))
+
+                if let subtitle {
+                    Text(subtitle)
+                        .font(PingFont.caption)
+                        .foregroundStyle(subtitleColor)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            Spacer(minLength: 16)
+
+            control()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
     }
 
     private var canSaveNickname: Bool {
@@ -223,6 +316,7 @@ private struct HotkeySettingsView: View {
             Form {
                 Section {
                     KeyboardShortcuts.Recorder("Ping 호출", name: .pingTrigger)
+                    KeyboardShortcuts.Recorder("라이트/다크 전환", name: .appearanceToggle)
                 } footer: {
                     Text("전역 단축키는 저장 즉시 적용됩니다.")
                         .font(PingFont.caption)
@@ -278,16 +372,27 @@ private struct RoomSettingsView: View {
 }
 
 private struct StorageSettingsView: View {
-    @AppStorage(LocalArchive.localSaveEnabledKey)
-    private var localSaveEnabled = true
+    @AppStorage(LocalArchive.saveSentEnabledKey)
+    private var saveSentEnabled = true
+
+    @AppStorage(LocalArchive.saveReceivedEnabledKey)
+    private var saveReceivedEnabled = true
+
+    @AppStorage(LocalArchive.autoDeleteAfter30DaysKey)
+    private var autoDeleteAfter30Days = false
 
     var body: some View {
         SettingsPane {
             Form {
                 Section {
-                    Toggle("모든 영상 로컬 저장", isOn: $localSaveEnabled)
+                    Toggle("보낸 영상 저장", isOn: $saveSentEnabled)
+                    Toggle("받은 영상 저장", isOn: $saveReceivedEnabled)
+                    Toggle("30일 뒤 자동 삭제", isOn: $autoDeleteAfter30Days)
+                        .onChange(of: autoDeleteAfter30Days) { _, enabled in
+                            LocalArchive.autoDeleteAfter30Days = enabled
+                        }
                 } footer: {
-                    Text("끄면 전송과 재생에 필요한 임시 파일만 사용합니다.")
+                    Text("끄면 해당 방향의 영상은 전송과 재생에 필요한 임시 파일만 사용합니다. 자동 삭제는 sent, received 폴더의 30일 지난 MP4 파일을 정리합니다.")
                         .font(PingFont.caption)
                 }
 
@@ -316,6 +421,18 @@ private struct StorageSettingsView: View {
                 }
             }
         }
+        .onAppear {
+            LocalArchive.migrateLegacyPreferencesIfNeeded()
+            saveSentEnabled = LocalArchive.saveSentEnabled
+            saveReceivedEnabled = LocalArchive.saveReceivedEnabled
+            autoDeleteAfter30Days = LocalArchive.autoDeleteAfter30Days
+        }
+        .onChange(of: saveSentEnabled) { _, newValue in
+            LocalArchive.saveSentEnabled = newValue
+        }
+        .onChange(of: saveReceivedEnabled) { _, newValue in
+            LocalArchive.saveReceivedEnabled = newValue
+        }
     }
 
     private var displayPath: String {
@@ -334,10 +451,10 @@ private struct AboutSettingsView: View {
                     .font(PingFont.body)
                     .foregroundStyle(.secondary)
 
-                Link(destination: SettingsUserDefaults.githubURL) {
-                    Label("GitHub", systemImage: "chevron.left.forwardslash.chevron.right")
-                }
-                .buttonStyle(.link)
+                Text("개발자 : @0_min._.00")
+                    .font(PingFont.caption)
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
 
                 Text(SettingsUserDefaults.licenseDisplayText)
                     .font(PingFont.caption)
@@ -361,7 +478,6 @@ private struct AboutSettingsView: View {
 }
 
 private enum SettingsUserDefaults {
-    static let githubURL = URL(string: "https://github.com/youngminpark/ping")!
     static let licenseDisplayText = "라이선스: MIT"
 }
 

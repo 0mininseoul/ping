@@ -32,10 +32,7 @@ struct MirrorView: View {
             }
         }
         .frame(width: 200, height: 200)
-        .shadow(color: .black.opacity(0.25), radius: 24, x: 0, y: 16)
-        .task {
-            await camera.start()
-        }
+        .pingShadow(PingDesign.Shadow.mirror)
         .onAppear {
             selectedRoomId = appState.defaultRoom?.id
             installKeyMonitor()
@@ -104,6 +101,10 @@ struct MirrorView: View {
 
     private func installKeyMonitor() {
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            guard event.window is MirrorWindow else {
+                return event
+            }
+
             switch event.keyCode {
             case 36:
                 Task { await startRecording() }
@@ -164,7 +165,7 @@ struct MirrorView: View {
             }
             targets = [room]
         case .allPartners:
-            targets = appState.rooms.filter { $0.memberUids.count == 2 }
+            targets = appState.rooms.filter { $0.memberUids.count >= RoomLimits.minSendableMembers }
             guard !targets.isEmpty else {
                 viewModel.state = .failed("파트너 없음")
                 return
@@ -174,6 +175,7 @@ struct MirrorView: View {
         viewModel.state = .recording
         viewModel.countdown = 2
 
+        await camera.prepareAudioForRecording()
         let recorder = VideoRecorder(output: camera.movieOutput)
         let countdownTask = Task { @MainActor in
             try? await Task.sleep(for: .seconds(1))

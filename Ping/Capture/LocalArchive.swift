@@ -2,16 +2,72 @@ import Foundation
 
 enum LocalArchive {
     static let localSaveEnabledKey = "ping.storage.localSaveEnabled"
+    static let saveSentEnabledKey = "ping.storage.saveSentEnabled"
+    static let saveReceivedEnabledKey = "ping.storage.saveReceivedEnabled"
+    static let autoDeleteAfter30DaysKey = "ping.storage.autoDeleteAfter30Days"
+
+    private static let retentionInterval: TimeInterval = 30 * 24 * 60 * 60
 
     static var localSaveEnabled: Bool {
         get {
-            if UserDefaults.standard.object(forKey: localSaveEnabledKey) == nil {
-                return true
-            }
-            return UserDefaults.standard.bool(forKey: localSaveEnabledKey)
+            migrateLegacyPreferencesIfNeeded()
+            return saveSentEnabled || saveReceivedEnabled
         }
         set {
             UserDefaults.standard.set(newValue, forKey: localSaveEnabledKey)
+            UserDefaults.standard.set(newValue, forKey: saveSentEnabledKey)
+            UserDefaults.standard.set(newValue, forKey: saveReceivedEnabledKey)
+        }
+    }
+
+    static var saveSentEnabled: Bool {
+        get {
+            migrateLegacyPreferencesIfNeeded()
+            return UserDefaults.standard.bool(forKey: saveSentEnabledKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: saveSentEnabledKey)
+            UserDefaults.standard.set(saveSentEnabled || saveReceivedEnabled, forKey: localSaveEnabledKey)
+        }
+    }
+
+    static var saveReceivedEnabled: Bool {
+        get {
+            migrateLegacyPreferencesIfNeeded()
+            return UserDefaults.standard.bool(forKey: saveReceivedEnabledKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: saveReceivedEnabledKey)
+            UserDefaults.standard.set(saveSentEnabled || saveReceivedEnabled, forKey: localSaveEnabledKey)
+        }
+    }
+
+    static var autoDeleteAfter30Days: Bool {
+        get {
+            UserDefaults.standard.bool(forKey: autoDeleteAfter30DaysKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: autoDeleteAfter30DaysKey)
+            if newValue {
+                deleteExpiredFilesIfNeeded(force: true)
+            }
+        }
+    }
+
+    static func migrateLegacyPreferencesIfNeeded() {
+        let defaults = UserDefaults.standard
+        let legacyValue = defaults.object(forKey: localSaveEnabledKey) as? Bool ?? true
+
+        if defaults.object(forKey: saveSentEnabledKey) == nil {
+            defaults.set(legacyValue, forKey: saveSentEnabledKey)
+        }
+
+        if defaults.object(forKey: saveReceivedEnabledKey) == nil {
+            defaults.set(legacyValue, forKey: saveReceivedEnabledKey)
+        }
+
+        if defaults.object(forKey: localSaveEnabledKey) == nil {
+            defaults.set(legacyValue, forKey: localSaveEnabledKey)
         }
     }
 
@@ -29,10 +85,12 @@ enum LocalArchive {
     }
 
     static func ensureFolders() {
+        migrateLegacyPreferencesIfNeeded()
         let sent = documentsRoot().appendingPathComponent("sent", isDirectory: true)
         let received = documentsRoot().appendingPathComponent("received", isDirectory: true)
         try? FileManager.default.createDirectory(at: sent, withIntermediateDirectories: true)
         try? FileManager.default.createDirectory(at: received, withIntermediateDirectories: true)
+        deleteExpiredFilesIfNeeded()
     }
 
     static func sentURL(to nickname: String, date: Date = Date()) -> URL {
@@ -51,6 +109,34 @@ enum LocalArchive {
         documentsRoot()
             .appendingPathComponent("sent", isDirectory: true)
             .appendingPathComponent("\(timestamp(date))_to_all.mp4")
+    }
+
+    static func deleteExpiredFilesIfNeeded(now: Date = Date(), force: Bool = false) {
+        guard force || autoDeleteAfter30Days else { return }
+
+        let cutoff = now.addingTimeInterval(-retentionInterval)
+        let folders = [
+            documentsRoot().appendingPathComponent("sent", isDirectory: true),
+            documentsRoot().appendingPathComponent("received", isDirectory: true)
+        ]
+
+        for folder in folders {
+            guard let files = try? FileManager.default.contentsOfDirectory(
+                at: folder,
+                includingPropertiesForKeys: [.contentModificationDateKey, .creationDateKey],
+                options: [.skipsHiddenFiles]
+            ) else {
+                continue
+            }
+
+            for file in files where file.pathExtension.lowercased() == "mp4" {
+                let values = try? file.resourceValues(forKeys: [.contentModificationDateKey, .creationDateKey])
+                let date = values?.contentModificationDate ?? values?.creationDate ?? .distantFuture
+                if date < cutoff {
+                    try? FileManager.default.removeItem(at: file)
+                }
+            }
+        }
     }
 
     private static func timestamp(_ date: Date) -> String {

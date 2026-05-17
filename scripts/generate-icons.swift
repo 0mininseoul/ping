@@ -6,6 +6,7 @@ let sourceURL = root.appendingPathComponent("Resources/AppIcon.png")
 let assetRoot = root.appendingPathComponent("Ping/Assets.xcassets")
 let appIconSet = assetRoot.appendingPathComponent("AppIcon.appiconset")
 let menuSet = assetRoot.appendingPathComponent("MenuBarIcon.imageset")
+let headerSet = assetRoot.appendingPathComponent("HeaderLogo.imageset")
 
 guard let source = NSImage(contentsOf: sourceURL),
       let sourceCG = source.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
@@ -14,6 +15,7 @@ guard let source = NSImage(contentsOf: sourceURL),
 
 try FileManager.default.createDirectory(at: appIconSet, withIntermediateDirectories: true)
 try FileManager.default.createDirectory(at: menuSet, withIntermediateDirectories: true)
+try FileManager.default.createDirectory(at: headerSet, withIntermediateDirectories: true)
 
 func pngData(from image: NSImage, size: Int) -> Data {
     guard let rep = NSBitmapImageRep(
@@ -123,7 +125,7 @@ func roundedIconImage(from cgImage: CGImage) -> NSImage {
     return image
 }
 
-func writeMenuIcon(size: Int, filename: String) throws {
+func writeMenuBarLensIcon(size: Int, filename: String) throws {
     guard let rep = NSBitmapImageRep(
         bitmapDataPlanes: nil,
         pixelsWide: size,
@@ -142,26 +144,69 @@ func writeMenuIcon(size: Int, filename: String) throws {
     rep.size = NSSize(width: size, height: size)
     NSGraphicsContext.saveGraphicsState()
     NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+    NSGraphicsContext.current?.imageInterpolation = .high
     NSColor.clear.setFill()
     NSRect(x: 0, y: 0, width: size, height: size).fill()
 
     let scale = CGFloat(size) / 18
-    let center = NSPoint(x: CGFloat(size) / 2, y: CGFloat(size) / 2)
-    let radius = CGFloat(size) * 0.32
-    let stroke = max(2.0 * scale, 2)
-    NSColor.black.setStroke()
+    let fullSize = CGFloat(size)
+    let iconRect = NSRect(
+        x: 2.1 * scale,
+        y: 2.1 * scale,
+        width: fullSize - 4.2 * scale,
+        height: fullSize - 4.2 * scale
+    )
+    let center = NSPoint(x: fullSize / 2, y: fullSize / 2)
 
-    let outer = NSBezierPath()
-    outer.lineWidth = stroke
-    outer.lineCapStyle = .round
-    outer.appendArc(withCenter: center, radius: radius, startAngle: 22, endAngle: 326)
-    outer.stroke()
+    let lensOuterRing = NSBezierPath(ovalIn: iconRect)
+    let lensShadow = NSShadow()
+    lensShadow.shadowColor = NSColor(calibratedWhite: 0.0, alpha: 0.22)
+    lensShadow.shadowOffset = NSSize(width: 0, height: -0.55 * scale)
+    lensShadow.shadowBlurRadius = 1.5 * scale
+    lensShadow.set()
+    NSGradient(colors: [
+        NSColor(calibratedRed: 0.30, green: 0.36, blue: 0.39, alpha: 0.98),
+        NSColor(calibratedRed: 0.06, green: 0.08, blue: 0.10, alpha: 0.98)
+    ])?.draw(in: lensOuterRing, angle: 270)
+    NSShadow().set()
 
-    let accent = NSBezierPath()
-    accent.lineWidth = max(1.35 * scale, 1.5)
-    accent.lineCapStyle = .round
-    accent.appendArc(withCenter: center, radius: radius * 0.72, startAngle: 262, endAngle: 326)
-    accent.stroke()
+    NSColor(calibratedWhite: 1.0, alpha: 0.42).setStroke()
+    lensOuterRing.lineWidth = 0.72 * scale
+    lensOuterRing.stroke()
+
+    let innerRect = iconRect.insetBy(dx: 2.65 * scale, dy: 2.65 * scale)
+    let innerLens = NSBezierPath(ovalIn: innerRect)
+    NSGradient(colors: [
+        NSColor(calibratedRed: 0.11, green: 0.15, blue: 0.17, alpha: 1.0),
+        NSColor(calibratedRed: 0.02, green: 0.03, blue: 0.04, alpha: 1.0)
+    ])?.draw(in: innerLens, angle: 250)
+    NSColor(calibratedWhite: 0.75, alpha: 0.20).setStroke()
+    innerLens.lineWidth = 0.85 * scale
+    innerLens.stroke()
+
+    let upperHighlight = NSBezierPath()
+    upperHighlight.lineCapStyle = .round
+    upperHighlight.lineWidth = 0.85 * scale
+    upperHighlight.appendArc(
+        withCenter: center,
+        radius: 5.15 * scale,
+        startAngle: 54,
+        endAngle: 126
+    )
+    NSColor.white.withAlphaComponent(0.56).setStroke()
+    upperHighlight.stroke()
+
+    let blueCatchlight = NSBezierPath()
+    blueCatchlight.lineCapStyle = .round
+    blueCatchlight.lineWidth = 1.05 * scale
+    blueCatchlight.appendArc(
+        withCenter: center,
+        radius: 5.2 * scale,
+        startAngle: 286,
+        endAngle: 344
+    )
+    NSColor(calibratedRed: 0.24, green: 0.58, blue: 1.0, alpha: 0.94).setStroke()
+    blueCatchlight.stroke()
 
     NSGraphicsContext.restoreGraphicsState()
 
@@ -187,8 +232,10 @@ for (filename, size) in appImages {
         .write(to: appIconSet.appendingPathComponent(filename), options: .atomic)
 }
 
-try writeMenuIcon(size: 18, filename: "menubar-icon.png")
-try writeMenuIcon(size: 36, filename: "menubar-icon@2x.png")
+try writeMenuBarLensIcon(size: 18, filename: "menubar-icon.png")
+try writeMenuBarLensIcon(size: 36, filename: "menubar-icon@2x.png")
+try Data(contentsOf: sourceURL)
+    .write(to: headerSet.appendingPathComponent("header-logo.png"), options: .atomic)
 
 let appIconContents = """
 {
@@ -220,15 +267,25 @@ let menuContents = """
   "info" : {
     "author" : "xcode",
     "version" : 1
-  },
-  "properties" : {
-    "template-rendering-intent" : "template"
+  }
+}
+"""
+
+let headerContents = """
+{
+  "images" : [
+    { "filename" : "header-logo.png", "idiom" : "universal", "scale" : "1x" }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
   }
 }
 """
 
 try appIconContents.write(to: appIconSet.appendingPathComponent("Contents.json"), atomically: true, encoding: .utf8)
 try menuContents.write(to: menuSet.appendingPathComponent("Contents.json"), atomically: true, encoding: .utf8)
+try headerContents.write(to: headerSet.appendingPathComponent("Contents.json"), atomically: true, encoding: .utf8)
 
 let rootContents = """
 {

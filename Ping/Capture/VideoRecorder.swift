@@ -21,9 +21,15 @@ final class VideoRecorder: NSObject, AVCaptureFileOutputRecordingDelegate {
         movieOutput.maxRecordedDuration = CMTime(seconds: 2.0, preferredTimescale: 600)
         movieOutput.startRecording(to: tempURL, recordingDelegate: self)
 
-        return try await withCheckedThrowingContinuation { continuation in
+        let recordedURL: URL = try await withCheckedThrowingContinuation { continuation in
             self.continuation = continuation
         }
+
+        let croppedURL = try await VideoCropper.cropToSquare(inputURL: recordedURL)
+        if croppedURL != recordedURL {
+            try? FileManager.default.removeItem(at: recordedURL)
+        }
+        return croppedURL
     }
 
     nonisolated func fileOutput(

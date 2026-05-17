@@ -5,17 +5,26 @@ struct RoomListView: View {
     var roomService: RoomService
     var onLeave: ((Room) -> Void)?
     var onRename: (Room) -> Void
+    var onCopyInviteLink: (Room) -> Void
+    var onCreateRoom: () -> Void
+    var onFindRoom: () -> Void
 
     init(
         appState: AppState,
         roomService: RoomService,
         onLeave: ((Room) -> Void)? = nil,
-        onRename: @escaping (Room) -> Void = { _ in }
+        onRename: @escaping (Room) -> Void = { _ in },
+        onCopyInviteLink: @escaping (Room) -> Void = { _ in },
+        onCreateRoom: @escaping () -> Void = {},
+        onFindRoom: @escaping () -> Void = {}
     ) {
         self.appState = appState
         self.roomService = roomService
         self.onLeave = onLeave
         self.onRename = onRename
+        self.onCopyInviteLink = onCopyInviteLink
+        self.onCreateRoom = onCreateRoom
+        self.onFindRoom = onFindRoom
     }
 
     private let columns = [
@@ -29,9 +38,13 @@ struct RoomListView: View {
                 emptyState
                     .padding(24)
             } else {
-                LazyVGrid(columns: columns, spacing: 14) {
-                    ForEach(appState.rooms) { room in
-                        roomCard(room)
+                VStack(alignment: .leading, spacing: 14) {
+                    roomCountHeader
+
+                    LazyVGrid(columns: columns, spacing: 14) {
+                        ForEach(appState.rooms) { room in
+                            roomCard(room)
+                        }
                     }
                 }
                 .padding(20)
@@ -39,83 +52,139 @@ struct RoomListView: View {
         }
     }
 
-    private var emptyState: some View {
-        GlassPanel {
-            VStack(spacing: 12) {
-                Image(systemName: "person.2.slash")
-                    .font(.system(size: 32, weight: .semibold))
+    private var roomCountHeader: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("내 룸")
+                    .font(PingFont.title)
+
+                Text("\(appState.rooms.count)/\(RoomLimits.maxRoomsPerUser)개 사용 중")
+                    .font(PingFont.caption)
                     .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            GlassButton("룸 찾기", action: onFindRoom)
+
+            GlassButton("룸 만들기", isPrimary: true, action: onCreateRoom)
+                .disabled(!canCreateRoom)
+        }
+        .padding(.horizontal, 2)
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "person.2.slash")
+                .font(.system(size: 34, weight: .semibold))
+                .foregroundStyle(.secondary)
+
+            VStack(spacing: 7) {
                 Text("아직 룸이 없습니다")
                     .font(PingFont.title)
-                Text("룸 찾기에서 열린 룸에 참여하거나 사용자를 초대하세요.")
+                Text("새 룸을 만들거나 열린 룸에 참여하세요.")
                     .font(PingFont.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
-            .frame(maxWidth: .infinity)
-            .padding(28)
+
+            HStack(spacing: 10) {
+                GlassButton("룸 만들기", isPrimary: true, action: onCreateRoom)
+                    .disabled(!canCreateRoom)
+                GlassButton("룸 찾기", action: onFindRoom)
+            }
         }
+        .frame(maxWidth: .infinity)
+        .padding(34)
+        .background {
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .fill(PingDesign.Surface.rowFill)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 26, style: .continuous)
+                        .strokeBorder(PingDesign.Surface.strongHairline.opacity(0.52), lineWidth: 0.8)
+                }
+        }
+        .pingShadow(PingDesign.Shadow.panel)
     }
 
     private func roomCard(_ room: Room) -> some View {
-        GlassPanel {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack(alignment: .top, spacing: 8) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(room.name)
-                            .font(PingFont.title)
-                            .lineLimit(2)
-                            .minimumScaleFactor(0.82)
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 8) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(room.name)
+                        .font(PingFont.title)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.82)
 
-                        Text(partnerSummary(in: room))
-                            .font(PingFont.body)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    }
-
-                    Spacer(minLength: 6)
-
-                    statusBadge(for: room)
+                    Text(partnerSummary(in: room))
+                        .font(PingFont.body)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
                 }
 
-                Divider()
-                    .opacity(0.35)
+                Spacer(minLength: 6)
 
-                HStack(spacing: 8) {
-                    GlassButton("나가기") {
-                        leave(room)
+                statusBadge(for: room)
+            }
+
+            Divider()
+                .opacity(0.35)
+
+            HStack(spacing: 8) {
+                GlassButton("나가기") {
+                    leave(room)
+                }
+
+                Spacer()
+
+                if room.memberUids.count < RoomLimits.maxMembersPerRoom {
+                    GlassButton("링크 복사") {
+                        onCopyInviteLink(room)
                     }
+                }
 
-                    if isOwner(room) {
-                        Spacer()
-                        GlassButton("이름 변경") {
-                            onRename(room)
-                        }
+                if isOwner(room) {
+                    GlassButton("이름 변경") {
+                        onRename(room)
                     }
                 }
             }
-            .padding(14)
+        }
+        .padding(14)
+        .background {
+            roomCardBackground
         }
     }
 
     private func statusBadge(for room: Room) -> some View {
-        Text(room.status == .full ? "활성" : "대기")
+        let isFull = room.memberUids.count >= RoomLimits.maxMembersPerRoom
+        let isActive = room.memberUids.count >= RoomLimits.minSendableMembers
+        let color = isActive ? PingDesign.ColorToken.success : PingDesign.ColorToken.warning
+
+        return Text(isFull ? "가득 참" : (isActive ? "활성" : "대기"))
             .font(PingFont.caption)
-            .foregroundStyle(room.status == .full ? Color.green : Color.yellow)
+            .foregroundStyle(color)
             .lineLimit(1)
             .padding(.horizontal, 9)
             .padding(.vertical, 5)
             .background {
                 Capsule()
-                    .glassEffect()
+                    .fill(color.opacity(0.12))
                     .overlay {
                         Capsule()
-                            .strokeBorder(
-                                (room.status == .full ? Color.green : Color.yellow).opacity(0.45),
-                                lineWidth: 1
-                            )
+                            .strokeBorder(color.opacity(0.36), lineWidth: 1)
                     }
             }
+    }
+
+    private var roomCardBackground: some View {
+        RoundedRectangle(cornerRadius: 22, style: .continuous)
+            .fill(PingDesign.Surface.panelFill)
+            .overlay {
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .strokeBorder(PingDesign.Surface.strongHairline.opacity(0.50), lineWidth: 0.8)
+            }
+            .pingShadow(PingDesign.Shadow.panel)
     }
 
     private func partnerSummary(in room: Room) -> String {
@@ -123,11 +192,27 @@ struct RoomListView: View {
             return "사용자 정보를 불러오는 중"
         }
 
-        if room.status == .open || room.memberUids.count < 2 {
+        if room.memberUids.count < RoomLimits.minSendableMembers {
             return "상대 참여 대기 중"
         }
 
-        return room.memberNicknames.first(where: { $0.key != myUid })?.value ?? "알 수 없는 파트너"
+        let others = room.memberUids
+            .filter { $0 != myUid }
+            .compactMap { room.memberNicknames[$0] }
+
+        if others.isEmpty {
+            return "알 수 없는 파트너"
+        }
+
+        if others.count <= 2 {
+            return others.joined(separator: ", ")
+        }
+
+        return "\(others[0]), \(others[1]) 외 \(others.count - 2)명"
+    }
+
+    private var canCreateRoom: Bool {
+        appState.rooms.count < RoomLimits.maxRoomsPerUser
     }
 
     private func isOwner(_ room: Room) -> Bool {

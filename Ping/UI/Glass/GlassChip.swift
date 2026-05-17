@@ -28,9 +28,14 @@ struct GlassChip: View {
         .padding(.vertical, 5)
         .background {
             Capsule()
+                .fill(PingDesign.Surface.rowFill.opacity(isHover ? 0.95 : 0.78))
                 .glassEffect()
                 .overlay {
-                    Capsule().strokeBorder(Color.white.opacity(isHover ? 0.50 : 0.30), lineWidth: 1)
+                    Capsule()
+                        .strokeBorder(
+                            PingDesign.Surface.strongHairline.opacity(isHover ? 0.86 : 0.56),
+                            lineWidth: 0.8
+                        )
                 }
         }
         .animation(.easeInOut(duration: 0.15), value: isHover)

@@ -1,6 +1,6 @@
 # Ping — 실시간 2초 영상 메시지 macOS 앱 기획서 (v2.0)
 
-> 2026-05-17 구현 메모: 현재 Firebase 프로젝트 `gen-lang-client-0974295904`는 Spark 요금제입니다. 2024년 10월 30일 이후 Firebase Storage 기본 버킷은 Blaze 요금제가 필요하고, Firestore TTL deletes도 무료 한도에 포함되지 않습니다. MVP 구현은 Firebase Storage/Firestore TTL 대신 Firestore `videoChunks` 청크 저장과 클라이언트 best-effort cleanup을 사용합니다.
+> 2026-05-17 구현 메모: Firebase macOS Auth Keychain/provisioning 제약과 무료 비용 전제를 피하기 위해 MVP 백엔드는 Supabase Free로 전환했습니다. 현재 구현의 단일 진실 출처는 `supabase/migrations/20260517000100_create_ping_backend.sql`, `Ping/Backend/SupabaseClient.swift`, `Resources/Supabase.example.plist`입니다. 이 문서의 Firebase/Firestore 세부 내용은 초기 계획 기록으로만 취급합니다.
 
 ## 📋 프로젝트 개요
 

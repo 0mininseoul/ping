@@ -19,14 +19,14 @@ final class AppState: ObservableObject {
     }
 
     var defaultRoom: Room? {
-        let usableRooms = rooms.filter { $0.memberUids.count == 2 }
+        let usableRooms = rooms.filter { $0.memberUids.count >= RoomLimits.minSendableMembers }
         let candidates = usableRooms.isEmpty ? rooms : usableRooms
         guard let lastId = currentUser?.lastUsedRoomId else { return candidates.first }
         return candidates.first(where: { $0.id == lastId }) ?? candidates.first
     }
 
     func cycleToNextPartner(currentRoomId: String?) -> Room? {
-        let candidates = rooms.filter { $0.memberUids.count == 2 }
+        let candidates = rooms.filter { $0.memberUids.count >= RoomLimits.minSendableMembers }
         guard !candidates.isEmpty else { return nil }
         guard let currentRoomId,
               let index = candidates.firstIndex(where: { $0.id == currentRoomId }) else {
@@ -36,7 +36,7 @@ final class AppState: ObservableObject {
     }
 
     func selectPartner(at index: Int) -> Room? {
-        let candidates = rooms.filter { $0.memberUids.count == 2 }
+        let candidates = rooms.filter { $0.memberUids.count >= RoomLimits.minSendableMembers }
         guard index >= 1, index <= candidates.count else { return nil }
         return candidates[index - 1]
     }

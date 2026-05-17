@@ -19,9 +19,6 @@ settings:
     CODE_SIGN_IDENTITY: "-"
 
 packages:
-  Firebase:
-    url: https://github.com/firebase/firebase-ios-sdk
-    from: "11.0.0"
   KeyboardShortcuts:
     url: https://github.com/sindresorhus/KeyboardShortcuts
     from: "2.0.0"
@@ -31,27 +28,32 @@ targets:
     type: application
     platform: macOS
     deploymentTarget: "26.0"
+    settings:
+      base:
+        CODE_SIGN_ENTITLEMENTS: Ping.entitlements
+      configs:
+        Debug:
+          CODE_SIGN_ENTITLEMENTS: PingDebug.entitlements
+        Release:
+          CODE_SIGN_ENTITLEMENTS: Ping.entitlements
     sources:
       - path: Ping
     resources:
       - path: Resources
         optional: true
     postCompileScripts:
-      - name: Copy Firebase Config
-        basedOnDependencyAnalysis: false
+      - name: Copy Supabase Config
         script: |
           set -euo pipefail
 
-          CONFIG_PLIST="$SRCROOT/Resources/GoogleService-Info.plist"
-          DESTINATION="$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/GoogleService-Info.plist"
+          SRC="$PROJECT_DIR/Resources/Supabase.plist"
+          DST="$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/Supabase.plist"
 
-          if [ ! -f "$CONFIG_PLIST" ]; then
-            echo "error: Missing Resources/GoogleService-Info.plist. Download it from Firebase Console before building Ping."
-            exit 1
+          if [ -f "$SRC" ]; then
+            cp "$SRC" "$DST"
           fi
-
-          mkdir -p "$(dirname "$DESTINATION")"
-          cp "$CONFIG_PLIST" "$DESTINATION"
+        outputFiles:
+          - "$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Supabase.plist"
     info:
       path: Ping/Info.plist
       properties:
@@ -63,26 +65,123 @@ targets:
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         NSCameraUsageDescription: "Ping은 2초 영상 메시지 촬영을 위해 카메라를 사용합니다."
         NSMicrophoneUsageDescription: "Ping은 영상 메시지의 음성 녹음을 위해 마이크를 사용합니다."
-    entitlements:
-      path: Ping.entitlements
-      properties:
-        com.apple.security.app-sandbox: true
-        com.apple.security.device.camera: true
-        com.apple.security.device.microphone: true
-        com.apple.security.network.client: true
-        com.apple.security.files.user-selected.read-write: true
+        CFBundleURLTypes:
+          - CFBundleURLName: com.youngminpark.ping.invite
+            CFBundleURLSchemes:
+              - ping
     dependencies:
-      - package: Firebase
-        product: FirebaseAuth
-      - package: Firebase
-        product: FirebaseFirestore
       - package: KeyboardShortcuts
 
   PingTests:
     type: bundle.unit-test
     platform: macOS
     deploymentTarget: "26.0"
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_NAME: PingTests
+        PRODUCT_MODULE_NAME: PingTests
     sources:
       - path: PingTests
+    postCompileScripts:
+      - name: Copy Contract Test Fixtures
+        script: |
+          set -euo pipefail
+
+          DST="$TARGET_BUILD_DIR/$CONTENTS_FOLDER_PATH/Resources"
+          mkdir -p "$DST"
+
+          cp "$PROJECT_DIR/Ping/UI/Glass/GlassButton.swift" "$DST/GlassButton.swift"
+          cp "$PROJECT_DIR/Ping/UI/Glass/PingDesign.swift" "$DST/PingDesign.swift"
+          cp "$PROJECT_DIR/Ping/Capture/CameraManager.swift" "$DST/CameraManager.swift"
+          cp "$PROJECT_DIR/Ping/UI/Mirror/MirrorView.swift" "$DST/MirrorView.swift"
+          cp "$PROJECT_DIR/Ping/UI/Setup/PairingView.swift" "$DST/PairingView.swift"
+          cp "$PROJECT_DIR/Ping/UI/Setup/PairingViewModel.swift" "$DST/PairingViewModel.swift"
+          cp "$PROJECT_DIR/Ping/UI/Setup/RoomListView.swift" "$DST/RoomListView.swift"
+          cp "$PROJECT_DIR/Ping/UI/Setup/RoomManagerWindow.swift" "$DST/RoomManagerWindow.swift"
+          cp "$PROJECT_DIR/Ping/UI/Setup/RoomSearchView.swift" "$DST/RoomSearchView.swift"
+          cp "$PROJECT_DIR/Ping/UI/Setup/SettingsScene.swift" "$DST/SettingsScene.swift"
+          cp "$PROJECT_DIR/Ping/Hotkey/HotkeyManager.swift" "$DST/HotkeyManager.swift"
+          cp "$PROJECT_DIR/Ping/Core/UserPreferences.swift" "$DST/UserPreferences.swift"
+          cp "$PROJECT_DIR/Ping/Core/InviteLink.swift" "$DST/InviteLink.swift"
+          cp "$PROJECT_DIR/Ping/Core/AppState.swift" "$DST/AppState.swift"
+          cp "$PROJECT_DIR/Ping/Core/RoomLimits.swift" "$DST/RoomLimits.swift"
+          cp "$PROJECT_DIR/Ping/Capture/LocalArchive.swift" "$DST/LocalArchive.swift"
+          cp "$PROJECT_DIR/Ping/Capture/VideoRecorder.swift" "$DST/VideoRecorder.swift"
+          cp "$PROJECT_DIR/Ping/Capture/VideoCropper.swift" "$DST/VideoCropper.swift"
+          cp "$PROJECT_DIR/Ping/AppDelegate.swift" "$DST/AppDelegate.swift"
+          cp "$PROJECT_DIR/Ping/Backend/InvitationService.swift" "$DST/InvitationService.swift"
+          cp "$PROJECT_DIR/Ping/Backend/MessageService.swift" "$DST/MessageService.swift"
+          cp "$PROJECT_DIR/web/src/App.tsx" "$DST/App.tsx"
+          cp "$PROJECT_DIR/scripts/build-release.sh" "$DST/build-release.sh"
+          cp "$PROJECT_DIR/.gitignore" "$DST/.gitignore"
+          cp "$PROJECT_DIR/scripts/generate-icons.swift" "$DST/generate-icons.swift"
+          cp "$PROJECT_DIR/Ping.entitlements" "$DST/Ping.entitlements"
+          cp "$PROJECT_DIR/docs/DESIGN_SYSTEM.md" "$DST/DESIGN_SYSTEM.md"
+          cp "$PROJECT_DIR/supabase/migrations/20260517000100_create_ping_backend.sql" "$DST/20260517000100_create_ping_backend.sql"
+          cp "$PROJECT_DIR/supabase/migrations/20260518003000_room_capacity_limits.sql" "$DST/20260518003000_room_capacity_limits.sql"
+          cp "$PROJECT_DIR/project.yml" "$DST/project.yml"
+        inputFiles:
+          - "$(PROJECT_DIR)/Ping/UI/Glass/GlassButton.swift"
+          - "$(PROJECT_DIR)/Ping/UI/Glass/PingDesign.swift"
+          - "$(PROJECT_DIR)/Ping/Capture/CameraManager.swift"
+          - "$(PROJECT_DIR)/Ping/UI/Mirror/MirrorView.swift"
+          - "$(PROJECT_DIR)/Ping/UI/Setup/PairingView.swift"
+          - "$(PROJECT_DIR)/Ping/UI/Setup/PairingViewModel.swift"
+          - "$(PROJECT_DIR)/Ping/UI/Setup/RoomListView.swift"
+          - "$(PROJECT_DIR)/Ping/UI/Setup/RoomManagerWindow.swift"
+          - "$(PROJECT_DIR)/Ping/UI/Setup/RoomSearchView.swift"
+          - "$(PROJECT_DIR)/Ping/UI/Setup/SettingsScene.swift"
+          - "$(PROJECT_DIR)/Ping/Hotkey/HotkeyManager.swift"
+          - "$(PROJECT_DIR)/Ping/Core/UserPreferences.swift"
+          - "$(PROJECT_DIR)/Ping/Core/InviteLink.swift"
+          - "$(PROJECT_DIR)/Ping/Core/AppState.swift"
+          - "$(PROJECT_DIR)/Ping/Core/RoomLimits.swift"
+          - "$(PROJECT_DIR)/Ping/Capture/LocalArchive.swift"
+          - "$(PROJECT_DIR)/Ping/Capture/VideoRecorder.swift"
+          - "$(PROJECT_DIR)/Ping/Capture/VideoCropper.swift"
+          - "$(PROJECT_DIR)/Ping/AppDelegate.swift"
+          - "$(PROJECT_DIR)/Ping/Backend/InvitationService.swift"
+          - "$(PROJECT_DIR)/Ping/Backend/MessageService.swift"
+          - "$(PROJECT_DIR)/web/src/App.tsx"
+          - "$(PROJECT_DIR)/scripts/build-release.sh"
+          - "$(PROJECT_DIR)/.gitignore"
+          - "$(PROJECT_DIR)/scripts/generate-icons.swift"
+          - "$(PROJECT_DIR)/Ping.entitlements"
+          - "$(PROJECT_DIR)/docs/DESIGN_SYSTEM.md"
+          - "$(PROJECT_DIR)/supabase/migrations/20260517000100_create_ping_backend.sql"
+          - "$(PROJECT_DIR)/supabase/migrations/20260518003000_room_capacity_limits.sql"
+          - "$(PROJECT_DIR)/project.yml"
+        outputFiles:
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/GlassButton.swift"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/PingDesign.swift"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/CameraManager.swift"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/MirrorView.swift"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/PairingView.swift"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/PairingViewModel.swift"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/RoomListView.swift"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/RoomManagerWindow.swift"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/RoomSearchView.swift"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/SettingsScene.swift"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/HotkeyManager.swift"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/UserPreferences.swift"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/InviteLink.swift"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/AppState.swift"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/RoomLimits.swift"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/LocalArchive.swift"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/VideoRecorder.swift"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/VideoCropper.swift"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/AppDelegate.swift"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/InvitationService.swift"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/MessageService.swift"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/App.tsx"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/build-release.sh"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/.gitignore"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/generate-icons.swift"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/Ping.entitlements"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/DESIGN_SYSTEM.md"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/20260517000100_create_ping_backend.sql"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/20260518003000_room_capacity_limits.sql"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/project.yml"
     dependencies:
       - target: Ping

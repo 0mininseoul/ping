@@ -3,6 +3,11 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+if [ ! -f "Resources/Supabase.plist" ]; then
+  echo "Supabase.plist is required at Resources/Supabase.plist for release builds." >&2
+  exit 1
+fi
+
 swift scripts/generate-icons.swift
 xcodegen generate
 
@@ -14,6 +19,11 @@ xcodebuild \
   clean build
 
 APP="build/Build/Products/Release/Ping.app"
+
+if [ ! -f "$APP/Contents/Resources/Supabase.plist" ]; then
+  echo "Supabase.plist is required in the built app bundle." >&2
+  exit 1
+fi
 
 codesign --force --deep --sign - \
   --options runtime \
@@ -40,4 +50,8 @@ hdiutil create \
   -format UDZO \
   "dist/Ping-v$VERSION.dmg"
 
+mkdir -p web/public/downloads
+cp "dist/Ping-v$VERSION.dmg" "web/public/downloads/Ping-v$VERSION.dmg"
+
 echo "Built dist/Ping-v$VERSION.dmg"
+echo "Copied web/public/downloads/Ping-v$VERSION.dmg"

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>SUPABASE_URL</key>
+	<string>https://YOUR_PROJECT_REF.supabase.co</string>
+	<key>SUPABASE_ANON_KEY</key>
+	<string>YOUR_SUPABASE_ANON_KEY</string>
+	<key>PING_INVITE_BASE_URL</key>
+	<string>https://ping-0mininseoul.vercel.app</string>
+</dict>
+</plist>

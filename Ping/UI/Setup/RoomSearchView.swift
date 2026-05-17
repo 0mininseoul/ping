@@ -91,23 +91,42 @@ final class RoomSearchViewModel: ObservableObject {
     }
 }
 
+enum RoomSearchTab: Hashable {
+    case rooms
+    case users
+}
+
 struct RoomSearchView: View {
     @ObservedObject var viewModel: RoomSearchViewModel
     @ObservedObject var appState: AppState
     var onJoinRoom: (Room) -> Void
     var onInviteUser: (PingUser) -> Void
+    var onJoinInviteLink: (String) -> Void
 
-    @State private var selectedTab: SearchTab = .rooms
+    @State private var selectedTab: RoomSearchTab
+    @State private var inviteLinkText = ""
     @FocusState private var searchFocused: Bool
 
-    private enum SearchTab: Hashable {
-        case rooms
-        case users
+    init(
+        viewModel: RoomSearchViewModel,
+        appState: AppState,
+        initialTab: RoomSearchTab = .rooms,
+        onJoinRoom: @escaping (Room) -> Void,
+        onInviteUser: @escaping (PingUser) -> Void,
+        onJoinInviteLink: @escaping (String) -> Void
+    ) {
+        self.viewModel = viewModel
+        self.appState = appState
+        self.onJoinRoom = onJoinRoom
+        self.onInviteUser = onInviteUser
+        self.onJoinInviteLink = onJoinInviteLink
+        _selectedTab = State(initialValue: initialTab)
     }
 
     var body: some View {
         VStack(spacing: 14) {
             searchField
+            inviteLinkJoinField
             tabPicker
 
             if let error = viewModel.errorMessage {
@@ -126,31 +145,63 @@ struct RoomSearchView: View {
         }
     }
 
-    private var searchField: some View {
-        GlassPanel {
-            HStack(spacing: 10) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(.secondary)
-                TextField("룸 이름 또는 닉네임 검색", text: $viewModel.query)
-                    .textFieldStyle(.plain)
-                    .font(PingFont.body)
-                    .focused($searchFocused)
-                    .onSubmit { viewModel.searchNow() }
-                if viewModel.isSearching {
-                    ProgressView()
-                        .controlSize(.small)
-                }
+    private var inviteLinkJoinField: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "link")
+                .foregroundStyle(.secondary)
+            TextField("초대 링크 또는 코드", text: $inviteLinkText)
+                .textFieldStyle(.plain)
+                .font(PingFont.body)
+                .onSubmit(joinInviteLink)
+
+            GlassButton("초대 링크로 참여", isPrimary: PingInviteLink.token(from: inviteLinkText) != nil) {
+                joinInviteLink()
             }
-            .padding(12)
+            .disabled(PingInviteLink.token(from: inviteLinkText) == nil)
+            .opacity(PingInviteLink.token(from: inviteLinkText) == nil ? 0.55 : 1)
+        }
+        .padding(12)
+        .background {
+            searchSurface(isFocused: false)
+        }
+    }
+
+    private func joinInviteLink() {
+        guard let token = PingInviteLink.token(from: inviteLinkText) else {
+            viewModel.errorMessage = "초대 링크나 초대 코드를 확인해 주세요."
+            return
+        }
+
+        viewModel.errorMessage = nil
+        onJoinInviteLink(token)
+    }
+
+    private var searchField: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+            TextField("룸 이름 또는 닉네임 검색", text: $viewModel.query)
+                .textFieldStyle(.plain)
+                .font(PingFont.body)
+                .focused($searchFocused)
+                .onSubmit { viewModel.searchNow() }
+            if viewModel.isSearching {
+                ProgressView()
+                    .controlSize(.small)
+            }
+        }
+        .padding(12)
+        .background {
+            searchSurface(isFocused: searchFocused)
         }
     }
 
     private var tabPicker: some View {
         Picker("", selection: $selectedTab) {
             Text("룸 \(viewModel.roomResults.count)")
-                .tag(SearchTab.rooms)
+                .tag(RoomSearchTab.rooms)
             Text("사용자 \(viewModel.userResults.count)")
-                .tag(SearchTab.users)
+                .tag(RoomSearchTab.users)
         }
         .pickerStyle(.segmented)
     }
@@ -184,62 +235,64 @@ struct RoomSearchView: View {
     private func roomResult(_ room: Room) -> some View {
         let alreadyJoined = isCurrentUserMember(of: room)
 
-        return GlassPanel {
-            HStack(spacing: 12) {
-                Image(systemName: "person.2.fill")
-                    .font(.system(size: 18, weight: .semibold))
+        return HStack(spacing: 12) {
+            Image(systemName: "person.2.fill")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: 28)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(room.name)
+                    .font(PingFont.body)
+                    .lineLimit(1)
+                Text("방장: \(ownerName(for: room))")
+                    .font(PingFont.caption)
                     .foregroundStyle(.secondary)
-                    .frame(width: 28)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(room.name)
-                        .font(PingFont.body)
-                        .lineLimit(1)
-                    Text("방장: \(ownerName(for: room))")
-                        .font(PingFont.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-
-                Spacer()
-
-                GlassButton(alreadyJoined ? "내 룸" : "참여 요청", isPrimary: !alreadyJoined) {
-                    guard !alreadyJoined else { return }
-                    onJoinRoom(room)
-                }
-                .disabled(alreadyJoined)
-                .opacity(alreadyJoined ? 0.55 : 1)
+                    .lineLimit(1)
             }
-            .padding(12)
+
+            Spacer()
+
+            GlassButton(alreadyJoined ? "내 룸" : "참여 요청", isPrimary: !alreadyJoined) {
+                guard !alreadyJoined else { return }
+                onJoinRoom(room)
+            }
+            .disabled(alreadyJoined)
+            .opacity(alreadyJoined ? 0.55 : 1)
+        }
+        .padding(12)
+        .background {
+            resultSurface
         }
     }
 
     private func userResult(_ user: PingUser) -> some View {
-        GlassPanel {
-            HStack(spacing: 12) {
-                Image(systemName: "person.crop.circle.fill")
-                    .font(.system(size: 20, weight: .semibold))
+        HStack(spacing: 12) {
+            Image(systemName: "person.crop.circle.fill")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: 28)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(user.nickname)
+                    .font(PingFont.body)
+                    .lineLimit(1)
+                Text(user.rooms.isEmpty ? "참여 중인 룸 없음" : "룸 \(user.rooms.count)개")
+                    .font(PingFont.caption)
                     .foregroundStyle(.secondary)
-                    .frame(width: 28)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(user.nickname)
-                        .font(PingFont.body)
-                        .lineLimit(1)
-                    Text(user.rooms.isEmpty ? "참여 중인 룸 없음" : "룸 \(user.rooms.count)개")
-                        .font(PingFont.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-
-                GlassButton("초대", isPrimary: true) {
-                    onInviteUser(user)
-                }
-                .disabled(user.id == nil)
-                .opacity(user.id == nil ? 0.55 : 1)
             }
-            .padding(12)
+
+            Spacer()
+
+            GlassButton("초대", isPrimary: true) {
+                onInviteUser(user)
+            }
+            .disabled(user.id == nil)
+            .opacity(user.id == nil ? 0.55 : 1)
+        }
+        .padding(12)
+        .background {
+            resultSurface
         }
     }
 
@@ -263,5 +316,30 @@ struct RoomSearchView: View {
 
     private func ownerName(for room: Room) -> String {
         room.memberNicknames[room.ownerUid] ?? "알 수 없음"
+    }
+
+    private func searchSurface(isFocused: Bool) -> some View {
+        RoundedRectangle(cornerRadius: 22, style: .continuous)
+            .fill(isFocused ? PingDesign.Surface.inputFieldFocusedFill : PingDesign.Surface.inputFieldFill)
+            .overlay {
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .strokeBorder(
+                        isFocused
+                            ? PingDesign.ColorToken.accent.opacity(0.45)
+                            : PingDesign.Surface.strongHairline.opacity(0.50),
+                        lineWidth: isFocused ? 1.1 : 0.8
+                    )
+            }
+            .pingShadow(PingDesign.Shadow.control)
+    }
+
+    private var resultSurface: some View {
+        RoundedRectangle(cornerRadius: 18, style: .continuous)
+            .fill(PingDesign.Surface.panelFill)
+            .overlay {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .strokeBorder(PingDesign.Surface.strongHairline.opacity(0.45), lineWidth: 0.8)
+            }
+            .pingShadow(PingDesign.Shadow.panel)
     }
 }

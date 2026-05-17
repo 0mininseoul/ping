@@ -1,5 +1,4 @@
 import Foundation
-@preconcurrency import FirebaseFirestore
 
 struct MirrorPosition: Codable, Equatable, Hashable {
     var xRatio: Double
@@ -7,12 +6,21 @@ struct MirrorPosition: Codable, Equatable, Hashable {
 }
 
 struct PingUser: Codable, Identifiable, Hashable {
-    @DocumentID var id: String?
+    var id: String?
     var nickname: String
     var searchableNickname: String
     var rooms: [String]
     var lastUsedRoomId: String?
-    @ServerTimestamp var createdAt: Date?
+    var createdAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case nickname
+        case searchableNickname = "searchable_nickname"
+        case rooms
+        case lastUsedRoomId = "last_used_room_id"
+        case createdAt = "created_at"
+    }
 
     init(
         id: String? = nil,
@@ -32,14 +40,25 @@ struct PingUser: Codable, Identifiable, Hashable {
 }
 
 struct Room: Codable, Identifiable, Hashable {
-    @DocumentID var id: String?
+    var id: String?
     var name: String
     var searchableName: String
     var ownerUid: String
     var memberUids: [String]
     var memberNicknames: [String: String]
     var status: RoomStatus
-    @ServerTimestamp var createdAt: Date?
+    var createdAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case searchableName = "searchable_name"
+        case ownerUid = "owner_uid"
+        case memberUids = "member_uids"
+        case memberNicknames = "member_nicknames"
+        case status
+        case createdAt = "created_at"
+    }
 
     init(
         id: String? = nil,
@@ -68,7 +87,7 @@ enum RoomStatus: String, Codable, Hashable {
 }
 
 struct VideoMessage: Codable, Identifiable, Hashable {
-    @DocumentID var id: String?
+    var id: String?
     var roomId: String
     var senderUid: String
     var receiverUid: String
@@ -78,8 +97,23 @@ struct VideoMessage: Codable, Identifiable, Hashable {
     var durationMs: Int
     var mirrorPosition: MirrorPosition
     var status: MessageStatus
-    @ServerTimestamp var createdAt: Date?
+    var createdAt: Date?
     var expiresAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case roomId = "room_id"
+        case senderUid = "sender_uid"
+        case receiverUid = "receiver_uid"
+        case senderNickname = "sender_nickname"
+        case videoId = "video_id"
+        case videoUrl = "video_url"
+        case durationMs = "duration_ms"
+        case mirrorPosition = "mirror_position"
+        case status
+        case createdAt = "created_at"
+        case expiresAt = "expires_at"
+    }
 }
 
 enum MessageStatus: String, Codable, Hashable {
@@ -88,12 +122,41 @@ enum MessageStatus: String, Codable, Hashable {
 }
 
 struct Invitation: Codable, Identifiable, Hashable {
-    @DocumentID var id: String?
+    var id: String?
     var fromUid: String
     var toUid: String
     var roomId: String
     var fromNickname: String
     var roomName: String
-    @ServerTimestamp var createdAt: Date?
+    var createdAt: Date?
     var expiresAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case fromUid = "from_uid"
+        case toUid = "to_uid"
+        case roomId = "room_id"
+        case fromNickname = "from_nickname"
+        case roomName = "room_name"
+        case createdAt = "created_at"
+        case expiresAt = "expires_at"
+    }
+}
+
+struct InviteLink: Codable, Identifiable, Hashable {
+    var token: String
+    var roomId: String
+    var roomName: String
+    var inviterNickname: String
+    var expiresAt: Date
+
+    var id: String { token }
+
+    enum CodingKeys: String, CodingKey {
+        case token
+        case roomId = "room_id"
+        case roomName = "room_name"
+        case inviterNickname = "inviter_nickname"
+        case expiresAt = "expires_at"
+    }
 }
