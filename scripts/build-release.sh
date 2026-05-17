@@ -3,6 +3,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+swift scripts/generate-icons.swift
 xcodegen generate
 
 xcodebuild \
@@ -24,15 +25,19 @@ codesign --verify --deep --strict --verbose=2 "$APP"
 VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APP/Contents/Info.plist")
 
 mkdir -p dist
-rm -f "dist/Ping-v$VERSION.dmg"
+DMG_ROOT="dist/dmg-root"
 
-create-dmg \
-  --volname "Ping Installer" \
-  --window-size 500 300 \
-  --icon-size 100 \
-  --icon "Ping.app" 125 150 \
-  --app-drop-link 375 150 \
-  "dist/Ping-v$VERSION.dmg" \
-  "$APP"
+rm -rf "$DMG_ROOT" "dist/Ping-v$VERSION.dmg"
+mkdir -p "$DMG_ROOT"
+
+ditto "$APP" "$DMG_ROOT/Ping.app"
+ln -s /Applications "$DMG_ROOT/Applications"
+
+hdiutil create \
+  -volname "Ping Installer" \
+  -srcfolder "$DMG_ROOT" \
+  -ov \
+  -format UDZO \
+  "dist/Ping-v$VERSION.dmg"
 
 echo "Built dist/Ping-v$VERSION.dmg"

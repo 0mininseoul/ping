@@ -36,6 +36,22 @@ targets:
     resources:
       - path: Resources
         optional: true
+    postCompileScripts:
+      - name: Copy Firebase Config
+        basedOnDependencyAnalysis: false
+        script: |
+          set -euo pipefail
+
+          CONFIG_PLIST="$SRCROOT/Resources/GoogleService-Info.plist"
+          DESTINATION="$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/GoogleService-Info.plist"
+
+          if [ ! -f "$CONFIG_PLIST" ]; then
+            echo "error: Missing Resources/GoogleService-Info.plist. Download it from Firebase Console before building Ping."
+            exit 1
+          fi
+
+          mkdir -p "$(dirname "$DESTINATION")"
+          cp "$CONFIG_PLIST" "$DESTINATION"
     info:
       path: Ping/Info.plist
       properties:

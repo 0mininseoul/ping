@@ -12,8 +12,24 @@ final class CameraManager: ObservableObject {
 
     private var configured = false
 
+    func start() async {
+        if configured {
+            if !session.isRunning {
+                session.startRunning()
+            }
+            return
+        }
+
+        await configure()
+    }
+
     func configure() async {
-        guard !configured else { return }
+        guard !configured else {
+            if !session.isRunning {
+                session.startRunning()
+            }
+            return
+        }
 
         let cameraGranted = await AVCaptureDevice.requestAccess(for: .video)
         guard cameraGranted else {

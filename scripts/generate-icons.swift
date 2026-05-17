@@ -94,11 +94,9 @@ func roundedIconImage(from cgImage: CGImage) -> NSImage {
         for x in 0..<width {
             let px = Double(x) + 0.5
             let py = Double(y) + 0.5
-            let dx = max(rect.minX - px, 0, px - rect.maxX)
-            let dy = max(rect.minY - py, 0, py - rect.maxY)
-            let cornerX = min(abs(px - rect.midX) - rect.width / 2 + radius, 0)
-            let cornerY = min(abs(py - rect.midY) - rect.height / 2 + radius, 0)
-            let outsideDistance = hypot(max(dx, -cornerX), max(dy, -cornerY)) - radius
+            let qx = abs(px - rect.midX) - rect.width / 2 + radius
+            let qy = abs(py - rect.midY) - rect.height / 2 + radius
+            let outsideDistance = hypot(max(qx, 0), max(qy, 0)) + min(max(qx, qy), 0) - radius
             let alpha: UInt8
 
             if outsideDistance <= -smoothing {

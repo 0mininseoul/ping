@@ -32,7 +32,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setupNotifications()
         setupHotkey()
 
-        Task { await camera.configure() }
         Task { await bootstrapFirebase() }
     }
 
@@ -168,8 +167,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func toggleMirror() {
         if let window = mirrorWindow, window.isVisible {
-            window.savePosition()
-            window.orderOut(nil)
+            closeMirrorWindow()
             return
         }
 
@@ -181,8 +179,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 appState: appState,
                 windowOrigin: { [weak window] in window?.frame.origin ?? .zero },
                 onClose: { [weak self] in
-                    self?.mirrorWindow?.savePosition()
-                    self?.mirrorWindow?.orderOut(nil)
+                    self?.closeMirrorWindow()
                 },
                 onSend: { [weak self] tempURL, position, targets in
                     try await self?.sendVideo(tempURL: tempURL, position: position, targets: targets)
@@ -197,6 +194,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         mirrorViewModel.reset()
         mirrorWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func closeMirrorWindow() {
+        mirrorWindow?.savePosition()
+        mirrorWindow?.orderOut(nil)
+        camera.stop()
     }
 
     private func sendVideo(tempURL: URL, position: MirrorPosition, targets: [Room]) async throws {

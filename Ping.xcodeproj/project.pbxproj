@@ -316,6 +316,7 @@
 			buildConfigurationList = 278B05766CC8B8E71A6B2837 /* Build configuration list for PBXNativeTarget "Ping" */;
 			buildPhases = (
 				C255A03EFDA6B3F9699390D9 /* Sources */,
+				A45EFCCA1B5A004A087384DD /* Copy Firebase Config */,
 				0FD94EF7FCF9100B594CBECD /* Resources */,
 				9D05FB8D8D7F0319FEB6F66B /* Frameworks */,
 			);
@@ -384,6 +385,28 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		A45EFCCA1B5A004A087384DD /* Copy Firebase Config */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Copy Firebase Config";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -euo pipefail\n\nCONFIG_PLIST=\"$SRCROOT/Resources/GoogleService-Info.plist\"\nDESTINATION=\"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/GoogleService-Info.plist\"\n\nif [ ! -f \"$CONFIG_PLIST\" ]; then\n  echo \"error: Missing Resources/GoogleService-Info.plist. Download it from Firebase Console before building Ping.\"\n  exit 1\nfi\n\nmkdir -p \"$(dirname \"$DESTINATION\")\"\ncp \"$CONFIG_PLIST\" \"$DESTINATION\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		2E9C98A9747EABEAAB8E9E48 /* Sources */ = {

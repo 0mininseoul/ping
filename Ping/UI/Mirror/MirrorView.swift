@@ -33,6 +33,9 @@ struct MirrorView: View {
         }
         .frame(width: 200, height: 200)
         .shadow(color: .black.opacity(0.25), radius: 24, x: 0, y: 16)
+        .task {
+            await camera.start()
+        }
         .onAppear {
             selectedRoomId = appState.defaultRoom?.id
             installKeyMonitor()
@@ -66,7 +69,16 @@ struct MirrorView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 18)
         default:
-            EmptyView()
+            if !camera.isReady {
+                Text(camera.lastError ?? "카메라 준비 중")
+                    .font(PingFont.caption)
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.7)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 18)
+                    .padding(.top, 18)
+            }
         }
     }
 
@@ -133,6 +145,14 @@ struct MirrorView: View {
             viewModel.reset()
         case .recording, .uploading:
             return
+        }
+
+        if !camera.isReady {
+            await camera.start()
+            if !camera.isReady {
+                viewModel.state = .failed(camera.lastError ?? "카메라 준비 중")
+                return
+            }
         }
 
         let targets: [Room]
