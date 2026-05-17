@@ -91,9 +91,9 @@ export default function FeaturesGrid() {
 function KeycapVisual() {
   return (
     <div className="grid aspect-[4/3] place-items-center bg-[#0c0e0a]">
-      <div className="flex items-center gap-3">
+      <div className="flex items-end gap-3">
         <Keycap label="⌥" sub="Option" />
-        <span className="text-2xl text-subtle">+</span>
+        <span className="pb-4 text-2xl text-subtle">+</span>
         <Keycap label="P" />
       </div>
     </div>
@@ -102,16 +102,13 @@ function KeycapVisual() {
 
 function Keycap({ label, sub }: { label: string; sub?: string }) {
   return (
-    <div
-      className="grid h-16 w-16 place-items-center rounded-md border border-border bg-white/[0.05] font-mono text-2xl font-bold text-fg shadow-[inset_0_-2px_0_rgba(0,0,0,0.4),0_4px_0_rgba(0,0,0,0.4)]"
-      aria-label={sub ?? label}
-    >
-      <span>{label}</span>
-      {sub ? (
-        <span className="absolute mt-12 text-[10px] font-medium text-subtle">
-          {sub}
-        </span>
-      ) : null}
+    <div className="flex flex-col items-center gap-1.5" aria-label={sub ?? label}>
+      <span className="grid h-16 w-16 place-items-center rounded-md border border-border bg-white/[0.05] font-mono text-2xl font-bold text-fg shadow-[inset_0_-2px_0_rgba(0,0,0,0.4),0_4px_0_rgba(0,0,0,0.4)]">
+        {label}
+      </span>
+      <span className="h-3 text-[10px] font-medium text-subtle">
+        {sub ?? ""}
+      </span>
     </div>
   );
 }
