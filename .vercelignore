@@ -1,0 +1,7 @@
+*
+!web/
+!web/**
+web/.DS_Store
+web/.vercel/**
+web/dist/**
+web/node_modules/**
