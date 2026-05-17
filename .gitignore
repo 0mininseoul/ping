@@ -28,6 +28,9 @@ Resources/Supabase.plist
 supabase/.branches/
 supabase/.temp/
 
+# Vercel
+.vercel/
+
 # DMG artifacts
 *.dmg
 !web/public/downloads/*.dmg
