@@ -20,10 +20,10 @@ export default function FinalCTA({ downloadUrl, version }: FinalCTAProps) {
             style={{ boxShadow: "var(--shadow-card)" }}
           >
             <Aurora
-              className="opacity-[0.35]"
-              colorStops={["#0a0b09", "#274a3a", "#8de8b9"]}
-              amplitude={0.7}
-              blend={0.45}
+              className="opacity-[0.28]"
+              colorStops={["#fffdf6", "#cfe9d8", "#8de8b9"]}
+              amplitude={0.55}
+              blend={0.4}
               speed={0.75}
             />
             <div

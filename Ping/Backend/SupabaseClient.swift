@@ -143,7 +143,7 @@ final class SupabaseClient: ObservableObject {
                 save(session: refreshed)
                 return refreshed.userId
             } catch {
-                clearSession()
+                throw PingError.supabaseSessionExpired(userId: session.userId)
             }
         }
 
@@ -237,10 +237,7 @@ final class SupabaseClient: ObservableObject {
             save(session: refreshed)
             return refreshed.accessToken
         } catch {
-            clearSession()
-            let anonymousSession = try await signInAnonymously()
-            save(session: anonymousSession)
-            return anonymousSession.accessToken
+            throw PingError.supabaseSessionExpired(userId: session?.userId ?? "unknown")
         }
     }
 

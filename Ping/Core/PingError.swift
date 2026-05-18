@@ -2,6 +2,7 @@ import Foundation
 
 enum PingError: LocalizedError {
     case supabaseConfigurationMissing
+    case supabaseSessionExpired(userId: String)
     case supabaseUnavailable
     case supabaseRequestFailed(statusCode: Int, message: String)
     case currentUserMissing
@@ -16,6 +17,8 @@ enum PingError: LocalizedError {
         switch self {
         case .supabaseConfigurationMissing:
             return "Resources/Supabase.plist가 없어 Supabase를 시작할 수 없습니다."
+        case let .supabaseSessionExpired(userId):
+            return "기존 Supabase 익명 세션을 복구할 수 없습니다. 데이터 보호를 위해 새 사용자로 자동 전환하지 않았습니다. Supabase Auth에서 사용자 \(userId)가 남아 있는지 확인해 주세요."
         case .supabaseUnavailable:
             return "Supabase 클라이언트가 아직 준비되지 않았습니다."
         case let .supabaseRequestFailed(statusCode, message):

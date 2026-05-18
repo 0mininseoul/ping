@@ -17,10 +17,10 @@ export default function Hero({ downloadUrl, version }: HeroProps) {
   return (
     <section className="relative isolate overflow-hidden pt-32 pb-28 md:pt-44 md:pb-36">
       <Aurora
-        className="opacity-[0.55]"
-        colorStops={["#0a0b09", "#1f4a36", "#8de8b9"]}
-        amplitude={1.0}
-        blend={0.5}
+        className="opacity-[0.35]"
+        colorStops={["#f7f4ea", "#cfe9d8", "#8de8b9"]}
+        amplitude={0.7}
+        blend={0.45}
         speed={0.9}
       />
       <div
@@ -31,7 +31,7 @@ export default function Hero({ downloadUrl, version }: HeroProps) {
       <div className="container-app relative z-10">
         <div className="grid items-center gap-12 md:grid-cols-[1.05fr_0.95fr] md:gap-14">
           <div>
-            <div className="mb-7 inline-flex items-center gap-2 rounded-pill border border-border bg-white/[0.05] px-3 py-1.5 text-xs text-muted backdrop-blur-md">
+            <div className="mb-7 inline-flex items-center gap-2 rounded-pill border border-border bg-bg-elev px-3 py-1.5 text-xs text-muted backdrop-blur-md">
               <BrandMark size={16} className="rounded-[28%]" />
               <span className="font-medium text-fg">Ping</span>
               <span className="text-faint">·</span>
@@ -47,8 +47,8 @@ export default function Hero({ downloadUrl, version }: HeroProps) {
               <span className="block">
                 <ShinyText
                   text="Ping하세요."
-                  color="#f7f4ea"
-                  shineColor="#8de8b9"
+                  color="#0a0b09"
+                  shineColor="#2faa6e"
                   speed={3.2}
                 />
               </span>
@@ -91,7 +91,7 @@ export default function Hero({ downloadUrl, version }: HeroProps) {
             aria-hidden
           >
             <div className="absolute inset-0 [mask-image:radial-gradient(circle,black_55%,transparent_72%)]">
-              <Orb hue={72} hoverIntensity={0.42} backgroundColor="#080907" />
+              <Orb hue={142} hoverIntensity={0.36} backgroundColor="#f7f4ea" />
             </div>
             <MirrorPreview />
             <Badge
@@ -122,16 +122,16 @@ function FactItem({ term, value }: { term: string; value: string }) {
 function MirrorPreview() {
   return (
     <div
-      className="absolute left-1/2 top-1/2 grid aspect-square w-[40%] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-white/30 bg-white/10 text-sm font-bold text-fg backdrop-blur-2xl"
+      className="absolute left-1/2 top-1/2 grid aspect-square w-[40%] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-fg/15 bg-bg-elev/80 text-sm font-bold text-fg backdrop-blur-2xl"
       style={{
         boxShadow:
-          "inset 0 1px 22px rgba(247,244,234,0.12), 0 18px 42px rgba(0,0,0,0.36)",
+          "inset 0 1px 22px rgba(255,255,255,0.6), 0 18px 42px rgba(10,11,9,0.14)",
       }}
     >
       <span className="font-mono tracking-tight">Option+P</span>
       <span
         aria-hidden
-        className="absolute top-4 h-2 w-2 rounded-full bg-[color:var(--color-record)] shadow-[0_0_18px_rgba(255,98,84,0.72)]"
+        className="absolute top-4 h-2 w-2 rounded-full bg-[color:var(--color-record)] shadow-[0_0_18px_rgba(255,90,71,0.55)]"
       />
     </div>
   );

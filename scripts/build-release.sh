@@ -55,3 +55,29 @@ cp "dist/Ping-v$VERSION.dmg" "web/public/downloads/Ping-v$VERSION.dmg"
 
 echo "Built dist/Ping-v$VERSION.dmg"
 echo "Copied web/public/downloads/Ping-v$VERSION.dmg"
+
+# Sparkle: sign the DMG with EdDSA and regenerate the appcast served at /appcast.xml.
+# Requires generate_keys to have been run once (see scripts/sparkle-generate-keys.sh).
+# shellcheck disable=SC1091
+source scripts/sparkle-tools-path.sh
+
+GENERATE_APPCAST="$SPARKLE_BIN/generate_appcast"
+if [ ! -x "$GENERATE_APPCAST" ]; then
+  echo "generate_appcast not found at $GENERATE_APPCAST" >&2
+  exit 1
+fi
+
+"$GENERATE_APPCAST" \
+  --account "com.youngminpark.ping.Ping" \
+  --download-url-prefix "https://ping0min.vercel.app/downloads/" \
+  --link "https://ping0min.vercel.app" \
+  --maximum-versions 10 \
+  web/public/downloads
+
+if [ -f "web/public/downloads/appcast.xml" ]; then
+  mv "web/public/downloads/appcast.xml" "web/public/appcast.xml"
+  echo "Wrote web/public/appcast.xml"
+else
+  echo "generate_appcast did not produce appcast.xml" >&2
+  exit 1
+fi

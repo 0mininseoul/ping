@@ -54,9 +54,11 @@
 		ACDDF0E513D2F7D330B6A9C7 /* SmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEBA01FC9DCA088BE83E5C4F /* SmokeTests.swift */; };
 		AE0BAABF032564CD75C6AC48 /* RoomManagerWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2F526895AEBD9128DA1538F /* RoomManagerWindow.swift */; };
 		B516DA8E35BE22691A6F324C /* LocalNotificationCenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFCF08C61ECD845F231DFFE4 /* LocalNotificationCenter.swift */; };
+		B6A11640F9C354B97F970881 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 9A1A6B3E7AB732144F264705 /* Sparkle */; };
 		BD4B27A9FA26170478465688 /* SupabaseClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = C719C9C94BAE6A852AD90D7A /* SupabaseClient.swift */; };
 		BE3551EEFED3B34395960150 /* ScreenCoordinatesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DB8EE7896F96DFAC0EFCA86 /* ScreenCoordinatesTests.swift */; };
 		C26014C3EE2AB59B7360E901 /* HotkeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6D978D1D0ADEFE94F8E2D9D /* HotkeyManager.swift */; };
+		C928EDBE9BA49D5188B218A3 /* UpdaterController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0F79541C73EA6A1AA177880 /* UpdaterController.swift */; };
 		CA2DF3196CAE29536E2450C1 /* VideoRecordingContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA17BAFB8C514438C7961E5F /* VideoRecordingContractTests.swift */; };
 		CBA9098946084A74F1DDD04C /* CleanupService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 196AE189C92F647078653279 /* CleanupService.swift */; };
 		CD48671985ADE8C6B4831F9B /* LocalArchive.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB469BD2ECF2AC4459C1A4D1 /* LocalArchive.swift */; };
@@ -65,6 +67,7 @@
 		D145DD48FDB755F20A1C5A99 /* CameraStartupContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B156E510EB6A9724929971C1 /* CameraStartupContractTests.swift */; };
 		D1F98BCF92D6A7D7BD4FAFA5 /* KeyboardRoutingContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4A1E99D8A2F055B3DD2924E /* KeyboardRoutingContractTests.swift */; };
 		D291A0F09A96CC00D2E3E020 /* SupabaseDecodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2319CC860C1B8D1CEC0E1E4E /* SupabaseDecodingTests.swift */; };
+		D3660AF8AC6874725F533E10 /* SupabaseSessionContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09E2E7CA36EC901ED5EE3FB /* SupabaseSessionContractTests.swift */; };
 		D554E57BED49035560D4AE74 /* PlaybackWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01290226E3F8D2ED2E2FA6AC /* PlaybackWindow.swift */; };
 		D94A00EE205AF8CCF9BE4393 /* RoomListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CD854FC545A367784978698 /* RoomListView.swift */; };
 		DF64AE4C1BA57CB52E98AC20 /* InvitationCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD69BFAD0704FB61C435A68E /* InvitationCard.swift */; };
@@ -136,6 +139,7 @@
 		B6D978D1D0ADEFE94F8E2D9D /* HotkeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyManager.swift; sourceTree = "<group>"; };
 		BCBB58248AD85A5BB4137D3F /* GlassPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassPanel.swift; sourceTree = "<group>"; };
 		C0B62D708A5A8B647FB677E8 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		C0F79541C73EA6A1AA177880 /* UpdaterController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdaterController.swift; sourceTree = "<group>"; };
 		C11910C93D73837A29B0536C /* OnboardingCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingCopy.swift; sourceTree = "<group>"; };
 		C56CBACCB04189EC83BDD330 /* PingDesign.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PingDesign.swift; sourceTree = "<group>"; };
 		C68B271420DEF87D935A0913 /* PermissionUXContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionUXContractTests.swift; sourceTree = "<group>"; };
@@ -143,6 +147,7 @@
 		C98008817B561907D8035DB2 /* Typography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Typography.swift; sourceTree = "<group>"; };
 		CEBA01FC9DCA088BE83E5C4F /* SmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmokeTests.swift; sourceTree = "<group>"; };
 		CFDFDDA4D6E69A3184DC445F /* GlassChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassChip.swift; sourceTree = "<group>"; };
+		D09E2E7CA36EC901ED5EE3FB /* SupabaseSessionContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseSessionContractTests.swift; sourceTree = "<group>"; };
 		DB4BE060956FB1ACEAC2591B /* Ping.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Ping.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		DDF74D004DFD2F009A5DA36B /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		DF791350460B22AC63D0CE32 /* PlaybackPrefetchContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackPrefetchContractTests.swift; sourceTree = "<group>"; };
@@ -166,6 +171,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				7035C7FE65C8AC75092F13FB /* KeyboardShortcuts in Frameworks */,
+				B6A11640F9C354B97F970881 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -214,6 +220,7 @@
 				57DD7EACDDC08BF405B26037 /* Hotkey */,
 				842A87CD221CBD811048C06D /* Notifications */,
 				F0C0D5199701D0E1BA4BCF2D /* UI */,
+				92CF37F13F835406DB6B82A7 /* Updater */,
 			);
 			path = Ping;
 			sourceTree = "<group>";
@@ -258,6 +265,14 @@
 				06B4B9E0137AD6A34F151BF2 /* VideoRecorder.swift */,
 			);
 			path = Capture;
+			sourceTree = "<group>";
+		};
+		92CF37F13F835406DB6B82A7 /* Updater */ = {
+			isa = PBXGroup;
+			children = (
+				C0F79541C73EA6A1AA177880 /* UpdaterController.swift */,
+			);
+			path = Updater;
 			sourceTree = "<group>";
 		};
 		A02423B6C8B08B7EA8498178 = {
@@ -336,6 +351,7 @@
 				CEBA01FC9DCA088BE83E5C4F /* SmokeTests.swift */,
 				F2F40CF1E71B9600941F2BE1 /* StatusMenuBuilderTests.swift */,
 				2319CC860C1B8D1CEC0E1E4E /* SupabaseDecodingTests.swift */,
+				D09E2E7CA36EC901ED5EE3FB /* SupabaseSessionContractTests.swift */,
 				FA17BAFB8C514438C7961E5F /* VideoRecordingContractTests.swift */,
 			);
 			path = PingTests;
@@ -390,6 +406,7 @@
 			name = Ping;
 			packageProductDependencies = (
 				124F74B5C81D2AD5BA394E96 /* KeyboardShortcuts */,
+				9A1A6B3E7AB732144F264705 /* Sparkle */,
 			);
 			productName = Ping;
 			productReference = DB4BE060956FB1ACEAC2591B /* Ping.app */;
@@ -423,6 +440,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				84AB79F3D2E263AAFDDC843A /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */,
+				679475D911290B3B5656FA54 /* XCRemoteSwiftPackageReference "Sparkle" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A9B87E8D0F6F0C9AE7E7E82C /* Products */;
@@ -489,12 +507,14 @@
 				"$(PROJECT_DIR)/Ping/Core/InviteLink.swift",
 				"$(PROJECT_DIR)/Ping/Core/AppState.swift",
 				"$(PROJECT_DIR)/Ping/Core/RoomLimits.swift",
+				"$(PROJECT_DIR)/Ping/Core/PingError.swift",
 				"$(PROJECT_DIR)/Ping/Capture/LocalArchive.swift",
 				"$(PROJECT_DIR)/Ping/Capture/VideoRecorder.swift",
 				"$(PROJECT_DIR)/Ping/Capture/VideoCropper.swift",
 				"$(PROJECT_DIR)/Ping/AppDelegate.swift",
 				"$(PROJECT_DIR)/Ping/Backend/InvitationService.swift",
 				"$(PROJECT_DIR)/Ping/Backend/MessageService.swift",
+				"$(PROJECT_DIR)/Ping/Backend/SupabaseClient.swift",
 				"$(PROJECT_DIR)/web/src/App.tsx",
 				"$(PROJECT_DIR)/scripts/build-release.sh",
 				"$(PROJECT_DIR)/.gitignore",
@@ -524,12 +544,14 @@
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/InviteLink.swift",
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/AppState.swift",
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/RoomLimits.swift",
+				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/PingError.swift",
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/LocalArchive.swift",
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/VideoRecorder.swift",
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/VideoCropper.swift",
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/AppDelegate.swift",
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/InvitationService.swift",
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/MessageService.swift",
+				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/SupabaseClient.swift",
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/App.tsx",
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/build-release.sh",
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/.gitignore",
@@ -542,7 +564,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -euo pipefail\n\nDST=\"$TARGET_BUILD_DIR/$CONTENTS_FOLDER_PATH/Resources\"\nmkdir -p \"$DST\"\n\ncp \"$PROJECT_DIR/Ping/UI/Glass/GlassButton.swift\" \"$DST/GlassButton.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Glass/PingDesign.swift\" \"$DST/PingDesign.swift\"\ncp \"$PROJECT_DIR/Ping/Capture/CameraManager.swift\" \"$DST/CameraManager.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Mirror/MirrorView.swift\" \"$DST/MirrorView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/PairingView.swift\" \"$DST/PairingView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/PairingViewModel.swift\" \"$DST/PairingViewModel.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/RoomListView.swift\" \"$DST/RoomListView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/RoomManagerWindow.swift\" \"$DST/RoomManagerWindow.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/RoomSearchView.swift\" \"$DST/RoomSearchView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/SettingsScene.swift\" \"$DST/SettingsScene.swift\"\ncp \"$PROJECT_DIR/Ping/Hotkey/HotkeyManager.swift\" \"$DST/HotkeyManager.swift\"\ncp \"$PROJECT_DIR/Ping/Core/UserPreferences.swift\" \"$DST/UserPreferences.swift\"\ncp \"$PROJECT_DIR/Ping/Core/InviteLink.swift\" \"$DST/InviteLink.swift\"\ncp \"$PROJECT_DIR/Ping/Core/AppState.swift\" \"$DST/AppState.swift\"\ncp \"$PROJECT_DIR/Ping/Core/RoomLimits.swift\" \"$DST/RoomLimits.swift\"\ncp \"$PROJECT_DIR/Ping/Capture/LocalArchive.swift\" \"$DST/LocalArchive.swift\"\ncp \"$PROJECT_DIR/Ping/Capture/VideoRecorder.swift\" \"$DST/VideoRecorder.swift\"\ncp \"$PROJECT_DIR/Ping/Capture/VideoCropper.swift\" \"$DST/VideoCropper.swift\"\ncp \"$PROJECT_DIR/Ping/AppDelegate.swift\" \"$DST/AppDelegate.swift\"\ncp \"$PROJECT_DIR/Ping/Backend/InvitationService.swift\" \"$DST/InvitationService.swift\"\ncp \"$PROJECT_DIR/Ping/Backend/MessageService.swift\" \"$DST/MessageService.swift\"\ncp \"$PROJECT_DIR/web/src/App.tsx\" \"$DST/App.tsx\"\ncp \"$PROJECT_DIR/scripts/build-release.sh\" \"$DST/build-release.sh\"\ncp \"$PROJECT_DIR/.gitignore\" \"$DST/.gitignore\"\ncp \"$PROJECT_DIR/scripts/generate-icons.swift\" \"$DST/generate-icons.swift\"\ncp \"$PROJECT_DIR/Ping.entitlements\" \"$DST/Ping.entitlements\"\ncp \"$PROJECT_DIR/docs/DESIGN_SYSTEM.md\" \"$DST/DESIGN_SYSTEM.md\"\ncp \"$PROJECT_DIR/supabase/migrations/20260517000100_create_ping_backend.sql\" \"$DST/20260517000100_create_ping_backend.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260518003000_room_capacity_limits.sql\" \"$DST/20260518003000_room_capacity_limits.sql\"\ncp \"$PROJECT_DIR/project.yml\" \"$DST/project.yml\"\n";
+			shellScript = "set -euo pipefail\n\nDST=\"$TARGET_BUILD_DIR/$CONTENTS_FOLDER_PATH/Resources\"\nmkdir -p \"$DST\"\n\ncp \"$PROJECT_DIR/Ping/UI/Glass/GlassButton.swift\" \"$DST/GlassButton.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Glass/PingDesign.swift\" \"$DST/PingDesign.swift\"\ncp \"$PROJECT_DIR/Ping/Capture/CameraManager.swift\" \"$DST/CameraManager.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Mirror/MirrorView.swift\" \"$DST/MirrorView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/PairingView.swift\" \"$DST/PairingView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/PairingViewModel.swift\" \"$DST/PairingViewModel.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/RoomListView.swift\" \"$DST/RoomListView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/RoomManagerWindow.swift\" \"$DST/RoomManagerWindow.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/RoomSearchView.swift\" \"$DST/RoomSearchView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/SettingsScene.swift\" \"$DST/SettingsScene.swift\"\ncp \"$PROJECT_DIR/Ping/Hotkey/HotkeyManager.swift\" \"$DST/HotkeyManager.swift\"\ncp \"$PROJECT_DIR/Ping/Core/UserPreferences.swift\" \"$DST/UserPreferences.swift\"\ncp \"$PROJECT_DIR/Ping/Core/InviteLink.swift\" \"$DST/InviteLink.swift\"\ncp \"$PROJECT_DIR/Ping/Core/AppState.swift\" \"$DST/AppState.swift\"\ncp \"$PROJECT_DIR/Ping/Core/RoomLimits.swift\" \"$DST/RoomLimits.swift\"\ncp \"$PROJECT_DIR/Ping/Core/PingError.swift\" \"$DST/PingError.swift\"\ncp \"$PROJECT_DIR/Ping/Capture/LocalArchive.swift\" \"$DST/LocalArchive.swift\"\ncp \"$PROJECT_DIR/Ping/Capture/VideoRecorder.swift\" \"$DST/VideoRecorder.swift\"\ncp \"$PROJECT_DIR/Ping/Capture/VideoCropper.swift\" \"$DST/VideoCropper.swift\"\ncp \"$PROJECT_DIR/Ping/AppDelegate.swift\" \"$DST/AppDelegate.swift\"\ncp \"$PROJECT_DIR/Ping/Backend/InvitationService.swift\" \"$DST/InvitationService.swift\"\ncp \"$PROJECT_DIR/Ping/Backend/MessageService.swift\" \"$DST/MessageService.swift\"\ncp \"$PROJECT_DIR/Ping/Backend/SupabaseClient.swift\" \"$DST/SupabaseClient.swift\"\ncp \"$PROJECT_DIR/web/src/App.tsx\" \"$DST/App.tsx\"\ncp \"$PROJECT_DIR/scripts/build-release.sh\" \"$DST/build-release.sh\"\ncp \"$PROJECT_DIR/.gitignore\" \"$DST/.gitignore\"\ncp \"$PROJECT_DIR/scripts/generate-icons.swift\" \"$DST/generate-icons.swift\"\ncp \"$PROJECT_DIR/Ping.entitlements\" \"$DST/Ping.entitlements\"\ncp \"$PROJECT_DIR/docs/DESIGN_SYSTEM.md\" \"$DST/DESIGN_SYSTEM.md\"\ncp \"$PROJECT_DIR/supabase/migrations/20260517000100_create_ping_backend.sql\" \"$DST/20260517000100_create_ping_backend.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260518003000_room_capacity_limits.sql\" \"$DST/20260518003000_room_capacity_limits.sql\"\ncp \"$PROJECT_DIR/project.yml\" \"$DST/project.yml\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -570,6 +592,7 @@
 				ACDDF0E513D2F7D330B6A9C7 /* SmokeTests.swift in Sources */,
 				2BE6D442750C42406D4CE6AF /* StatusMenuBuilderTests.swift in Sources */,
 				D291A0F09A96CC00D2E3E020 /* SupabaseDecodingTests.swift in Sources */,
+				D3660AF8AC6874725F533E10 /* SupabaseSessionContractTests.swift in Sources */,
 				CA2DF3196CAE29536E2450C1 /* VideoRecordingContractTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -620,6 +643,7 @@
 				3B5117F35AEE41A4224D9837 /* StorageService.swift in Sources */,
 				BD4B27A9FA26170478465688 /* SupabaseClient.swift in Sources */,
 				18F76346F0F837EF6E0BA48D /* Typography.swift in Sources */,
+				C928EDBE9BA49D5188B218A3 /* UpdaterController.swift in Sources */,
 				15FA5EA0B50E0383E9791360 /* UserPreferences.swift in Sources */,
 				776C909E046ADCF36EFB3CB8 /* UserService.swift in Sources */,
 				18C48517F57EFCA192AD3E54 /* VideoCropper.swift in Sources */,
@@ -874,6 +898,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		679475D911290B3B5656FA54 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.6.0;
+			};
+		};
 		84AB79F3D2E263AAFDDC843A /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/sindresorhus/KeyboardShortcuts";
@@ -889,6 +921,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 84AB79F3D2E263AAFDDC843A /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */;
 			productName = KeyboardShortcuts;
+		};
+		9A1A6B3E7AB732144F264705 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 679475D911290B3B5656FA54 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

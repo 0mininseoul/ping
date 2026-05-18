@@ -39,7 +39,7 @@ export default function SiteNav({ downloadUrl }: SiteNavProps) {
           aria-label="Ping 홈"
           className="flex items-center gap-2.5"
         >
-          <BrandMark size={32} className="shadow-[0_0_22px_rgba(247,244,234,0.18)]" />
+          <BrandMark size={32} className="shadow-[0_0_22px_rgba(47,170,110,0.14)]" />
           <span className="text-base font-bold tracking-tight">Ping</span>
         </a>
 

@@ -1,25 +1,26 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #0a0b09;
-  --color-bg-elev: #11130f;
-  --color-fg: #f7f4ea;
-  --color-muted: rgba(247, 244, 234, 0.62);
-  --color-subtle: rgba(247, 244, 234, 0.42);
-  --color-faint: rgba(247, 244, 234, 0.18);
-  --color-border: rgba(247, 244, 234, 0.1);
-  --color-accent: #8de8b9;
-  --color-accent-soft: rgba(141, 232, 185, 0.18);
-  --color-record: #ff6254;
-  --color-warm: #f4ff78;
+  --color-bg: #f7f4ea;
+  --color-bg-elev: #fffdf6;
+  --color-fg: #0a0b09;
+  --color-muted: rgba(10, 11, 9, 0.66);
+  --color-subtle: rgba(10, 11, 9, 0.5);
+  --color-faint: rgba(10, 11, 9, 0.22);
+  --color-border: rgba(10, 11, 9, 0.12);
+  --color-accent: #2faa6e;
+  --color-accent-soft: rgba(47, 170, 110, 0.18);
+  --color-accent-bright: #8de8b9;
+  --color-record: #ff5a47;
+  --color-warm: #e6c044;
 
   --radius-sm: 12px;
   --radius-md: 18px;
   --radius-lg: 24px;
   --radius-pill: 999px;
 
-  --shadow-cta: 0 18px 54px rgba(141, 232, 185, 0.24);
-  --shadow-card: 0 24px 60px rgba(0, 0, 0, 0.4);
+  --shadow-cta: 0 18px 54px rgba(47, 170, 110, 0.22);
+  --shadow-card: 0 24px 60px rgba(10, 11, 9, 0.12);
 
   --font-sans: "Pretendard Variable", Pretendard, -apple-system,
     BlinkMacSystemFont, "Apple SD Gothic Neo", "Segoe UI", sans-serif;
@@ -28,7 +29,7 @@
 
 @layer base {
   :root {
-    color-scheme: dark;
+    color-scheme: light;
   }
 
   * {
@@ -85,7 +86,7 @@
   }
 
   .glass-panel {
-    background: rgba(247, 244, 234, 0.05);
+    background: rgba(255, 253, 246, 0.7);
     border: 1px solid var(--color-border);
     backdrop-filter: blur(18px);
   }

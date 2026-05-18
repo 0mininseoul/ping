@@ -10,7 +10,7 @@ interface SpotlightCardProps {
 export default function SpotlightCard({
   children,
   className,
-  spotlightColor = "rgba(141, 232, 185, 0.18)",
+  spotlightColor = "rgba(47, 170, 110, 0.16)",
 }: SpotlightCardProps) {
   const ref = useRef<HTMLDivElement | null>(null);
 
@@ -27,7 +27,7 @@ export default function SpotlightCard({
       ref={ref}
       onMouseMove={handleMouseMove}
       className={cn(
-        "group relative overflow-hidden rounded-lg border border-border bg-white/[0.04] p-6 transition-colors hover:border-white/20",
+        "group relative overflow-hidden rounded-lg border border-border bg-bg-elev p-6 transition-colors hover:border-fg/25",
         className,
       )}
       style={{

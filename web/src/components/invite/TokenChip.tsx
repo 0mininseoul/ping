@@ -26,7 +26,7 @@ export default function TokenChip({ token }: TokenChipProps) {
         type="button"
         onClick={copy}
         className={cn(
-          "group flex w-full items-center justify-between gap-4 rounded-md border border-border bg-white/[0.04] p-4 text-left font-mono text-fg transition-colors hover:border-white/20",
+          "group flex w-full items-center justify-between gap-4 rounded-md border border-border bg-bg-elev p-4 text-left font-mono text-fg transition-colors hover:border-fg/25",
           copied && "border-accent/60",
         )}
         aria-label={`초대 토큰 ${token} 복사`}
@@ -39,7 +39,7 @@ export default function TokenChip({ token }: TokenChipProps) {
             "inline-flex shrink-0 items-center gap-1.5 rounded-pill border px-2.5 py-1 text-xs",
             copied
               ? "border-accent/40 bg-accent/10 text-accent"
-              : "border-border bg-white/[0.05] text-muted",
+              : "border-border bg-fg/5 text-muted",
           )}
         >
           {copied ? (

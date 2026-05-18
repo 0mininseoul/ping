@@ -185,6 +185,9 @@ Day 4 Task 4.3 에서 임시 EmptyView로 윈도우를 만든 뒤 `contentView` 
 ### Supabase polling의 중복 알림
 현재 MVP는 Supabase Realtime 대신 2초 polling으로 `messages`/`rooms`/`invitations`를 읽습니다. `observeIncoming`은 세션 내 `yieldedIds`와 앱 전역 `notifiedMessageIds`로 중복 알림을 막으므로 이 방어를 제거하지 마세요.
 
+### Sparkle 자동 업데이트
+앱은 Sparkle 2로 자동 업데이트한다. `project.yml`의 `SUPublicEDKey`는 빌드 머신 Keychain에 있는 EdDSA 개인키와 짝을 이뤄야 한다. `Ping/Info.plist`는 XcodeGen 산출물이므로 직접 편집하지 말 것. 한 번도 셋업이 안 된 환경이라면 `docs/AUTO_UPDATE_SETUP.md` 의 1~2단계를 먼저 실행해야 빌드가 의미 있는 appcast를 만든다. `SUFeedURL`을 임의로 바꾸지 말 것 — `https://ping0min.vercel.app/appcast.xml` 이 단일 진실 출처다.
+
 ### Sandbox + 글로벌 단축키
 `KeyboardShortcuts` 는 Sandbox 안에서 동작합니다. 만약 단축키가 안 잡히면 entitlements 의 `com.apple.security.app-sandbox` 를 의심하기 전에 **시스템 설정 → 개인정보 보호 및 보안 → 입력 모니터링** 권한을 먼저 확인하세요.
 

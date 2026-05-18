@@ -10,7 +10,7 @@ export default function InviteSteps() {
       {steps.map((s) => (
         <li
           key={s.n}
-          className="flex items-start gap-4 rounded-md border border-border bg-white/[0.03] p-4"
+          className="flex items-start gap-4 rounded-md border border-border bg-bg-elev p-4"
         >
           <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-accent/40 bg-accent/10 font-mono text-sm font-bold text-accent">
             {s.n}

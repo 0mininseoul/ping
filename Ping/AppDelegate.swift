@@ -41,6 +41,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setupHotkey()
 
         if !ProcessInfo.processInfo.isRunningUnitTests {
+            UpdaterController.shared.start()
             startBootstrapTaskIfNeeded()
         }
     }

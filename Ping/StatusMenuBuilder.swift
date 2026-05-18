@@ -25,6 +25,15 @@ enum StatusMenuBuilder {
         menu.addItem(command(title: "라이트/다크 전환", action: Selector(("toggleAppearanceModeAction")), shortcutName: .appearanceToggle, target: target))
 
         menu.addItem(NSMenuItem.separator())
+        let updateItem = NSMenuItem(
+            title: "업데이트 확인…",
+            action: #selector(UpdaterController.checkForUpdates(_:)),
+            keyEquivalent: ""
+        )
+        updateItem.target = UpdaterController.shared
+        menu.addItem(updateItem)
+
+        menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "종료", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
 
         return menu

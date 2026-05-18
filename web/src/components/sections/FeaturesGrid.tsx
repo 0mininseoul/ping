@@ -20,7 +20,7 @@ export default function FeaturesGrid() {
       aside: "WebGL 셰이더 기반의 부드러운 가장자리",
       visual: (
         <div className="relative aspect-square w-full overflow-hidden rounded-md [mask-image:radial-gradient(circle,black_60%,transparent_72%)]">
-          <Orb hue={72} hoverIntensity={0.35} backgroundColor="#0a0b09" />
+          <Orb hue={142} hoverIntensity={0.32} backgroundColor="#f7f4ea" />
         </div>
       ),
     },
@@ -66,7 +66,7 @@ export default function FeaturesGrid() {
           {features.map((f, i) => (
             <ScrollFloat key={f.title} delay={(i % 2) * 0.08}>
               <SpotlightCard className="flex h-full flex-col">
-                <div className="mb-5 inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-white/[0.05] text-accent">
+                <div className="mb-5 inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-fg/5 text-accent">
                   {f.icon}
                 </div>
                 <h3 className="mb-2 text-2xl">{f.title}</h3>
@@ -90,7 +90,7 @@ export default function FeaturesGrid() {
 
 function KeycapVisual() {
   return (
-    <div className="grid aspect-[4/3] place-items-center bg-[#0c0e0a]">
+    <div className="grid aspect-[4/3] place-items-center bg-bg-elev">
       <div className="flex items-end gap-3">
         <Keycap label="⌥" sub="Option" />
         <span className="pb-4 text-2xl text-subtle">+</span>
@@ -103,7 +103,7 @@ function KeycapVisual() {
 function Keycap({ label, sub }: { label: string; sub?: string }) {
   return (
     <div className="flex flex-col items-center gap-1.5" aria-label={sub ?? label}>
-      <span className="grid h-16 w-16 place-items-center rounded-md border border-border bg-white/[0.05] font-mono text-2xl font-bold text-fg shadow-[inset_0_-2px_0_rgba(0,0,0,0.4),0_4px_0_rgba(0,0,0,0.4)]">
+      <span className="grid h-16 w-16 place-items-center rounded-md border border-border bg-bg-elev font-mono text-2xl font-bold text-fg shadow-[inset_0_-2px_0_rgba(10,11,9,0.12),0_4px_0_rgba(10,11,9,0.10)]">
         {label}
       </span>
       <span className="h-3 text-[10px] font-medium text-subtle">
@@ -115,7 +115,7 @@ function Keycap({ label, sub }: { label: string; sub?: string }) {
 
 function CountdownVisual() {
   return (
-    <div className="relative grid aspect-[4/3] place-items-center bg-[#0c0e0a]">
+    <div className="relative grid aspect-[4/3] place-items-center bg-bg-elev">
       <div className="flex items-end gap-1.5">
         {Array.from({ length: 20 }).map((_, i) => (
           <span
@@ -137,19 +137,19 @@ function CountdownVisual() {
 
 function RoomVisual() {
   return (
-    <div className="relative grid aspect-[4/3] place-items-center bg-[#0c0e0a]">
+    <div className="relative grid aspect-[4/3] place-items-center bg-bg-elev">
       <div className="flex -space-x-2.5">
         {["#8de8b9", "#f4ff78", "#ff6254", "#f7f4ea"].map((c, i) => (
           <span
             key={c}
-            className="grid h-10 w-10 place-items-center rounded-full border-2 border-bg-elev font-bold text-[#07100b]"
+            className="grid h-10 w-10 place-items-center rounded-full border-2 border-bg font-bold text-[#07100b]"
             style={{ background: c }}
           >
             {["A", "B", "C", "D"][i]}
           </span>
         ))}
       </div>
-      <span className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-pill border border-border bg-white/[0.05] px-3 py-1 font-mono text-[10px] text-subtle">
+      <span className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-pill border border-border bg-fg/5 px-3 py-1 font-mono text-[10px] text-subtle">
         ROOM · friends
       </span>
     </div>

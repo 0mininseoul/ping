@@ -19,7 +19,7 @@ export default function SpecStrip() {
                 key={s.label}
                 className="flex items-center gap-2.5 text-sm text-muted"
               >
-                <span className="grid h-7 w-7 place-items-center rounded-full border border-border bg-white/[0.04] text-accent">
+                <span className="grid h-7 w-7 place-items-center rounded-full border border-border bg-bg-elev text-accent">
                   {s.icon}
                 </span>
                 <span className="font-medium text-fg">{s.label}</span>

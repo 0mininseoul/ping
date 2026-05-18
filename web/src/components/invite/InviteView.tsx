@@ -23,15 +23,15 @@ export default function InviteView({
   return (
     <main className="relative isolate min-h-screen overflow-hidden">
       <Aurora
-        className="opacity-40"
-        colorStops={["#0a0b09", "#1a3a2c", "#8de8b9"]}
-        amplitude={0.7}
+        className="opacity-30"
+        colorStops={["#f7f4ea", "#cfe9d8", "#8de8b9"]}
+        amplitude={0.55}
         blend={0.35}
         speed={0.6}
       />
       <div
         aria-hidden
-        className="absolute inset-0 bg-gradient-to-b from-bg/60 via-bg/75 to-bg"
+        className="absolute inset-0 bg-gradient-to-b from-bg/40 via-bg/70 to-bg"
       />
 
       <div className="container-app relative z-10 flex min-h-screen flex-col py-10">

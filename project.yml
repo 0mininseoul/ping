@@ -22,6 +22,9 @@ packages:
   KeyboardShortcuts:
     url: https://github.com/sindresorhus/KeyboardShortcuts
     from: "2.0.0"
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    from: "2.6.0"
 
 targets:
   Ping:
@@ -69,8 +72,15 @@ targets:
           - CFBundleURLName: com.youngminpark.ping.invite
             CFBundleURLSchemes:
               - ping
+        SUFeedURL: https://ping0min.vercel.app/appcast.xml
+        SUPublicEDKey: ZmfTayyDvfWn3zo/4+FoWUFi9MplFtZsjsrZcbijLnM=
+        SUEnableInstallerLauncherService: true
+        SUEnableAutomaticChecks: true
+        SUScheduledCheckInterval: 86400
+        SUAutomaticallyUpdate: true
     dependencies:
       - package: KeyboardShortcuts
+      - package: Sparkle
 
   PingTests:
     type: bundle.unit-test
@@ -106,12 +116,14 @@ targets:
           cp "$PROJECT_DIR/Ping/Core/InviteLink.swift" "$DST/InviteLink.swift"
           cp "$PROJECT_DIR/Ping/Core/AppState.swift" "$DST/AppState.swift"
           cp "$PROJECT_DIR/Ping/Core/RoomLimits.swift" "$DST/RoomLimits.swift"
+          cp "$PROJECT_DIR/Ping/Core/PingError.swift" "$DST/PingError.swift"
           cp "$PROJECT_DIR/Ping/Capture/LocalArchive.swift" "$DST/LocalArchive.swift"
           cp "$PROJECT_DIR/Ping/Capture/VideoRecorder.swift" "$DST/VideoRecorder.swift"
           cp "$PROJECT_DIR/Ping/Capture/VideoCropper.swift" "$DST/VideoCropper.swift"
           cp "$PROJECT_DIR/Ping/AppDelegate.swift" "$DST/AppDelegate.swift"
           cp "$PROJECT_DIR/Ping/Backend/InvitationService.swift" "$DST/InvitationService.swift"
           cp "$PROJECT_DIR/Ping/Backend/MessageService.swift" "$DST/MessageService.swift"
+          cp "$PROJECT_DIR/Ping/Backend/SupabaseClient.swift" "$DST/SupabaseClient.swift"
           cp "$PROJECT_DIR/web/src/App.tsx" "$DST/App.tsx"
           cp "$PROJECT_DIR/scripts/build-release.sh" "$DST/build-release.sh"
           cp "$PROJECT_DIR/.gitignore" "$DST/.gitignore"
@@ -137,12 +149,14 @@ targets:
           - "$(PROJECT_DIR)/Ping/Core/InviteLink.swift"
           - "$(PROJECT_DIR)/Ping/Core/AppState.swift"
           - "$(PROJECT_DIR)/Ping/Core/RoomLimits.swift"
+          - "$(PROJECT_DIR)/Ping/Core/PingError.swift"
           - "$(PROJECT_DIR)/Ping/Capture/LocalArchive.swift"
           - "$(PROJECT_DIR)/Ping/Capture/VideoRecorder.swift"
           - "$(PROJECT_DIR)/Ping/Capture/VideoCropper.swift"
           - "$(PROJECT_DIR)/Ping/AppDelegate.swift"
           - "$(PROJECT_DIR)/Ping/Backend/InvitationService.swift"
           - "$(PROJECT_DIR)/Ping/Backend/MessageService.swift"
+          - "$(PROJECT_DIR)/Ping/Backend/SupabaseClient.swift"
           - "$(PROJECT_DIR)/web/src/App.tsx"
           - "$(PROJECT_DIR)/scripts/build-release.sh"
           - "$(PROJECT_DIR)/.gitignore"
@@ -168,12 +182,14 @@ targets:
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/InviteLink.swift"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/AppState.swift"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/RoomLimits.swift"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/PingError.swift"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/LocalArchive.swift"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/VideoRecorder.swift"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/VideoCropper.swift"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/AppDelegate.swift"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/InvitationService.swift"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/MessageService.swift"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/SupabaseClient.swift"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/App.tsx"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/build-release.sh"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/.gitignore"

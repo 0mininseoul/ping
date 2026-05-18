@@ -25,12 +25,8 @@ export default function ScrollFloat({
     <motion.div
       ref={ref}
       className={cn(className)}
-      initial={reduced ? false : { opacity: 0, y: offsetY, filter: "blur(8px)" }}
-      animate={
-        inView || reduced
-          ? { opacity: 1, y: 0, filter: "blur(0px)" }
-          : undefined
-      }
+      initial={reduced ? false : { y: offsetY }}
+      animate={inView || reduced ? { y: 0 } : undefined}
       transition={{
         duration: 0.65,
         ease: [0.22, 1, 0.36, 1],
