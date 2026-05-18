@@ -17,7 +17,7 @@ Package.resolved
 *.swp
 *.swo
 
-# Firebase
+# Legacy backend local config
 GoogleService-Info.plist
 Resources/GoogleService-Info.plist
 firebase-debug.log

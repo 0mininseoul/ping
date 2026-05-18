@@ -44,18 +44,18 @@
 Bundle ID는 macOS 권한과 앱 식별의 기준이므로 임의 변경하지 마세요.
 
 ### Supabase 설정
-현재 구현은 Firebase가 아니라 Supabase Free 플랜 기준입니다. 앱 런타임에는 `Resources/Supabase.plist`가 필요하고, 이 파일은 git에 커밋하지 않습니다. 형식은 `Resources/Supabase.example.plist`를 따릅니다.
+현재 구현은 Supabase Free 플랜 기준입니다. 앱 런타임에는 `Resources/Supabase.plist`가 필요하고, 이 파일은 git에 커밋하지 않습니다. 형식은 `Resources/Supabase.example.plist`를 따릅니다.
 
 Supabase CLI 작업은 `npx supabase`로 수행합니다. 새 계정/프로젝트에 링크하려면 `npx supabase login --no-browser` 또는 `npx supabase link --project-ref <ref>`가 필요합니다.
 
 ### Supabase Free 저장소
 영상은 Supabase Storage의 비공개 `ping-videos` 버킷에 `<senderUid>/<videoId>.mp4` 경로로 저장합니다. 테이블/RLS/RPC/Storage 정책은 `supabase/migrations/20260517000100_create_ping_backend.sql`이 단일 진실 출처입니다. 서버 예약 작업 없이 앱 실행 시 `ping_cleanup_expired_data()` RPC로 만료 데이터를 best-effort 정리합니다.
 
-### App 버전 — `0.1.0`
+### App 버전 — `0.1.3`
 - `project.yml` → `settings.base.MARKETING_VERSION`
 - `scripts/build-release.sh` → 빌드 산출물 자동 추출
 - `README.md` 의 DMG 파일명 예시
-- `git tag` v0.1.0
+- release tag는 해당 버전 배포 시 생성
 
 ---
 
