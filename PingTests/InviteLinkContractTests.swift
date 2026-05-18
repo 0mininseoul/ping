@@ -57,6 +57,19 @@ final class InviteLinkContractTests: XCTestCase {
         XCTAssertTrue(migration.contains("rm_count.room_id = room_uuid"))
     }
 
+    func testInviteLinkAcceptRpcQualifiesAmbiguousIdReferences() throws {
+        let migration = try readSourceFile("20260519021000_fix_accept_invite_link_id_ambiguity.sql")
+
+        XCTAssertTrue(migration.contains("create or replace function public.ping_accept_invite_link"))
+        XCTAssertTrue(migration.contains("from public.rooms r_accept"))
+        XCTAssertTrue(migration.contains("where r_accept.id = link_row.room_id"))
+        XCTAssertTrue(migration.contains("update public.profiles p_accept"))
+        XCTAssertTrue(migration.contains("where p_accept.id = current_uid"))
+        XCTAssertTrue(migration.contains("update public.rooms r_update"))
+        XCTAssertTrue(migration.contains("where r_update.id = link_row.room_id"))
+        XCTAssertFalse(migration.contains("where id ="))
+    }
+
     func testRoomSearchCanJoinByInviteLinkOrCode() throws {
         let source = try readSourceFile("Ping/UI/Setup/RoomSearchView.swift")
 
