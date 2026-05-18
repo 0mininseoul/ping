@@ -4,11 +4,14 @@ final class CompatibilityContractTests: XCTestCase {
     func testProjectTargetsMacOS13AndSwift6() throws {
         let project = try readFixture("project.yml")
         let info = try readFixture("Ping/Info.plist")
+        let appTarget = try sourceSlice(in: project, from: "  Ping:", to: "  PingTests:")
+        let testTarget = try sourceSlice(in: project, from: "  PingTests:")
 
         XCTAssertTrue(project.contains("macOS: \"13.0\""))
         XCTAssertTrue(project.contains("MACOSX_DEPLOYMENT_TARGET: \"13.0\""))
-        XCTAssertEqual(project.countOccurrences(of: "deploymentTarget: \"13.0\""), 2)
         XCTAssertTrue(project.contains("SWIFT_VERSION: \"6.0\""))
+        XCTAssertTrue(appTarget.contains("deploymentTarget: \"13.0\""))
+        XCTAssertTrue(testTarget.contains("deploymentTarget: \"13.0\""))
         XCTAssertTrue(info.contains("<key>LSMinimumSystemVersion</key>"))
         XCTAssertTrue(info.contains("<string>13.0</string>"))
     }
@@ -90,10 +93,15 @@ final class CompatibilityContractTests: XCTestCase {
             return resourceValues.isRegularFile == true ? url : nil
         }
     }
-}
 
-private extension String {
-    func countOccurrences(of needle: String) -> Int {
-        components(separatedBy: needle).count - 1
+    private func sourceSlice(in source: String, from startMarker: String, to endMarker: String? = nil) throws -> String {
+        let start = try XCTUnwrap(source.range(of: startMarker)?.lowerBound)
+
+        guard let endMarker else {
+            return String(source[start...])
+        }
+
+        let end = try XCTUnwrap(source.range(of: endMarker, range: start..<source.endIndex)?.lowerBound)
+        return String(source[start..<end])
     }
 }
