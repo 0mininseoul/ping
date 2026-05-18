@@ -151,14 +151,14 @@ struct RoomListView: View {
             }
 
             Menu {
-                Button("나가기", role: .destructive) {
-                    leave(room)
+                Button("이름 변경") {
+                    onRename(room)
                 }
 
-                if isOwner(room) {
-                    Button("이름 변경") {
-                        onRename(room)
-                    }
+                Divider()
+
+                Button("나가기", role: .destructive) {
+                    leave(room)
                 }
             } label: {
                 iconLabel(systemName: "ellipsis", accessibilityLabel: "룸 메뉴")
@@ -256,10 +256,6 @@ struct RoomListView: View {
 
     private var canCreateRoom: Bool {
         appState.rooms.count < RoomLimits.maxRoomsPerUser
-    }
-
-    private func isOwner(_ room: Room) -> Bool {
-        room.ownerUid == appState.currentUser?.id
     }
 
     private func leave(_ room: Room) {

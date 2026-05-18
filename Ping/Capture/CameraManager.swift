@@ -18,8 +18,10 @@ final class CameraManager: ObservableObject {
 
         if configured {
             if !session.isRunning {
+                isReady = false
                 session.startRunning()
             }
+            isReady = session.isRunning
             return
         }
 
@@ -31,8 +33,10 @@ final class CameraManager: ObservableObject {
 
         guard !configured else {
             if !session.isRunning {
+                isReady = false
                 session.startRunning()
             }
+            isReady = session.isRunning
             return
         }
 
@@ -66,8 +70,8 @@ final class CameraManager: ObservableObject {
         guard !Task.isCancelled else { return }
 
         configured = true
-        isReady = true
         session.startRunning()
+        isReady = session.isRunning
     }
 
     func prepareAudioForRecording() async {
@@ -96,6 +100,7 @@ final class CameraManager: ObservableObject {
     }
 
     func stop() {
+        isReady = false
         guard session.isRunning else { return }
         session.stopRunning()
     }

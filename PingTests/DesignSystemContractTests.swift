@@ -79,6 +79,26 @@ final class DesignSystemContractTests: XCTestCase {
         XCTAssertTrue(designDoc.contains("layered colored shadow"))
     }
 
+    func testMirrorShadowIsDrawnFromCircularSurface() throws {
+        let source = try readSourceFile("Ping/UI/Mirror/MirrorView.swift")
+        let body = try sourceSlice(
+            in: source,
+            from: "var body: some View",
+            to: "@ViewBuilder private var topOverlay"
+        )
+        let shadowSurface = try sourceSlice(
+            in: source,
+            from: "private var mirrorShadowSurface",
+            to: "private var mirrorContent"
+        )
+
+        XCTAssertTrue(body.contains("mirrorShadowSurface"))
+        XCTAssertTrue(body.contains("mirrorContent"))
+        XCTAssertFalse(body.contains(".frame(width: 200, height: 200)\n        .pingShadow"))
+        XCTAssertTrue(shadowSurface.contains("Circle()"))
+        XCTAssertTrue(shadowSurface.contains(".pingShadow(PingDesign.Shadow.mirror)"))
+    }
+
     private func readSourceFile(_ relativePath: String) throws -> String {
         let fileName = URL(fileURLWithPath: relativePath).lastPathComponent
         let fileURL = try XCTUnwrap(Bundle(for: Self.self).resourceURL?.appendingPathComponent(fileName))

@@ -10,7 +10,7 @@
             <sparkle:shortVersionString>0.1.0</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <enclosure url="https://ping0min.vercel.app/downloads/Ping-v0.1.0.dmg" length="5347280" type="application/octet-stream" sparkle:edSignature="gbrMht3BLc7DOYtbHSJDMAKEyskjrc5HfthyI2dCFeLbRHFEskb8Av0VWX44Kxi4KfzGr2R0hss4diVZYI7LDw=="/>
+            <enclosure url="https://ping0min.vercel.app/downloads/Ping-v0.1.0.dmg" length="5349930" type="application/octet-stream" sparkle:edSignature="uX6NL4cMQtX8QlrrKNXeUwAwVuF6UJhrJ1eYCOdBMIBKoQ51S3O7yAwNRxqQgqcEn6+8/GqGgFQmT+H0fRwuCQ=="/>
         </item>
     </channel>
 </rss>

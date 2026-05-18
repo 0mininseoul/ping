@@ -16,6 +16,31 @@ struct MirrorView: View {
 
     var body: some View {
         ZStack {
+            mirrorShadowSurface
+            mirrorContent
+        }
+        .frame(width: 200, height: 200)
+        .contentShape(Circle())
+        .onAppear {
+            selectedRoomId = appState.defaultRoom?.id
+            installKeyMonitor()
+        }
+        .onDisappear {
+            if let keyMonitor {
+                NSEvent.removeMonitor(keyMonitor)
+            }
+            keyMonitor = nil
+        }
+    }
+
+    private var mirrorShadowSurface: some View {
+        Circle()
+            .fill(PingDesign.Surface.circleFill)
+            .pingShadow(PingDesign.Shadow.mirror)
+    }
+
+    private var mirrorContent: some View {
+        ZStack {
             CameraPreviewView(session: camera.session)
                 .clipShape(Circle())
 
@@ -32,17 +57,6 @@ struct MirrorView: View {
             }
         }
         .frame(width: 200, height: 200)
-        .pingShadow(PingDesign.Shadow.mirror)
-        .onAppear {
-            selectedRoomId = appState.defaultRoom?.id
-            installKeyMonitor()
-        }
-        .onDisappear {
-            if let keyMonitor {
-                NSEvent.removeMonitor(keyMonitor)
-            }
-            keyMonitor = nil
-        }
     }
 
     @ViewBuilder private var topOverlay: some View {

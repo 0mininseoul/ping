@@ -27,6 +27,26 @@ final class CameraStartupContractTests: XCTestCase {
         XCTAssertLessThan(prepareAudio.lowerBound, recorder.lowerBound)
     }
 
+    func testCameraReadyReflectsRunningSessionNotJustConfiguration() throws {
+        let source = try readSourceFile("Ping/Capture/CameraManager.swift")
+        let configure = try sourceSlice(
+            in: source,
+            from: "func configure() async",
+            to: "func prepareAudioForRecording() async"
+        )
+        let stop = try sourceSlice(
+            in: source,
+            from: "func stop()",
+            to: "private func configureFrameRate"
+        )
+
+        let startRunning = try XCTUnwrap(configure.range(of: "session.startRunning()"))
+        let ready = try XCTUnwrap(configure.range(of: "isReady = session.isRunning"))
+        XCTAssertLessThan(startRunning.lowerBound, ready.lowerBound)
+        XCTAssertFalse(configure.contains("isReady = true\n        session.startRunning()"))
+        XCTAssertTrue(stop.contains("isReady = false"))
+    }
+
     private func readSourceFile(_ relativePath: String) throws -> String {
         let fileName = URL(fileURLWithPath: relativePath).lastPathComponent
         let fileURL = try XCTUnwrap(Bundle(for: Self.self).resourceURL?.appendingPathComponent(fileName))

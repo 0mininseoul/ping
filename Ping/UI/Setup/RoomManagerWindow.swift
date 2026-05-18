@@ -204,7 +204,8 @@ struct RoomManagerView: View {
     }
 
     private func renameRoom(_ room: Room) {
-        guard room.ownerUid == appState.currentUser?.id,
+        guard let currentUid = appState.currentUser?.id,
+              room.memberUids.contains(currentUid),
               let roomId = room.id,
               let newName = promptForRoomName(currentName: room.name),
               !newName.isEmpty,

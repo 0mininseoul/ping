@@ -603,14 +603,22 @@ declare
 begin
     current_uid := ping_private.require_uid();
 
+    if not exists (
+        select 1
+        from public.room_members
+        where room_id = room_uuid
+          and user_id = current_uid
+    ) then
+        raise exception 'room_not_found_or_not_member' using errcode = '42501';
+    end if;
+
     update public.rooms
     set name = new_name,
         searchable_name = new_searchable_name
-    where rooms.id = room_uuid
-      and rooms.owner_uid = current_uid;
+    where rooms.id = room_uuid;
 
     if not found then
-        raise exception 'room_not_found_or_not_owner' using errcode = '42501';
+        raise exception 'room_not_found_or_not_member' using errcode = '42501';
     end if;
 end;
 $$;

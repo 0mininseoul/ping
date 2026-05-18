@@ -69,6 +69,43 @@ final class RoomManagerUXContractTests: XCTestCase {
         XCTAssertTrue(source.contains(".disabled(sharesExistingRoom || user.id == nil)"))
     }
 
+    func testRoomMenuOffersRenameForMemberRooms() throws {
+        let source = try readSourceFile("Ping/UI/Setup/RoomListView.swift")
+        let roomActions = try sourceSlice(
+            in: source,
+            from: "private func roomActions(for room: Room)",
+            to: "private func iconAction"
+        )
+
+        XCTAssertTrue(roomActions.contains("Button(\"이름 변경\")"))
+        XCTAssertFalse(roomActions.contains("if isOwner(room)"))
+    }
+
+    func testRoomRenameAllowsAnyCurrentMember() throws {
+        let source = try readSourceFile("Ping/UI/Setup/RoomManagerWindow.swift")
+        let renameRoom = try sourceSlice(
+            in: source,
+            from: "private func renameRoom(_ room: Room)",
+            to: "private func insertOrReplaceRoom"
+        )
+
+        XCTAssertTrue(renameRoom.contains("room.memberUids.contains(currentUid)"))
+        XCTAssertFalse(renameRoom.contains("room.ownerUid == appState.currentUser?.id"))
+    }
+
+    func testRoomRenameRpcAuthorizesByMembershipInsteadOfOwnership() throws {
+        let migration = try readSourceFile("20260517000100_create_ping_backend.sql")
+        let renameRpc = try sourceSlice(
+            in: migration,
+            from: "create or replace function public.ping_rename_room",
+            to: "create or replace function public.ping_search_profiles"
+        )
+
+        XCTAssertTrue(renameRpc.contains("from public.room_members"))
+        XCTAssertTrue(renameRpc.contains("where room_id = room_uuid"))
+        XCTAssertFalse(renameRpc.contains("rooms.owner_uid = current_uid"))
+    }
+
     private func readSourceFile(_ relativePath: String) throws -> String {
         let fileName = URL(fileURLWithPath: relativePath).lastPathComponent
         let fileURL = try XCTUnwrap(Bundle(for: Self.self).resourceURL?.appendingPathComponent(fileName))
