@@ -105,7 +105,13 @@ struct MirrorView: View {
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
                 .background {
-                    Capsule().glassEffect()
+                    Capsule()
+                        .fill(PingDesign.Surface.rowFill.opacity(0.84))
+                        .pingGlassEffect()
+                        .overlay {
+                            Capsule()
+                                .strokeBorder(PingDesign.Surface.strongHairline.opacity(0.48), lineWidth: 0.8)
+                        }
                 }
                 .padding(.bottom, 12)
         default:

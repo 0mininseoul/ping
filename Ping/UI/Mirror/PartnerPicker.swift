@@ -56,7 +56,12 @@ struct PartnerPicker: View {
         .frame(maxWidth: 180)
         .background {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .glassEffect()
+                .fill(PingDesign.Surface.panelFill.opacity(0.94))
+                .pingGlassEffect()
+                .overlay {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .strokeBorder(PingDesign.Surface.strongHairline.opacity(0.42), lineWidth: 0.8)
+                }
         }
     }
 

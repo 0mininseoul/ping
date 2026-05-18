@@ -16,6 +16,24 @@ final class DesignSystemContractTests: XCTestCase {
         XCTAssertTrue(source.contains("stableSecondaryFill"))
     }
 
+    func testGlassEffectIsIsolatedBehindCompatibilityModifier() throws {
+        let glassCompat = try readSourceFile("Ping/UI/Glass/GlassEffectCompat.swift")
+        let glassChip = try readSourceFile("Ping/UI/Glass/GlassChip.swift")
+        let partnerPicker = try readSourceFile("Ping/UI/Mirror/PartnerPicker.swift")
+        let mirrorView = try readSourceFile("Ping/UI/Mirror/MirrorView.swift")
+
+        XCTAssertTrue(glassCompat.contains("if #available(macOS 26.0, *)"))
+        XCTAssertTrue(glassCompat.contains(".glassEffect()"))
+        XCTAssertTrue(glassCompat.contains("macOS 26"))
+        XCTAssertTrue(glassCompat.contains("pre-Tahoe"))
+        XCTAssertFalse(glassChip.contains(".glassEffect()"))
+        XCTAssertFalse(partnerPicker.contains(".glassEffect()"))
+        XCTAssertFalse(mirrorView.contains(".glassEffect()"))
+        XCTAssertTrue(glassChip.contains(".pingGlassEffect()"))
+        XCTAssertTrue(partnerPicker.contains(".pingGlassEffect()"))
+        XCTAssertTrue(mirrorView.contains(".pingGlassEffect()"))
+    }
+
     func testLightModeRoomSurfacesAvoidNestedGlassLayers() throws {
         let source = try readSourceFile("Ping/UI/Setup/RoomListView.swift")
         let roomCard = try sourceSlice(

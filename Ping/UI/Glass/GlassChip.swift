@@ -29,7 +29,7 @@ struct GlassChip: View {
         .background {
             Capsule()
                 .fill(PingDesign.Surface.rowFill.opacity(isHover ? 0.95 : 0.78))
-                .glassEffect()
+                .pingGlassEffect()
                 .overlay {
                     Capsule()
                         .strokeBorder(
