@@ -4,10 +4,10 @@
 
 **Ping**은 macOS 26 Tahoe 전용 2초 영상 메시지 메뉴바 앱이다. Option+P로 원형 카메라 거울을 띄우고, Enter로 정확히 2초 녹화한 뒤 Supabase를 통해 파트너에게 전송한다. 수신자는 로컬 알림을 클릭하면 발신자가 보낸 위치에 2초 원형 재생창이 뜬다.
 
-### 초기 사용자
+### 초기 검증 환경
 
-- 박영민 (M3 Pro Mac)
-- 김나영 (M1 Pro Mac)
+- 박영민 Apple Silicon Mac
+- 테스트 Apple Silicon Mac
 
 ### 목표
 
@@ -216,7 +216,7 @@ Supabase Dashboard에서 Anonymous sign-ins가 켜져 있어야 한다.
 파일명 예:
 
 ```text
-sent/2026-05-17_14-30-25_to_김나영.mp4
+sent/2026-05-17_14-30-25_to_partner.mp4
 sent/2026-05-17_14-30-25_to_all.mp4
 received/2026-05-17_14-32-18_from_박영민.mp4
 ```
