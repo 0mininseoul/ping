@@ -40,6 +40,7 @@
 		6FC1B535DD12B36BA7721FDD /* GlassPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCBB58248AD85A5BB4137D3F /* GlassPanel.swift */; };
 		7035C7FE65C8AC75092F13FB /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 124F74B5C81D2AD5BA394E96 /* KeyboardShortcuts */; };
 		776C909E046ADCF36EFB3CB8 /* UserService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 260A034212C7DCDAE4B05B4E /* UserService.swift */; };
+		7D6820A9720716BA8CC598CE /* WindowPositioning.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73B2E5B2B85836038B79C18B /* WindowPositioning.swift */; };
 		81AD9AA639E624B9BD249F74 /* VideoRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06B4B9E0137AD6A34F151BF2 /* VideoRecorder.swift */; };
 		81CF775CFAC24B82B2F8043A /* GlassChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFDFDDA4D6E69A3184DC445F /* GlassChip.swift */; };
 		82489619708A93D7397D5172 /* MenuBarIconContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B34FE34A23EC76CE975F980D /* MenuBarIconContractTests.swift */; };
@@ -55,6 +56,7 @@
 		ACDDF0E513D2F7D330B6A9C7 /* SmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEBA01FC9DCA088BE83E5C4F /* SmokeTests.swift */; };
 		AE0BAABF032564CD75C6AC48 /* RoomManagerWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2F526895AEBD9128DA1538F /* RoomManagerWindow.swift */; };
 		B516DA8E35BE22691A6F324C /* LocalNotificationCenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFCF08C61ECD845F231DFFE4 /* LocalNotificationCenter.swift */; };
+		B5ADEAB2D74F268DF698CC0E /* WindowPositioningTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA897CE96651014C4A14D9FF /* WindowPositioningTests.swift */; };
 		B6A11640F9C354B97F970881 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 9A1A6B3E7AB732144F264705 /* Sparkle */; };
 		BD4B27A9FA26170478465688 /* SupabaseClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = C719C9C94BAE6A852AD90D7A /* SupabaseClient.swift */; };
 		BE3551EEFED3B34395960150 /* ScreenCoordinatesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DB8EE7896F96DFAC0EFCA86 /* ScreenCoordinatesTests.swift */; };
@@ -123,6 +125,7 @@
 		6BB8B40BB61BAE16EB12E239 /* ReleaseVersionContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReleaseVersionContractTests.swift; sourceTree = "<group>"; };
 		727042FF4263267EEFA18D20 /* CameraManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraManager.swift; sourceTree = "<group>"; };
 		72E17B6A6D89179C56491009 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		73B2E5B2B85836038B79C18B /* WindowPositioning.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowPositioning.swift; sourceTree = "<group>"; };
 		864AD1809E808999EDC337AA /* LandingPageDesignContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LandingPageDesignContractTests.swift; sourceTree = "<group>"; };
 		880D2B3F583FCC9102608E19 /* CameraPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPreviewView.swift; sourceTree = "<group>"; };
 		8841413A695A3C64F0B3F247 /* GlassButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassButton.swift; sourceTree = "<group>"; };
@@ -141,6 +144,7 @@
 		B34FE34A23EC76CE975F980D /* MenuBarIconContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarIconContractTests.swift; sourceTree = "<group>"; };
 		B5C8F83E9CBB7B5717E22773 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		B6D978D1D0ADEFE94F8E2D9D /* HotkeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyManager.swift; sourceTree = "<group>"; };
+		BA897CE96651014C4A14D9FF /* WindowPositioningTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowPositioningTests.swift; sourceTree = "<group>"; };
 		BCBB58248AD85A5BB4137D3F /* GlassPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassPanel.swift; sourceTree = "<group>"; };
 		C0B62D708A5A8B647FB677E8 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		C0F79541C73EA6A1AA177880 /* UpdaterController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdaterController.swift; sourceTree = "<group>"; };
@@ -206,6 +210,7 @@
 				F760D624DE03E352A8514854 /* ScreenCoordinates.swift */,
 				E917296A7C45B0DEF90EEB1C /* SearchableText.swift */,
 				A998B4DE490C410DD8C04545 /* UserPreferences.swift */,
+				73B2E5B2B85836038B79C18B /* WindowPositioning.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -359,6 +364,7 @@
 				2319CC860C1B8D1CEC0E1E4E /* SupabaseDecodingTests.swift */,
 				D09E2E7CA36EC901ED5EE3FB /* SupabaseSessionContractTests.swift */,
 				FA17BAFB8C514438C7961E5F /* VideoRecordingContractTests.swift */,
+				BA897CE96651014C4A14D9FF /* WindowPositioningTests.swift */,
 			);
 			path = PingTests;
 			sourceTree = "<group>";
@@ -614,6 +620,7 @@
 				D291A0F09A96CC00D2E3E020 /* SupabaseDecodingTests.swift in Sources */,
 				D3660AF8AC6874725F533E10 /* SupabaseSessionContractTests.swift in Sources */,
 				CA2DF3196CAE29536E2450C1 /* VideoRecordingContractTests.swift in Sources */,
+				B5ADEAB2D74F268DF698CC0E /* WindowPositioningTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -668,6 +675,7 @@
 				776C909E046ADCF36EFB3CB8 /* UserService.swift in Sources */,
 				18C48517F57EFCA192AD3E54 /* VideoCropper.swift in Sources */,
 				81AD9AA639E624B9BD249F74 /* VideoRecorder.swift in Sources */,
+				7D6820A9720716BA8CC598CE /* WindowPositioning.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
