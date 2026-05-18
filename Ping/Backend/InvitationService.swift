@@ -18,6 +18,19 @@ final class InvitationService {
         ])
     }
 
+    @discardableResult
+    func inviteUser(toUid: String, fromNickname: String, roomName: String) async throws -> Room {
+        let rooms: [Room] = try await client.rpcArray("ping_invite_user", body: [
+            "target_uid": toUid,
+            "inviter_nickname_text": fromNickname,
+            "room_name_text": roomName,
+            "searchable_room_name": SearchableText.normalize(roomName)
+        ])
+
+        guard let room = rooms.first else { throw PingError.supabaseUnavailable }
+        return room
+    }
+
     func observeIncoming(uid: String) -> AsyncStream<[Invitation]> {
         AsyncStream { continuation in
             let task = Task { @MainActor in

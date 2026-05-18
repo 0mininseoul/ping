@@ -267,7 +267,9 @@ struct RoomSearchView: View {
     }
 
     private func userResult(_ user: PingUser) -> some View {
-        HStack(spacing: 12) {
+        let sharesExistingRoom = sharesRoom(with: user)
+
+        return HStack(spacing: 12) {
             Image(systemName: "person.crop.circle.fill")
                 .font(.system(size: 20, weight: .semibold))
                 .foregroundStyle(.secondary)
@@ -284,11 +286,12 @@ struct RoomSearchView: View {
 
             Spacer()
 
-            GlassButton("초대", isPrimary: true) {
+            GlassButton(sharesExistingRoom ? "내 룸" : "초대", isPrimary: !sharesExistingRoom) {
+                guard !sharesExistingRoom else { return }
                 onInviteUser(user)
             }
-            .disabled(user.id == nil)
-            .opacity(user.id == nil ? 0.55 : 1)
+            .disabled(sharesExistingRoom || user.id == nil)
+            .opacity(sharesExistingRoom || user.id == nil ? 0.55 : 1)
         }
         .padding(12)
         .background {
@@ -312,6 +315,11 @@ struct RoomSearchView: View {
     private func isCurrentUserMember(of room: Room) -> Bool {
         guard let uid = appState.currentUser?.id else { return false }
         return room.memberUids.contains(uid)
+    }
+
+    private func sharesRoom(with user: PingUser) -> Bool {
+        let myRoomIds = Set(appState.rooms.compactMap(\.id))
+        return user.rooms.contains { myRoomIds.contains($0) }
     }
 
     private func ownerName(for room: Room) -> String {

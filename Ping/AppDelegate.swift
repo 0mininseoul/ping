@@ -585,7 +585,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func handleInvite(user: PingUser) {
         guard let currentUser = appState.currentUser,
-              let myUid = currentUser.id,
               let theirUid = user.id else {
             return
         }
@@ -593,19 +592,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Task {
             do {
                 let roomName = "\(currentUser.nickname) ↔ \(user.nickname)"
-                let room = try await roomService.createRoom(
-                    name: roomName,
-                    ownerUid: myUid,
-                    ownerNickname: currentUser.nickname
-                )
-                guard let roomId = room.id else { return }
-                try await invitationService.send(
-                    fromUid: myUid,
-                    fromNickname: currentUser.nickname,
+                let room = try await invitationService.inviteUser(
                     toUid: theirUid,
-                    roomId: roomId,
+                    fromNickname: currentUser.nickname,
                     roomName: roomName
                 )
+                insertOrReplaceRoom(room)
             } catch {
                 appState.backendStatusMessage = error.localizedDescription
             }

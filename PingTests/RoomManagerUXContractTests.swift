@@ -40,6 +40,35 @@ final class RoomManagerUXContractTests: XCTestCase {
         XCTAssertTrue(source.contains("renameLocalRoom(roomId: roomId, newName: newName)"))
     }
 
+    func testUserInviteUsesAtomicReuseRpcInsteadOfCreatingDuplicateRooms() throws {
+        let appDelegateSource = try readSourceFile("Ping/AppDelegate.swift")
+        let invitationServiceSource = try readSourceFile("Ping/Backend/InvitationService.swift")
+        let migration = try readSourceFile("20260518113000_invite_user_reuses_pending_room.sql")
+        let handleInvite = try sourceSlice(
+            in: appDelegateSource,
+            from: "private func handleInvite(user: PingUser)",
+            to: "private func copyInviteLink"
+        )
+
+        XCTAssertTrue(handleInvite.contains("invitationService.inviteUser"))
+        XCTAssertTrue(handleInvite.contains("insertOrReplaceRoom(room)"))
+        XCTAssertFalse(handleInvite.contains("roomService.createRoom"))
+        XCTAssertTrue(invitationServiceSource.contains("func inviteUser"))
+        XCTAssertTrue(invitationServiceSource.contains("ping_invite_user"))
+        XCTAssertTrue(migration.contains("create or replace function public.ping_invite_user"))
+        XCTAssertTrue(migration.contains("existing_invitation_id"))
+        XCTAssertTrue(migration.contains("existing_room_id"))
+        XCTAssertTrue(migration.contains("grant execute on function public.ping_invite_user"))
+    }
+
+    func testUserSearchShowsExistingMembersAsMyRoomInsteadOfInvite() throws {
+        let source = try readSourceFile("Ping/UI/Setup/RoomSearchView.swift")
+
+        XCTAssertTrue(source.contains("sharesRoom(with: user)"))
+        XCTAssertTrue(source.contains("sharesExistingRoom ? \"내 룸\" : \"초대\""))
+        XCTAssertTrue(source.contains(".disabled(sharesExistingRoom || user.id == nil)"))
+    }
+
     private func readSourceFile(_ relativePath: String) throws -> String {
         let fileName = URL(fileURLWithPath: relativePath).lastPathComponent
         let fileURL = try XCTUnwrap(Bundle(for: Self.self).resourceURL?.appendingPathComponent(fileName))
