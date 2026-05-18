@@ -74,14 +74,6 @@ final class CameraManager: ObservableObject {
         isReady = session.isRunning
     }
 
-    func startIfAuthorized() async {
-        guard AVCaptureDevice.authorizationStatus(for: .video) == .authorized else {
-            return
-        }
-
-        await start()
-    }
-
     func prepareAudioForRecording() async {
         guard !audioConfigured, !Task.isCancelled else { return }
 

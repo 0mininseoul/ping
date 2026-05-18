@@ -1,5 +1,4 @@
 import { MonitorDown } from "lucide-react";
-import Aurora from "@/components/bits/Aurora";
 import ClickSpark from "@/components/bits/ClickSpark";
 import ScrollFloat from "@/components/bits/ScrollFloat";
 import { Badge } from "@/components/ui/badge";
@@ -16,19 +15,11 @@ export default function FinalCTA({ downloadUrl, version }: FinalCTAProps) {
       <div className="container-app">
         <ScrollFloat>
           <div
-            className="relative isolate overflow-hidden rounded-lg border border-border bg-bg-elev p-10 md:p-14"
-            style={{ boxShadow: "var(--shadow-card)" }}
+            className="relative overflow-hidden rounded-lg border border-[rgba(10,11,9,0.10)] bg-bg-elev p-10 shadow-[0_18px_42px_rgba(10,11,9,0.07)] md:p-14"
           >
-            <Aurora
-              className="opacity-[0.28]"
-              colorStops={["#fffdf6", "#cfe9d8", "#8de8b9"]}
-              amplitude={0.55}
-              blend={0.4}
-              speed={0.75}
-            />
             <div
               aria-hidden
-              className="absolute inset-0 -z-[1] bg-gradient-to-t from-bg-elev via-bg-elev/70 to-transparent"
+              className="pointer-events-none absolute inset-px rounded-[23px] border border-white/70"
             />
 
             <div className="relative grid items-center gap-10 md:grid-cols-[1.1fr_0.9fr] md:gap-14">
@@ -51,7 +42,11 @@ export default function FinalCTA({ downloadUrl, version }: FinalCTAProps) {
                     href={downloadUrl}
                     aria-label={`Ping ${version} DMG 다운로드`}
                   >
-                    <Button variant="primary" size="lg" className="w-full md:w-auto">
+                    <Button
+                      variant="primary"
+                      size="lg"
+                      className="w-full !shadow-[0_10px_22px_rgba(47,170,110,0.16)] md:w-auto"
+                    >
                       <MonitorDown aria-hidden className="h-[18px] w-[18px]" />
                       Ping {version} 다운로드
                     </Button>
