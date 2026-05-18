@@ -4,16 +4,18 @@ struct RoomListView: View {
     @ObservedObject var appState: AppState
     var roomService: RoomService
     var onLeave: ((Room) -> Void)?
-    var onRename: (Room) -> Void
     var onCopyInviteLink: (Room) -> Void
     var onCreateRoom: () -> Void
     var onFindRoom: () -> Void
+
+    @State private var editingRoomId: String?
+    @State private var editingName = ""
+    @FocusState private var focusedEditingRoomId: String?
 
     init(
         appState: AppState,
         roomService: RoomService,
         onLeave: ((Room) -> Void)? = nil,
-        onRename: @escaping (Room) -> Void = { _ in },
         onCopyInviteLink: @escaping (Room) -> Void = { _ in },
         onCreateRoom: @escaping () -> Void = {},
         onFindRoom: @escaping () -> Void = {}
@@ -21,7 +23,6 @@ struct RoomListView: View {
         self.appState = appState
         self.roomService = roomService
         self.onLeave = onLeave
-        self.onRename = onRename
         self.onCopyInviteLink = onCopyInviteLink
         self.onCreateRoom = onCreateRoom
         self.onFindRoom = onFindRoom
@@ -106,11 +107,15 @@ struct RoomListView: View {
         HStack(alignment: .center, spacing: 18) {
             VStack(alignment: .leading, spacing: 11) {
                 HStack(alignment: .firstTextBaseline, spacing: 10) {
-                    Text(room.name)
-                        .font(.system(size: 21, weight: .semibold))
-                        .foregroundStyle(Color.primary.opacity(0.92))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.78)
+                    if isEditing(room) {
+                        inlineRoomNameEditor(for: room)
+                    } else {
+                        Text(room.name)
+                            .font(.system(size: 21, weight: .semibold))
+                            .foregroundStyle(Color.primary.opacity(0.92))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.78)
+                    }
 
                     statusBadge(for: room)
                         .fixedSize()
@@ -152,7 +157,7 @@ struct RoomListView: View {
 
             Menu {
                 Button("이름 변경") {
-                    onRename(room)
+                    beginRenaming(room)
                 }
 
                 Divider()
@@ -167,6 +172,49 @@ struct RoomListView: View {
             .buttonStyle(.plain)
             .fixedSize()
             .help("룸 메뉴")
+        }
+    }
+
+    @ViewBuilder
+    private func inlineRoomNameEditor(for room: Room) -> some View {
+        if let roomId = room.id {
+            TextField("", text: $editingName)
+                .font(.system(size: 21, weight: .semibold))
+                .foregroundStyle(Color.primary.opacity(0.92))
+                .textFieldStyle(.plain)
+                .lineLimit(1)
+                .focused($focusedEditingRoomId, equals: roomId)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .frame(minWidth: 160, maxWidth: 280)
+                .background {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(PingDesign.Surface.inputFieldFocusedFill)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .strokeBorder(PingDesign.ColorToken.accent.opacity(0.45), lineWidth: 1)
+                        }
+                }
+                .onSubmit {
+                    commitRename(room)
+                }
+                .onExitCommand {
+                    cancelRename()
+                }
+                .onAppear {
+                    focusedEditingRoomId = roomId
+                }
+                .onChange(of: focusedEditingRoomId) { _, newValue in
+                    if editingRoomId == roomId, newValue != roomId {
+                        commitRename(room)
+                    }
+                }
+        } else {
+            Text(room.name)
+                .font(.system(size: 21, weight: .semibold))
+                .foregroundStyle(Color.primary.opacity(0.92))
+                .lineLimit(1)
+                .minimumScaleFactor(0.78)
         }
     }
 
@@ -256,6 +304,71 @@ struct RoomListView: View {
 
     private var canCreateRoom: Bool {
         appState.rooms.count < RoomLimits.maxRoomsPerUser
+    }
+
+    private func isEditing(_ room: Room) -> Bool {
+        guard let roomId = room.id else { return false }
+        return editingRoomId == roomId
+    }
+
+    private func beginRenaming(_ room: Room) {
+        guard let currentUid = appState.currentUser?.id,
+              room.memberUids.contains(currentUid),
+              let roomId = room.id else {
+            return
+        }
+
+        editingRoomId = roomId
+        editingName = room.name
+        focusedEditingRoomId = roomId
+    }
+
+    private func commitRename(_ room: Room) {
+        guard let currentUid = appState.currentUser?.id,
+              room.memberUids.contains(currentUid),
+              let roomId = room.id,
+              editingRoomId == roomId else {
+            cancelRename()
+            return
+        }
+
+        let newName = editingName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !newName.isEmpty, newName != room.name else {
+            cancelRename()
+            return
+        }
+
+        Task { @MainActor in
+            do {
+                try await roomService.renameRoom(roomId: roomId, newName: newName)
+                renameLocalRoom(roomId: roomId, newName: newName)
+                cancelRename()
+            } catch {
+                appState.backendStatusMessage = error.localizedDescription
+            }
+        }
+    }
+
+    private func cancelRename() {
+        editingRoomId = nil
+        editingName = ""
+        focusedEditingRoomId = nil
+    }
+
+    private func renameLocalRoom(roomId: String, newName: String) {
+        guard let index = appState.rooms.firstIndex(where: { $0.id == roomId }) else {
+            return
+        }
+
+        appState.rooms[index].name = newName
+        appState.rooms[index].searchableName = SearchableText.normalize(newName)
+        sortRooms()
+    }
+
+    private func sortRooms() {
+        appState.rooms.sort { lhs, rhs in
+            lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
+        }
     }
 
     private func leave(_ room: Room) {

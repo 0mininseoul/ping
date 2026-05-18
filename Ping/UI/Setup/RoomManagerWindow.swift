@@ -72,7 +72,6 @@ struct RoomManagerView: View {
                 RoomListView(
                     appState: appState,
                     roomService: roomService,
-                    onRename: renameRoom,
                     onCopyInviteLink: onCopyInviteLink,
                     onCreateRoom: createRoom,
                     onFindRoom: { selectedTab = .search }
@@ -203,26 +202,6 @@ struct RoomManagerView: View {
         }
     }
 
-    private func renameRoom(_ room: Room) {
-        guard let currentUid = appState.currentUser?.id,
-              room.memberUids.contains(currentUid),
-              let roomId = room.id,
-              let newName = promptForRoomName(currentName: room.name),
-              !newName.isEmpty,
-              newName != room.name else {
-            return
-        }
-
-        Task { @MainActor in
-            do {
-                try await roomService.renameRoom(roomId: roomId, newName: newName)
-                renameLocalRoom(roomId: roomId, newName: newName)
-            } catch {
-                appState.backendStatusMessage = error.localizedDescription
-            }
-        }
-    }
-
     private func insertOrReplaceRoom(_ room: Room) {
         if let roomId = room.id,
            let index = appState.rooms.firstIndex(where: { $0.id == roomId }) {
@@ -234,16 +213,6 @@ struct RoomManagerView: View {
         sortRooms()
     }
 
-    private func renameLocalRoom(roomId: String, newName: String) {
-        guard let index = appState.rooms.firstIndex(where: { $0.id == roomId }) else {
-            return
-        }
-
-        appState.rooms[index].name = newName
-        appState.rooms[index].searchableName = SearchableText.normalize(newName)
-        sortRooms()
-    }
-
     private func sortRooms() {
         appState.rooms.sort { lhs, rhs in
             lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
@@ -252,9 +221,9 @@ struct RoomManagerView: View {
 
     private func promptForRoomName(currentName: String) -> String? {
         let alert = NSAlert()
-        alert.messageText = currentName.isEmpty ? "룸 만들기" : "룸 이름 변경"
-        alert.informativeText = currentName.isEmpty ? "새 룸 이름을 입력하세요." : "새 룸 이름을 입력하세요."
-        alert.addButton(withTitle: currentName.isEmpty ? "만들기" : "변경")
+        alert.messageText = "룸 만들기"
+        alert.informativeText = "새 룸 이름을 입력하세요."
+        alert.addButton(withTitle: "만들기")
         alert.addButton(withTitle: "취소")
 
         let input = NSTextField(string: currentName)

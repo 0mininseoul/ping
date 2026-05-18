@@ -47,6 +47,19 @@ final class CameraStartupContractTests: XCTestCase {
         XCTAssertTrue(stop.contains("isReady = false"))
     }
 
+    func testCameraCanWarmStartWithoutPromptingUndecidedUsers() throws {
+        let source = try readSourceFile("Ping/Capture/CameraManager.swift")
+        let startIfAuthorized = try sourceSlice(
+            in: source,
+            from: "func startIfAuthorized() async",
+            to: "func prepareAudioForRecording() async"
+        )
+
+        XCTAssertTrue(startIfAuthorized.contains("AVCaptureDevice.authorizationStatus(for: .video) == .authorized"))
+        XCTAssertTrue(startIfAuthorized.contains("await start()"))
+        XCTAssertFalse(startIfAuthorized.contains("requestAccess(for: .video)"))
+    }
+
     private func readSourceFile(_ relativePath: String) throws -> String {
         let fileName = URL(fileURLWithPath: relativePath).lastPathComponent
         let fileURL = try XCTUnwrap(Bundle(for: Self.self).resourceURL?.appendingPathComponent(fileName))

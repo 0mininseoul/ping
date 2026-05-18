@@ -29,6 +29,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var incomingMessageTask: Task<Void, Never>?
     private var bootstrapTask: Task<Void, Never>?
     private var cameraStartTask: Task<Void, Never>?
+    private var cameraIdleStopTask: Task<Void, Never>?
     private var pendingInviteToken: String?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -41,6 +42,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setupHotkey()
 
         if !ProcessInfo.processInfo.isRunningUnitTests {
+            prewarmCameraIfAuthorized()
             UpdaterController.shared.start()
             startBootstrapTaskIfNeeded()
         }
@@ -52,6 +54,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         invitationObserverTask?.cancel()
         incomingMessageTask?.cancel()
         cameraStartTask?.cancel()
+        cameraIdleStopTask?.cancel()
         camera.stop()
     }
 
@@ -106,6 +109,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
     }
 
+    private func startBootstrapTaskIfNeeded() {
+        guard bootstrapTask == nil else { return }
+
+        bootstrapTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            await self.bootstrapBackend()
+            self.bootstrapTask = nil
+        }
+    }
+
+    private func prewarmCameraIfAuthorized() {
+        cameraIdleStopTask?.cancel()
+        cameraStartTask?.cancel()
+        cameraStartTask = Task { @MainActor in
+            await camera.startIfAuthorized()
+        }
+    }
+
     private func bootstrapBackend() async {
         do {
             let uid = try await SupabaseClient.shared.bootstrap()
@@ -125,16 +146,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             appState.backendStatusMessage = error.localizedDescription
             NSLog("Backend bootstrap failed: \(error)")
             showSetupError(error)
-        }
-    }
-
-    private func startBootstrapTaskIfNeeded() {
-        guard bootstrapTask == nil else { return }
-
-        bootstrapTask = Task { @MainActor [weak self] in
-            guard let self else { return }
-            await self.bootstrapBackend()
-            self.bootstrapTask = nil
         }
     }
 
@@ -245,10 +256,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func startCameraForMirrorPresentation() {
+        cameraIdleStopTask?.cancel()
         cameraStartTask?.cancel()
-        cameraStartTask = Task {
+        cameraStartTask = Task { @MainActor in
             guard !Task.isCancelled else { return }
             await camera.start()
+        }
+    }
+
+    private func scheduleCameraIdleStop() {
+        cameraIdleStopTask?.cancel()
+        cameraIdleStopTask = Task { @MainActor in
+            try? await Task.sleep(for: .minutes(5))
+            guard !Task.isCancelled else { return }
+            camera.stop()
+            cameraIdleStopTask = nil
         }
     }
 
@@ -257,7 +279,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         cameraStartTask = nil
         mirrorWindow?.savePosition()
         mirrorWindow?.orderOut(nil)
-        camera.stop()
+        scheduleCameraIdleStop()
     }
 
     private func sendVideo(tempURL: URL, position: MirrorPosition, targets: [Room]) async throws {
@@ -515,6 +537,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                         opensRoomManagerWhenEmpty: completion.action != .later
                     )
                     self.runCleanup(uid: uid)
+                    self.prewarmCameraIfAuthorized()
                     self.onboardingWindow?.close()
                     self.onboardingWindow = nil
                     if let token = self.pendingInviteToken {
@@ -752,5 +775,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 private extension ProcessInfo {
     var isRunningUnitTests: Bool {
         environment["XCTestConfigurationFilePath"] != nil
+    }
+}
+
+private extension Duration {
+    static func minutes(_ value: Int64) -> Duration {
+        .seconds(value * 60)
     }
 }

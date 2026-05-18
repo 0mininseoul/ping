@@ -31,13 +31,14 @@ final class RoomManagerUXContractTests: XCTestCase {
         XCTAssertTrue(source.contains("onFindRoom: { selectedTab = .search }"))
     }
 
-    func testRoomCreateAndRenameUpdateLocalRoomsWithoutWaitingForPolling() throws {
-        let source = try readSourceFile("Ping/UI/Setup/RoomManagerWindow.swift")
+    func testRoomCreateAndInlineRenameUpdateLocalRoomsWithoutWaitingForPolling() throws {
+        let roomManagerSource = try readSourceFile("Ping/UI/Setup/RoomManagerWindow.swift")
+        let roomListSource = try readSourceFile("Ping/UI/Setup/RoomListView.swift")
 
-        XCTAssertTrue(source.contains("insertOrReplaceRoom"))
-        XCTAssertTrue(source.contains("renameLocalRoom"))
-        XCTAssertTrue(source.contains("let createdRoom = try await roomService.createRoom"))
-        XCTAssertTrue(source.contains("renameLocalRoom(roomId: roomId, newName: newName)"))
+        XCTAssertTrue(roomManagerSource.contains("insertOrReplaceRoom"))
+        XCTAssertTrue(roomManagerSource.contains("let createdRoom = try await roomService.createRoom"))
+        XCTAssertTrue(roomListSource.contains("renameLocalRoom"))
+        XCTAssertTrue(roomListSource.contains("renameLocalRoom(roomId: roomId, newName: newName)"))
     }
 
     func testUserInviteUsesAtomicReuseRpcInsteadOfCreatingDuplicateRooms() throws {
@@ -81,16 +82,34 @@ final class RoomManagerUXContractTests: XCTestCase {
         XCTAssertFalse(roomActions.contains("if isOwner(room)"))
     }
 
+    func testRoomRenameUsesInlineCardEditorInsteadOfPromptWindow() throws {
+        let roomListSource = try readSourceFile("Ping/UI/Setup/RoomListView.swift")
+        let roomManagerSource = try readSourceFile("Ping/UI/Setup/RoomManagerWindow.swift")
+
+        XCTAssertTrue(roomListSource.contains("@State private var editingRoomId"))
+        XCTAssertTrue(roomListSource.contains("@FocusState private var focusedEditingRoomId"))
+        XCTAssertTrue(roomListSource.contains("private func inlineRoomNameEditor"))
+        XCTAssertTrue(roomListSource.contains("TextField(\"\", text: $editingName)"))
+        XCTAssertTrue(roomListSource.contains("beginRenaming(room)"))
+        XCTAssertTrue(roomListSource.contains("commitRename(room)"))
+        XCTAssertTrue(roomListSource.contains("onExitCommand"))
+
+        XCTAssertFalse(roomManagerSource.contains("onRename: renameRoom"))
+        XCTAssertFalse(roomManagerSource.contains("private func renameRoom"))
+        XCTAssertFalse(roomManagerSource.contains("\"룸 이름 변경\""))
+    }
+
     func testRoomRenameAllowsAnyCurrentMember() throws {
-        let source = try readSourceFile("Ping/UI/Setup/RoomManagerWindow.swift")
-        let renameRoom = try sourceSlice(
+        let source = try readSourceFile("Ping/UI/Setup/RoomListView.swift")
+        let commitRename = try sourceSlice(
             in: source,
-            from: "private func renameRoom(_ room: Room)",
-            to: "private func insertOrReplaceRoom"
+            from: "private func commitRename(_ room: Room)",
+            to: "private func renameLocalRoom"
         )
 
-        XCTAssertTrue(renameRoom.contains("room.memberUids.contains(currentUid)"))
-        XCTAssertFalse(renameRoom.contains("room.ownerUid == appState.currentUser?.id"))
+        XCTAssertTrue(commitRename.contains("room.memberUids.contains(currentUid)"))
+        XCTAssertTrue(commitRename.contains("roomService.renameRoom(roomId: roomId, newName: newName)"))
+        XCTAssertFalse(commitRename.contains("room.ownerUid == appState.currentUser?.id"))
     }
 
     func testRoomRenameRpcAuthorizesByMembershipInsteadOfOwnership() throws {

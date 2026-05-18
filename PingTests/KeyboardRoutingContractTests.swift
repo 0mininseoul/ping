@@ -14,7 +14,7 @@ final class KeyboardRoutingContractTests: XCTestCase {
         XCTAssertTrue(source.contains("await camera.start()"))
     }
 
-    func testMirrorCameraStartTaskIsCanceledWhenMirrorCloses() throws {
+    func testMirrorCameraStartTaskIsCanceledWhenMirrorClosesButCameraStaysWarmBriefly() throws {
         let source = try readSourceFile("Ping/AppDelegate.swift")
         let startCamera = try sourceSlice(
             in: source,
@@ -26,12 +26,42 @@ final class KeyboardRoutingContractTests: XCTestCase {
             from: "private func closeMirrorWindow()",
             to: "private func sendVideo"
         )
+        let idleStop = try sourceSlice(
+            in: source,
+            from: "private func scheduleCameraIdleStop()",
+            to: "private func sendVideo"
+        )
 
         XCTAssertTrue(source.contains("private var cameraStartTask: Task<Void, Never>?"))
+        XCTAssertTrue(source.contains("private var cameraIdleStopTask: Task<Void, Never>?"))
         XCTAssertTrue(startCamera.contains("cameraStartTask?.cancel()"))
+        XCTAssertTrue(startCamera.contains("cameraIdleStopTask?.cancel()"))
         XCTAssertTrue(startCamera.contains("cameraStartTask = Task"))
         XCTAssertTrue(closeMirror.contains("cameraStartTask?.cancel()"))
         XCTAssertTrue(closeMirror.contains("cameraStartTask = nil"))
+        XCTAssertTrue(closeMirror.contains("scheduleCameraIdleStop()"))
+        XCTAssertFalse(closeMirror.contains("camera.stop()"))
+        XCTAssertTrue(idleStop.contains("cameraIdleStopTask = Task"))
+        XCTAssertTrue(idleStop.contains("try? await Task.sleep(for: .minutes(5))"))
+        XCTAssertTrue(idleStop.contains("camera.stop()"))
+    }
+
+    func testAppPrewarmsCameraWhenPermissionAlreadyGranted() throws {
+        let source = try readSourceFile("Ping/AppDelegate.swift")
+        let launch = try sourceSlice(
+            in: source,
+            from: "func applicationDidFinishLaunching",
+            to: "func applicationWillTerminate"
+        )
+        let prewarm = try sourceSlice(
+            in: source,
+            from: "private func prewarmCameraIfAuthorized()",
+            to: "private func bootstrapBackend() async"
+        )
+
+        XCTAssertTrue(launch.contains("prewarmCameraIfAuthorized()"))
+        XCTAssertTrue(prewarm.contains("cameraIdleStopTask?.cancel()"))
+        XCTAssertTrue(prewarm.contains("await camera.startIfAuthorized()"))
     }
 
     func testMirrorKeyMonitorIgnoresNonMirrorWindows() throws {
