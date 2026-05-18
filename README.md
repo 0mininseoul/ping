@@ -18,7 +18,7 @@ cp Resources/Supabase.example.plist Resources/Supabase.plist
 <key>SUPABASE_ANON_KEY</key>
 <string>YOUR_SUPABASE_ANON_KEY</string>
 <key>PING_INVITE_BASE_URL</key>
-<string>https://ping-0mininseoul.vercel.app</string>
+<string>https://ping0min.vercel.app</string>
 ```
 
 스키마는 `supabase/migrations/20260517000100_create_ping_backend.sql`에 있다. 원격 프로젝트에 연결한 뒤 적용한다.
@@ -45,7 +45,7 @@ Supabase Dashboard의 Authentication 설정에서 Anonymous sign-ins가 켜져 �
 - Esc: 취소.
 - Tab / 1~9: 파트너 전환.
 - 0 또는 A: 전체 파트너에게 동시 발송.
-- 내 룸 > 링크 복사: 앱을 아직 설치하지 않은 상대에게 초대 링크를 보낸다.
+- 내 룸 > 초대링크 복사: 앱을 아직 설치하지 않은 상대에게 초대 링크를 보낸다.
 
 ## 시스템 요구사항
 

@@ -25,9 +25,20 @@ final class InviteLinkContractTests: XCTestCase {
         XCTAssertTrue(source.contains("초대링크 복사"))
         XCTAssertTrue(source.contains("systemName: \"link\""))
         XCTAssertTrue(source.contains("Menu {"))
+        XCTAssertTrue(source.contains(".menuIndicator(.hidden)"))
         XCTAssertFalse(source.contains("GlassButton(\"나가기\")"))
         XCTAssertFalse(source.contains("GlassButton(\"링크 복사\")"))
         XCTAssertFalse(source.contains("GlassButton(\"이름 변경\")"))
+    }
+
+    func testRoomListUsesBalancedHeaderButtonsAndBreathableRoomCards() throws {
+        let source = try readSourceFile("Ping/UI/Setup/RoomListView.swift")
+
+        XCTAssertTrue(source.contains("RoomHeaderActionButton"))
+        XCTAssertTrue(source.contains(".frame(width: 144, height: 46)"))
+        XCTAssertTrue(source.contains(".frame(maxWidth: .infinity, minHeight: 112"))
+        XCTAssertTrue(source.contains("GridItem(.flexible(), spacing: 14)"))
+        XCTAssertFalse(source.contains("GridItem(.flexible(), spacing: 14),\n        GridItem(.flexible(), spacing: 14)"))
     }
 
     func testRoomListHidesRoomLimitUntilUserReachesIt() throws {
@@ -77,6 +88,19 @@ final class InviteLinkContractTests: XCTestCase {
 
         XCTAssertTrue(source.contains("ping://invite/"))
         XCTAssertTrue(source.contains("Ping에서 열기"))
+    }
+
+    func testInviteLinksUseCurrentProductionDomain() throws {
+        let source = try readSourceFile("InviteLink.swift")
+        let readme = try readSourceFile("README.md")
+        let examplePlist = try readSourceFile("Supabase.example.plist")
+
+        XCTAssertTrue(source.contains("https://ping0min.vercel.app"))
+        XCTAssertTrue(readme.contains("https://ping0min.vercel.app"))
+        XCTAssertTrue(examplePlist.contains("https://ping0min.vercel.app"))
+        XCTAssertFalse(source.contains("ping-0mininseoul.vercel.app"))
+        XCTAssertFalse(readme.contains("ping-0mininseoul.vercel.app"))
+        XCTAssertFalse(examplePlist.contains("ping-0mininseoul.vercel.app"))
     }
 
     func testReleaseScriptPackagesDownloadAndFailsWithoutSupabaseConfig() throws {

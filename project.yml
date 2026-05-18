@@ -133,6 +133,8 @@ targets:
           cp "$PROJECT_DIR/supabase/migrations/20260517000100_create_ping_backend.sql" "$DST/20260517000100_create_ping_backend.sql"
           cp "$PROJECT_DIR/supabase/migrations/20260518003000_room_capacity_limits.sql" "$DST/20260518003000_room_capacity_limits.sql"
           cp "$PROJECT_DIR/project.yml" "$DST/project.yml"
+          cp "$PROJECT_DIR/README.md" "$DST/README.md"
+          cp "$PROJECT_DIR/Resources/Supabase.example.plist" "$DST/Supabase.example.plist"
         inputFiles:
           - "$(PROJECT_DIR)/Ping/UI/Glass/GlassButton.swift"
           - "$(PROJECT_DIR)/Ping/UI/Glass/PingDesign.swift"
@@ -166,6 +168,8 @@ targets:
           - "$(PROJECT_DIR)/supabase/migrations/20260517000100_create_ping_backend.sql"
           - "$(PROJECT_DIR)/supabase/migrations/20260518003000_room_capacity_limits.sql"
           - "$(PROJECT_DIR)/project.yml"
+          - "$(PROJECT_DIR)/README.md"
+          - "$(PROJECT_DIR)/Resources/Supabase.example.plist"
         outputFiles:
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/GlassButton.swift"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/PingDesign.swift"
@@ -199,5 +203,7 @@ targets:
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/20260517000100_create_ping_backend.sql"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/20260518003000_room_capacity_limits.sql"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/project.yml"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/README.md"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/Supabase.example.plist"
     dependencies:
       - target: Ping

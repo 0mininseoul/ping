@@ -28,7 +28,6 @@ struct RoomListView: View {
     }
 
     private let columns = [
-        GridItem(.flexible(), spacing: 14),
         GridItem(.flexible(), spacing: 14)
     ]
 
@@ -53,16 +52,18 @@ struct RoomListView: View {
     }
 
     private var roomCountHeader: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 16) {
             Text("내 룸")
                 .font(PingFont.title)
 
             Spacer()
 
-            headerActionButton("룸 찾기", action: onFindRoom)
+            HStack(spacing: 10) {
+                headerActionButton("룸 찾기", action: onFindRoom)
 
-            headerActionButton("룸 만들기", isPrimary: true, action: onCreateRoom)
-                .disabled(!canCreateRoom)
+                headerActionButton("룸 만들기", isPrimary: true, action: onCreateRoom)
+                    .disabled(!canCreateRoom)
+            }
         }
         .padding(.horizontal, 2)
     }
@@ -102,27 +103,32 @@ struct RoomListView: View {
     }
 
     private func roomCard(_ room: Room) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top, spacing: 8) {
-                VStack(alignment: .leading, spacing: 6) {
+        HStack(alignment: .center, spacing: 18) {
+            VStack(alignment: .leading, spacing: 11) {
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
                     Text(room.name)
-                        .font(PingFont.title)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.82)
-
-                    Text(partnerSummary(in: room))
-                        .font(PingFont.body)
-                        .foregroundStyle(.secondary)
+                        .font(.system(size: 21, weight: .semibold))
+                        .foregroundStyle(Color.primary.opacity(0.92))
                         .lineLimit(1)
+                        .minimumScaleFactor(0.78)
+
+                    statusBadge(for: room)
+                        .fixedSize()
                 }
 
-                Spacer(minLength: 6)
-
-                statusBadge(for: room)
-                roomActions(for: room)
+                Text(partnerSummary(in: room))
+                    .font(PingFont.body)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
+
+            Spacer(minLength: 14)
+
+            roomActions(for: room)
         }
-        .padding(14)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 18)
+        .frame(maxWidth: .infinity, minHeight: 112, alignment: .leading)
         .background {
             roomCardBackground
         }
@@ -133,12 +139,11 @@ struct RoomListView: View {
         isPrimary: Bool = false,
         action: @escaping () -> Void
     ) -> some View {
-        GlassButton(title, isPrimary: isPrimary, action: action)
-            .frame(width: 136)
+        RoomHeaderActionButton(title: title, isPrimary: isPrimary, action: action)
     }
 
     private func roomActions(for room: Room) -> some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 8) {
             if room.memberUids.count < RoomLimits.maxMembersPerRoom {
                 iconAction(systemName: "link", accessibilityLabel: "초대링크 복사") {
                     onCopyInviteLink(room)
@@ -158,8 +163,10 @@ struct RoomListView: View {
             } label: {
                 iconLabel(systemName: "ellipsis", accessibilityLabel: "룸 메뉴")
             }
-            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .buttonStyle(.plain)
             .fixedSize()
+            .help("룸 메뉴")
         }
     }
 
@@ -177,18 +184,18 @@ struct RoomListView: View {
 
     private func iconLabel(systemName: String, accessibilityLabel: String) -> some View {
         Image(systemName: systemName)
-            .font(.system(size: 14, weight: .semibold))
-            .foregroundStyle(Color.primary.opacity(0.86))
-            .frame(width: 34, height: 34)
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundStyle(Color.primary.opacity(0.82))
+            .frame(width: 38, height: 38)
             .background {
-                Circle()
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .fill(PingDesign.Surface.chipFill.opacity(0.94))
                     .overlay {
-                        Circle()
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
                             .strokeBorder(PingDesign.Surface.strongHairline.opacity(0.64), lineWidth: 0.8)
                     }
             }
-            .contentShape(Circle())
+            .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .accessibilityLabel(accessibilityLabel)
     }
 
@@ -214,11 +221,11 @@ struct RoomListView: View {
     }
 
     private var roomCardBackground: some View {
-        RoundedRectangle(cornerRadius: 22, style: .continuous)
+        RoundedRectangle(cornerRadius: 24, style: .continuous)
             .fill(PingDesign.Surface.panelFill)
             .overlay {
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .strokeBorder(PingDesign.Surface.strongHairline.opacity(0.50), lineWidth: 0.8)
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .strokeBorder(PingDesign.Surface.strongHairline.opacity(0.46), lineWidth: 0.8)
             }
             .pingShadow(PingDesign.Shadow.panel)
     }
@@ -272,6 +279,122 @@ struct RoomListView: View {
             } catch {
                 appState.backendStatusMessage = error.localizedDescription
             }
+        }
+    }
+}
+
+private struct RoomHeaderActionButton: View {
+    @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    @State private var isHovering = false
+
+    let title: String
+    let isPrimary: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(PingFont.label)
+                .foregroundStyle(textColor)
+                .lineLimit(1)
+                .minimumScaleFactor(0.86)
+                .frame(width: 144, height: 46)
+                .contentShape(Capsule(style: .continuous))
+                .background {
+                    background
+                }
+        }
+        .buttonStyle(.plain)
+        .scaleEffect(isInteractiveHovering ? 1.014 : 1)
+        .offset(y: isInteractiveHovering ? -1 : 0)
+        .animation(reduceMotion ? nil : PingDesign.Motion.buttonHover, value: isInteractiveHovering)
+        .onHover { hovering in
+            isHovering = hovering
+        }
+    }
+
+    private var textColor: Color {
+        if isPrimary {
+            return Color.white.opacity(isEnabled ? 0.96 : 0.50)
+        }
+        return Color.primary.opacity(isEnabled ? 0.86 : 0.42)
+    }
+
+    private var isInteractiveHovering: Bool {
+        isEnabled && isHovering
+    }
+
+    @ViewBuilder
+    private var background: some View {
+        if isPrimary {
+            Capsule(style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            PingDesign.ColorToken.accent.opacity(isEnabled ? 0.90 : 0.18),
+                            PingDesign.ColorToken.accent.opacity(isEnabled ? 0.70 : 0.10)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .overlay {
+                    Capsule(style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(isEnabled ? 0.24 : 0.07),
+                                    Color.clear
+                                ],
+                                startPoint: .top,
+                                endPoint: .center
+                            )
+                        )
+                }
+                .overlay {
+                    Capsule(style: .continuous)
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(isEnabled ? (isInteractiveHovering ? 0.58 : 0.52) : 0.14),
+                                    Color.white.opacity(isEnabled ? 0.14 : 0.05)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 0.8
+                        )
+                }
+                .pingShadow(isEnabled ? PingDesign.Shadow.accent : PingDesign.Shadow.none)
+        } else {
+            Capsule(style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            PingDesign.Surface.chipFill.opacity(isEnabled ? (isInteractiveHovering ? 0.98 : 0.94) : 0.36),
+                            PingDesign.Surface.panelFill.opacity(isEnabled ? 0.90 : 0.28)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .overlay {
+                    Capsule(style: .continuous)
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: [
+                                    PingDesign.Surface.strongHairline.opacity(isEnabled ? (isInteractiveHovering ? 0.82 : 0.70) : 0.18),
+                                    Color.primary.opacity(isEnabled ? 0.08 : 0.03)
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            ),
+                            lineWidth: 0.8
+                        )
+                }
+                .pingShadow(isEnabled ? PingDesign.Shadow.control : PingDesign.Shadow.none)
         }
     }
 }
