@@ -429,34 +429,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .appendingPathComponent("ping-received-\(fileName).mp4")
     }
 
-    @objc private func showInitialSetupAction() {
-        showInitialSetup()
-    }
-
-    private func showInitialSetup() {
-        if let onboardingWindow {
-            onboardingWindow.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
-            return
-        }
-
-        if let uid = appState.currentUser?.id ?? SupabaseClient.shared.currentUid {
-            showOnboarding(uid: uid)
-            return
-        }
-
-        Task { @MainActor in
-            do {
-                let uid = try await SupabaseClient.shared.bootstrap()
-                showOnboarding(uid: uid)
-            } catch {
-                appState.backendStatusMessage = error.localizedDescription
-                NSLog("Setup bootstrap failed: \(error)")
-                showSetupError(error)
-            }
-        }
-    }
-
     private func showSetupError(_ error: Error) {
         let alert = NSAlert()
         alert.alertStyle = .warning

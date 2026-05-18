@@ -29,13 +29,13 @@ final class StatusMenuBuilderTests: XCTestCase {
     }
 
     @MainActor
-    func testMenuIncludesInitialSetupItem() {
+    func testMenuOmitsInitialSetupAfterOnboardingOwnsThatFlow() {
         let menu = StatusMenuBuilder.makeMenu(target: NSObject())
 
         let setupItem = menu.items.first { $0.title == "초기 설정…" }
+        let settingsItem = menu.items.first { $0.title == "설정…" }
 
-        XCTAssertNotNil(setupItem)
-        XCTAssertEqual(setupItem?.action, Selector(("showInitialSetupAction")))
-        XCTAssertTrue(setupItem?.isEnabled ?? false)
+        XCTAssertNil(setupItem)
+        XCTAssertNotNil(settingsItem)
     }
 }

@@ -1,4 +1,5 @@
 import Foundation
+import Security
 
 enum SupabaseJSON {
     static let decoder: JSONDecoder = {
@@ -111,9 +112,9 @@ final class SupabaseClient: ObservableObject {
     @Published private(set) var currentUid: String?
     @Published private(set) var isConfigured = false
 
-    private let sessionStorageKey = "ping.supabase.session"
     private var configuration: SupabaseConfiguration?
     private var session: SupabaseSession?
+    private var authSessionTask: Task<SupabaseSession, Error>?
     private let urlSession: URLSession
 
     init(urlSession: URLSession = .shared) {
@@ -124,32 +125,15 @@ final class SupabaseClient: ObservableObject {
         guard !isConfigured else { return }
 
         configuration = try SupabaseConfiguration.load()
-        session = loadStoredSession()
+        session = SupabaseSessionStore.load()
         currentUid = session?.userId
         isConfigured = true
     }
 
     func bootstrap() async throws -> String {
-        try configureIfNeeded()
-
-        if let session, !session.needsRefresh {
-            currentUid = session.userId
-            return session.userId
-        }
-
-        if let session {
-            do {
-                let refreshed = try await refreshSession(refreshToken: session.refreshToken)
-                save(session: refreshed)
-                return refreshed.userId
-            } catch {
-                throw PingError.supabaseSessionExpired(userId: session.userId)
-            }
-        }
-
-        let anonymousSession = try await signInAnonymously()
-        save(session: anonymousSession)
-        return anonymousSession.userId
+        let session = try await authenticatedSession()
+        currentUid = session.userId
+        return session.userId
     }
 
     func rpcArray<T: Decodable>(_ function: String, body: [String: Any] = [:]) async throws -> [T] {
@@ -220,25 +204,51 @@ final class SupabaseClient: ObservableObject {
     }
 
     private func accessToken() async throws -> String {
+        try await authenticatedSession().accessToken
+    }
+
+    private func authenticatedSession() async throws -> SupabaseSession {
         try configureIfNeeded()
 
         if let session, !session.needsRefresh {
-            return session.accessToken
+            return session
         }
 
-        guard let refreshToken = session?.refreshToken else {
-            let anonymousSession = try await signInAnonymously()
-            save(session: anonymousSession)
-            return anonymousSession.accessToken
+        if let authSessionTask {
+            return try await authSessionTask.value
         }
+
+        let task = Task { @MainActor in
+            let authenticated = try await self.resolveAuthenticatedSession()
+            self.save(session: authenticated)
+            return authenticated
+        }
+        authSessionTask = task
 
         do {
-            let refreshed = try await refreshSession(refreshToken: refreshToken)
-            save(session: refreshed)
-            return refreshed.accessToken
+            let authenticated = try await task.value
+            authSessionTask = nil
+            return authenticated
         } catch {
-            throw PingError.supabaseSessionExpired(userId: session?.userId ?? "unknown")
+            authSessionTask = nil
+            throw error
         }
+    }
+
+    private func resolveAuthenticatedSession() async throws -> SupabaseSession {
+        if let session, !session.needsRefresh {
+            return session
+        }
+
+        if let session {
+            do {
+                return try await refreshSession(refreshToken: session.refreshToken)
+            } catch {
+                throw PingError.supabaseSessionExpired(userId: session.userId)
+            }
+        }
+
+        return try await signInAnonymously()
     }
 
     private func signInAnonymously() async throws -> SupabaseSession {
@@ -312,22 +322,13 @@ final class SupabaseClient: ObservableObject {
     private func save(session: SupabaseSession) {
         self.session = session
         currentUid = session.userId
-        if let data = try? JSONEncoder().encode(session) {
-            UserDefaults.standard.set(data, forKey: sessionStorageKey)
-        }
-    }
-
-    private func loadStoredSession() -> SupabaseSession? {
-        guard let data = UserDefaults.standard.data(forKey: sessionStorageKey) else {
-            return nil
-        }
-        return try? JSONDecoder().decode(SupabaseSession.self, from: data)
+        SupabaseSessionStore.save(session)
     }
 
     private func clearSession() {
         session = nil
         currentUid = nil
-        UserDefaults.standard.removeObject(forKey: sessionStorageKey)
+        SupabaseSessionStore.clear()
     }
 
     private func objectURL(base: URL, bucket: String, path: String) -> URL {
@@ -348,5 +349,118 @@ final class SupabaseClient: ObservableObject {
         }
 
         return String(data: data, encoding: .utf8) ?? "응답을 해석할 수 없습니다."
+    }
+}
+
+private enum SupabaseSessionStore {
+    private static let defaultsKey = "ping.supabase.session"
+    private static let keychainService = "com.youngminpark.ping.supabase"
+    private static let keychainAccount = "anonymous-session"
+    private static let fileName = "SupabaseSession.json"
+
+    static func load() -> SupabaseSession? {
+        if let session = loadKeychainSession() {
+            return session
+        }
+
+        if let session = loadFileSession() ?? loadLegacyDefaultsSession() {
+            save(session)
+            return session
+        }
+
+        return nil
+    }
+
+    static func save(_ session: SupabaseSession) {
+        guard let data = try? JSONEncoder().encode(session) else { return }
+
+        saveKeychainData(data)
+        saveFileData(data)
+        UserDefaults.standard.set(data, forKey: defaultsKey)
+    }
+
+    static func clear() {
+        SecItemDelete(keychainQuery() as CFDictionary)
+        if let url = sessionFileURL() {
+            try? FileManager.default.removeItem(at: url)
+        }
+        UserDefaults.standard.removeObject(forKey: defaultsKey)
+    }
+
+    private static func loadKeychainSession() -> SupabaseSession? {
+        var query = keychainQuery()
+        query[kSecReturnData as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+
+        var item: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
+        guard status == errSecSuccess, let data = item as? Data else {
+            return nil
+        }
+
+        return decode(data)
+    }
+
+    private static func saveKeychainData(_ data: Data) {
+        var query = keychainQuery()
+        query[kSecValueData as String] = data
+
+        let status = SecItemAdd(query as CFDictionary, nil)
+        if status == errSecDuplicateItem {
+            SecItemUpdate(
+                keychainQuery() as CFDictionary,
+                [kSecValueData as String: data] as CFDictionary
+            )
+        }
+    }
+
+    private static func keychainQuery() -> [String: Any] {
+        [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: keychainService,
+            kSecAttrAccount as String: keychainAccount
+        ]
+    }
+
+    private static func loadFileSession() -> SupabaseSession? {
+        guard let url = sessionFileURL(),
+              let data = try? Data(contentsOf: url) else {
+            return nil
+        }
+
+        return decode(data)
+    }
+
+    private static func saveFileData(_ data: Data) {
+        guard let url = sessionFileURL() else { return }
+        try? data.write(to: url, options: .atomic)
+    }
+
+    private static func sessionFileURL() -> URL? {
+        do {
+            let supportURL = try FileManager.default.url(
+                for: .applicationSupportDirectory,
+                in: .userDomainMask,
+                appropriateFor: nil,
+                create: true
+            )
+            let directory = supportURL.appendingPathComponent("Ping", isDirectory: true)
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            return directory.appendingPathComponent(fileName)
+        } catch {
+            return nil
+        }
+    }
+
+    private static func loadLegacyDefaultsSession() -> SupabaseSession? {
+        guard let data = UserDefaults.standard.data(forKey: defaultsKey) else {
+            return nil
+        }
+
+        return decode(data)
+    }
+
+    private static func decode(_ data: Data) -> SupabaseSession? {
+        try? JSONDecoder().decode(SupabaseSession.self, from: data)
     }
 }
