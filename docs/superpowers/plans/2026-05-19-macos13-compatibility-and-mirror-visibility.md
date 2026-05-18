@@ -54,6 +54,10 @@ SwiftUI two-argument `.onChange` call sites to migrate for macOS 13:
 - `Ping/UI/Setup/RoomListView.swift`
 - `Ping/UI/Setup/SettingsScene.swift`
 
+SwiftUI macOS 14-only empty-state API to migrate for macOS 13:
+
+- `Ping/UI/Setup/SettingsScene.swift` `ContentUnavailableView` in room settings
+
 ## File Structure
 
 - Create `Ping/Core/WindowPositioning.swift`: pure window-origin helper for persisted mirror positions.
@@ -65,6 +69,7 @@ SwiftUI two-argument `.onChange` call sites to migrate for macOS 13:
 - Modify `Ping/UI/Mirror/PartnerPicker.swift`: use a filled fallback surface plus `.pingGlassEffect()`.
 - Modify `Ping/UI/Mirror/MirrorView.swift`: use a filled fallback surface plus `.pingGlassEffect()` for the uploading chip.
 - Modify `Ping/UI/Setup/RoomListView.swift` and `Ping/UI/Setup/SettingsScene.swift`: replace two-argument `.onChange` closures with macOS 13-compatible one-argument closures.
+- Modify `Ping/UI/Setup/SettingsScene.swift`: replace `ContentUnavailableView` with a custom macOS 13-compatible `emptyRoomsState`.
 - Modify `project.yml` and `Ping/Info.plist`: set macOS minimum to `13.0`, bump app version to `0.1.4`, and include new source files in test fixture copying where needed.
 - Modify `AGENTS.md`, `PING_PROJECT_SPECIFICATION.md`, `README.md`, `docs/superpowers/plans/2026-05-17-ping-mvp.md`, and website copy under `web/src`: replace the old macOS 26-only invariant with the new macOS 13+ compatibility rule.
 - Modify `PingTests/ReleaseVersionContractTests.swift` and add compatibility contract tests for minimum OS text and no direct `.glassEffect()` outside the compatibility file.
@@ -573,6 +578,14 @@ with:
 ```
 
 - [ ] **Step 4: Confirm no two-argument onChange call remains**
+
+Also confirm room settings no longer use `ContentUnavailableView`:
+
+```bash
+rg -n "ContentUnavailableView" Ping/UI/Setup/SettingsScene.swift
+```
+
+Expected: no output.
 
 Run:
 

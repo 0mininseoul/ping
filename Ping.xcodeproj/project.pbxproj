@@ -23,6 +23,7 @@
 		3A42A12F85CF34A4D5F2F7CD /* OnboardingWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 050A0147A7508D00A8E2DE3B /* OnboardingWindow.swift */; };
 		3B5117F35AEE41A4224D9837 /* StorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0323B3DFE22413AC6BB3627D /* StorageService.swift */; };
 		3E8747EC3C02819DE0808A7E /* GlassButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8841413A695A3C64F0B3F247 /* GlassButton.swift */; };
+		44DC21E6B318CF6969918DE9 /* CompatibilityContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7BA291155ACBFF85185B36B /* CompatibilityContractTests.swift */; };
 		45CDCD2993C1E53FB62356A1 /* StatusMenuBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CAAECC60F6BE44D405DF213 /* StatusMenuBuilder.swift */; };
 		4817EF4ACB6DAD760DDDF3E2 /* OnboardingCopyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F542186B03D30E2C8BE833E /* OnboardingCopyTests.swift */; };
 		489FD8469EFD7A09256A8F54 /* PlaybackPrefetchContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF791350460B22AC63D0CE32 /* PlaybackPrefetchContractTests.swift */; };
@@ -163,6 +164,7 @@
 		DF791350460B22AC63D0CE32 /* PlaybackPrefetchContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackPrefetchContractTests.swift; sourceTree = "<group>"; };
 		E0CE48710A798DC7E4F5F387 /* EntitlementsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntitlementsTests.swift; sourceTree = "<group>"; };
 		E4C0907AE314021D2DFEC882 /* RoomLimits.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomLimits.swift; sourceTree = "<group>"; };
+		E7BA291155ACBFF85185B36B /* CompatibilityContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompatibilityContractTests.swift; sourceTree = "<group>"; };
 		E89232F1FE943FF8CE229F13 /* MirrorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MirrorViewModel.swift; sourceTree = "<group>"; };
 		E8EEA4E1E7817FF473236F52 /* MessageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageService.swift; sourceTree = "<group>"; };
 		E917296A7C45B0DEF90EEB1C /* SearchableText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchableText.swift; sourceTree = "<group>"; };
@@ -345,6 +347,7 @@
 			isa = PBXGroup;
 			children = (
 				B156E510EB6A9724929971C1 /* CameraStartupContractTests.swift */,
+				E7BA291155ACBFF85185B36B /* CompatibilityContractTests.swift */,
 				A6157E3107FE54D68F65EFCB /* DesignSystemContractTests.swift */,
 				E0CE48710A798DC7E4F5F387 /* EntitlementsTests.swift */,
 				3CC9A5C9C5BA8FF0D9D30E0A /* InviteLinkContractTests.swift */,
@@ -546,6 +549,9 @@
 				"$(PROJECT_DIR)/supabase/migrations/20260518113000_invite_user_reuses_pending_room.sql",
 				"$(PROJECT_DIR)/supabase/migrations/20260518131500_allow_member_room_rename.sql",
 				"$(PROJECT_DIR)/project.yml",
+				"$(PROJECT_DIR)/AGENTS.md",
+				"$(PROJECT_DIR)/PING_PROJECT_SPECIFICATION.md",
+				"$(PROJECT_DIR)/Ping/Info.plist",
 				"$(PROJECT_DIR)/README.md",
 				"$(PROJECT_DIR)/Resources/Supabase.example.plist",
 			);
@@ -592,12 +598,15 @@
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/20260518113000_invite_user_reuses_pending_room.sql",
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/20260518131500_allow_member_room_rename.sql",
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/project.yml",
+				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/AGENTS.md",
+				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/PING_PROJECT_SPECIFICATION.md",
+				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/Info.plist",
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/README.md",
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/Supabase.example.plist",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -euo pipefail\n\nDST=\"$TARGET_BUILD_DIR/$CONTENTS_FOLDER_PATH/Resources\"\nmkdir -p \"$DST\"\n\ncp \"$PROJECT_DIR/Ping/UI/Glass/GlassButton.swift\" \"$DST/GlassButton.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Glass/GlassChip.swift\" \"$DST/GlassChip.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Glass/GlassEffectCompat.swift\" \"$DST/GlassEffectCompat.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Glass/PingDesign.swift\" \"$DST/PingDesign.swift\"\ncp \"$PROJECT_DIR/Ping/Capture/CameraManager.swift\" \"$DST/CameraManager.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Mirror/MirrorView.swift\" \"$DST/MirrorView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Mirror/PartnerPicker.swift\" \"$DST/PartnerPicker.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/PairingView.swift\" \"$DST/PairingView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/PairingViewModel.swift\" \"$DST/PairingViewModel.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/RoomListView.swift\" \"$DST/RoomListView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/RoomManagerWindow.swift\" \"$DST/RoomManagerWindow.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/RoomSearchView.swift\" \"$DST/RoomSearchView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/SettingsScene.swift\" \"$DST/SettingsScene.swift\"\ncp \"$PROJECT_DIR/Ping/Hotkey/HotkeyManager.swift\" \"$DST/HotkeyManager.swift\"\ncp \"$PROJECT_DIR/Ping/Core/UserPreferences.swift\" \"$DST/UserPreferences.swift\"\ncp \"$PROJECT_DIR/Ping/Core/InviteLink.swift\" \"$DST/InviteLink.swift\"\ncp \"$PROJECT_DIR/Ping/Core/AppState.swift\" \"$DST/AppState.swift\"\ncp \"$PROJECT_DIR/Ping/Core/RoomLimits.swift\" \"$DST/RoomLimits.swift\"\ncp \"$PROJECT_DIR/Ping/Core/PingError.swift\" \"$DST/PingError.swift\"\ncp \"$PROJECT_DIR/Ping/Capture/LocalArchive.swift\" \"$DST/LocalArchive.swift\"\ncp \"$PROJECT_DIR/Ping/Capture/VideoRecorder.swift\" \"$DST/VideoRecorder.swift\"\ncp \"$PROJECT_DIR/Ping/Capture/VideoCropper.swift\" \"$DST/VideoCropper.swift\"\ncp \"$PROJECT_DIR/Ping/AppDelegate.swift\" \"$DST/AppDelegate.swift\"\ncp \"$PROJECT_DIR/Ping/Backend/InvitationService.swift\" \"$DST/InvitationService.swift\"\ncp \"$PROJECT_DIR/Ping/Backend/MessageService.swift\" \"$DST/MessageService.swift\"\ncp \"$PROJECT_DIR/Ping/Backend/SupabaseClient.swift\" \"$DST/SupabaseClient.swift\"\ncp \"$PROJECT_DIR/web/src/App.tsx\" \"$DST/App.tsx\"\ncp \"$PROJECT_DIR/web/src/routes.tsx\" \"$DST/routes.tsx\"\ncp \"$PROJECT_DIR/web/src/components/sections/FinalCTA.tsx\" \"$DST/FinalCTA.tsx\"\ncp \"$PROJECT_DIR/scripts/build-release.sh\" \"$DST/build-release.sh\"\ncp \"$PROJECT_DIR/.gitignore\" \"$DST/.gitignore\"\ncp \"$PROJECT_DIR/scripts/generate-icons.swift\" \"$DST/generate-icons.swift\"\ncp \"$PROJECT_DIR/Ping.entitlements\" \"$DST/Ping.entitlements\"\ncp \"$PROJECT_DIR/docs/DESIGN_SYSTEM.md\" \"$DST/DESIGN_SYSTEM.md\"\ncp \"$PROJECT_DIR/supabase/migrations/20260517000100_create_ping_backend.sql\" \"$DST/20260517000100_create_ping_backend.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260518003000_room_capacity_limits.sql\" \"$DST/20260518003000_room_capacity_limits.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260518113000_invite_user_reuses_pending_room.sql\" \"$DST/20260518113000_invite_user_reuses_pending_room.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260518131500_allow_member_room_rename.sql\" \"$DST/20260518131500_allow_member_room_rename.sql\"\ncp \"$PROJECT_DIR/project.yml\" \"$DST/project.yml\"\ncp \"$PROJECT_DIR/README.md\" \"$DST/README.md\"\ncp \"$PROJECT_DIR/Resources/Supabase.example.plist\" \"$DST/Supabase.example.plist\"\n";
+			shellScript = "set -euo pipefail\n\nDST=\"$TARGET_BUILD_DIR/$CONTENTS_FOLDER_PATH/Resources\"\nmkdir -p \"$DST\"\n\ncp \"$PROJECT_DIR/Ping/UI/Glass/GlassButton.swift\" \"$DST/GlassButton.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Glass/GlassChip.swift\" \"$DST/GlassChip.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Glass/GlassEffectCompat.swift\" \"$DST/GlassEffectCompat.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Glass/PingDesign.swift\" \"$DST/PingDesign.swift\"\ncp \"$PROJECT_DIR/Ping/Capture/CameraManager.swift\" \"$DST/CameraManager.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Mirror/MirrorView.swift\" \"$DST/MirrorView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Mirror/PartnerPicker.swift\" \"$DST/PartnerPicker.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/PairingView.swift\" \"$DST/PairingView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/PairingViewModel.swift\" \"$DST/PairingViewModel.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/RoomListView.swift\" \"$DST/RoomListView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/RoomManagerWindow.swift\" \"$DST/RoomManagerWindow.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/RoomSearchView.swift\" \"$DST/RoomSearchView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/SettingsScene.swift\" \"$DST/SettingsScene.swift\"\ncp \"$PROJECT_DIR/Ping/Hotkey/HotkeyManager.swift\" \"$DST/HotkeyManager.swift\"\ncp \"$PROJECT_DIR/Ping/Core/UserPreferences.swift\" \"$DST/UserPreferences.swift\"\ncp \"$PROJECT_DIR/Ping/Core/InviteLink.swift\" \"$DST/InviteLink.swift\"\ncp \"$PROJECT_DIR/Ping/Core/AppState.swift\" \"$DST/AppState.swift\"\ncp \"$PROJECT_DIR/Ping/Core/RoomLimits.swift\" \"$DST/RoomLimits.swift\"\ncp \"$PROJECT_DIR/Ping/Core/PingError.swift\" \"$DST/PingError.swift\"\ncp \"$PROJECT_DIR/Ping/Capture/LocalArchive.swift\" \"$DST/LocalArchive.swift\"\ncp \"$PROJECT_DIR/Ping/Capture/VideoRecorder.swift\" \"$DST/VideoRecorder.swift\"\ncp \"$PROJECT_DIR/Ping/Capture/VideoCropper.swift\" \"$DST/VideoCropper.swift\"\ncp \"$PROJECT_DIR/Ping/AppDelegate.swift\" \"$DST/AppDelegate.swift\"\ncp \"$PROJECT_DIR/Ping/Backend/InvitationService.swift\" \"$DST/InvitationService.swift\"\ncp \"$PROJECT_DIR/Ping/Backend/MessageService.swift\" \"$DST/MessageService.swift\"\ncp \"$PROJECT_DIR/Ping/Backend/SupabaseClient.swift\" \"$DST/SupabaseClient.swift\"\ncp \"$PROJECT_DIR/web/src/App.tsx\" \"$DST/App.tsx\"\ncp \"$PROJECT_DIR/web/src/routes.tsx\" \"$DST/routes.tsx\"\ncp \"$PROJECT_DIR/web/src/components/sections/FinalCTA.tsx\" \"$DST/FinalCTA.tsx\"\ncp \"$PROJECT_DIR/scripts/build-release.sh\" \"$DST/build-release.sh\"\ncp \"$PROJECT_DIR/.gitignore\" \"$DST/.gitignore\"\ncp \"$PROJECT_DIR/scripts/generate-icons.swift\" \"$DST/generate-icons.swift\"\ncp \"$PROJECT_DIR/Ping.entitlements\" \"$DST/Ping.entitlements\"\ncp \"$PROJECT_DIR/docs/DESIGN_SYSTEM.md\" \"$DST/DESIGN_SYSTEM.md\"\ncp \"$PROJECT_DIR/supabase/migrations/20260517000100_create_ping_backend.sql\" \"$DST/20260517000100_create_ping_backend.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260518003000_room_capacity_limits.sql\" \"$DST/20260518003000_room_capacity_limits.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260518113000_invite_user_reuses_pending_room.sql\" \"$DST/20260518113000_invite_user_reuses_pending_room.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260518131500_allow_member_room_rename.sql\" \"$DST/20260518131500_allow_member_room_rename.sql\"\ncp \"$PROJECT_DIR/project.yml\" \"$DST/project.yml\"\ncp \"$PROJECT_DIR/AGENTS.md\" \"$DST/AGENTS.md\"\ncp \"$PROJECT_DIR/PING_PROJECT_SPECIFICATION.md\" \"$DST/PING_PROJECT_SPECIFICATION.md\"\ncp \"$PROJECT_DIR/Ping/Info.plist\" \"$DST/Info.plist\"\ncp \"$PROJECT_DIR/README.md\" \"$DST/README.md\"\ncp \"$PROJECT_DIR/Resources/Supabase.example.plist\" \"$DST/Supabase.example.plist\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -607,6 +616,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D145DD48FDB755F20A1C5A99 /* CameraStartupContractTests.swift in Sources */,
+				44DC21E6B318CF6969918DE9 /* CompatibilityContractTests.swift in Sources */,
 				2E6412BD4860FB69C0B3C49A /* DesignSystemContractTests.swift in Sources */,
 				67FBBC00ABEE4FDC9A8E5496 /* EntitlementsTests.swift in Sources */,
 				315501BEACA5034EC49BB7B3 /* InviteLinkContractTests.swift in Sources */,
@@ -711,7 +721,7 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.youngminpark.ping.PingTests;
 				PRODUCT_MODULE_NAME = PingTests;
 				PRODUCT_NAME = PingTests;
@@ -731,7 +741,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.youngminpark.ping.Ping;
 				SDKROOT = macosx;
 			};
@@ -748,7 +758,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.youngminpark.ping.Ping;
 				SDKROOT = macosx;
 			};
@@ -765,7 +775,7 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.youngminpark.ping.PingTests;
 				PRODUCT_MODULE_NAME = PingTests;
 				PRODUCT_NAME = PingTests;
@@ -810,7 +820,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -829,8 +839,8 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 0.1.3;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 0.1.4;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -878,7 +888,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -891,8 +901,8 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 0.1.3;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 0.1.4;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = Ping;

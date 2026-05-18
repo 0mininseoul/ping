@@ -2,7 +2,7 @@ name: Ping
 options:
   bundleIdPrefix: com.youngminpark.ping
   deploymentTarget:
-    macOS: "26.0"
+    macOS: "13.0"
   developmentLanguage: ko
   createIntermediateGroups: true
   generateEmptyDirectories: true
@@ -10,9 +10,9 @@ options:
 settings:
   base:
     SWIFT_VERSION: "6.0"
-    MACOSX_DEPLOYMENT_TARGET: "26.0"
-    MARKETING_VERSION: "0.1.3"
-    CURRENT_PROJECT_VERSION: "5"
+    MACOSX_DEPLOYMENT_TARGET: "13.0"
+    MARKETING_VERSION: "0.1.4"
+    CURRENT_PROJECT_VERSION: "6"
     PRODUCT_NAME: Ping
     ENABLE_HARDENED_RUNTIME: YES
     CODE_SIGN_STYLE: Manual
@@ -30,7 +30,7 @@ targets:
   Ping:
     type: application
     platform: macOS
-    deploymentTarget: "26.0"
+    deploymentTarget: "13.0"
     settings:
       base:
         CODE_SIGN_ENTITLEMENTS: Ping.entitlements
@@ -61,7 +61,7 @@ targets:
       path: Ping/Info.plist
       properties:
         LSUIElement: true
-        LSMinimumSystemVersion: "26.0"
+        LSMinimumSystemVersion: "13.0"
         CFBundleName: Ping
         CFBundleDisplayName: Ping
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
@@ -85,7 +85,7 @@ targets:
   PingTests:
     type: bundle.unit-test
     platform: macOS
-    deploymentTarget: "26.0"
+    deploymentTarget: "13.0"
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
@@ -140,6 +140,9 @@ targets:
           cp "$PROJECT_DIR/supabase/migrations/20260518113000_invite_user_reuses_pending_room.sql" "$DST/20260518113000_invite_user_reuses_pending_room.sql"
           cp "$PROJECT_DIR/supabase/migrations/20260518131500_allow_member_room_rename.sql" "$DST/20260518131500_allow_member_room_rename.sql"
           cp "$PROJECT_DIR/project.yml" "$DST/project.yml"
+          cp "$PROJECT_DIR/AGENTS.md" "$DST/AGENTS.md"
+          cp "$PROJECT_DIR/PING_PROJECT_SPECIFICATION.md" "$DST/PING_PROJECT_SPECIFICATION.md"
+          cp "$PROJECT_DIR/Ping/Info.plist" "$DST/Info.plist"
           cp "$PROJECT_DIR/README.md" "$DST/README.md"
           cp "$PROJECT_DIR/Resources/Supabase.example.plist" "$DST/Supabase.example.plist"
         inputFiles:
@@ -182,6 +185,9 @@ targets:
           - "$(PROJECT_DIR)/supabase/migrations/20260518113000_invite_user_reuses_pending_room.sql"
           - "$(PROJECT_DIR)/supabase/migrations/20260518131500_allow_member_room_rename.sql"
           - "$(PROJECT_DIR)/project.yml"
+          - "$(PROJECT_DIR)/AGENTS.md"
+          - "$(PROJECT_DIR)/PING_PROJECT_SPECIFICATION.md"
+          - "$(PROJECT_DIR)/Ping/Info.plist"
           - "$(PROJECT_DIR)/README.md"
           - "$(PROJECT_DIR)/Resources/Supabase.example.plist"
         outputFiles:
@@ -224,6 +230,9 @@ targets:
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/20260518113000_invite_user_reuses_pending_room.sql"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/20260518131500_allow_member_room_rename.sql"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/project.yml"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/AGENTS.md"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/PING_PROJECT_SPECIFICATION.md"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/Info.plist"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/README.md"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/Supabase.example.plist"
     dependencies:

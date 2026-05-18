@@ -6,24 +6,24 @@
 
 ## 0. 가장 중요한 규칙
 
-### 🚨 다음 4가지 항목을 절대로 "다운그레이드"하거나 "교체"하지 마세요
+### 🚨 다음 4가지 제품 불변식을 절대로 "다운그레이드"하거나 "교체"하지 마세요
 
-학습 데이터 시점이 macOS 26 / Swift 6 / Apple Liquid Glass API 이전이라 모를 수 있지만, **이들은 모두 실재하는 최신 정식 API입니다**. 본인이 모른다고 해서 구식 API로 바꾸지 마세요.
+Ping은 v0.1.4부터 **macOS 13 Ventura 이상**을 지원합니다. 학습 데이터 시점이 Swift 6 / Apple Liquid Glass API 이전이라 모를 수 있지만, **이들은 모두 실재하는 최신 정식 API입니다**. 본인이 모른다고 해서 구식 API로 바꾸지 마세요.
 
 | 항목 | 상태 | 절대 하지 말 것 |
 |---|---|---|
-| **macOS 26 (Tahoe)** | 2025년 가을 정식 출시 | `macOS 14` / `15` 로 deploymentTarget 낮추지 말 것 |
+| **macOS 13 Ventura 이상** | v0.1.4부터 지원 | `MACOSX_DEPLOYMENT_TARGET` 또는 `LSMinimumSystemVersion`을 `13.0` 아래로 낮추지 말 것 |
 | **Swift 6.0+** | 정식 릴리스 | `Swift 5.x` 로 SWIFT_VERSION 낮추지 말 것 |
-| **`.glassEffect()` SwiftUI modifier** | macOS 26 네이티브 Liquid Glass material | `.background(.regularMaterial)` 또는 `NSVisualEffectView` 로 교체하지 말 것 |
+| **`.pingGlassEffect()` wrapper** | macOS 26 Tahoe에서는 `.glassEffect()`, macOS 13-25에서는 안정 tint fallback | `Ping/UI/Glass/GlassEffectCompat.swift` 밖에서 `.glassEffect()`를 직접 호출하지 말 것 |
 | **`SMAppService.mainApp`** | macOS 13+ 모던 자동 시작 API | 구식 `LaunchAgent` plist 방식으로 바꾸지 말 것 |
 
-**API가 컴파일되지 않으면** Xcode Command Line Tools가 구버전인 것입니다. 사용자에게 `xcode-select --install` 또는 Xcode 16+ 업데이트를 요청하세요. **API를 바꾸지 말고 도구를 업데이트하라는 메시지로 멈추세요.**
+**`.glassEffect()`가 compat 파일 안에서 컴파일되지 않으면** Xcode Command Line Tools가 구버전인 것입니다. 사용자에게 `xcode-select --install` 또는 Xcode 16+ 업데이트를 요청하세요. **API를 바꾸지 말고 도구를 업데이트하라는 메시지로 멈추세요.**
 
 ---
 
 ## 1. 프로젝트 개요
 
-**Ping** — macOS 26 Tahoe 전용 2초 영상 메시지 메뉴바 앱. Option+P로 즉시 카메라 원형 거울이 뜨고, Enter로 정확히 2초 녹화하여 Supabase 경유로 파트너에게 전송. 수신자는 발신자가 지정한 위치에 그대로 2초간 재생.
+**Ping** — macOS 13 Ventura 이상에서 동작하는 2초 영상 메시지 메뉴바 앱. Option+P로 즉시 카메라 원형 거울이 뜨고, Enter로 정확히 2초 녹화하여 Supabase 경유로 파트너에게 전송. 수신자는 발신자가 지정한 위치에 그대로 2초간 재생.
 
 ### 핵심 문서 (반드시 모두 읽고 작업 시작)
 1. **`PING_PROJECT_SPECIFICATION.md`** — 기능/아키텍처/보안 명세 (v2.0)
@@ -51,7 +51,7 @@ Supabase CLI 작업은 `npx supabase`로 수행합니다. 새 계정/프로젝�
 ### Supabase Free 저장소
 영상은 Supabase Storage의 비공개 `ping-videos` 버킷에 `<senderUid>/<videoId>.mp4` 경로로 저장합니다. 테이블/RLS/RPC/Storage 정책은 `supabase/migrations/20260517000100_create_ping_backend.sql`이 단일 진실 출처입니다. 서버 예약 작업 없이 앱 실행 시 `ping_cleanup_expired_data()` RPC로 만료 데이터를 best-effort 정리합니다.
 
-### App 버전 — `0.1.3`
+### App 버전 — `0.1.4`
 - `project.yml` → `settings.base.MARKETING_VERSION`
 - `scripts/build-release.sh` → 빌드 산출물 자동 추출
 - `README.md` 의 DMG 파일명 예시
@@ -156,7 +156,7 @@ ping/
 
 ## 7. UI 디자인 원칙
 
-- **Liquid Glass (`.glassEffect()`)** 가 기본. macOS 26 표준 material이라 별도 라이브러리 불필요.
+- **Liquid Glass는 `.pingGlassEffect()` wrapper를 통해서만 적용**. macOS 26 Tahoe에서는 네이티브 `.glassEffect()`, macOS 13-25에서는 `PingDesign.Surface` 기반 안정 tint fallback을 사용한다.
 - **시스템 폰트만 사용** — SF Pro / Apple SD Gothic Neo 자동 fallback. 커스텀 폰트 번들링 금지.
 - **거울/재생창은 원형**, 카드/패널은 16pt 라운드.
 - **상태별 보더 색 일관성**:
@@ -199,7 +199,7 @@ Day 4 Task 4.3 에서 임시 EmptyView로 윈도우를 만든 뒤 `contentView` 
 A: 1) `Resources/Supabase.plist` 가 있는지, 2) `SUPABASE_URL`/`SUPABASE_ANON_KEY`가 맞는지, 3) Supabase Dashboard에서 Anonymous sign-ins가 활성화됐는지, 4) `npx supabase db push`가 적용됐는지 확인.
 
 **Q: `.glassEffect()` 가 unknown identifier 라고 합니다.**
-A: Xcode Command Line Tools 가 macOS 26 SDK를 포함하지 않은 구버전입니다. Xcode 16+ 를 설치하거나 `xcode-select` 로 경로를 바꾸세요. **API를 다른 것으로 교체하지 마세요.**
+A: `Ping/UI/Glass/GlassEffectCompat.swift` 를 컴파일하는 Xcode Command Line Tools 가 macOS 26 SDK를 포함하지 않은 구버전입니다. Xcode 16+ 를 설치하거나 `xcode-select` 로 경로를 바꾸세요. **API를 다른 것으로 교체하지 말고 `.pingGlassEffect()` wrapper를 유지하세요.**
 
 **Q: 단위 테스트에서 네트워크 요청이 나갑니다.**
 A: `AppDelegate`는 `XCTestConfigurationFilePath` 환경에서 bootstrap을 건너뜁니다. 이 방어를 유지하세요.

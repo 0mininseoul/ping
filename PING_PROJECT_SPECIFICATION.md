@@ -1,8 +1,8 @@
-# Ping — 실시간 2초 영상 메시지 macOS 앱 기획서 (v2.1)
+# Ping — 실시간 2초 영상 메시지 macOS 앱 기획서 (v2.2)
 
 ## 프로젝트 개요
 
-**Ping**은 macOS 26 Tahoe 전용 2초 영상 메시지 메뉴바 앱이다. Option+P로 원형 카메라 거울을 띄우고, Enter로 정확히 2초 녹화한 뒤 Supabase를 통해 파트너에게 전송한다. 수신자는 로컬 알림을 클릭하면 발신자가 보낸 위치에 2초 원형 재생창이 뜬다.
+**Ping**은 macOS 13 Ventura 이상에서 동작하는 2초 영상 메시지 메뉴바 앱이다. Option+P로 원형 카메라 거울을 띄우고, Enter로 정확히 2초 녹화한 뒤 Supabase를 통해 파트너에게 전송한다. 수신자는 로컬 알림을 클릭하면 발신자가 보낸 위치에 2초 원형 재생창이 뜬다.
 
 ### 초기 검증 환경
 
@@ -27,13 +27,13 @@
 
 | 항목 | 요구사항 |
 |---|---|
-| 운영체제 | macOS 26 Tahoe 이상 |
-| 아키텍처 | Apple Silicon Mac (M1 이상) |
+| 운영체제 | macOS 13 Ventura 이상 |
+| 아키텍처 | Apple Silicon Mac 권장, Intel Mac은 v0.1.4에서 실기기 검증 전 |
 | 카메라 | 내장 FaceTime 카메라 또는 외장 USB 카메라 |
 | 마이크 | 내장 또는 외장 |
 | 네트워크 | Supabase Auth, Postgres RPC, Storage 접근 가능 |
 
-macOS 26을 최저 요구사항으로 잡는 이유는 SwiftUI 네이티브 `.glassEffect()`를 호환성 코드 없이 사용하기 위함이다. 이 API를 구식 material 또는 `NSVisualEffectView`로 대체하지 않는다.
+macOS 26 이상에서는 `.pingGlassEffect()` wrapper가 SwiftUI 네이티브 `.glassEffect()`를 사용하고, macOS 13-25에서는 `PingDesign.Surface` 기반 fallback surface를 사용한다. 앱 코드는 `.pingGlassEffect()` wrapper만 호출한다.
 
 ## 핵심 기능
 
@@ -80,7 +80,7 @@ macOS 26을 최저 요구사항으로 잡는 이유는 SwiftUI 네이티브 `.gl
 
 - 200px 원형 borderless floating window.
 - 메인 스크린에 표시하며 마지막 위치를 저장한다.
-- SwiftUI `.glassEffect()` 기반 Liquid Glass 스타일.
+- SwiftUI `.pingGlassEffect()` 기반 compatible glass 스타일.
 - `AppDelegate`가 보유한 단일 `CameraManager` 인스턴스를 주입한다.
 
 | 상태 | 시각 표현 |
@@ -286,7 +286,8 @@ ping/
 
 ## 디자인 원칙
 
-- Liquid Glass는 `.glassEffect()`가 기본이다.
+- Liquid Glass는 `.pingGlassEffect()` wrapper를 통해 적용한다.
+- macOS 26 이상에서는 SwiftUI 네이티브 `.glassEffect()`를 사용하고, macOS 13-25에서는 `PingDesign.Surface` 기반 fallback surface를 사용한다.
 - 거울과 재생창은 원형, 카드와 패널은 16pt radius.
 - 시스템 폰트만 사용한다.
 - 송신 완료 시 별도 toast나 성공 문구를 띄우지 않는다.
@@ -336,7 +337,7 @@ ping/
 
 ---
 
-- **문서 버전**: 2.1
+- **문서 버전**: 2.2
 - **작성일**: 2026-05-17
-- **최종 수정일**: 2026-05-18
+- **최종 수정일**: 2026-05-19
 - **상태**: Supabase 기반 MVP 구현 기준
