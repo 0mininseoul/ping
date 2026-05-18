@@ -87,7 +87,7 @@ private struct GeneralSettingsView: View {
                             Toggle("", isOn: $autoLaunchEnabled)
                                 .labelsHidden()
                         }
-                        .onChange(of: autoLaunchEnabled) { _, newValue in
+                        .onChange(of: autoLaunchEnabled) { newValue in
                             updateAutoLaunch(newValue)
                         }
                     }
@@ -146,10 +146,10 @@ private struct GeneralSettingsView: View {
             refreshAutoLaunchStatus()
             nicknameDraft = appState.currentUser?.nickname ?? ""
         }
-        .onChange(of: appState.currentUser?.nickname) { _, newValue in
+        .onChange(of: appState.currentUser?.nickname) { newValue in
             nicknameDraft = newValue ?? ""
         }
-        .onChange(of: appearanceMode) { _, newValue in
+        .onChange(of: appearanceMode) { newValue in
             (PingAppearanceMode(rawValue: newValue) ?? .system).apply()
         }
     }
@@ -388,7 +388,7 @@ private struct StorageSettingsView: View {
                     Toggle("보낸 영상 저장", isOn: $saveSentEnabled)
                     Toggle("받은 영상 저장", isOn: $saveReceivedEnabled)
                     Toggle("30일 뒤 자동 삭제", isOn: $autoDeleteAfter30Days)
-                        .onChange(of: autoDeleteAfter30Days) { _, enabled in
+                        .onChange(of: autoDeleteAfter30Days) { enabled in
                             LocalArchive.autoDeleteAfter30Days = enabled
                         }
                 } footer: {
@@ -427,10 +427,10 @@ private struct StorageSettingsView: View {
             saveReceivedEnabled = LocalArchive.saveReceivedEnabled
             autoDeleteAfter30Days = LocalArchive.autoDeleteAfter30Days
         }
-        .onChange(of: saveSentEnabled) { _, newValue in
+        .onChange(of: saveSentEnabled) { newValue in
             LocalArchive.saveSentEnabled = newValue
         }
-        .onChange(of: saveReceivedEnabled) { _, newValue in
+        .onChange(of: saveReceivedEnabled) { newValue in
             LocalArchive.saveReceivedEnabled = newValue
         }
     }

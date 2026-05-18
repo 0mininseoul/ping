@@ -204,7 +204,7 @@ struct RoomListView: View {
                 .onAppear {
                     focusedEditingRoomId = roomId
                 }
-                .onChange(of: focusedEditingRoomId) { _, newValue in
+                .onChange(of: focusedEditingRoomId) { newValue in
                     if editingRoomId == roomId, newValue != roomId {
                         commitRename(room)
                     }
