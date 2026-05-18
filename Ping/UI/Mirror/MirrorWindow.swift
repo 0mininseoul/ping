@@ -31,16 +31,23 @@ final class MirrorWindow: NSWindow {
     }
 
     static func loadLastPosition() -> NSPoint {
-        let defaults = UserDefaults.standard
-        if let dict = defaults.dictionary(forKey: positionKey),
-           let x = dict["x"] as? CGFloat,
-           let y = dict["y"] as? CGFloat {
-            return NSPoint(x: x, y: y)
-        }
-
         guard let screen = NSScreen.main else { return .zero }
-        let frame = screen.visibleFrame
-        return NSPoint(x: frame.midX - size.width / 2, y: frame.midY - size.height / 2)
+
+        return WindowPositioning.visibleOrigin(
+            preferred: savedPosition(),
+            windowSize: size,
+            in: screen.visibleFrame
+        )
+    }
+
+    func ensureVisibleOnCurrentScreen() {
+        guard let screen = screenForCurrentFrame() ?? NSScreen.main else { return }
+        let origin = WindowPositioning.visibleOrigin(
+            preferred: frame.origin,
+            windowSize: frame.size,
+            in: screen.visibleFrame
+        )
+        setFrameOrigin(origin)
     }
 
     func savePosition() {
@@ -53,5 +60,22 @@ final class MirrorWindow: NSWindow {
     override func mouseUp(with event: NSEvent) {
         super.mouseUp(with: event)
         savePosition()
+    }
+
+    private static func savedPosition() -> NSPoint? {
+        let defaults = UserDefaults.standard
+        guard let dict = defaults.dictionary(forKey: positionKey),
+              let x = dict["x"] as? CGFloat,
+              let y = dict["y"] as? CGFloat else {
+            return nil
+        }
+
+        return NSPoint(x: x, y: y)
+    }
+
+    private func screenForCurrentFrame() -> NSScreen? {
+        NSScreen.screens.first { screen in
+            screen.frame.intersects(frame)
+        }
     }
 }

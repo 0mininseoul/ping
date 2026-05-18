@@ -239,6 +239,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         mirrorViewModel.reset()
+        mirrorWindow?.ensureVisibleOnCurrentScreen()
         startCameraForMirrorPresentation()
         mirrorWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
