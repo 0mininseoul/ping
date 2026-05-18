@@ -48,15 +48,15 @@ begin
 
     if not exists (
         select 1
-        from public.room_members
-        where room_id = room_uuid and user_id = current_uid
+        from public.room_members rm_check
+        where rm_check.room_id = room_uuid and rm_check.user_id = current_uid
     ) then
         raise exception 'not_room_member' using errcode = '42501';
     end if;
 
     select count(*) into member_count
-    from public.room_members
-    where room_id = room_uuid;
+    from public.room_members rm_count
+    where rm_count.room_id = room_uuid;
 
     if not exists (
         select 1

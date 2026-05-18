@@ -54,20 +54,14 @@ struct RoomListView: View {
 
     private var roomCountHeader: some View {
         HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text("내 룸")
-                    .font(PingFont.title)
-
-                Text("\(appState.rooms.count)/\(RoomLimits.maxRoomsPerUser)개 사용 중")
-                    .font(PingFont.caption)
-                    .foregroundStyle(.secondary)
-            }
+            Text("내 룸")
+                .font(PingFont.title)
 
             Spacer()
 
-            GlassButton("룸 찾기", action: onFindRoom)
+            headerActionButton("룸 찾기", action: onFindRoom)
 
-            GlassButton("룸 만들기", isPrimary: true, action: onCreateRoom)
+            headerActionButton("룸 만들기", isPrimary: true, action: onCreateRoom)
                 .disabled(!canCreateRoom)
         }
         .padding(.horizontal, 2)
@@ -89,9 +83,9 @@ struct RoomListView: View {
             }
 
             HStack(spacing: 10) {
-                GlassButton("룸 만들기", isPrimary: true, action: onCreateRoom)
+                headerActionButton("룸 만들기", isPrimary: true, action: onCreateRoom)
                     .disabled(!canCreateRoom)
-                GlassButton("룸 찾기", action: onFindRoom)
+                headerActionButton("룸 찾기", action: onFindRoom)
             }
         }
         .frame(maxWidth: .infinity)
@@ -125,35 +119,77 @@ struct RoomListView: View {
                 Spacer(minLength: 6)
 
                 statusBadge(for: room)
-            }
-
-            Divider()
-                .opacity(0.35)
-
-            HStack(spacing: 8) {
-                GlassButton("나가기") {
-                    leave(room)
-                }
-
-                Spacer()
-
-                if room.memberUids.count < RoomLimits.maxMembersPerRoom {
-                    GlassButton("링크 복사") {
-                        onCopyInviteLink(room)
-                    }
-                }
-
-                if isOwner(room) {
-                    GlassButton("이름 변경") {
-                        onRename(room)
-                    }
-                }
+                roomActions(for: room)
             }
         }
         .padding(14)
         .background {
             roomCardBackground
         }
+    }
+
+    private func headerActionButton(
+        _ title: String,
+        isPrimary: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
+        GlassButton(title, isPrimary: isPrimary, action: action)
+            .frame(width: 136)
+    }
+
+    private func roomActions(for room: Room) -> some View {
+        HStack(spacing: 6) {
+            if room.memberUids.count < RoomLimits.maxMembersPerRoom {
+                iconAction(systemName: "link", accessibilityLabel: "초대링크 복사") {
+                    onCopyInviteLink(room)
+                }
+            }
+
+            Menu {
+                Button("나가기", role: .destructive) {
+                    leave(room)
+                }
+
+                if isOwner(room) {
+                    Button("이름 변경") {
+                        onRename(room)
+                    }
+                }
+            } label: {
+                iconLabel(systemName: "ellipsis", accessibilityLabel: "룸 메뉴")
+            }
+            .menuStyle(.borderlessButton)
+            .fixedSize()
+        }
+    }
+
+    private func iconAction(
+        systemName: String,
+        accessibilityLabel: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            iconLabel(systemName: systemName, accessibilityLabel: accessibilityLabel)
+        }
+        .buttonStyle(.plain)
+        .help(accessibilityLabel)
+    }
+
+    private func iconLabel(systemName: String, accessibilityLabel: String) -> some View {
+        Image(systemName: systemName)
+            .font(.system(size: 14, weight: .semibold))
+            .foregroundStyle(Color.primary.opacity(0.86))
+            .frame(width: 34, height: 34)
+            .background {
+                Circle()
+                    .fill(PingDesign.Surface.chipFill.opacity(0.94))
+                    .overlay {
+                        Circle()
+                            .strokeBorder(PingDesign.Surface.strongHairline.opacity(0.64), lineWidth: 0.8)
+                    }
+            }
+            .contentShape(Circle())
+            .accessibilityLabel(accessibilityLabel)
     }
 
     private func statusBadge(for room: Room) -> some View {

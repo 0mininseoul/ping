@@ -22,7 +22,28 @@ final class InviteLinkContractTests: XCTestCase {
         let source = try readSourceFile("Ping/UI/Setup/RoomListView.swift")
 
         XCTAssertTrue(source.contains("onCopyInviteLink"))
-        XCTAssertTrue(source.contains("링크 복사"))
+        XCTAssertTrue(source.contains("초대링크 복사"))
+        XCTAssertTrue(source.contains("systemName: \"link\""))
+        XCTAssertTrue(source.contains("Menu {"))
+        XCTAssertFalse(source.contains("GlassButton(\"나가기\")"))
+        XCTAssertFalse(source.contains("GlassButton(\"링크 복사\")"))
+        XCTAssertFalse(source.contains("GlassButton(\"이름 변경\")"))
+    }
+
+    func testRoomListHidesRoomLimitUntilUserReachesIt() throws {
+        let source = try readSourceFile("Ping/UI/Setup/RoomListView.swift")
+
+        XCTAssertFalse(source.contains("/\\(RoomLimits.maxRoomsPerUser)개 사용 중"))
+        XCTAssertFalse(source.contains("개 사용 중"))
+    }
+
+    func testInviteLinkCreateRpcQualifiesRoomIdReferences() throws {
+        let migration = try readSourceFile("20260518003000_room_capacity_limits.sql")
+
+        XCTAssertTrue(migration.contains("from public.room_members rm_check"))
+        XCTAssertTrue(migration.contains("rm_check.room_id = room_uuid"))
+        XCTAssertTrue(migration.contains("from public.room_members rm_count"))
+        XCTAssertTrue(migration.contains("rm_count.room_id = room_uuid"))
     }
 
     func testRoomSearchCanJoinByInviteLinkOrCode() throws {

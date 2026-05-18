@@ -6,11 +6,11 @@
             <title>0.1.0</title>
             <pubDate>Mon, 18 May 2026 02:50:52 +0900</pubDate>
             <link>https://ping0min.vercel.app</link>
-            <sparkle:version>1</sparkle:version>
+            <sparkle:version>2</sparkle:version>
             <sparkle:shortVersionString>0.1.0</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <enclosure url="https://ping0min.vercel.app/downloads/Ping-v0.1.0.dmg" length="5303981" type="application/octet-stream" sparkle:edSignature="a8wRXsg0eDgshrPi0Nb/bobtmYblK1Q2x6eLmDvEdGWVdrfcRty7gMSWKQxhqdeDTydYDW8CLWRU/kPon8qBDQ=="/>
+            <enclosure url="https://ping0min.vercel.app/downloads/Ping-v0.1.0.dmg" length="5330571" type="application/octet-stream" sparkle:edSignature="lMQHfUFfxOD2qC1xUiHI4YXwZPtEO1QocEHc0DGbG1jmOXE3YstrxHt2a/5kU1dR8/dKe7lEbY+XAQcmbYy3AA=="/>
         </item>
     </channel>
 </rss>
