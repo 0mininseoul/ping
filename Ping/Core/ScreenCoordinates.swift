@@ -6,9 +6,12 @@ enum ScreenCoordinates {
             return MirrorPosition(xRatio: 0.5, yRatio: 0.5)
         }
 
+        let xRatio = (point.x - screen.minX) / screen.width
+        let yRatio = (point.y - screen.minY) / screen.height
+
         return MirrorPosition(
-            xRatio: Double((point.x - screen.minX) / screen.width),
-            yRatio: Double((point.y - screen.minY) / screen.height)
+            xRatio: Double(min(max(xRatio, 0), 1)),
+            yRatio: Double(min(max(yRatio, 0), 1))
         )
     }
 

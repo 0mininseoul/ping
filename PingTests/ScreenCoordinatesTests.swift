@@ -12,6 +12,16 @@ final class ScreenCoordinatesTests: XCTestCase {
         XCTAssertEqual(pos.yRatio, 0.5, accuracy: 0.0001)
     }
 
+    func testNormalizeClampsPointsOutsideScreenToValidRatios() {
+        let pos = ScreenCoordinates.normalize(
+            point: CGPoint(x: 2200, y: -100),
+            in: CGRect(x: 0, y: 0, width: 1920, height: 1080)
+        )
+
+        XCTAssertEqual(pos.xRatio, 1.0, accuracy: 0.0001)
+        XCTAssertEqual(pos.yRatio, 0.0, accuracy: 0.0001)
+    }
+
     func testDenormalizeHalfHalfReturnsCenter() {
         let point = ScreenCoordinates.denormalize(
             position: MirrorPosition(xRatio: 0.5, yRatio: 0.5),
