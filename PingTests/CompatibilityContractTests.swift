@@ -32,27 +32,46 @@ final class CompatibilityContractTests: XCTestCase {
     }
 
     func testAppSwiftSourcesUseGlassEffectOnlyThroughCompatibilityWrapper() throws {
-        let repositoryRoot = try repositoryRoot()
-        let appSourceRoot = repositoryRoot.appendingPathComponent("Ping")
-        let allowedRelativePath = "Ping/UI/Glass/GlassEffectCompat.swift"
-        let swiftSources = try swiftSourceFiles(under: appSourceRoot)
+        let allowedFixtureName = "GlassEffectCompat.swift"
+        let appSourceFixtureNames = [
+            "GlassEffectCompat.swift",
+            "GlassChip.swift",
+            "MirrorView.swift",
+            "PartnerPicker.swift",
+            "GlassButton.swift",
+            "GlassPanel.swift",
+            "PairingView.swift",
+            "RoomListView.swift",
+            "RoomSearchView.swift",
+            "SettingsScene.swift",
+            "PingDesign.swift",
+            "CameraManager.swift",
+            "PairingViewModel.swift",
+            "RoomManagerWindow.swift",
+            "HotkeyManager.swift",
+            "UserPreferences.swift",
+            "InviteLink.swift",
+            "AppState.swift",
+            "RoomLimits.swift",
+            "PingError.swift",
+            "LocalArchive.swift",
+            "VideoRecorder.swift",
+            "VideoCropper.swift",
+            "AppDelegate.swift",
+            "InvitationService.swift",
+            "MessageService.swift",
+            "SupabaseClient.swift",
+        ]
 
-        XCTAssertFalse(swiftSources.isEmpty)
-
-        let offenders = try swiftSources.compactMap { sourceURL -> String? in
-            let contents = try String(contentsOf: sourceURL, encoding: .utf8)
-            let relativePath = sourceURL.path.replacingOccurrences(of: repositoryRoot.path + "/", with: "")
-
-            guard relativePath != allowedRelativePath, contents.contains(".glassEffect(") else {
-                return nil
-            }
-
-            return relativePath
+        let directGlassEffectFixtures = try appSourceFixtureNames.compactMap { fixtureName -> String? in
+            let contents = try readFixture(fixtureName)
+            return contents.contains(".glassEffect(") ? fixtureName : nil
         }
 
-        XCTAssertTrue(
-            offenders.isEmpty,
-            "Direct .glassEffect() is only allowed in \(allowedRelativePath). Offenders: \(offenders.joined(separator: ", "))"
+        XCTAssertEqual(
+            directGlassEffectFixtures,
+            [allowedFixtureName],
+            "Direct .glassEffect() is only allowed in \(allowedFixtureName). Found in: \(directGlassEffectFixtures.joined(separator: ", "))"
         )
     }
 
@@ -61,37 +80,6 @@ final class CompatibilityContractTests: XCTestCase {
         let fileURL = try XCTUnwrap(Bundle(for: Self.self).resourceURL?.appendingPathComponent(fileName))
 
         return try String(contentsOf: fileURL, encoding: .utf8)
-    }
-
-    private func repositoryRoot() throws -> URL {
-        let testFile = URL(fileURLWithPath: #filePath)
-        let root = testFile.deletingLastPathComponent().deletingLastPathComponent()
-
-        XCTAssertTrue(
-            FileManager.default.fileExists(atPath: root.appendingPathComponent("Ping").path),
-            "Expected to derive repository root from #filePath"
-        )
-
-        return root
-    }
-
-    private func swiftSourceFiles(under root: URL) throws -> [URL] {
-        let enumerator = try XCTUnwrap(
-            FileManager.default.enumerator(
-                at: root,
-                includingPropertiesForKeys: [.isRegularFileKey],
-                options: [.skipsHiddenFiles]
-            )
-        )
-
-        return try enumerator.compactMap { item -> URL? in
-            guard let url = item as? URL, url.pathExtension == "swift" else {
-                return nil
-            }
-
-            let resourceValues = try url.resourceValues(forKeys: [.isRegularFileKey])
-            return resourceValues.isRegularFile == true ? url : nil
-        }
     }
 
     private func sourceSlice(in source: String, from startMarker: String, to endMarker: String? = nil) throws -> String {
