@@ -337,8 +337,7 @@ private struct RoomSettingsView: View {
                     .foregroundStyle(.secondary)
 
                 if appState.rooms.isEmpty {
-                    ContentUnavailableView("룸 없음", systemImage: "person.2.slash", description: Text("참여 중인 룸이 없습니다."))
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    emptyRoomsState
                 } else {
                     List {
                         ForEach(Array(appState.rooms.enumerated()), id: \.offset) { _, room in
@@ -368,6 +367,24 @@ private struct RoomSettingsView: View {
                 }
             }
         }
+    }
+
+    private var emptyRoomsState: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "person.2.slash")
+                .font(.system(size: 32, weight: .regular))
+                .foregroundStyle(.secondary)
+
+            Text("룸 없음")
+                .font(PingFont.label)
+                .foregroundStyle(.secondary)
+
+            Text("참여 중인 룸이 없습니다.")
+                .font(PingFont.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 

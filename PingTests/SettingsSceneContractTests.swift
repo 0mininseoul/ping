@@ -63,6 +63,18 @@ final class SettingsSceneContractTests: XCTestCase {
         XCTAssertTrue(archiveSource.contains("deleteExpiredFilesIfNeeded"))
     }
 
+    func testRoomSettingsUsesMacOS13CompatibleEmptyState() throws {
+        let settingsSource = try readSourceFile("Ping/UI/Setup/SettingsScene.swift")
+        let roomSettingsSource = try sourceSlice(
+            in: settingsSource,
+            from: "private struct RoomSettingsView",
+            to: "private struct StorageSettingsView"
+        )
+
+        XCTAssertFalse(roomSettingsSource.contains("ContentUnavailableView"))
+        XCTAssertTrue(roomSettingsSource.contains("emptyRoomsState"))
+    }
+
     private func readSourceFile(_ relativePath: String) throws -> String {
         let fileName = URL(fileURLWithPath: relativePath).lastPathComponent
         let fileURL = try XCTUnwrap(Bundle(for: Self.self).resourceURL?.appendingPathComponent(fileName))
