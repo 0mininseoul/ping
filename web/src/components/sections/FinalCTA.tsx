@@ -53,7 +53,7 @@ export default function FinalCTA({ downloadUrl, version }: FinalCTAProps) {
                   </a>
                 </ClickSpark>
                 <p className="text-xs text-subtle md:text-right">
-                  Apple Silicon · macOS 26 Tahoe+ · ~24MB
+                  Apple Silicon 권장 · macOS 13 Ventura+ · ~24MB
                 </p>
               </div>
             </div>

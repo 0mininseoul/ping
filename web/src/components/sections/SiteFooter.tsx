@@ -17,7 +17,7 @@ export default function SiteFooter({ version }: SiteFooterProps) {
         </div>
 
         <p className="text-xs text-subtle">
-          macOS 26 Tahoe 이상 · Apple Silicon Mac 권장
+          macOS 13 Ventura 이상 · Apple Silicon Mac 권장
         </p>
 
         <nav

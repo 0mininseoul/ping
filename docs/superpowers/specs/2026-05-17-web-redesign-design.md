@@ -9,7 +9,7 @@
 지금 배포된 `web/` 는 한 화면짜리 단조로운 다크 랜딩이고 한국어 헤드라인이 음절 단위로 깨진다. 이번 작업으로 Ping(macOS 메뉴바 2초 영상 메시지 앱)의 정체성을 한 호흡으로 전달하는 *cinematic product site* 로 바꾼다.
 
 - 즉시 이해 가능한 3-Beat 데모(Option+P → 원형 거울 → 2초)
-- macOS 26 Tahoe / Apple Silicon 감성과 미니멀 다크 톤 유지
+- macOS 13 Ventura+ 지원을 명확히 알리고, Apple Silicon-first 감성과 미니멀 다크 톤 유지
 - shadcn-ui + Tailwind v4 + React Bits 컴포넌트 구성을 정착
 - 한국어 타이포 보정(`word-break: keep-all`)
 - 초대 경험(`/invite/:token`) 도 별도 풀페이지로 격상
@@ -93,8 +93,8 @@
 
 ### 4.5 Privacy & Spec strip
 - 한 줄 4-칸 라이트 보더 그리드
-  - Apple Silicon Mac
-  - macOS 26 Tahoe+
+  - Apple Silicon Mac 권장
+  - macOS 13 Ventura+
   - ~24MB
   - 메뉴바에서만 동작 · 영상은 만료 후 삭제
 

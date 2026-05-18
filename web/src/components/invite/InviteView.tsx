@@ -105,7 +105,7 @@ export default function InviteView({
             <span>
               Ping <span className="font-mono">{version}</span>
             </span>
-            <span>macOS 26 Tahoe 이상 · Apple Silicon Mac</span>
+            <span>macOS 13 Ventura 이상 · Apple Silicon Mac 권장</span>
           </div>
         </footer>
       </div>
