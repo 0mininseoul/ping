@@ -28,7 +28,7 @@ struct PartnerPicker: View {
                     GlassChip("파트너 없음", isHover: isExpanded)
                 }
             case .allPartners:
-                GlassChip("🌐 모두에게 (\(appState.rooms.count))", isHover: isExpanded)
+                GlassChip("🌐 모두에게 (\(activeRooms.count))", isHover: isExpanded)
             }
         }
         .buttonStyle(.plain)
@@ -36,12 +36,14 @@ struct PartnerPicker: View {
 
     @ViewBuilder private var dropdown: some View {
         VStack(spacing: 4) {
-            optionRow(label: "🌐 모두에게", selected: appState.sendMode == .allPartners) {
-                appState.sendMode = .allPartners
-                isExpanded = false
+            if activeRooms.count >= 2 {
+                optionRow(label: "🌐 모두에게", selected: appState.sendMode == .allPartners) {
+                    appState.sendMode = .allPartners
+                    isExpanded = false
+                }
+                Divider().opacity(0.3)
             }
-            Divider().opacity(0.3)
-            ForEach(Array(appState.rooms.enumerated()), id: \.element.id) { index, room in
+            ForEach(Array(activeRooms.enumerated()), id: \.element.id) { index, room in
                 optionRow(
                     label: "\(index + 1). \(partnerNickname(in: room))",
                     selected: appState.sendMode == .singlePartner && selectedRoomId == room.id
@@ -82,6 +84,10 @@ struct PartnerPicker: View {
             .padding(.vertical, 4)
         }
         .buttonStyle(.plain)
+    }
+
+    private var activeRooms: [Room] {
+        appState.rooms.filter { $0.memberUids.count >= RoomLimits.minSendableMembers }
     }
 
     private func currentRoom() -> Room? {
