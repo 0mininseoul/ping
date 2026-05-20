@@ -1,11 +1,17 @@
 @preconcurrency import AVFoundation
 import AppKit
 import Combine
+import CoreImage
 
 @MainActor
-final class CameraManager: ObservableObject {
+final class CameraManager: NSObject, ObservableObject {
+    nonisolated(unsafe) static var latestVideoFrame: CIImage?
+
     let session = AVCaptureSession()
     private(set) var movieOutput = AVCaptureMovieFileOutput()
+
+    private let videoDataOutput = AVCaptureVideoDataOutput()
+    private let videoFrameQueue = DispatchQueue(label: "ping.camera.frame")
 
     @Published var isReady = false
     @Published var lastError: String?
@@ -70,6 +76,15 @@ final class CameraManager: ObservableObject {
             session.addOutput(movieOutput)
         }
 
+        videoDataOutput.alwaysDiscardsLateVideoFrames = true
+        videoDataOutput.videoSettings = [
+            kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA
+        ]
+        videoDataOutput.setSampleBufferDelegate(self, queue: videoFrameQueue)
+        if session.canAddOutput(videoDataOutput) {
+            session.addOutput(videoDataOutput)
+        }
+
         configureFrameRate(for: camera)
         session.commitConfiguration()
 
@@ -120,5 +135,16 @@ final class CameraManager: ObservableObject {
         } catch {
             lastError = "카메라 프레임레이트 설정에 실패했습니다: \(error.localizedDescription)"
         }
+    }
+}
+
+extension CameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
+    nonisolated func captureOutput(
+        _ output: AVCaptureOutput,
+        didOutput sampleBuffer: CMSampleBuffer,
+        from connection: AVCaptureConnection
+    ) {
+        guard let pb = sampleBuffer.imageBuffer else { return }
+        CameraManager.latestVideoFrame = CIImage(cvPixelBuffer: pb)
     }
 }
