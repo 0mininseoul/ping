@@ -11,9 +11,10 @@ struct MirrorView: View {
 
     var windowOrigin: () -> NSPoint
     var onClose: () -> Void = {}
-    var onSend: (URL, MirrorPosition, [Room]) async throws -> Void
+    var onSend: (URL, MirrorPosition, [Room], CaptureMode, Double) async throws -> Void
 
     @State private var keyMonitor: Any?
+    @State private var lastRecordedAspect: Double = 1.0
     @State private var selectedRoomId: String?
     @State private var pickerExpanded = false
 
@@ -247,7 +248,6 @@ struct MirrorView: View {
         await camera.prepareAudioForRecording()
         // Audio configuration may briefly destabilize session; wait for first frame to land.
         try? await Task.sleep(for: .milliseconds(150))
-        let recorder = VideoRecorder(output: camera.movieOutput)
         let countdownTask = Task { @MainActor in
             try? await Task.sleep(for: .seconds(1))
             viewModel.countdown = 2
@@ -256,9 +256,27 @@ struct MirrorView: View {
         }
 
         do {
-            let tempURL = try await recorder.recordClip()
+            let recordedURL: URL
+            switch captureMode {
+            case .faceOnly:
+                let recorder = VideoRecorder(output: camera.movieOutput)
+                recordedURL = try await recorder.recordClip()
+                lastRecordedAspect = 1.0
+            case .screenFace:
+                let screen = NSScreen.main ?? NSScreen.screens.first!
+                await screenCapture.startRecording(on: screen)
+                let recorder = ScreenFaceRecorder()
+                let out = try await recorder.record(
+                    screenManager: screenCapture,
+                    cameraSession: camera.session,
+                    screenSize: screen.frame.size
+                )
+                recordedURL = out.url
+                lastRecordedAspect = out.aspectRatio
+                await screenCapture.startPreview(on: screen)
+            }
             countdownTask.cancel()
-            viewModel.enterReviewing(url: tempURL)
+            viewModel.enterReviewing(url: recordedURL)
         } catch {
             countdownTask.cancel()
             viewModel.state = .failed(error.localizedDescription)
@@ -297,11 +315,12 @@ struct MirrorView: View {
 
         let origin = windowOrigin()
         let screen = NSScreen.main?.frame ?? .zero
-        let center = NSPoint(x: origin.x + 100, y: origin.y + 100)
-        let position = ScreenCoordinates.normalize(point: center, in: screen)
+        let centerX = origin.x + contentSize.width / 2
+        let centerY = origin.y + contentSize.height / 2
+        let position = ScreenCoordinates.normalize(point: NSPoint(x: centerX, y: centerY), in: screen)
 
         do {
-            try await onSend(url, position, currentTargets())
+            try await onSend(url, position, currentTargets(), captureMode, lastRecordedAspect)
             try? await Task.sleep(for: .milliseconds(300))
             onClose()
             viewModel.reset()

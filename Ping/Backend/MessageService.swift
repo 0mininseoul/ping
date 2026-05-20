@@ -23,6 +23,8 @@ final class MessageService {
         let mirrorPosition: MirrorPosition
         let senderUid: String
         let senderNickname: String
+        let captureMode: CaptureMode
+        let aspectRatio: Double
     }
 
     func send(_ input: SendInput) async throws {
@@ -60,7 +62,9 @@ final class MessageService {
                     "video_id_text": sharedVideoId,
                     "video_url_text": videoStoragePath,
                     "x_ratio": input.mirrorPosition.xRatio,
-                    "y_ratio": input.mirrorPosition.yRatio
+                    "y_ratio": input.mirrorPosition.yRatio,
+                    "capture_mode_text": input.captureMode.rawValue,
+                    "aspect_ratio_value": input.aspectRatio
                 ])
             }
         }

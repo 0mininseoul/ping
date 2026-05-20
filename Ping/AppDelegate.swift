@@ -243,8 +243,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             onClose: { [weak self] in
                 self?.closeMirrorWindow()
             },
-            onSend: { [weak self] tempURL, position, targets in
-                try await self?.sendVideo(tempURL: tempURL, position: position, targets: targets)
+            onSend: { [weak self] url, position, rooms, mode, aspect in
+                try await self?.sendVideo(tempURL: url, position: position, targets: rooms, captureMode: mode, aspectRatio: aspect)
             }
         )
         let host = NSHostingView(rootView: view)
@@ -282,7 +282,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         currentMirrorMode = nil
     }
 
-    private func sendVideo(tempURL: URL, position: MirrorPosition, targets: [Room]) async throws {
+    private func sendVideo(tempURL: URL, position: MirrorPosition, targets: [Room], captureMode: CaptureMode = .faceOnly, aspectRatio: Double = 1.0) async throws {
         guard let currentUser = appState.currentUser,
               let senderUid = currentUser.id else {
             throw PingError.currentUserMissing
@@ -316,7 +316,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 localVideoURL: localVideoURL,
                 mirrorPosition: position,
                 senderUid: senderUid,
-                senderNickname: currentUser.nickname
+                senderNickname: currentUser.nickname,
+                captureMode: captureMode,
+                aspectRatio: aspectRatio
             ))
         } catch {
             if shouldRemoveLocalVideoAfterSend {
