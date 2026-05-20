@@ -463,5 +463,53 @@ v1 skip. 후속 spec에서 발신자/모드/날짜 필터 추가 검토.
 - **Backspace**: 다시 찍기 (송신측 reviewing).
 - **Esc**: 닫기 (모든 컨텍스트).
 - **Space**: 확대 토글 (수신측 + 히스토리).
-- **F**: 모드 토글 (송신측 거울 안에서).
+- **Option+P**: 얼굴만 모드 거울 토글 (글로벌).
+- **Option+L**: 화면+얼굴 모드 거울 토글 (글로벌).
 - **Option+O**: 히스토리 윈도우 토글 (글로벌).
+
+---
+
+## v0.2.1 Amendments (2026-05-21)
+
+본문 일부 결정이 사용자 검토로 갱신됨. 본 amendment가 권위 있는 결정.
+
+### A1. 녹화 시간 2초 → 3초
+
+본문은 모두 "2초"였으나 **3초**로 변경.
+- `VideoRecorder.maxRecordedDuration` 2.0 → 3.0
+- `MirrorViewModel.countdown` default 2 → 3 (시퀀스 3 → 2 → 1)
+- `MirrorView.startRecording`의 카운트다운 task가 1초 후 2, 2초 후 1로 갱신되도록 수정
+- DB `messages.duration_ms` default 2000 → 3000
+- `ping_create_message` RPC hardcoded 2000 → 3000
+
+### A2. 녹화 길이 1초 버그 수정 (audio warm-up)
+
+원인: `CameraManager.prepareAudioForRecording`이 첫 녹화 시점에 `AVCaptureSession.beginConfiguration / commitConfiguration` 동기 수행. session reconfigure 동안 첫 frame 도착이 약 1초 지연. `maxRecordedDuration`은 `startRecording` 호출부터 카운트되어 영상은 절반만 캡쳐됨.
+
+해결: 카메라가 준비되는 시점(launch 후 첫 `camera.start()` 완료 직후)에 audio도 함께 configure. 이후 발사 시점엔 `prepareAudioForRecording`이 noop. 추가 안전망으로 `startRecording` 직전 짧은 wait (`Task.sleep(.milliseconds(150))`).
+
+### B1. 캡쳐 모드 단축키 분리 (F 토글 제거)
+
+본문은 기본 모드 자동 + `F` 토글이었으나, **두 글로벌 단축키로 분리**.
+
+- **Option+P** (`pingTrigger` 의미 갱신) — 얼굴만 모드 거울 토글
+- **Option+L** (`captureScreenFace` 신규) — 화면+얼굴 모드 거울 토글
+- 두 단축키 모두 `KeyboardShortcuts`로 정의, Settings의 단축키 탭에서 커스터마이징
+- **F 토글 키 제거**
+- **`UserPreferences.lastCaptureMode` 저장 제거** — 단축키가 모드를 명시
+- **Settings의 "기본 캡쳐 모드" 라디오 제거** — 두 단축키 항목으로 대체
+
+기존 `KeyboardShortcuts.Name.pingTrigger`는 이름·default 유지(UserDefaults 호환), 의미만 "얼굴만 모드"로 한정. 새 항목 `captureScreenFace` (default Option+L) 추가.
+
+### B2. 거울 떠 있을 때 다른 모드 단축키 동작
+
+- 같은 모드: toggle off (현재와 동일).
+- 다른 모드: **현재 거울 닫고 새 모드로 재시작**.
+
+### C1. 영향받은 본문 결정
+
+다음 본문은 본 amendment로 대체됨:
+- §A1, A3, A5 등 "2초" 표현은 "3초"로 해석.
+- §B3 "`F`로 얼굴 only 토글" → 두 단축키 분리.
+- §B8 "권한 거부 → 자동 얼굴 only fallback" → "권한 거부 시 Option+L은 안내 후 단축키 무시. Option+P는 항상 동작".
+- §B13 "Settings 기본 캡쳐 모드 라디오" → 제거. "Settings 단축키 탭에 captureFace / captureScreenFace 항목 표시"로 대체.
