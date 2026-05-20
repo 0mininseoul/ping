@@ -69,6 +69,7 @@
 		CD48671985ADE8C6B4831F9B /* LocalArchive.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB469BD2ECF2AC4459C1A4D1 /* LocalArchive.swift */; };
 		CE8B3DB276BFE8D087DEEFB5 /* PingDesign.swift in Sources */ = {isa = PBXBuildFile; fileRef = C56CBACCB04189EC83BDD330 /* PingDesign.swift */; };
 		D12F7E997BB6376FEF3F220D /* CameraPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 880D2B3F583FCC9102608E19 /* CameraPreviewView.swift */; };
+		802D5C569375475DB680587A /* VideoMessageCodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C2C6002DBF4D85A134C8EC /* VideoMessageCodingTests.swift */; };
 		CBDA70BDE3554303AD85B3C4 /* MirrorViewModelStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0641D481A4476EA5417203 /* MirrorViewModelStateTests.swift */; };
 		D145DD48FDB755F20A1C5A99 /* CameraStartupContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B156E510EB6A9724929971C1 /* CameraStartupContractTests.swift */; };
 		D1F98BCF92D6A7D7BD4FAFA5 /* KeyboardRoutingContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4A1E99D8A2F055B3DD2924E /* KeyboardRoutingContractTests.swift */; };
@@ -143,6 +144,7 @@
 		A6157E3107FE54D68F65EFCB /* DesignSystemContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystemContractTests.swift; sourceTree = "<group>"; };
 		A8DEB2830970ABFE4A394A01 /* SettingsSceneContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSceneContractTests.swift; sourceTree = "<group>"; };
 		A998B4DE490C410DD8C04545 /* UserPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserPreferences.swift; sourceTree = "<group>"; };
+		B4C2C6002DBF4D85A134C8EC /* VideoMessageCodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoMessageCodingTests.swift; sourceTree = "<group>"; };
 		1A0641D481A4476EA5417203 /* MirrorViewModelStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MirrorViewModelStateTests.swift; sourceTree = "<group>"; };
 		B156E510EB6A9724929971C1 /* CameraStartupContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraStartupContractTests.swift; sourceTree = "<group>"; };
 		B2F526895AEBD9128DA1538F /* RoomManagerWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomManagerWindow.swift; sourceTree = "<group>"; };
@@ -350,6 +352,7 @@
 			children = (
 				B156E510EB6A9724929971C1 /* CameraStartupContractTests.swift */,
 				E7BA291155ACBFF85185B36B /* CompatibilityContractTests.swift */,
+				B4C2C6002DBF4D85A134C8EC /* VideoMessageCodingTests.swift */,
 				1A0641D481A4476EA5417203 /* MirrorViewModelStateTests.swift */,
 				A6157E3107FE54D68F65EFCB /* DesignSystemContractTests.swift */,
 				E0CE48710A798DC7E4F5F387 /* EntitlementsTests.swift */,
@@ -624,6 +627,7 @@
 			files = (
 				D145DD48FDB755F20A1C5A99 /* CameraStartupContractTests.swift in Sources */,
 				44DC21E6B318CF6969918DE9 /* CompatibilityContractTests.swift in Sources */,
+				802D5C569375475DB680587A /* VideoMessageCodingTests.swift in Sources */,
 				CBDA70BDE3554303AD85B3C4 /* MirrorViewModelStateTests.swift in Sources */,
 				2E6412BD4860FB69C0B3C49A /* DesignSystemContractTests.swift in Sources */,
 				67FBBC00ABEE4FDC9A8E5496 /* EntitlementsTests.swift in Sources */,

@@ -104,6 +104,8 @@ struct VideoMessage: Codable, Identifiable, Hashable {
     var status: MessageStatus
     var createdAt: Date?
     var expiresAt: Date
+    var captureMode: CaptureMode
+    var aspectRatio: Double?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -118,6 +120,58 @@ struct VideoMessage: Codable, Identifiable, Hashable {
         case status
         case createdAt = "created_at"
         case expiresAt = "expires_at"
+        case captureMode = "capture_mode"
+        case aspectRatio = "aspect_ratio"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decodeIfPresent(String.self, forKey: .id)
+        self.roomId = try c.decode(String.self, forKey: .roomId)
+        self.senderUid = try c.decode(String.self, forKey: .senderUid)
+        self.receiverUid = try c.decode(String.self, forKey: .receiverUid)
+        self.senderNickname = try c.decode(String.self, forKey: .senderNickname)
+        self.videoId = try c.decode(String.self, forKey: .videoId)
+        self.videoUrl = try c.decode(String.self, forKey: .videoUrl)
+        self.durationMs = try c.decode(Int.self, forKey: .durationMs)
+        self.mirrorPosition = try c.decode(MirrorPosition.self, forKey: .mirrorPosition)
+        self.status = try c.decode(MessageStatus.self, forKey: .status)
+        self.createdAt = try c.decodeIfPresent(Date.self, forKey: .createdAt)
+        self.expiresAt = try c.decode(Date.self, forKey: .expiresAt)
+        self.captureMode = try c.decodeIfPresent(CaptureMode.self, forKey: .captureMode) ?? .faceOnly
+        self.aspectRatio = try c.decodeIfPresent(Double.self, forKey: .aspectRatio)
+    }
+
+    init(
+        id: String? = nil,
+        roomId: String,
+        senderUid: String,
+        receiverUid: String,
+        senderNickname: String,
+        videoId: String,
+        videoUrl: String,
+        durationMs: Int,
+        mirrorPosition: MirrorPosition,
+        status: MessageStatus,
+        createdAt: Date? = nil,
+        expiresAt: Date,
+        captureMode: CaptureMode = .faceOnly,
+        aspectRatio: Double? = nil
+    ) {
+        self.id = id
+        self.roomId = roomId
+        self.senderUid = senderUid
+        self.receiverUid = receiverUid
+        self.senderNickname = senderNickname
+        self.videoId = videoId
+        self.videoUrl = videoUrl
+        self.durationMs = durationMs
+        self.mirrorPosition = mirrorPosition
+        self.status = status
+        self.createdAt = createdAt
+        self.expiresAt = expiresAt
+        self.captureMode = captureMode
+        self.aspectRatio = aspectRatio
     }
 }
 
