@@ -1,8 +1,10 @@
 import SwiftUI
 @preconcurrency import AVFoundation
+import CoreImage
 
 struct MirrorView: View {
     @ObservedObject var camera: CameraManager
+    @ObservedObject var screenCapture: ScreenCaptureManager
     let captureMode: CaptureMode
     @ObservedObject var viewModel: MirrorViewModel
     @ObservedObject var appState: AppState
@@ -84,7 +86,12 @@ struct MirrorView: View {
         if case .reviewing(let url) = viewModel.state {
             ReviewLoopPlayerView(url: url)
         } else {
-            CameraPreviewView(session: camera.session)
+            switch captureMode {
+            case .faceOnly:
+                CameraPreviewView(session: camera.session)
+            case .screenFace:
+                ScreenFacePreview(screenCapture: screenCapture, camera: camera)
+            }
         }
     }
 
@@ -437,5 +444,38 @@ struct HintCapsuleView: View {
                     opacity = 0
                 }
             }
+    }
+}
+
+struct ScreenFacePreview: View {
+    @ObservedObject var screenCapture: ScreenCaptureManager
+    @ObservedObject var camera: CameraManager
+
+    var body: some View {
+        ZStack(alignment: .bottomTrailing) {
+            ScreenLiveImageView(screenCapture: screenCapture)
+            CameraPreviewView(session: camera.session)
+                .frame(width: 72, height: 72)
+                .clipShape(Circle())
+                .padding(12)
+        }
+    }
+}
+
+struct ScreenLiveImageView: NSViewRepresentable {
+    @ObservedObject var screenCapture: ScreenCaptureManager
+
+    func makeNSView(context: Context) -> NSImageView {
+        let v = NSImageView()
+        v.imageScaling = .scaleProportionallyUpOrDown
+        return v
+    }
+
+    func updateNSView(_ nsView: NSImageView, context: Context) {
+        guard let frame = screenCapture.latestFrame else { return }
+        let ciContext = CIContext()
+        if let cgImage = ciContext.createCGImage(frame, from: frame.extent) {
+            nsView.image = NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
+        }
     }
 }

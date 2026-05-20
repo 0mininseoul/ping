@@ -14,6 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private let appState = AppState.shared
     private let camera = CameraManager()
+    private let screenCapture = ScreenCaptureManager()
     private let mirrorViewModel = MirrorViewModel()
     private let messageService = MessageService()
     private let userService = UserService()
@@ -234,6 +235,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let window = MirrorWindow(captureMode: mode, initialSize: size, origin: origin)
         let view = MirrorView(
             camera: camera,
+            screenCapture: screenCapture,
             captureMode: mode,
             viewModel: mirrorViewModel,
             appState: appState,
@@ -253,6 +255,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         mirrorViewModel.reset()
         mirrorWindow?.ensureVisibleOnCurrentScreen()
         startCameraForMirrorPresentation()
+        if mode == .screenFace {
+            Task {
+                await screenCapture.startPreview(on: window.screen ?? screen)
+            }
+        }
         mirrorWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
@@ -271,6 +278,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         mirrorWindow?.savePosition()
         mirrorWindow?.orderOut(nil)
         camera.stop()
+        Task { await screenCapture.stop() }
         currentMirrorMode = nil
     }
 
