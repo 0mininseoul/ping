@@ -222,14 +222,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self.historyWindow = nil
             return
         }
-        // History UI is implemented in Tasks C3-C8.
-        // For now, show a temporary placeholder alert so the shortcut is wired.
-        let alert = NSAlert()
-        alert.messageText = "히스토리"
-        alert.informativeText = "히스토리 윈도우는 곧 도입됩니다."
-        alert.addButton(withTitle: "확인")
-        NSApp.activate(ignoringOtherApps: true)
-        alert.runModal()
+        let window = HistoryWindow(
+            appState: appState,
+            messageService: messageService,
+            cacheService: HistoryCacheService.shared
+        )
+        window.makeKeyAndOrderFront(nil)
+        historyWindow = window
     }
 
     private func toggleMirror(mode: CaptureMode) {
@@ -791,11 +790,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
     }
-}
-
-// Placeholder until Task C5 implements the real window.
-@MainActor final class HistoryWindow: NSObject {
-    func orderOut(_ sender: Any?) {}
 }
 
 private extension ProcessInfo {

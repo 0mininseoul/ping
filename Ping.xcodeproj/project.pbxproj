@@ -95,6 +95,11 @@
 		C3A1B2C3D4E5F6A7B8C9D0E1 /* HistoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3A1B2C3D4E5F6A7B8C9D0E0 /* HistoryViewModel.swift */; };
 		C3B1B2C3D4E5F6A7B8C9D0E1 /* HistoryViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3B1B2C3D4E5F6A7B8C9D0E0 /* HistoryViewModelTests.swift */; };
 		C4A1B2C3D4E5F6A7B8C9D0E1 /* HistoryCacheService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4A1B2C3D4E5F6A7B8C9D0E0 /* HistoryCacheService.swift */; };
+		C5A1B2C3D4E5F6A7B8C9D0E1 /* HistoryWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5A1B2C3D4E5F6A7B8C9D0E0 /* HistoryWindow.swift */; };
+		C5B1B2C3D4E5F6A7B8C9D0E1 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5B1B2C3D4E5F6A7B8C9D0E0 /* HistoryView.swift */; };
+		C5C1B2C3D4E5F6A7B8C9D0E1 /* HistorySidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5C1B2C3D4E5F6A7B8C9D0E0 /* HistorySidebar.swift */; };
+		C5D1B2C3D4E5F6A7B8C9D0E1 /* MessageRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5D1B2C3D4E5F6A7B8C9D0E0 /* MessageRowView.swift */; };
+		C5E1B2C3D4E5F6A7B8C9D0E1 /* RoomTimelineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5E1B2C3D4E5F6A7B8C9D0E0 /* RoomTimelineView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -197,6 +202,11 @@
 		C3A1B2C3D4E5F6A7B8C9D0E0 /* HistoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryViewModel.swift; sourceTree = "<group>"; };
 		C3B1B2C3D4E5F6A7B8C9D0E0 /* HistoryViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryViewModelTests.swift; sourceTree = "<group>"; };
 		C4A1B2C3D4E5F6A7B8C9D0E0 /* HistoryCacheService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryCacheService.swift; sourceTree = "<group>"; };
+		C5A1B2C3D4E5F6A7B8C9D0E0 /* HistoryWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryWindow.swift; sourceTree = "<group>"; };
+		C5B1B2C3D4E5F6A7B8C9D0E0 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
+		C5C1B2C3D4E5F6A7B8C9D0E0 /* HistorySidebar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistorySidebar.swift; sourceTree = "<group>"; };
+		C5D1B2C3D4E5F6A7B8C9D0E0 /* MessageRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageRowView.swift; sourceTree = "<group>"; };
+		C5E1B2C3D4E5F6A7B8C9D0E0 /* RoomTimelineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomTimelineView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -411,6 +421,11 @@
 			isa = PBXGroup;
 			children = (
 				C3A1B2C3D4E5F6A7B8C9D0E0 /* HistoryViewModel.swift */,
+				C5A1B2C3D4E5F6A7B8C9D0E0 /* HistoryWindow.swift */,
+				C5B1B2C3D4E5F6A7B8C9D0E0 /* HistoryView.swift */,
+				C5C1B2C3D4E5F6A7B8C9D0E0 /* HistorySidebar.swift */,
+				C5D1B2C3D4E5F6A7B8C9D0E0 /* MessageRowView.swift */,
+				C5E1B2C3D4E5F6A7B8C9D0E0 /* RoomTimelineView.swift */,
 			);
 			path = History;
 			sourceTree = "<group>";
@@ -752,6 +767,11 @@
 				7D6820A9720716BA8CC598CE /* WindowPositioning.swift in Sources */,
 				C3A1B2C3D4E5F6A7B8C9D0E1 /* HistoryViewModel.swift in Sources */,
 				C4A1B2C3D4E5F6A7B8C9D0E1 /* HistoryCacheService.swift in Sources */,
+				C5A1B2C3D4E5F6A7B8C9D0E1 /* HistoryWindow.swift in Sources */,
+				C5B1B2C3D4E5F6A7B8C9D0E1 /* HistoryView.swift in Sources */,
+				C5C1B2C3D4E5F6A7B8C9D0E1 /* HistorySidebar.swift in Sources */,
+				C5D1B2C3D4E5F6A7B8C9D0E1 /* MessageRowView.swift in Sources */,
+				C5E1B2C3D4E5F6A7B8C9D0E1 /* RoomTimelineView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
