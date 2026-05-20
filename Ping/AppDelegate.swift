@@ -249,7 +249,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         cameraStartTask?.cancel()
         cameraStartTask = Task { @MainActor in
             guard !Task.isCancelled else { return }
-            await camera.start()
+            await camera.startWithAudio()
         }
     }
 

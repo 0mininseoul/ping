@@ -13,6 +13,12 @@ final class CameraManager: ObservableObject {
     private var configured = false
     private var audioConfigured = false
 
+    func startWithAudio() async {
+        await start()
+        guard isReady else { return }
+        await prepareAudioForRecording()
+    }
+
     func start() async {
         guard !Task.isCancelled else { return }
 

@@ -11,7 +11,7 @@ final class KeyboardRoutingContractTests: XCTestCase {
 
         XCTAssertTrue(source.contains("private func startCameraForMirrorPresentation()"))
         XCTAssertTrue(toggleMirror.contains("startCameraForMirrorPresentation()"))
-        XCTAssertTrue(source.contains("await camera.start()"))
+        XCTAssertTrue(source.contains("await camera.startWithAudio()"))
     }
 
     func testMirrorCameraStopsImmediatelyWhenMirrorCloses() throws {
