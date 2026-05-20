@@ -10,6 +10,7 @@ final class PlaybackWindow: NSWindow {
     private let videoAspectRatio: Double?
     private let controllerBox = PlaybackView.ControllerBox()
     private var keyMonitor: Any?
+    private var expandedWindow: ExpandedPlaybackWindow?
     private var timeoutTask: Task<Void, Never>?
     private var replayObserver: NSObjectProtocol?
     private let onDone: @MainActor @Sendable () -> Void
@@ -100,6 +101,9 @@ final class PlaybackWindow: NSWindow {
             case 36: // Return
                 self.handleReplay()
                 return nil
+            case 49: // Space
+                self.handleExpand()
+                return nil
             case 53: // Escape
                 self.handleClose()
                 return nil
@@ -107,6 +111,29 @@ final class PlaybackWindow: NSWindow {
                 return event
             }
         }
+    }
+
+    private func handleExpand() {
+        guard let player = controllerBox.player, let screen = self.screen ?? NSScreen.main else { return }
+        let aspect: Double
+        switch captureMode {
+        case .faceOnly:
+            aspect = 1.0
+        case .screenFace:
+            aspect = videoAspectRatio ?? 1.0
+        }
+        let expanded = ExpandedPlaybackWindow(
+            player: player,
+            aspectRatio: aspect,
+            on: screen,
+            onDismiss: { [weak self] in
+                self?.expandedWindow = nil
+                self?.makeKeyAndOrderFront(nil)
+            }
+        )
+        self.expandedWindow = expanded
+        self.orderOut(nil)
+        expanded.present()
     }
 
     private func handleFirstPlayEnd() {

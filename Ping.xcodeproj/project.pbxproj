@@ -91,6 +91,7 @@
 		BB11223344556677AABBCCDD /* PIPCompositorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB11223344556677AABBCC00 /* PIPCompositorTests.swift */; };
 		CC11223344556677AABBCCDD /* ScreenCaptureManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC11223344556677AABBCC00 /* ScreenCaptureManager.swift */; };
 		DD11223344556677AABBCCDD /* ScreenFaceRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD11223344556677AABBCC00 /* ScreenFaceRecorder.swift */; };
+		EE11223344556677AABBCCDD /* ExpandedPlaybackWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE11223344556677AABBCC00 /* ExpandedPlaybackWindow.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -189,6 +190,7 @@
 		BB11223344556677AABBCC00 /* PIPCompositorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PIPCompositorTests.swift; sourceTree = "<group>"; };
 		CC11223344556677AABBCC00 /* ScreenCaptureManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenCaptureManager.swift; sourceTree = "<group>"; };
 		DD11223344556677AABBCC00 /* ScreenFaceRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenFaceRecorder.swift; sourceTree = "<group>"; };
+		EE11223344556677AABBCC00 /* ExpandedPlaybackWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpandedPlaybackWindow.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -355,6 +357,7 @@
 		DB880AE10331784F0F7DEE3B /* Playback */ = {
 			isa = PBXGroup;
 			children = (
+				EE11223344556677AABBCC00 /* ExpandedPlaybackWindow.swift */,
 				5F48333663676556795B9E01 /* PlaybackView.swift */,
 				01290226E3F8D2ED2E2FA6AC /* PlaybackWindow.swift */,
 			);
@@ -703,6 +706,7 @@
 				26C57B77BA7A0B77B0B6AB11 /* PingApp.swift in Sources */,
 				CE8B3DB276BFE8D087DEEFB5 /* PingDesign.swift in Sources */,
 				E4C44F790AB4501AE2D9B4DD /* PingError.swift in Sources */,
+				EE11223344556677AABBCCDD /* ExpandedPlaybackWindow.swift in Sources */,
 				5786E8216FB61CB6DBE1397A /* PlaybackView.swift in Sources */,
 				D554E57BED49035560D4AE74 /* PlaybackWindow.swift in Sources */,
 				F9F01F4FE990F1A34D5E5FCF /* RainbowBorder.swift in Sources */,
