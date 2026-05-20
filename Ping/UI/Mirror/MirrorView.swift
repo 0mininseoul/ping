@@ -193,7 +193,7 @@ struct MirrorView: View {
         }
 
         viewModel.state = .recording
-        viewModel.countdown = 2
+        viewModel.countdown = 3
 
         await camera.prepareAudioForRecording()
         // Audio configuration may briefly destabilize session; wait for first frame to land.
@@ -201,11 +201,13 @@ struct MirrorView: View {
         let recorder = VideoRecorder(output: camera.movieOutput)
         let countdownTask = Task { @MainActor in
             try? await Task.sleep(for: .seconds(1))
+            viewModel.countdown = 2
+            try? await Task.sleep(for: .seconds(1))
             viewModel.countdown = 1
         }
 
         do {
-            let tempURL = try await recorder.recordTwoSeconds()
+            let tempURL = try await recorder.recordClip()
             countdownTask.cancel()
             viewModel.state = .uploading
 

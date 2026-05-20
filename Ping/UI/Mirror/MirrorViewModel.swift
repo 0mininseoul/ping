@@ -11,10 +11,10 @@ final class MirrorViewModel: ObservableObject {
     }
 
     @Published var state: State = .idle
-    @Published var countdown: Int = 2
+    @Published var countdown: Int = 3
 
     func reset() {
         state = .idle
-        countdown = 2
+        countdown = 3
     }
 }

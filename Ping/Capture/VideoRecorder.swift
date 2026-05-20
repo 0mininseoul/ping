@@ -10,7 +10,7 @@ final class VideoRecorder: NSObject, AVCaptureFileOutputRecordingDelegate {
         self.movieOutput = output
     }
 
-    func recordTwoSeconds() async throws -> URL {
+    func recordClip(seconds: Double = 3.0) async throws -> URL {
         let tempURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("ping-\(UUID().uuidString).mp4")
 
@@ -18,7 +18,7 @@ final class VideoRecorder: NSObject, AVCaptureFileOutputRecordingDelegate {
             movieOutput.stopRecording()
         }
 
-        movieOutput.maxRecordedDuration = CMTime(seconds: 2.0, preferredTimescale: 600)
+        movieOutput.maxRecordedDuration = CMTime(seconds: seconds, preferredTimescale: 600)
         movieOutput.startRecording(to: tempURL, recordingDelegate: self)
 
         let recordedURL: URL = try await withCheckedThrowingContinuation { continuation in
