@@ -114,6 +114,25 @@ final class MessageService {
         ])
     }
 
+    func roomMessages(roomId: String, beforeTimestamp: Date? = nil, limit: Int = 50) async throws -> [VideoMessage] {
+        var body: [String: Any] = [
+            "room_uuid": roomId,
+            "page_limit": limit
+        ]
+        if let beforeTimestamp {
+            body["before_ts"] = ISO8601DateFormatter.shared.string(from: beforeTimestamp)
+        }
+        return try await client.rpcArray("ping_room_messages", body: body)
+    }
+
+    func deleteMessage(messageId: String) async throws {
+        try await client.rpcVoid("ping_delete_message", body: ["message_uuid": messageId])
+    }
+
+    func hideMessageForReceiver(messageId: String) async throws {
+        try await client.rpcVoid("ping_hide_message_for_receiver", body: ["message_uuid": messageId])
+    }
+
     private func messageSort(lhs: VideoMessage, rhs: VideoMessage) -> Bool {
         switch (lhs.createdAt, rhs.createdAt) {
         case let (left?, right?):
@@ -126,4 +145,12 @@ final class MessageService {
             return (lhs.id ?? "") < (rhs.id ?? "")
         }
     }
+}
+
+extension ISO8601DateFormatter {
+    nonisolated(unsafe) static let shared: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
 }
