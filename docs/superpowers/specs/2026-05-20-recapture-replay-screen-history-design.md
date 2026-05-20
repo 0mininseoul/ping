@@ -16,15 +16,16 @@
 
 이번 v0.2 업데이트는 위 약점 중 3개를 풀고, 동시에 Ping의 강점 — spatial overlay, instant Option+P, Liquid Glass — 을 보존한다. 단순 setlog 클론이 아니라 "spatial Ping + setlog의 장점 흡수" 방향이다.
 
-세 개 spec으로 나눈다.
+네 개 spec으로 나눈다.
 
 | Spec | 범위 | 푸는 약점 |
 |---|---|---|
 | **A** | 다시 찍기 + 다시 재생 UX 재설계 | 결정성 보강 (raw 보존) |
 | **B** | 전체화면+얼굴 PIP 캡쳐 모드 + 받는쪽 Space 확대 | 컨텐츠 monotony |
 | **C** | 룸 히스토리 피드 (30일 보관) | 휘발성, 회상 자산 |
+| **D** | 메뉴바 정리 (파트너 제거) + 응답성 개선 | 체감 품질 |
 
-본 문서는 이 세 spec의 디자인을 단일 진실 출처로 정리한다. 후속 spec (모바일 export, 데일리 컴파일, 실시간 챗 등)은 별도 브레인스토밍 세션 대상이다.
+본 문서는 이 네 spec의 디자인을 단일 진실 출처로 정리한다. 후속 spec (모바일 export, 데일리 컴파일, 실시간 챗 등)은 별도 브레인스토밍 세션 대상이다.
 
 ---
 
@@ -375,13 +376,74 @@ v1 skip. 후속 spec에서 발신자/모드/날짜 필터 추가 검토.
 
 ---
 
+## Spec D — 메뉴바 정리 & 응답성 개선
+
+이번 v0.2와 함께 묶어서 출시. 작은 작업이지만 사용자 체감 품질에 직결.
+
+### D1. 파트너 표시 제거
+
+룸 기반 다중 룸 사용으로 가는 v0.2에선 메뉴바의 단일 파트너 표시 의미 없음.
+
+제거 대상:
+- `StatusMenuBuilder.swift:6,15-18` — `partnerItemTag` 상수, partner 메뉴 아이템 추가 코드
+- `AppDelegate.swift:670-681` — `updateMenuPartner()` 함수 자체
+- 호출 지점 5곳 (`AppDelegate:129,161,634` 등) — 호출 라인 제거
+- `partnerName(in:)` (`AppDelegate:312`)는 archive 파일명 등에 쓰이므로 유지
+
+### D2. 메뉴 응답성 — 진단 후 fix
+
+#### D2.1 가설
+
+가장 유력한 원인은 **메인 액터 점유에 의한 menu open hop 지연**. AppDelegate의 polling task 3개 (`roomObserverTask`, `invitationObserverTask`, `incomingMessageTask`)가 모두 `@MainActor` for-await 루프에서 2초 간격 JSON decode + `appState` 변경 + `updateMenuPartner` 같은 side effect를 동기 처리. 사용자 클릭 순간이 한 cycle 진행 중이면 NSStatusItem이 메인 액터를 기다려야 함.
+
+부수 가설:
+- NSStatusItem icon이 template 아님 (`AppDelegate.swift:70` `isTemplate = false`) — 상태바 캐싱 최적화 회피, 영향 미미
+- NSMenu validation pass의 target callback이 메인 액터 점유와 겹침 — 가설 1과 같은 뿌리
+
+#### D2.2 측정 (root cause 확인)
+
+추측 fix를 막기 위해 실측 선행:
+- **Instruments Time Profiler**: Ping 실행, attach, 메뉴 5-10회 open/close. main thread sample 분포 확인. polling task가 main thread 점유 중인지 검증.
+- **`os_signpost` 인스트루멘테이션**: `NSStatusItem` button action handler 직전·직후 + polling task 안에 signpost 찍어 overlap 정량 측정.
+
+#### D2.3 해결 방향 (가설 1 기준 우선순위)
+
+1. **해결 A — Polling을 메인 액터에서 분리 (1순위)**
+   - 현재 `RoomService.observeMyRooms` 등 AsyncStream yield가 메인 액터에서 진행. 네트워크 호출과 JSON decode는 detached Task 또는 specific actor로 옮기고, 결과만 메인 액터로 hop하여 `appState` 업데이트.
+   - 메인 액터 점유 비율을 cycle당 ~100ms → ~10ms 미만으로 감소 목표.
+
+2. **해결 B — 메뉴 표시 직전 polling 일시정지 (보강)**
+   - AppDelegate에 `NSMenuDelegate` 채택. `menuWillOpen(_:)`에서 polling task `cancel()`, `menuDidClose(_:)`에서 재시작.
+   - 해결 A로 충분하면 skip 가능. 잔여 지연 있을 때만 적용.
+
+3. **해결 C — Status icon template 옵션화 (선택)**
+   - `isTemplate = true`로 변경 검토. 시스템 통합감 ↑ + 다크/라이트 자동 처리. 단 컬러 정체성 손실. 디자인 선호에 따라 결정.
+
+4. **해결 D — 첫 polling cycle 늦추기 (보조)**
+   - `bootstrapBackend` 완료 후 3-5초 grace period 두고 polling 시작. 앱 launch 직후 메뉴 클릭하는 사용자 패턴에 도움.
+
+### D3. 작업 순서
+
+1. D1 파트너 제거 — 즉시 가능, 코드 변경 작음.
+2. D2.2 측정 — Instruments + signpost로 가설 1 확인.
+3. D2.3 해결 A 적용 — service layer 리팩터.
+4. 측정 재시행 — 개선 정량 확인.
+5. 잔여 지연 있으면 해결 B 추가.
+
+### D4. 테스트 전략
+
+- Polling service 리팩터 후 `RoomService`/`InvitationService`/`MessageService`는 actor isolation 단위 테스트 추가.
+- 메뉴 응답성은 자동화 어려움 — 측정값(signpost) before/after 비교를 PR description에 첨부.
+
+---
+
 ## 후속 spec (이번 작업 외 큐잉)
 
 | Spec | 범위 | 약점 푸는 부분 |
 |---|---|---|
-| D | 모바일 export (히스토리 영상을 웹/모바일에서 보기) | 외부 바이럴 루프 |
-| E | 데일리 컴파일 (하루치 영상 자동 합성) | setlog 시그니처 |
-| F | 실시간 텍스트 챗 | turn-taking 보완 |
+| E | 모바일 export (히스토리 영상을 웹/모바일에서 보기) | 외부 바이럴 루프 |
+| F | 데일리 컴파일 (하루치 영상 자동 합성) | setlog 시그니처 |
+| G | 실시간 텍스트 챗 | turn-taking 보완 |
 
 각 후속 spec은 독립 브레인스토밍 세션에서 풀어낸다.
 
