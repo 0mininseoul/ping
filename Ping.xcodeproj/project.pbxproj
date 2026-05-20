@@ -100,6 +100,7 @@
 		C5C1B2C3D4E5F6A7B8C9D0E1 /* HistorySidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5C1B2C3D4E5F6A7B8C9D0E0 /* HistorySidebar.swift */; };
 		C5D1B2C3D4E5F6A7B8C9D0E1 /* MessageRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5D1B2C3D4E5F6A7B8C9D0E0 /* MessageRowView.swift */; };
 		C5E1B2C3D4E5F6A7B8C9D0E1 /* RoomTimelineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5E1B2C3D4E5F6A7B8C9D0E0 /* RoomTimelineView.swift */; };
+		C6A1B2C3D4E5F6A7B8C9D0E1 /* InlinePlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6A1B2C3D4E5F6A7B8C9D0E0 /* InlinePlayerView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -207,6 +208,7 @@
 		C5C1B2C3D4E5F6A7B8C9D0E0 /* HistorySidebar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistorySidebar.swift; sourceTree = "<group>"; };
 		C5D1B2C3D4E5F6A7B8C9D0E0 /* MessageRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageRowView.swift; sourceTree = "<group>"; };
 		C5E1B2C3D4E5F6A7B8C9D0E0 /* RoomTimelineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomTimelineView.swift; sourceTree = "<group>"; };
+		C6A1B2C3D4E5F6A7B8C9D0E0 /* InlinePlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InlinePlayerView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -426,6 +428,7 @@
 				C5C1B2C3D4E5F6A7B8C9D0E0 /* HistorySidebar.swift */,
 				C5D1B2C3D4E5F6A7B8C9D0E0 /* MessageRowView.swift */,
 				C5E1B2C3D4E5F6A7B8C9D0E0 /* RoomTimelineView.swift */,
+				C6A1B2C3D4E5F6A7B8C9D0E0 /* InlinePlayerView.swift */,
 			);
 			path = History;
 			sourceTree = "<group>";
@@ -772,6 +775,7 @@
 				C5C1B2C3D4E5F6A7B8C9D0E1 /* HistorySidebar.swift in Sources */,
 				C5D1B2C3D4E5F6A7B8C9D0E1 /* MessageRowView.swift in Sources */,
 				C5E1B2C3D4E5F6A7B8C9D0E1 /* RoomTimelineView.swift in Sources */,
+				C6A1B2C3D4E5F6A7B8C9D0E1 /* InlinePlayerView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -5,12 +5,17 @@ struct MessageRowView: View {
     let isMine: Bool
     let isExpanded: Bool
     let onTap: () -> Void
+    let cacheService: HistoryCacheService
 
     var body: some View {
         HStack {
             if isMine { Spacer() }
             VStack(alignment: isMine ? .trailing : .leading, spacing: 4) {
-                thumbnail
+                if isExpanded {
+                    InlinePlayerView(message: message, cacheService: cacheService)
+                } else {
+                    thumbnail
+                }
                 metadata
             }
             if !isMine { Spacer() }

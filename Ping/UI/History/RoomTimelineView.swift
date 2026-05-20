@@ -21,7 +21,8 @@ struct RoomTimelineView: View {
                                     } else {
                                         viewModel.expandedMessageId = msg.id
                                     }
-                                }
+                                },
+                                cacheService: cacheService
                             )
                         }
                     }

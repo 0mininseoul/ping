@@ -51,4 +51,19 @@ final class StorageService {
             to: localURL
         )
     }
+
+    func downloadVideo(remotePath: String) async throws -> URL {
+        guard !remotePath.isEmpty, remotePath.hasSuffix(".mp4") else {
+            throw PingError.invalidStorageURL
+        }
+
+        let tempURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ping-dl-\(UUID().uuidString).mp4")
+        try await client.downloadObject(
+            bucket: Self.bucket,
+            path: remotePath,
+            to: tempURL
+        )
+        return tempURL
+    }
 }
