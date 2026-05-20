@@ -86,6 +86,7 @@
 		F82A4ECB45A5581D811B4F3C /* OnboardingInputContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E1A841BBD8BDD965C164BF8 /* OnboardingInputContractTests.swift */; };
 		F9F01F4FE990F1A34D5E5FCF /* RainbowBorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97150E02C17DE9AEBD26BF13 /* RainbowBorder.swift */; };
 		FF645ABE2A696D7110266F3C /* PairingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F013D14C65D1B797C6EF367 /* PairingViewModel.swift */; };
+		4DD97F5A379648FB85E0A1AD /* ScreenCapturePermission.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E84F4EAE50D44F7AC347ABF /* ScreenCapturePermission.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -179,6 +180,7 @@
 		FA17BAFB8C514438C7961E5F /* VideoRecordingContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoRecordingContractTests.swift; sourceTree = "<group>"; };
 		FD69BFAD0704FB61C435A68E /* InvitationCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvitationCard.swift; sourceTree = "<group>"; };
 		FFCF08C61ECD845F231DFFE4 /* LocalNotificationCenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalNotificationCenter.swift; sourceTree = "<group>"; };
+		1E84F4EAE50D44F7AC347ABF /* ScreenCapturePermission.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenCapturePermission.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -279,6 +281,7 @@
 				727042FF4263267EEFA18D20 /* CameraManager.swift */,
 				880D2B3F583FCC9102608E19 /* CameraPreviewView.swift */,
 				EB469BD2ECF2AC4459C1A4D1 /* LocalArchive.swift */,
+				1E84F4EAE50D44F7AC347ABF /* ScreenCapturePermission.swift */,
 				4741EB3E3614D20DF3C78279 /* VideoCropper.swift */,
 				06B4B9E0137AD6A34F151BF2 /* VideoRecorder.swift */,
 			);
@@ -696,6 +699,7 @@
 				A35216D4802F7669D7CEE926 /* RoomSearchView.swift in Sources */,
 				E5098E32A2ACA9ED9F8A2939 /* RoomService.swift in Sources */,
 				6D10BA31F2FBF6ADCB3D99B1 /* ScreenCoordinates.swift in Sources */,
+				4DD97F5A379648FB85E0A1AD /* ScreenCapturePermission.swift in Sources */,
 				4933DD31B57294089191AC57 /* SearchableText.swift in Sources */,
 				8998769E27D9629FBA3B8388 /* SettingsScene.swift in Sources */,
 				45CDCD2993C1E53FB62356A1 /* StatusMenuBuilder.swift in Sources */,
