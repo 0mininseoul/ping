@@ -356,19 +356,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 guard let message = try await messageService.get(messageId: messageId) else { return }
                 let localURL = try await cachedVideoURL(for: message)
 
-                let screen = NSScreen.main?.visibleFrame ?? .zero
-                let center = ScreenCoordinates.denormalize(position: message.mirrorPosition, in: screen)
+                let screen = NSScreen.main ?? NSScreen.screens.first!
+                let size = PlaybackWindow.size(for: message.captureMode, aspectRatio: message.aspectRatio, on: screen)
+                let visibleFrame = screen.visibleFrame
+                let center = ScreenCoordinates.denormalize(position: message.mirrorPosition, in: visibleFrame)
                 let origin = ScreenCoordinates.clamp(
-                    point: NSPoint(x: center.x - PlaybackWindow.size.width / 2,
-                                   y: center.y - PlaybackWindow.size.height / 2),
-                    windowSize: PlaybackWindow.size,
-                    inSafeArea: screen
+                    point: NSPoint(x: center.x - size.width / 2, y: center.y - size.height / 2),
+                    windowSize: size,
+                    inSafeArea: visibleFrame
                 )
 
                 let windowId = UUID()
                 let window = PlaybackWindow(
                     videoURL: localURL,
+                    mode: message.captureMode,
+                    aspectRatio: message.aspectRatio,
                     atScreenPoint: origin,
+                    screen: screen,
                     onFirstPlayEnd: { [weak self] in
                         Task { @MainActor in
                             try? await self?.messageService.markSeen(messageId: messageId)

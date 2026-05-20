@@ -3,10 +3,11 @@ import SwiftUI
 
 @MainActor
 final class PlaybackWindow: NSWindow {
-    static let size = NSSize(width: 200, height: 200)
     static let pausedTimeoutSeconds: Double = 10
     var pingWindowId = UUID()
 
+    private let captureMode: CaptureMode
+    private let videoAspectRatio: Double?
     private let controllerBox = PlaybackView.ControllerBox()
     private var keyMonitor: Any?
     private var timeoutTask: Task<Void, Never>?
@@ -14,17 +15,38 @@ final class PlaybackWindow: NSWindow {
     private let onDone: @MainActor @Sendable () -> Void
     private let onFirstPlayEnd: @MainActor @Sendable () -> Void
 
+    static func size(for mode: CaptureMode, aspectRatio: Double?, on screen: NSScreen) -> NSSize {
+        switch mode {
+        case .faceOnly:
+            return NSSize(width: 200, height: 200)
+        case .screenFace:
+            let aspect = aspectRatio ?? (screen.frame.width / screen.frame.height)
+            let longSide: CGFloat = 480
+            if aspect >= 1 {
+                return NSSize(width: longSide, height: (longSide / aspect).rounded())
+            } else {
+                return NSSize(width: (longSide * aspect).rounded(), height: longSide)
+            }
+        }
+    }
+
     init(
         videoURL: URL,
+        mode: CaptureMode,
+        aspectRatio: Double?,
         atScreenPoint origin: NSPoint,
+        screen: NSScreen,
         onFirstPlayEnd: @escaping @MainActor @Sendable () -> Void,
         onDone: @escaping @MainActor @Sendable () -> Void
     ) {
+        self.captureMode = mode
+        self.videoAspectRatio = aspectRatio
         self.onDone = onDone
         self.onFirstPlayEnd = onFirstPlayEnd
 
+        let size = Self.size(for: mode, aspectRatio: videoAspectRatio, on: screen)
         super.init(
-            contentRect: NSRect(origin: origin, size: Self.size),
+            contentRect: NSRect(origin: origin, size: size),
             styleMask: [.borderless],
             backing: .buffered,
             defer: false
@@ -37,20 +59,28 @@ final class PlaybackWindow: NSWindow {
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         isReleasedWhenClosed = false
 
+        let shape = Self.shape(for: mode)
         let root = ZStack {
             PlaybackView(url: videoURL, onFirstPlayEnd: { [weak self] in
                 self?.handleFirstPlayEnd()
             }, controllerBox: controllerBox)
-            .clipShape(Circle())
+            .clipShape(shape)
 
-            Circle().strokeBorder(Color.white.opacity(0.30), lineWidth: 1)
+            shape.stroke(Color.white.opacity(0.30), lineWidth: 1)
         }
-        .frame(width: Self.size.width, height: Self.size.height)
+        .frame(width: size.width, height: size.height)
 
         let host = NSHostingView(rootView: AnyView(root))
-        host.frame = NSRect(origin: .zero, size: Self.size)
+        host.frame = NSRect(origin: .zero, size: size)
         contentView = host
         alphaValue = 0
+    }
+
+    private static func shape(for mode: CaptureMode) -> AnyShape {
+        switch mode {
+        case .faceOnly: return AnyShape(Circle())
+        case .screenFace: return AnyShape(RoundedRectangle(cornerRadius: 16))
+        }
     }
 
     func fadeIn() {
