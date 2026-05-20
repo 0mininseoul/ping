@@ -12,6 +12,7 @@ enum StatusMenuBuilder {
         menu.addItem(NSMenuItem.separator())
 
         menu.addItem(command(title: "영상 보내기", action: Selector(("toggleMirrorAction")), shortcutName: .pingTrigger, target: target))
+        menu.addItem(command(title: "히스토리 열기", action: Selector(("toggleHistoryAction")), shortcutName: .historyToggle, target: target))
         menu.addItem(command(title: "내 룸…", action: Selector(("showRoomManager")), target: target))
         menu.addItem(command(title: "설정…", action: Selector(("showSettings")), keyEquivalent: ",", target: target))
         menu.addItem(command(title: "라이트/다크 전환", action: Selector(("toggleAppearanceModeAction")), shortcutName: .appearanceToggle, target: target))

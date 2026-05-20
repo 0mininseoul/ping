@@ -5,6 +5,7 @@ extension KeyboardShortcuts.Name {
     static let pingTrigger = Self("pingTrigger", default: .init(.p, modifiers: [.option]))
     static let appearanceToggle = Self("appearanceToggle", default: .init(.d, modifiers: [.option, .shift]))
     static let captureScreenFace = Self("captureScreenFace", default: .init(.l, modifiers: [.option]))
+    static let historyToggle = Self("historyToggle", default: .init(.o, modifiers: [.option]))
 }
 
 @MainActor
@@ -16,7 +17,8 @@ final class HotkeyManager {
     func register(
         onCaptureFace: @escaping @MainActor () -> Void,
         onAppearanceToggle: @escaping @MainActor () -> Void,
-        onCaptureScreenFace: @escaping @MainActor () -> Void
+        onCaptureScreenFace: @escaping @MainActor () -> Void,
+        onHistoryToggle: @escaping @MainActor () -> Void
     ) {
         KeyboardShortcuts.onKeyDown(for: .pingTrigger) {
             Task { @MainActor in
@@ -33,6 +35,12 @@ final class HotkeyManager {
         KeyboardShortcuts.onKeyDown(for: .captureScreenFace) {
             Task { @MainActor in
                 onCaptureScreenFace()
+            }
+        }
+
+        KeyboardShortcuts.onKeyDown(for: .historyToggle) {
+            Task { @MainActor in
+                onHistoryToggle()
             }
         }
     }

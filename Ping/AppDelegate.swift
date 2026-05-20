@@ -8,6 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var onboardingWindow: OnboardingWindow?
     private var roomManagerWindow: RoomManagerWindow?
     private var settingsWindow: SettingsWindow?
+    private var historyWindow: HistoryWindow?
     private var playbackWindows: [PlaybackWindow] = []
     private var playbackCache: [String: URL] = [:]
     private var playbackPrefetchTasks: [String: Task<URL, Error>] = [:]
@@ -101,7 +102,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         HotkeyManager.shared.register(
             onCaptureFace: { [weak self] in self?.toggleMirror(mode: .faceOnly) },
             onAppearanceToggle: { [weak self] in self?.toggleAppearanceMode() },
-            onCaptureScreenFace: { [weak self] in self?.toggleMirror(mode: .screenFace) }
+            onCaptureScreenFace: { [weak self] in self?.toggleMirror(mode: .screenFace) },
+            onHistoryToggle: { [weak self] in self?.toggleHistory() }
         )
     }
 
@@ -208,6 +210,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func toggleAppearanceMode() {
         PingAppearanceMode.toggleLightDark()
+    }
+
+    @objc func toggleHistoryAction() {
+        toggleHistory()
+    }
+
+    private func toggleHistory() {
+        if let historyWindow {
+            historyWindow.orderOut(nil)
+            self.historyWindow = nil
+            return
+        }
+        // History UI is implemented in Tasks C3-C8.
+        // For now, show a temporary placeholder alert so the shortcut is wired.
+        let alert = NSAlert()
+        alert.messageText = "히스토리"
+        alert.informativeText = "히스토리 윈도우는 곧 도입됩니다."
+        alert.addButton(withTitle: "확인")
+        NSApp.activate(ignoringOtherApps: true)
+        alert.runModal()
     }
 
     private func toggleMirror(mode: CaptureMode) {
@@ -769,6 +791,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
     }
+}
+
+// Placeholder until Task C5 implements the real window.
+@MainActor final class HistoryWindow: NSObject {
+    func orderOut(_ sender: Any?) {}
 }
 
 private extension ProcessInfo {

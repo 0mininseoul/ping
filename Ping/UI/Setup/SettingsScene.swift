@@ -318,6 +318,7 @@ private struct HotkeySettingsView: View {
                     KeyboardShortcuts.Recorder("Ping 호출", name: .pingTrigger)
                     KeyboardShortcuts.Recorder("라이트/다크 전환", name: .appearanceToggle)
                     KeyboardShortcuts.Recorder("화면+얼굴 거울", name: .captureScreenFace)
+                    KeyboardShortcuts.Recorder("히스토리", name: .historyToggle)
                 } footer: {
                     Text("전역 단축키는 저장 즉시 적용됩니다.")
                         .font(PingFont.caption)
