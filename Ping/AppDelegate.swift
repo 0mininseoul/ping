@@ -220,8 +220,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // Different mode → close and re-open in new mode
             closeMirrorWindow()
         }
-        currentMirrorMode = mode
-        showMirror()
+
+        switch mode {
+        case .faceOnly:
+            currentMirrorMode = mode
+            showMirror()
+        case .screenFace:
+            Task { [weak self] in
+                guard let self else { return }
+                let status = await ScreenCapturePermission.currentStatus()
+                if status == .authorized {
+                    self.currentMirrorMode = mode
+                    self.showMirror()
+                } else {
+                    self.notifyScreenRecordingPermissionRequired()
+                }
+            }
+        }
+    }
+
+    private func notifyScreenRecordingPermissionRequired() {
+        let alert = NSAlert()
+        alert.messageText = "화면 녹화 권한이 필요합니다"
+        alert.informativeText = "화면+얼굴 모드를 사용하려면 시스템 설정에서 Ping에 화면 녹화 권한을 부여해주세요."
+        alert.addButton(withTitle: "시스템 설정 열기")
+        alert.addButton(withTitle: "닫기")
+        NSApp.activate(ignoringOtherApps: true)
+        let response = alert.runModal()
+        if response == .alertFirstButtonReturn {
+            ScreenCapturePermission.openSystemSettings()
+        }
     }
 
     private func showMirror() {
