@@ -3,6 +3,7 @@ build/
 build-*/
 DerivedData/
 .worktrees/
+.claude/
 *.xcodeproj/xcuserdata/
 *.xcodeproj/project.xcworkspace/xcuserdata/
 *.xcworkspace/xcuserdata/
