@@ -3,19 +3,12 @@ import KeyboardShortcuts
 
 @MainActor
 enum StatusMenuBuilder {
-    static let partnerItemTag = 1001
-
     static func makeMenu(target: AnyObject) -> NSMenu {
         let menu = NSMenu()
 
         let status = NSMenuItem(title: "Ping", action: nil, keyEquivalent: "")
         status.isEnabled = false
         menu.addItem(status)
-
-        let partner = NSMenuItem(title: "파트너: 없음", action: nil, keyEquivalent: "")
-        partner.tag = partnerItemTag
-        partner.isEnabled = false
-        menu.addItem(partner)
         menu.addItem(NSMenuItem.separator())
 
         menu.addItem(command(title: "영상 보내기", action: Selector(("toggleMirrorAction")), shortcutName: .pingTrigger, target: target))

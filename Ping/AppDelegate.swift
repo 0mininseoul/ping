@@ -126,7 +126,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 appState.currentUser = try await userService.get(uid: uid) ?? existing
                 startObservers(uid: uid, opensRoomManagerWhenEmpty: !roomSetupWasDeferred)
                 runCleanup(uid: uid)
-                updateMenuPartner()
                 consumePendingInviteTokenIfAvailable()
             } else {
                 showOnboarding(uid: uid)
@@ -158,7 +157,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 if !rooms.isEmpty {
                     UserDefaults.standard.set(false, forKey: PingPreferenceKeys.roomSetupDeferred)
                 }
-                updateMenuPartner()
 
                 if !didHandleInitialSnapshot {
                     didHandleInitialSnapshot = true
@@ -639,7 +637,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         appState.rooms.sort { lhs, rhs in
             lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
         }
-        updateMenuPartner()
     }
 
     private func showTransientAlert(title: String, message: String) {
@@ -672,19 +669,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func rejectInvitation(inviteId: String) {
         Task {
             try? await invitationService.reject(inviteId: inviteId)
-        }
-    }
-
-    private func updateMenuPartner() {
-        guard let menu = statusItem?.menu,
-              let item = menu.item(withTag: StatusMenuBuilder.partnerItemTag) else {
-            return
-        }
-
-        if let room = appState.defaultRoom {
-            item.title = "파트너: \(partnerName(in: room))"
-        } else {
-            item.title = "파트너: 없음"
         }
     }
 
