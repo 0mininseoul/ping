@@ -1,5 +1,10 @@
 import Foundation
 
+enum CaptureMode: String, Codable, Hashable {
+    case faceOnly = "face_only"
+    case screenFace = "screen_face"
+}
+
 struct MirrorPosition: Codable, Equatable, Hashable {
     var xRatio: Double
     var yRatio: Double

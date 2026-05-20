@@ -3,14 +3,14 @@ import XCTest
 final class KeyboardRoutingContractTests: XCTestCase {
     func testMirrorPresentationRestartsCameraAfterEscCloseReusesWindow() throws {
         let source = try readSourceFile("Ping/AppDelegate.swift")
-        let toggleMirror = try sourceSlice(
+        let showMirror = try sourceSlice(
             in: source,
-            from: "private func toggleMirror()",
-            to: "private func closeMirrorWindow()"
+            from: "private func showMirror()",
+            to: "private func startCameraForMirrorPresentation()"
         )
 
         XCTAssertTrue(source.contains("private func startCameraForMirrorPresentation()"))
-        XCTAssertTrue(toggleMirror.contains("startCameraForMirrorPresentation()"))
+        XCTAssertTrue(showMirror.contains("startCameraForMirrorPresentation()"))
         XCTAssertTrue(source.contains("await camera.startWithAudio()"))
     }
 

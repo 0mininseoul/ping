@@ -30,6 +30,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var bootstrapTask: Task<Void, Never>?
     private var cameraStartTask: Task<Void, Never>?
     private var pendingInviteToken: String?
+    private var currentMirrorMode: CaptureMode?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -97,12 +98,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func setupHotkey() {
         HotkeyManager.shared.register(
-            onPress: { [weak self] in
-                self?.toggleMirror()
-            },
-            onAppearanceToggle: { [weak self] in
-                self?.toggleAppearanceMode()
-            }
+            onCaptureFace: { [weak self] in self?.toggleMirror(mode: .faceOnly) },
+            onAppearanceToggle: { [weak self] in self?.toggleAppearanceMode() },
+            onCaptureScreenFace: { [weak self] in self?.toggleMirror(mode: .screenFace) }
         )
     }
 
@@ -199,7 +197,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func toggleMirrorAction() {
-        toggleMirror()
+        // Status-menu action — defaults to face_only (Option+P behavior)
+        toggleMirror(mode: .faceOnly)
     }
 
     @objc private func toggleAppearanceModeAction() {
@@ -210,12 +209,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         PingAppearanceMode.toggleLightDark()
     }
 
-    private func toggleMirror() {
-        if let window = mirrorWindow, window.isVisible {
+    private func toggleMirror(mode: CaptureMode) {
+        if mirrorWindow != nil, currentMirrorMode == mode {
+            // Same-mode toggle → close
             closeMirrorWindow()
             return
         }
+        if mirrorWindow != nil {
+            // Different mode → close and re-open in new mode
+            closeMirrorWindow()
+        }
+        currentMirrorMode = mode
+        showMirror()
+    }
 
+    private func showMirror() {
         if mirrorWindow == nil {
             let window = MirrorWindow(rootView: EmptyView())
             let view = MirrorView(
@@ -257,6 +265,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         mirrorWindow?.savePosition()
         mirrorWindow?.orderOut(nil)
         camera.stop()
+        currentMirrorMode = nil
     }
 
     private func sendVideo(tempURL: URL, position: MirrorPosition, targets: [Room]) async throws {
