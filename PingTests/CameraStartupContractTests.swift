@@ -1,7 +1,7 @@
 import XCTest
 
 final class CameraStartupContractTests: XCTestCase {
-    func testMirrorStartupDoesNotConfigureAudioInputBeforeRecording() throws {
+    func testConfigureFunctionDoesNotConfigureAudioInput() throws {
         let source = try readSourceFile("Ping/Capture/CameraManager.swift")
         let configure = try sourceSlice(
             in: source,
@@ -11,6 +11,16 @@ final class CameraStartupContractTests: XCTestCase {
 
         XCTAssertFalse(configure.contains("requestAccess(for: .audio)"))
         XCTAssertFalse(configure.contains("AVCaptureDevice.default(for: .audio)"))
+    }
+
+    func testStartWithAudioConfiguresAudioBeforeRecordingCanBegin() throws {
+        let source = try readSourceFile("Ping/Capture/CameraManager.swift")
+        let startWithAudio = try sourceSlice(
+            in: source,
+            from: "func startWithAudio() async",
+            to: "func configure() async"
+        )
+        XCTAssertTrue(startWithAudio.contains("await prepareAudioForRecording()"))
     }
 
     func testRecordingPreparesAudioLazilyAfterCameraIsReady() throws {
