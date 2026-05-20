@@ -90,6 +90,7 @@
 		AA11223344556677AABBCCDD /* PIPCompositor.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11223344556677AABBCC00 /* PIPCompositor.swift */; };
 		BB11223344556677AABBCCDD /* PIPCompositorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB11223344556677AABBCC00 /* PIPCompositorTests.swift */; };
 		CC11223344556677AABBCCDD /* ScreenCaptureManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC11223344556677AABBCC00 /* ScreenCaptureManager.swift */; };
+		DD11223344556677AABBCCDD /* ScreenFaceRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD11223344556677AABBCC00 /* ScreenFaceRecorder.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -187,6 +188,7 @@
 		AA11223344556677AABBCC00 /* PIPCompositor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PIPCompositor.swift; sourceTree = "<group>"; };
 		BB11223344556677AABBCC00 /* PIPCompositorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PIPCompositorTests.swift; sourceTree = "<group>"; };
 		CC11223344556677AABBCC00 /* ScreenCaptureManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenCaptureManager.swift; sourceTree = "<group>"; };
+		DD11223344556677AABBCC00 /* ScreenFaceRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenFaceRecorder.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -290,6 +292,7 @@
 				AA11223344556677AABBCC00 /* PIPCompositor.swift */,
 				1E84F4EAE50D44F7AC347ABF /* ScreenCapturePermission.swift */,
 				CC11223344556677AABBCC00 /* ScreenCaptureManager.swift */,
+				DD11223344556677AABBCC00 /* ScreenFaceRecorder.swift */,
 				4741EB3E3614D20DF3C78279 /* VideoCropper.swift */,
 				06B4B9E0137AD6A34F151BF2 /* VideoRecorder.swift */,
 			);
@@ -712,6 +715,7 @@
 				4DD97F5A379648FB85E0A1AD /* ScreenCapturePermission.swift in Sources */,
 				CC11223344556677AABBCCDD /* ScreenCaptureManager.swift in Sources */,
 				AA11223344556677AABBCCDD /* PIPCompositor.swift in Sources */,
+				DD11223344556677AABBCCDD /* ScreenFaceRecorder.swift in Sources */,
 				4933DD31B57294089191AC57 /* SearchableText.swift in Sources */,
 				8998769E27D9629FBA3B8388 /* SettingsScene.swift in Sources */,
 				45CDCD2993C1E53FB62356A1 /* StatusMenuBuilder.swift in Sources */,
