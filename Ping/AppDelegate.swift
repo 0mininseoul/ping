@@ -343,16 +343,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 )
 
                 let windowId = UUID()
-                let window = PlaybackWindow(videoURL: localURL, atScreenPoint: origin) { [weak self] in
-                    Task { @MainActor in
-                        try? await self?.messageService.markSeen(messageId: messageId)
-                        if !LocalArchive.saveReceivedEnabled {
-                            try? FileManager.default.removeItem(at: localURL)
-                            self?.playbackCache[messageId] = nil
+                let window = PlaybackWindow(
+                    videoURL: localURL,
+                    atScreenPoint: origin,
+                    onFirstPlayEnd: { [weak self] in
+                        Task { @MainActor in
+                            try? await self?.messageService.markSeen(messageId: messageId)
                         }
-                        self?.playbackWindows.removeAll { $0.pingWindowId == windowId }
+                    },
+                    onDone: { [weak self] in
+                        Task { @MainActor in
+                            if !LocalArchive.saveReceivedEnabled {
+                                try? FileManager.default.removeItem(at: localURL)
+                                self?.playbackCache[messageId] = nil
+                            }
+                            self?.playbackWindows.removeAll { $0.pingWindowId == windowId }
+                        }
                     }
-                }
+                )
                 window.pingWindowId = windowId
                 playbackWindows.append(window)
                 window.fadeIn()

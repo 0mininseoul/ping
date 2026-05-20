@@ -3,11 +3,20 @@ import AVKit
 
 struct PlaybackView: NSViewRepresentable {
     let url: URL
-    let onFinish: @MainActor @Sendable () -> Void
+    let onFirstPlayEnd: @MainActor @Sendable () -> Void
+    let controllerBox: ControllerBox
+
+    final class ControllerBox {
+        var player: AVPlayer?
+        func replay() {
+            player?.seek(to: .zero)
+            player?.play()
+        }
+    }
 
     func makeNSView(context: Context) -> PlayerNSView {
         let view = PlayerNSView()
-        view.configure(url: url, onFinish: onFinish)
+        view.configure(url: url, onFirstEnd: onFirstPlayEnd, controllerBox: controllerBox)
         return view
     }
 
@@ -17,9 +26,10 @@ struct PlaybackView: NSViewRepresentable {
         private var player: AVPlayer?
         private var playerLayer: AVPlayerLayer?
         nonisolated(unsafe) private var observer: NSObjectProtocol?
+        nonisolated(unsafe) private var didFirePlayEnd = false
 
-        override init(frame frameRect: NSRect) {
-            super.init(frame: frameRect)
+        override init(frame: NSRect) {
+            super.init(frame: frame)
             setup()
         }
 
@@ -28,10 +38,15 @@ struct PlaybackView: NSViewRepresentable {
             setup()
         }
 
-        func configure(url: URL, onFinish: @escaping @MainActor @Sendable () -> Void) {
+        func configure(
+            url: URL,
+            onFirstEnd: @escaping @MainActor @Sendable () -> Void,
+            controllerBox: ControllerBox
+        ) {
             let item = AVPlayerItem(url: url)
             let player = AVPlayer(playerItem: item)
             self.player = player
+            controllerBox.player = player
 
             let layer = AVPlayerLayer(player: player)
             layer.videoGravity = .resizeAspectFill
@@ -39,15 +54,15 @@ struct PlaybackView: NSViewRepresentable {
             self.layer?.addSublayer(layer)
             self.playerLayer = layer
 
-            let finish = onFinish
             observer = NotificationCenter.default.addObserver(
                 forName: .AVPlayerItemDidPlayToEndTime,
                 object: item,
                 queue: .main
-            ) { _ in
-                Task { @MainActor in
-                    finish()
-                }
+            ) { [weak self, weak player] _ in
+                player?.pause()
+                guard let self, !self.didFirePlayEnd else { return }
+                self.didFirePlayEnd = true
+                Task { @MainActor in onFirstEnd() }
             }
 
             player.play()
