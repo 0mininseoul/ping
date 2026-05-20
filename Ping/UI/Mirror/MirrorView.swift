@@ -164,7 +164,7 @@ struct MirrorView: View {
             break
         case .failed:
             viewModel.reset()
-        case .recording, .uploading:
+        case .recording, .uploading, .reviewing:
             return
         }
 
@@ -239,14 +239,14 @@ struct MirrorView: View {
             return appState.sendMode == .allPartners
         case .uploading:
             return true
-        case .recording, .failed:
+        case .recording, .failed, .reviewing:
             return false
         }
     }
 
     private var borderColor: Color {
         switch viewModel.state {
-        case .idle, .uploading:
+        case .idle, .uploading, .reviewing:
             return .white.opacity(0.30)
         case .recording:
             return Color(.sRGB, red: 1.0, green: 0.231, blue: 0.188, opacity: 1)
@@ -257,7 +257,7 @@ struct MirrorView: View {
 
     private var borderWidth: CGFloat {
         switch viewModel.state {
-        case .idle, .uploading:
+        case .idle, .uploading, .reviewing:
             return 1
         case .recording, .failed:
             return 2
