@@ -3,16 +3,28 @@ import SwiftUI
 
 @MainActor
 final class MirrorWindow: NSWindow {
-    static let size = NSSize(width: 200, height: 200)
+    static let faceOnlySize = NSSize(width: 200, height: 200)
     private static let positionKey = "ping.mirror.lastPosition"
+
+    static func sizeForScreenFace(on screen: NSScreen) -> NSSize {
+        let aspect = screen.frame.width / screen.frame.height
+        let longSide: CGFloat = 480
+        if aspect >= 1 {
+            return NSSize(width: longSide, height: (longSide / aspect).rounded())
+        } else {
+            return NSSize(width: (longSide * aspect).rounded(), height: longSide)
+        }
+    }
+
+    let captureMode: CaptureMode
 
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
 
-    init<Content: View>(rootView: Content) {
-        let initialRect = NSRect(origin: Self.loadLastPosition(), size: Self.size)
+    init(captureMode: CaptureMode, initialSize: NSSize, origin: NSPoint) {
+        self.captureMode = captureMode
         super.init(
-            contentRect: initialRect,
+            contentRect: NSRect(origin: origin, size: initialSize),
             styleMask: [.borderless],
             backing: .buffered,
             defer: false
@@ -24,20 +36,7 @@ final class MirrorWindow: NSWindow {
         isMovableByWindowBackground = true
         ignoresMouseEvents = false
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-
-        let host = NSHostingView(rootView: AnyView(rootView))
-        host.frame = NSRect(origin: .zero, size: Self.size)
-        contentView = host
-    }
-
-    static func loadLastPosition() -> NSPoint {
-        guard let screen = NSScreen.main else { return .zero }
-
-        return WindowPositioning.visibleOrigin(
-            preferred: savedPosition(),
-            windowSize: size,
-            in: screen.visibleFrame
-        )
+        isReleasedWhenClosed = false
     }
 
     func ensureVisibleOnCurrentScreen() {
@@ -62,6 +61,15 @@ final class MirrorWindow: NSWindow {
         savePosition()
     }
 
+    static func loadLastPosition(for size: NSSize) -> NSPoint {
+        guard let screen = NSScreen.main else { return .zero }
+        return WindowPositioning.visibleOrigin(
+            preferred: savedPosition(),
+            windowSize: size,
+            in: screen.visibleFrame
+        )
+    }
+
     private static func savedPosition() -> NSPoint? {
         let defaults = UserDefaults.standard
         guard let dict = defaults.dictionary(forKey: positionKey),
@@ -69,7 +77,6 @@ final class MirrorWindow: NSWindow {
               let y = dict["y"] as? CGFloat else {
             return nil
         }
-
         return NSPoint(x: x, y: y)
     }
 

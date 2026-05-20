@@ -224,25 +224,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func showMirror() {
-        if mirrorWindow == nil {
-            let window = MirrorWindow(rootView: EmptyView())
-            let view = MirrorView(
-                camera: camera,
-                viewModel: mirrorViewModel,
-                appState: appState,
-                windowOrigin: { [weak window] in window?.frame.origin ?? .zero },
-                onClose: { [weak self] in
-                    self?.closeMirrorWindow()
-                },
-                onSend: { [weak self] tempURL, position, targets in
-                    try await self?.sendVideo(tempURL: tempURL, position: position, targets: targets)
-                }
-            )
-            let host = NSHostingView(rootView: view)
-            host.frame = NSRect(origin: .zero, size: MirrorWindow.size)
-            window.contentView = host
-            mirrorWindow = window
-        }
+        let mode = currentMirrorMode ?? .faceOnly
+        let screen = NSScreen.main ?? NSScreen.screens.first!
+        let size: NSSize = (mode == .faceOnly)
+            ? MirrorWindow.faceOnlySize
+            : MirrorWindow.sizeForScreenFace(on: screen)
+        let origin = MirrorWindow.loadLastPosition(for: size)
+
+        let window = MirrorWindow(captureMode: mode, initialSize: size, origin: origin)
+        let view = MirrorView(
+            camera: camera,
+            captureMode: mode,
+            viewModel: mirrorViewModel,
+            appState: appState,
+            windowOrigin: { [weak window] in window?.frame.origin ?? .zero },
+            onClose: { [weak self] in
+                self?.closeMirrorWindow()
+            },
+            onSend: { [weak self] tempURL, position, targets in
+                try await self?.sendVideo(tempURL: tempURL, position: position, targets: targets)
+            }
+        )
+        let host = NSHostingView(rootView: view)
+        host.frame = NSRect(origin: .zero, size: size)
+        window.contentView = host
+        mirrorWindow = window
 
         mirrorViewModel.reset()
         mirrorWindow?.ensureVisibleOnCurrentScreen()

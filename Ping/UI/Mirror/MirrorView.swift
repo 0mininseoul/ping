@@ -3,6 +3,7 @@ import SwiftUI
 
 struct MirrorView: View {
     @ObservedObject var camera: CameraManager
+    let captureMode: CaptureMode
     @ObservedObject var viewModel: MirrorViewModel
     @ObservedObject var appState: AppState
 
@@ -14,13 +15,33 @@ struct MirrorView: View {
     @State private var selectedRoomId: String?
     @State private var pickerExpanded = false
 
+    private var contentSize: CGSize {
+        switch captureMode {
+        case .faceOnly:
+            return CGSize(width: 200, height: 200)
+        case .screenFace:
+            let screen = NSScreen.main ?? NSScreen.screens.first!
+            let s = MirrorWindow.sizeForScreenFace(on: screen)
+            return CGSize(width: s.width, height: s.height)
+        }
+    }
+
+    private var mirrorShape: AnyShape {
+        switch captureMode {
+        case .faceOnly:
+            return AnyShape(Circle())
+        case .screenFace:
+            return AnyShape(RoundedRectangle(cornerRadius: 16))
+        }
+    }
+
     var body: some View {
         ZStack {
             mirrorShadowSurface
             mirrorContent
         }
-        .frame(width: 200, height: 200)
-        .contentShape(Circle())
+        .frame(width: contentSize.width, height: contentSize.height)
+        .contentShape(mirrorShape)
         .onAppear {
             selectedRoomId = appState.defaultRoom?.id
             installKeyMonitor()
@@ -34,7 +55,7 @@ struct MirrorView: View {
     }
 
     private var mirrorShadowSurface: some View {
-        Circle()
+        mirrorShape
             .fill(PingDesign.Surface.circleFill)
             .pingShadow(PingDesign.Shadow.mirror)
     }
@@ -42,12 +63,12 @@ struct MirrorView: View {
     private var mirrorContent: some View {
         ZStack {
             previewLayer
-                .clipShape(Circle())
+                .clipShape(mirrorShape)
 
-            if showsRainbowBorder {
+            if showsRainbowBorder && captureMode == .faceOnly {
                 RainbowBorder(lineWidth: 2)
             } else {
-                Circle().strokeBorder(borderColor, lineWidth: borderWidth)
+                mirrorShape.stroke(borderColor, lineWidth: borderWidth)
             }
 
             VStack {
@@ -56,7 +77,7 @@ struct MirrorView: View {
                 bottomOverlay
             }
         }
-        .frame(width: 200, height: 200)
+        .frame(width: contentSize.width, height: contentSize.height)
     }
 
     @ViewBuilder private var previewLayer: some View {

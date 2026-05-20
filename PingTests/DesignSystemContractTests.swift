@@ -113,7 +113,8 @@ final class DesignSystemContractTests: XCTestCase {
         XCTAssertTrue(body.contains("mirrorShadowSurface"))
         XCTAssertTrue(body.contains("mirrorContent"))
         XCTAssertFalse(body.contains(".frame(width: 200, height: 200)\n        .pingShadow"))
-        XCTAssertTrue(shadowSurface.contains("Circle()"))
+        // Shadow surface uses mode-aware mirrorShape (Circle for faceOnly, RoundedRectangle for screenFace)
+        XCTAssertTrue(shadowSurface.contains("mirrorShape"))
         XCTAssertTrue(shadowSurface.contains(".pingShadow(PingDesign.Shadow.mirror)"))
     }
 
