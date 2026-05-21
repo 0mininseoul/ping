@@ -1,6 +1,7 @@
 import SwiftUI
 @preconcurrency import AVFoundation
 import CoreImage
+import Combine
 
 struct MirrorView: View {
     @ObservedObject var camera: CameraManager
@@ -98,6 +99,20 @@ struct MirrorView: View {
 
     @ViewBuilder private var topOverlay: some View {
         switch viewModel.state {
+        case .idle:
+            if camera.isReady {
+                HintCapsuleView(text: "↵ 녹화 시작")
+                    .padding(.top, 14)
+            } else {
+                Text(camera.lastError ?? "카메라 준비 중")
+                    .font(PingFont.caption)
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.7)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 18)
+                    .padding(.top, 18)
+            }
         case .recording:
             HStack {
                 Spacer()
@@ -119,17 +134,8 @@ struct MirrorView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 16)
                 .padding(.top, 18)
-        default:
-            if !camera.isReady {
-                Text(camera.lastError ?? "카메라 준비 중")
-                    .font(PingFont.caption)
-                    .foregroundStyle(.white)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.7)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 18)
-                    .padding(.top, 18)
-            }
+        case .uploading:
+            EmptyView()
         }
     }
 
@@ -176,6 +182,10 @@ struct MirrorView: View {
                 handleBackspaceKey()
                 return nil
             case 53: // Escape
+                if case .reviewing(let tempURL) = viewModel.state {
+                    try? FileManager.default.removeItem(at: tempURL)
+                }
+                viewModel.reset()
                 onClose()
                 return nil
             case 48: // Tab
@@ -474,28 +484,39 @@ struct ScreenFacePreview: View {
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
             ScreenLiveImageView(screenCapture: screenCapture)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             CameraPreviewView(session: camera.session)
                 .frame(width: 72, height: 72)
                 .clipShape(Circle())
                 .padding(12)
+                .allowsHitTesting(false)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
-struct ScreenLiveImageView: NSViewRepresentable {
+struct ScreenLiveImageView: View {
     @ObservedObject var screenCapture: ScreenCaptureManager
+    @State private var nsImage: NSImage?
 
-    func makeNSView(context: Context) -> NSImageView {
-        let v = NSImageView()
-        v.imageScaling = .scaleProportionallyUpOrDown
-        return v
-    }
-
-    func updateNSView(_ nsView: NSImageView, context: Context) {
-        guard let frame = screenCapture.latestFrame else { return }
-        let ciContext = CIContext()
-        if let cgImage = ciContext.createCGImage(frame, from: frame.extent) {
-            nsView.image = NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
+    var body: some View {
+        ZStack {
+            if let nsImage {
+                Image(nsImage: nsImage)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                Color.black.opacity(0.15)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .clipped()
+        .allowsHitTesting(false)
+        .onReceive(screenCapture.$latestFrame.compactMap { $0 }) { frame in
+            let ctx = CIContext()
+            if let cg = ctx.createCGImage(frame, from: frame.extent) {
+                nsImage = NSImage(cgImage: cg, size: .zero)
+            }
         }
     }
 }

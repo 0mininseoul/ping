@@ -221,6 +221,16 @@ struct PairingView: View {
                         Task { await viewModel.requestNotifications() }
                     }
                 }
+
+                permissionRow(
+                    title: "화면 녹화",
+                    detail: "화면+얼굴 모드 녹화",
+                    icon: "rectangle.on.rectangle.fill",
+                    granted: viewModel.screenRecordingGranted,
+                    blocked: viewModel.screenRecordingPermission.needsSystemSettings
+                ) {
+                    viewModel.requestScreenRecording()
+                }
             }
             .padding(.bottom, 14)
 

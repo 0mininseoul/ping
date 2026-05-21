@@ -207,6 +207,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         toggleMirror(mode: .faceOnly)
     }
 
+    @objc func toggleScreenFaceAction() {
+        toggleMirror(mode: .screenFace)
+    }
+
     @objc private func toggleAppearanceModeAction() {
         toggleAppearanceMode()
     }
@@ -327,12 +331,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func closeMirrorWindow() {
+        // 1. Clean up any reviewing temp file before resetting state.
+        if case .reviewing(let tempURL) = mirrorViewModel.state {
+            try? FileManager.default.removeItem(at: tempURL)
+        }
+
+        // 2. Reset shared view model so the next mirror starts clean.
+        mirrorViewModel.reset()
+        appState.sendMode = .singlePartner
+
+        // 3. Save position and tear down the window, detaching NSHostingView so .onDisappear fires.
+        mirrorWindow?.savePosition()
+        mirrorWindow?.contentView = nil
+        mirrorWindow?.orderOut(nil)
+        mirrorWindow = nil
+
+        // 4. Cancel any in-flight camera start, wait for it, then stop the session.
+        let pendingStart = cameraStartTask
         cameraStartTask?.cancel()
         cameraStartTask = nil
-        mirrorWindow?.savePosition()
-        mirrorWindow?.orderOut(nil)
-        camera.stop()
-        Task { await screenCapture.stop() }
+
+        Task { @MainActor in
+            _ = await pendingStart?.value
+            camera.stop()
+            await screenCapture.stop()
+        }
+
         currentMirrorMode = nil
     }
 

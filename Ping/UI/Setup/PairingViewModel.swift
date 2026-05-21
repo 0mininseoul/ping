@@ -23,6 +23,7 @@ enum SetupPermissionKind: String, CaseIterable {
     case camera
     case audio
     case notifications
+    case screenRecording
 
     var displayName: String {
         switch self {
@@ -32,6 +33,8 @@ enum SetupPermissionKind: String, CaseIterable {
             return "마이크"
         case .notifications:
             return "알림"
+        case .screenRecording:
+            return "화면 녹화"
         }
     }
 
@@ -44,6 +47,8 @@ enum SetupPermissionKind: String, CaseIterable {
             urlString = "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"
         case .notifications:
             urlString = "x-apple.systempreferences:com.apple.preference.notifications"
+        case .screenRecording:
+            urlString = "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"
         }
         return URL(string: urlString)
     }
@@ -58,12 +63,14 @@ enum PermissionGuidance {
     static func notice(
         camera: SetupPermissionState,
         audio: SetupPermissionState,
-        notifications: SetupPermissionState
+        notifications: SetupPermissionState,
+        screenRecording: SetupPermissionState = .notDetermined
     ) -> PermissionNotice? {
         let blockedKinds = [
             (SetupPermissionKind.camera, camera),
             (.audio, audio),
-            (.notifications, notifications)
+            (.notifications, notifications),
+            (.screenRecording, screenRecording)
         ]
         .filter { $0.1.needsSystemSettings }
         .map(\.0.displayName)
@@ -108,6 +115,7 @@ final class PairingViewModel: ObservableObject {
     @Published private(set) var cameraPermission: SetupPermissionState = .notDetermined
     @Published private(set) var audioPermission: SetupPermissionState = .notDetermined
     @Published private(set) var notificationPermission: SetupPermissionState = .notDetermined
+    @Published private(set) var screenRecordingPermission: SetupPermissionState = .notDetermined
     @Published private(set) var isRequestingPermissions = false
     @Published var isCompleting = false
     @Published var errorMessage: String?
@@ -115,6 +123,7 @@ final class PairingViewModel: ObservableObject {
     init() {
         refreshMediaPermissionState()
         Task { await refreshNotificationPermissionState() }
+        Task { await refreshScreenRecordingPermission() }
     }
 
     var cameraGranted: Bool {
@@ -129,6 +138,10 @@ final class PairingViewModel: ObservableObject {
         notificationPermission.isGranted
     }
 
+    var screenRecordingGranted: Bool {
+        screenRecordingPermission.isGranted
+    }
+
     var trimmedNickname: String {
         nickname.trimmingCharacters(in: .whitespacesAndNewlines)
     }
@@ -138,14 +151,15 @@ final class PairingViewModel: ObservableObject {
     }
 
     var canProceedFromPermissions: Bool {
-        cameraGranted && audioGranted && notificationGranted
+        cameraGranted && audioGranted && notificationGranted && screenRecordingGranted
     }
 
     var permissionNotice: PermissionNotice? {
         PermissionGuidance.notice(
             camera: cameraPermission,
             audio: audioPermission,
-            notifications: notificationPermission
+            notifications: notificationPermission,
+            screenRecording: screenRecordingPermission
         )
     }
 
@@ -279,11 +293,30 @@ final class PairingViewModel: ObservableObject {
         errorMessage = nil
     }
 
+    func requestScreenRecording() {
+        // Screen recording permission cannot be requested programmatically;
+        // guide the user to system settings.
+        openSystemPermissionSettings(for: .screenRecording)
+    }
+
     func refreshPermissionStates() async {
         refreshMediaPermissionState()
         await refreshNotificationPermissionState()
+        await refreshScreenRecordingPermission()
         if canProceedFromPermissions || permissionNotice != nil {
             errorMessage = nil
+        }
+    }
+
+    func refreshScreenRecordingPermission() async {
+        let status = await ScreenCapturePermission.currentStatus()
+        switch status {
+        case .authorized:
+            screenRecordingPermission = .granted
+        case .denied:
+            screenRecordingPermission = .denied
+        case .unknown:
+            screenRecordingPermission = .notDetermined
         }
     }
 
@@ -342,6 +375,9 @@ final class PairingViewModel: ObservableObject {
         }
         if notificationPermission.needsSystemSettings {
             return .notifications
+        }
+        if screenRecordingPermission.needsSystemSettings {
+            return .screenRecording
         }
         return nil
     }
