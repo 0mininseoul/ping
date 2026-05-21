@@ -114,6 +114,7 @@ final class PlaybackWindow: NSWindow {
     }
 
     private func handleExpand() {
+        ClientEventService.shared.log("ping_expanded")
         guard let player = controllerBox.player, let screen = self.screen ?? NSScreen.main else { return }
         let aspect: Double
         switch captureMode {
@@ -142,6 +143,7 @@ final class PlaybackWindow: NSWindow {
     }
 
     private func handleReplay() {
+        ClientEventService.shared.log("ping_replayed")
         timeoutTask?.cancel()
         controllerBox.replay()
         startReplayEndObserver()

@@ -214,6 +214,7 @@ struct MirrorView: View {
     private func handleBackspaceKey() {
         if case .reviewing(let url) = viewModel.state {
             try? FileManager.default.removeItem(at: url)
+            ClientEventService.shared.log("redo_used")
             Task { await startRecording() }
         }
     }

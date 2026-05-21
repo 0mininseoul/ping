@@ -20,6 +20,9 @@ struct RoomTimelineView: View {
                                         viewModel.expandedMessageId = nil
                                     } else {
                                         viewModel.expandedMessageId = msg.id
+                                        ClientEventService.shared.log("history_message_played", properties: [
+                                            "mode": msg.captureMode.rawValue
+                                        ])
                                     }
                                 },
                                 cacheService: cacheService,

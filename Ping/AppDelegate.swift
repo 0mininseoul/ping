@@ -127,6 +127,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if let existing {
                 try await userService.upsert(uid: uid, nickname: existing.nickname)
                 appState.currentUser = try await userService.get(uid: uid) ?? existing
+                ClientEventService.shared.log("app_launched")
                 startObservers(uid: uid, opensRoomManagerWhenEmpty: !roomSetupWasDeferred)
                 runCleanup(uid: uid)
                 consumePendingInviteTokenIfAvailable()
@@ -231,6 +232,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         window.makeKeyAndOrderFront(nil)
         historyWindow = window
+        ClientEventService.shared.log("history_opened")
     }
 
     private func toggleMirror(mode: CaptureMode) {
@@ -313,6 +315,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         mirrorWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+        ClientEventService.shared.log("mirror_opened", properties: ["mode": mode.rawValue])
     }
 
     private func startCameraForMirrorPresentation() {
@@ -371,6 +374,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 captureMode: captureMode,
                 aspectRatio: aspectRatio
             ))
+            ClientEventService.shared.log("ping_sent", properties: [
+                "mode": captureMode.rawValue,
+                "aspect_ratio": aspectRatio,
+                "recipients_count": Set(targets.flatMap { $0.memberUids }).count
+            ])
         } catch {
             if shouldRemoveLocalVideoAfterSend {
                 try? FileManager.default.removeItem(at: localVideoURL)
@@ -441,6 +449,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 )
                 window.pingWindowId = windowId
                 playbackWindows.append(window)
+                ClientEventService.shared.log("ping_received_view", properties: [
+                    "mode": message.captureMode.rawValue
+                ])
                 window.fadeIn()
             } catch {
                 NSLog("Playback failed: \(error)")
