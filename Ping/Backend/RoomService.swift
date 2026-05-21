@@ -1,9 +1,11 @@
 import Foundation
+import OSLog
+
+private let signposter = OSSignposter(subsystem: "com.youngminpark.ping.Ping", category: "polling")
 
 @MainActor
 final class RoomService {
     private let client: SupabaseClient
-    private let pollingIntervalNanoseconds: UInt64 = 2_000_000_000
 
     init(client: SupabaseClient = .shared) {
         self.client = client
@@ -22,17 +24,19 @@ final class RoomService {
     }
 
     func observeMyRooms(uid: String) -> AsyncStream<[Room]> {
-        AsyncStream { continuation in
-            let task = Task { @MainActor in
+        let client = self.client
+        return AsyncStream { continuation in
+            let task = Task.detached(priority: .utility) {
                 while !Task.isCancelled {
+                    let intervalState = signposter.beginInterval("rooms-poll-cycle")
                     do {
                         let rooms: [Room] = try await client.rpcArray("ping_my_rooms")
                         continuation.yield(rooms.sorted { $0.name < $1.name })
                     } catch {
                         continuation.yield([])
                     }
-
-                    try? await Task.sleep(nanoseconds: pollingIntervalNanoseconds)
+                    signposter.endInterval("rooms-poll-cycle", intervalState)
+                    try? await Task.sleep(nanoseconds: 2_000_000_000)
                 }
 
                 continuation.finish()

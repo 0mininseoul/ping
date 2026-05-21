@@ -1,4 +1,5 @@
 import AppKit
+import OSLog
 import SwiftUI
 
 @MainActor
@@ -76,6 +77,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         item.button?.imageScaling = .scaleProportionallyDown
 
         item.menu = StatusMenuBuilder.makeMenu(target: self)
+        item.menu?.delegate = self
         statusItem = item
     }
 
@@ -789,6 +791,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 NSLog("Cleanup failed: \(error)")
             }
         }
+    }
+}
+
+extension AppDelegate: NSMenuDelegate {
+    nonisolated func menuWillOpen(_ menu: NSMenu) {
+        let signposter = OSSignposter(subsystem: "com.youngminpark.ping.Ping", category: "polling")
+        signposter.emitEvent("menu-will-open")
     }
 }
 

@@ -1,11 +1,13 @@
 import Foundation
+import OSLog
+
+private let signposter = OSSignposter(subsystem: "com.youngminpark.ping.Ping", category: "polling")
 
 @MainActor
 final class MessageService {
     private let client: SupabaseClient
     private let storage: StorageService
     private let userService: UserService
-    private let pollingIntervalNanoseconds: UInt64 = 2_000_000_000
 
     init(
         client: SupabaseClient = .shared,
@@ -75,14 +77,16 @@ final class MessageService {
     }
 
     func observeIncoming(uid: String) -> AsyncStream<VideoMessage> {
-        AsyncStream { continuation in
-            let task = Task { @MainActor in
+        let client = self.client
+        return AsyncStream { continuation in
+            let task = Task.detached(priority: .utility) {
                 var yieldedIds = Set<String>()
 
                 while !Task.isCancelled {
+                    let intervalState = signposter.beginInterval("messages-poll-cycle")
                     do {
                         let messages: [VideoMessage] = try await client.rpcArray("ping_incoming_messages")
-                        for message in messages.sorted(by: messageSort) {
+                        for message in messages.sorted(by: Self.messageSortStatic) {
                             guard let id = message.id, !yieldedIds.contains(id) else { continue }
                             yieldedIds.insert(id)
                             continuation.yield(message)
@@ -90,8 +94,8 @@ final class MessageService {
                     } catch {
                         NSLog("Incoming message polling failed: \(error)")
                     }
-
-                    try? await Task.sleep(nanoseconds: pollingIntervalNanoseconds)
+                    signposter.endInterval("messages-poll-cycle", intervalState)
+                    try? await Task.sleep(nanoseconds: 2_000_000_000)
                 }
 
                 continuation.finish()
@@ -134,6 +138,10 @@ final class MessageService {
     }
 
     private func messageSort(lhs: VideoMessage, rhs: VideoMessage) -> Bool {
+        Self.messageSortStatic(lhs: lhs, rhs: rhs)
+    }
+
+    private nonisolated static func messageSortStatic(lhs: VideoMessage, rhs: VideoMessage) -> Bool {
         switch (lhs.createdAt, rhs.createdAt) {
         case let (left?, right?):
             return left < right

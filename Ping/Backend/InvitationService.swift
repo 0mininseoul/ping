@@ -1,9 +1,11 @@
 import Foundation
+import OSLog
+
+private let signposter = OSSignposter(subsystem: "com.youngminpark.ping.Ping", category: "polling")
 
 @MainActor
 final class InvitationService {
     private let client: SupabaseClient
-    private let pollingIntervalNanoseconds: UInt64 = 2_000_000_000
 
     init(client: SupabaseClient = .shared) {
         self.client = client
@@ -32,17 +34,19 @@ final class InvitationService {
     }
 
     func observeIncoming(uid: String) -> AsyncStream<[Invitation]> {
-        AsyncStream { continuation in
-            let task = Task { @MainActor in
+        let client = self.client
+        return AsyncStream { continuation in
+            let task = Task.detached(priority: .utility) {
                 while !Task.isCancelled {
+                    let intervalState = signposter.beginInterval("invitations-poll-cycle")
                     do {
                         let invitations: [Invitation] = try await client.rpcArray("ping_incoming_invitations")
                         continuation.yield(invitations)
                     } catch {
                         continuation.yield([])
                     }
-
-                    try? await Task.sleep(nanoseconds: pollingIntervalNanoseconds)
+                    signposter.endInterval("invitations-poll-cycle", intervalState)
+                    try? await Task.sleep(nanoseconds: 2_000_000_000)
                 }
 
                 continuation.finish()
