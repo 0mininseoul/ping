@@ -1,9 +1,12 @@
+import AppKit
 import SwiftUI
 
 struct HistoryView: View {
     @ObservedObject var appState: AppState
     @ObservedObject var viewModel: HistoryViewModel
     let cacheService: HistoryCacheService
+
+    @State private var keyMonitor: Any?
 
     var body: some View {
         HSplitView {
@@ -24,6 +27,50 @@ struct HistoryView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+        }
+        .onAppear {
+            keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+                handleKey(event) ? nil : event
+            }
+        }
+        .onDisappear {
+            if let keyMonitor {
+                NSEvent.removeMonitor(keyMonitor)
+                self.keyMonitor = nil
+            }
+        }
+    }
+
+    private func handleKey(_ event: NSEvent) -> Bool {
+        let allMsgs = viewModel.groups.flatMap(\.messages)
+        let current = viewModel.expandedMessageId.flatMap { id in
+            allMsgs.firstIndex(where: { $0.id == id })
+        }
+
+        switch event.keyCode {
+        case 126: // up
+            if let i = current, i > 0 {
+                viewModel.expandedMessageId = allMsgs[i - 1].id
+            } else if current == nil, let first = allMsgs.first {
+                viewModel.expandedMessageId = first.id
+            }
+            return true
+        case 125: // down
+            if let i = current, i + 1 < allMsgs.count {
+                viewModel.expandedMessageId = allMsgs[i + 1].id
+            } else if current == nil, let first = allMsgs.first {
+                viewModel.expandedMessageId = first.id
+            }
+            return true
+        case 53: // Esc
+            if viewModel.expandedMessageId != nil {
+                viewModel.expandedMessageId = nil
+            } else {
+                NSApp.keyWindow?.close()
+            }
+            return true
+        default:
+            return false
         }
     }
 }
