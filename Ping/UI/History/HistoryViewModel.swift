@@ -42,6 +42,38 @@ final class HistoryViewModel: ObservableObject {
         }
     }
 
+    let inlineController = InlinePlayerController()
+
+    func save(message: VideoMessage, cacheService: HistoryCacheService, currentUid: String?) async {
+        guard let id = message.id else { return }
+        guard let cached = cacheService.cachedFile(roomId: message.roomId, messageId: id) else { return }
+        let isMine = message.senderUid == currentUid
+        LocalArchive.ensureFolders()
+        let dest: URL
+        if isMine {
+            dest = LocalArchive.sentURL(to: message.senderNickname)
+        } else {
+            dest = LocalArchive.receivedURL(from: message.senderNickname)
+        }
+        try? FileManager.default.copyItem(at: cached, to: dest)
+    }
+
+    func delete(message: VideoMessage, currentUid: String?) async {
+        guard let id = message.id else { return }
+        let isMine = message.senderUid == currentUid
+        do {
+            if isMine {
+                try await messageService.deleteMessage(messageId: id)
+            } else {
+                try await messageService.hideMessageForReceiver(messageId: id)
+            }
+            loadedMessages.removeAll { $0.id == id }
+            groups = Self.groupByDay(messages: loadedMessages, calendar: .current)
+        } catch {
+            NSLog("Delete failed: \(error)")
+        }
+    }
+
     static func groupByDay(messages: [VideoMessage], calendar: Calendar) -> [DayGroup] {
         let sorted = messages.compactMap { msg -> (Date, VideoMessage)? in
             guard let created = msg.createdAt else { return nil }

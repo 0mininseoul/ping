@@ -1,9 +1,21 @@
 import SwiftUI
 import AVKit
 
+final class InlinePlayerController: ObservableObject {
+    @Published var isPaused: Bool = false
+    weak var player: AVPlayer?
+
+    func replay() {
+        player?.seek(to: .zero)
+        player?.play()
+        isPaused = false
+    }
+}
+
 struct InlinePlayerView: View {
     let message: VideoMessage
     let cacheService: HistoryCacheService
+    @ObservedObject var controller: InlinePlayerController
 
     @State private var localURL: URL?
     @State private var error: String?
@@ -14,7 +26,8 @@ struct InlinePlayerView: View {
                 PlayerBox(
                     url: localURL,
                     aspectRatio: message.aspectRatio ?? 1,
-                    isCircle: message.captureMode == .faceOnly
+                    isCircle: message.captureMode == .faceOnly,
+                    controller: controller
                 )
             } else if let error {
                 Text(error).foregroundStyle(.red).font(.caption)
@@ -46,6 +59,7 @@ struct InlinePlayerView: View {
         let url: URL
         let aspectRatio: Double
         let isCircle: Bool
+        @ObservedObject var controller: InlinePlayerController
 
         func makeNSView(context: Context) -> NSView {
             let container = NSView()
@@ -55,7 +69,15 @@ struct InlinePlayerView: View {
             let layer = AVPlayerLayer(player: player)
             layer.videoGravity = .resizeAspectFill
             container.layer?.addSublayer(layer)
-            context.coordinator.player = player
+            controller.player = player
+            context.coordinator.observer = NotificationCenter.default.addObserver(
+                forName: .AVPlayerItemDidPlayToEndTime,
+                object: item,
+                queue: .main
+            ) { [weak player] _ in
+                player?.pause()
+                Task { @MainActor in controller.isPaused = true }
+            }
             player.play()
             return container
         }
@@ -66,31 +88,19 @@ struct InlinePlayerView: View {
                 let mask = CAShapeLayer()
                 if isCircle {
                     let dim = min(nsView.bounds.width, nsView.bounds.height)
-                    let rect = CGRect(
-                        x: (nsView.bounds.width - dim) / 2,
-                        y: (nsView.bounds.height - dim) / 2,
-                        width: dim,
-                        height: dim
-                    )
-                    mask.path = CGPath(ellipseIn: rect, transform: nil)
+                    mask.path = CGPath(ellipseIn: CGRect(x: (nsView.bounds.width - dim) / 2, y: (nsView.bounds.height - dim) / 2, width: dim, height: dim), transform: nil)
                 } else {
-                    mask.path = CGPath(
-                        roundedRect: nsView.bounds,
-                        cornerWidth: 12,
-                        cornerHeight: 12,
-                        transform: nil
-                    )
+                    mask.path = CGPath(roundedRect: nsView.bounds, cornerWidth: 12, cornerHeight: 12, transform: nil)
                 }
                 nsView.layer?.mask = mask
             }
         }
 
-        func makeCoordinator() -> Coordinator {
-            Coordinator()
-        }
+        func makeCoordinator() -> Coord { Coord() }
 
-        final class Coordinator {
-            var player: AVPlayer?
+        final class Coord {
+            var observer: Any?
+            deinit { if let o = observer { NotificationCenter.default.removeObserver(o) } }
         }
     }
 }

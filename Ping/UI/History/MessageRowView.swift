@@ -1,4 +1,5 @@
 import SwiftUI
+import AVKit
 
 struct MessageRowView: View {
     let message: VideoMessage
@@ -6,23 +7,42 @@ struct MessageRowView: View {
     let isExpanded: Bool
     let onTap: () -> Void
     let cacheService: HistoryCacheService
+    @ObservedObject var inlineController: InlinePlayerController
+    let onSave: () -> Void
+    let onDelete: () -> Void
+
+    @State private var isHovered: Bool = false
 
     var body: some View {
         HStack {
             if isMine { Spacer() }
             VStack(alignment: isMine ? .trailing : .leading, spacing: 4) {
                 if isExpanded {
-                    InlinePlayerView(message: message, cacheService: cacheService)
+                    InlinePlayerView(message: message, cacheService: cacheService, controller: inlineController)
                 } else {
                     thumbnail
                 }
                 metadata
+            }
+            if isHovered && !isExpanded {
+                HStack(spacing: 8) {
+                    Button(action: onSave) {
+                        Image(systemName: "arrow.down.circle").imageScale(.small)
+                    }.buttonStyle(.plain)
+                    Button(action: onDelete) {
+                        Image(systemName: "trash").imageScale(.small)
+                    }.buttonStyle(.plain)
+                }
+                .transition(.opacity)
             }
             if !isMine { Spacer() }
         }
         .padding(.vertical, 4)
         .contentShape(Rectangle())
         .onTapGesture { onTap() }
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.15)) { isHovered = hovering }
+        }
     }
 
     private var thumbnail: some View {

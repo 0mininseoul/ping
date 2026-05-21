@@ -7,6 +7,7 @@ struct HistoryView: View {
     let cacheService: HistoryCacheService
 
     @State private var keyMonitor: Any?
+    @State private var expandedPlaybackWindow: ExpandedPlaybackWindow?
 
     var body: some View {
         HSplitView {
@@ -60,6 +61,28 @@ struct HistoryView: View {
                 viewModel.expandedMessageId = allMsgs[i + 1].id
             } else if current == nil, let first = allMsgs.first {
                 viewModel.expandedMessageId = first.id
+            }
+            return true
+        case 36: // Enter — replay
+            viewModel.inlineController.replay()
+            return true
+        case 49: // Space — expand
+            if let player = viewModel.inlineController.player,
+               let id = viewModel.expandedMessageId,
+               let msg = allMsgs.first(where: { $0.id == id }),
+               let screen = NSApp.keyWindow?.screen {
+                let aspect: Double = msg.captureMode == .screenFace ? (msg.aspectRatio ?? 1.78) : 1.0
+                let expanded = ExpandedPlaybackWindow(
+                    player: player,
+                    aspectRatio: aspect,
+                    on: screen,
+                    onDismiss: { [self] in
+                        expandedPlaybackWindow?.orderOut(nil)
+                        expandedPlaybackWindow = nil
+                    }
+                )
+                expandedPlaybackWindow = expanded
+                expanded.present()
             }
             return true
         case 53: // Esc

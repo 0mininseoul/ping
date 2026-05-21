@@ -22,7 +22,14 @@ struct RoomTimelineView: View {
                                         viewModel.expandedMessageId = msg.id
                                     }
                                 },
-                                cacheService: cacheService
+                                cacheService: cacheService,
+                                inlineController: viewModel.inlineController,
+                                onSave: {
+                                    Task { await viewModel.save(message: msg, cacheService: cacheService, currentUid: appState.currentUser?.id) }
+                                },
+                                onDelete: {
+                                    Task { await viewModel.delete(message: msg, currentUid: appState.currentUser?.id) }
+                                }
                             )
                         }
                     }
