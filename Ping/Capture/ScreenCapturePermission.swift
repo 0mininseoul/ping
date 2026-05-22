@@ -1,4 +1,5 @@
 import AppKit
+import CoreGraphics
 import ScreenCaptureKit
 
 @MainActor
@@ -9,13 +10,22 @@ enum ScreenCapturePermission {
         case unknown
     }
 
+    /// Idempotent permission check. Does NOT trigger a prompt.
+    /// Reliable across ad-hoc signed builds where SCShareableContent throws spuriously.
     static func currentStatus() async -> Status {
-        do {
-            _ = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+        if CGPreflightScreenCaptureAccess() {
             return .authorized
-        } catch {
-            return .denied
         }
+        return .denied
+    }
+
+    /// Triggers the system permission prompt if needed. Returns true if granted.
+    /// macOS shows the standard "Screen Recording" prompt on first call;
+    /// after denial, this returns false without prompting again — user must
+    /// grant via System Settings.
+    @discardableResult
+    static func requestPermission() -> Bool {
+        CGRequestScreenCaptureAccess()
     }
 
     static func openSystemSettings() {

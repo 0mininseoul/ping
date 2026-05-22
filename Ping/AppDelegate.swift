@@ -290,7 +290,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case .screenFace:
             Task { [weak self] in
                 guard let self else { return }
-                let status = await ScreenCapturePermission.currentStatus()
+                var status = await ScreenCapturePermission.currentStatus()
+
+                // If denied, ask the system to surface the prompt once.
+                // After a permanent denial, CGRequestScreenCaptureAccess returns
+                // immediately without prompting — user must grant via Settings.
+                if status != .authorized {
+                    _ = ScreenCapturePermission.requestPermission()
+                    // Re-check after the request returns.
+                    status = await ScreenCapturePermission.currentStatus()
+                }
+
                 if status == .authorized {
                     self.currentMirrorMode = mode
                     self.showMirror()
