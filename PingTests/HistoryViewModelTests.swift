@@ -20,6 +20,36 @@ final class HistoryViewModelTests: XCTestCase {
         XCTAssertEqual(groups[1].messages.map(\.id), ["m3"])
     }
 
+    func test_mergeTimeline_interleavesByTimestamp() {
+        let cal = Calendar(identifier: .gregorian)
+        let today = Date()
+
+        let video = VideoMessage(
+            id: "v1", roomId: "r", senderUid: "u",
+            receiverUid: "rcv", senderNickname: "n",
+            videoId: "v", videoUrl: "u/v.mp4", durationMs: 3000,
+            mirrorPosition: MirrorPosition(xRatio: 0.5, yRatio: 0.5),
+            status: .uploaded,
+            createdAt: today,
+            expiresAt: today.addingTimeInterval(60),
+            captureMode: .faceOnly,
+            aspectRatio: nil
+        )
+        let chat = ChatMessage(
+            id: "c1", roomId: "r", senderUid: "u",
+            senderNickname: "n", body: "hi",
+            createdAt: today.addingTimeInterval(10)
+        )
+
+        let groups = HistoryViewModel.groupTimelineByDay(
+            videos: [video],
+            chats: [chat],
+            calendar: cal
+        )
+        XCTAssertEqual(groups.count, 1)
+        XCTAssertEqual(groups[0].items.map(\.id), ["chat:c1", "video:v1"])
+    }
+
     private func makeMsg(id: String, createdAt: Date) -> VideoMessage {
         VideoMessage(
             id: id,

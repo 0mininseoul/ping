@@ -5,44 +5,194 @@ import Combine
 final class HistoryViewModel: ObservableObject {
     struct DayGroup: Identifiable {
         let date: Date
-        let messages: [VideoMessage]
+        let items: [TimelineItem]
         var id: TimeInterval { date.timeIntervalSince1970 }
+
+        // Compatibility shim — callers updated in Task F4
+        var messages: [VideoMessage] {
+            items.compactMap {
+                if case .video(let m) = $0 { return m }
+                return nil
+            }
+        }
+    }
+
+    struct ReactionAggregate: Hashable {
+        let emoji: String
+        let count: Int
+        let myReacted: Bool
+    }
+
+    enum ReplyTarget: Hashable {
+        case chat(id: String, sender: String, preview: String)
+        case video(id: String, sender: String, captureMode: CaptureMode)
     }
 
     @Published var selectedRoomId: String?
     @Published var groups: [DayGroup] = []
     @Published var isLoading: Bool = false
     @Published var expandedMessageId: String?
+    @Published var replyTarget: ReplyTarget?
+    @Published var reactionsByTargetId: [String: [String: ReactionAggregate]] = [:]
+
+    let inlineController = InlinePlayerController()
 
     private let messageService: MessageService
-    private var loadedMessages: [VideoMessage] = []
+    private let chatService: ChatMessageService
+    private let reactionService: ReactionService
+    private var loadedVideos: [VideoMessage] = []
+    private var loadedChats: [ChatMessage] = []
 
-    init(messageService: MessageService) {
+    init(
+        messageService: MessageService,
+        chatService: ChatMessageService = ChatMessageService(),
+        reactionService: ReactionService = ReactionService()
+    ) {
         self.messageService = messageService
+        self.chatService = chatService
+        self.reactionService = reactionService
     }
 
     func selectRoom(_ roomId: String) async {
         selectedRoomId = roomId
-        loadedMessages = []
+        loadedVideos = []
+        loadedChats = []
         groups = []
+        reactionsByTargetId = [:]
         await loadMore()
+        try? await chatService.markRoomRead(roomId: roomId)
     }
 
     func loadMore() async {
         guard let roomId = selectedRoomId, !isLoading else { return }
         isLoading = true
         defer { isLoading = false }
-        let before = loadedMessages.last?.createdAt
+
+        async let videosTask = messageService.roomMessages(roomId: roomId, beforeTimestamp: loadedVideos.last?.createdAt, limit: 50)
+        async let chatsTask = chatService.roomChatMessages(roomId: roomId, beforeTimestamp: loadedChats.last?.createdAt, limit: 50)
+
         do {
-            let next = try await messageService.roomMessages(roomId: roomId, beforeTimestamp: before, limit: 50)
-            loadedMessages.append(contentsOf: next)
-            groups = Self.groupByDay(messages: loadedMessages, calendar: .current)
+            let videos = try await videosTask
+            let chats = try await chatsTask
+            loadedVideos.append(contentsOf: videos)
+            loadedChats.append(contentsOf: chats)
+            groups = Self.groupTimelineByDay(videos: loadedVideos, chats: loadedChats, calendar: .current)
+            await refreshReactions()
         } catch {
             NSLog("History load failed: \(error)")
         }
     }
 
-    let inlineController = InlinePlayerController()
+    func refreshReactions() async {
+        let chatIds = loadedChats.compactMap(\.id)
+        let videoIds = loadedVideos.compactMap(\.id)
+        guard !chatIds.isEmpty || !videoIds.isEmpty else { return }
+        do {
+            let reactions = try await reactionService.reactions(chatIds: chatIds, videoIds: videoIds)
+            var map: [String: [String: ReactionAggregate]] = [:]
+            for r in reactions {
+                let key = "\(r.targetKind.rawValue):\(r.targetId)"
+                map[key, default: [:]][r.emoji] = ReactionAggregate(emoji: r.emoji, count: r.totalCount, myReacted: r.myReacted)
+            }
+            reactionsByTargetId = map
+        } catch {
+            NSLog("Reactions fetch failed: \(error)")
+        }
+    }
+
+    func handleRealtimeEvent(_ event: ChatRealtimeService.Event) {
+        switch event {
+        case .chatInserted(let msg):
+            guard msg.roomId == selectedRoomId else { return }
+            if !loadedChats.contains(where: { $0.id == msg.id }) {
+                loadedChats.append(msg)
+                groups = Self.groupTimelineByDay(videos: loadedVideos, chats: loadedChats, calendar: .current)
+            }
+        case .chatDeleted(let id, _):
+            loadedChats.removeAll { $0.id == id }
+            groups = Self.groupTimelineByDay(videos: loadedVideos, chats: loadedChats, calendar: .current)
+        case .reactionChanged:
+            Task { await refreshReactions() }
+        }
+    }
+
+    func sendChat(body: String) async {
+        guard let roomId = selectedRoomId else { return }
+        let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        var replyChatId: String?
+        var replyVideoId: String?
+        switch replyTarget {
+        case .chat(let id, _, _): replyChatId = id
+        case .video(let id, _, _): replyVideoId = id
+        case .none: break
+        }
+
+        do {
+            _ = try await chatService.sendChat(roomId: roomId, body: trimmed, replyToChatId: replyChatId, replyToVideoId: replyVideoId)
+            replyTarget = nil
+            await refreshReactions()
+        } catch {
+            NSLog("Send chat failed: \(error)")
+        }
+    }
+
+    func toggleReaction(target: MessageReaction.TargetKind, targetId: String, emoji: String) async {
+        do {
+            _ = try await reactionService.toggle(target: target, targetId: targetId, emoji: emoji)
+            await refreshReactions()
+        } catch {
+            NSLog("Toggle reaction failed: \(error)")
+        }
+    }
+
+    func deleteChat(messageId: String) async {
+        do {
+            try await chatService.deleteChat(messageId: messageId)
+            loadedChats.removeAll { $0.id == messageId }
+            groups = Self.groupTimelineByDay(videos: loadedVideos, chats: loadedChats, calendar: .current)
+        } catch {
+            NSLog("Delete chat failed: \(error)")
+        }
+    }
+
+    static func groupTimelineByDay(videos: [VideoMessage], chats: [ChatMessage], calendar: Calendar) -> [DayGroup] {
+        var items: [TimelineItem] = []
+        items.append(contentsOf: videos.map(TimelineItem.video))
+        items.append(contentsOf: chats.map(TimelineItem.chat))
+        let sorted = items.compactMap { item -> (Date, TimelineItem)? in
+            guard let d = item.createdAt else { return nil }
+            return (d, item)
+        }.sorted { $0.0 > $1.0 }
+
+        var groups: [DayGroup] = []
+        var currentDate: Date?
+        var currentItems: [TimelineItem] = []
+        for (date, item) in sorted {
+            let day = calendar.startOfDay(for: date)
+            if day != currentDate {
+                if let currentDate {
+                    groups.append(DayGroup(date: currentDate, items: currentItems))
+                }
+                currentDate = day
+                currentItems = [item]
+            } else {
+                currentItems.append(item)
+            }
+        }
+        if let currentDate {
+            groups.append(DayGroup(date: currentDate, items: currentItems))
+        }
+        return groups
+    }
+
+    // Compatibility shim — callers updated in Task F4
+    static func groupByDay(messages: [VideoMessage], calendar: Calendar) -> [DayGroup] {
+        groupTimelineByDay(videos: messages, chats: [], calendar: calendar)
+    }
+
+    // MARK: - Video save/delete (API preserved; callers updated in Task F4)
 
     func save(message: VideoMessage, cacheService: HistoryCacheService, currentUid: String?) async {
         guard let id = message.id else { return }
@@ -67,38 +217,10 @@ final class HistoryViewModel: ObservableObject {
             } else {
                 try await messageService.hideMessageForReceiver(messageId: id)
             }
-            loadedMessages.removeAll { $0.id == id }
-            groups = Self.groupByDay(messages: loadedMessages, calendar: .current)
+            loadedVideos.removeAll { $0.id == id }
+            groups = Self.groupTimelineByDay(videos: loadedVideos, chats: loadedChats, calendar: .current)
         } catch {
             NSLog("Delete failed: \(error)")
         }
-    }
-
-    static func groupByDay(messages: [VideoMessage], calendar: Calendar) -> [DayGroup] {
-        let sorted = messages.compactMap { msg -> (Date, VideoMessage)? in
-            guard let created = msg.createdAt else { return nil }
-            return (created, msg)
-        }.sorted { $0.0 > $1.0 }
-
-        var groups: [DayGroup] = []
-        var currentDate: Date?
-        var currentMsgs: [VideoMessage] = []
-
-        for (date, msg) in sorted {
-            let day = calendar.startOfDay(for: date)
-            if day != currentDate {
-                if let currentDate {
-                    groups.append(DayGroup(date: currentDate, messages: currentMsgs))
-                }
-                currentDate = day
-                currentMsgs = [msg]
-            } else {
-                currentMsgs.append(msg)
-            }
-        }
-        if let currentDate {
-            groups.append(DayGroup(date: currentDate, messages: currentMsgs))
-        }
-        return groups
     }
 }
