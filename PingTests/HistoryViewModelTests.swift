@@ -16,8 +16,9 @@ final class HistoryViewModelTests: XCTestCase {
 
         let groups = HistoryViewModel.groupByDay(messages: msgs, calendar: cal)
         XCTAssertEqual(groups.count, 2)
-        XCTAssertEqual(groups[0].messages.map(\.id), ["m1", "m2"])
-        XCTAssertEqual(groups[1].messages.map(\.id), ["m3"])
+        // ascending: yesterday group first, today group last
+        XCTAssertEqual(groups[0].messages.map(\.id), ["m3"])
+        XCTAssertEqual(groups[1].messages.map(\.id), ["m1", "m2"])
     }
 
     func test_mergeTimeline_interleavesByTimestamp() {
@@ -47,7 +48,8 @@ final class HistoryViewModelTests: XCTestCase {
             calendar: cal
         )
         XCTAssertEqual(groups.count, 1)
-        XCTAssertEqual(groups[0].items.map(\.id), ["chat:c1", "video:v1"])
+        // ascending: video (today) first, chat (today+10s) last
+        XCTAssertEqual(groups[0].items.map(\.id), ["video:v1", "chat:c1"])
     }
 
     private func makeMsg(id: String, createdAt: Date) -> VideoMessage {

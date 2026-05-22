@@ -58,7 +58,7 @@ struct MessageRowView: View {
             }
             if !isMine { Spacer() }
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 1)
         .contentShape(Rectangle())
         .onTapGesture { onTap() }
         .onHover { hovering in
@@ -69,14 +69,24 @@ struct MessageRowView: View {
     private var thumbnail: some View {
         Group {
             if message.captureMode == .faceOnly {
-                Circle().fill(Color.gray.opacity(0.3)).frame(width: 60, height: 60)
+                VideoThumbnailView(message: message, cacheService: cacheService)
+                    .frame(width: 60, height: 60)
+                    .clipShape(Circle())
             } else {
-                RoundedRectangle(cornerRadius: 8).fill(Color.gray.opacity(0.3))
+                VideoThumbnailView(message: message, cacheService: cacheService)
                     .aspectRatio(message.aspectRatio ?? 1.78, contentMode: .fit)
                     .frame(maxWidth: 90)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             }
         }
-        .overlay(Image(systemName: "play.fill").foregroundStyle(.white))
+        .overlay(
+            Image(systemName: "play.fill")
+                .font(.caption)
+                .foregroundStyle(.white)
+                .padding(6)
+                .background(Circle().fill(Color.black.opacity(0.35)))
+                .allowsHitTesting(false)
+        )
     }
 
     private var metadata: some View {

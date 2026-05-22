@@ -32,7 +32,7 @@ Supabase Dashboard의 Authentication 설정에서 Anonymous sign-ins가 켜져 �
 
 ## 설치
 
-1. `Ping-v0.3.8.dmg`를 더블클릭해 마운트한다.
+1. `Ping-v0.3.9.dmg`를 더블클릭해 마운트한다.
 2. `Ping.app`을 Applications 폴더로 드래그한다.
 3. 첫 실행은 우클릭 후 "열기"를 선택한다.
 4. 카메라, 마이크, 알림 권한을 허용한다.

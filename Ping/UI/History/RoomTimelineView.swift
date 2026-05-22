@@ -15,7 +15,7 @@ struct RoomTimelineView: View {
         VStack(spacing: 0) {
             ScrollViewReader { scrollProxy in
                 ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 12, pinnedViews: [.sectionHeaders]) {
+                    LazyVStack(alignment: .leading, spacing: 2, pinnedViews: [.sectionHeaders]) {
                         ForEach(viewModel.groups) { group in
                             Section(header: dayHeader(group.date)) {
                                 ForEach(group.items) { item in
@@ -30,9 +30,14 @@ struct RoomTimelineView: View {
                     }
                     .padding(.horizontal, 16)
                 }
-                .onChange(of: viewModel.groups.first?.items.first?.id) { _ in
-                    if let firstId = viewModel.groups.first?.items.first?.id {
-                        withAnimation(.easeOut) { scrollProxy.scrollTo(firstId, anchor: .bottom) }
+                .onChange(of: viewModel.groups.last?.items.last?.id) { _ in
+                    if let lastId = viewModel.groups.last?.items.last?.id {
+                        withAnimation(.easeOut) { scrollProxy.scrollTo(lastId, anchor: .bottom) }
+                    }
+                }
+                .onAppear {
+                    if let lastId = viewModel.groups.last?.items.last?.id {
+                        scrollProxy.scrollTo(lastId, anchor: .bottom)
                     }
                 }
             }

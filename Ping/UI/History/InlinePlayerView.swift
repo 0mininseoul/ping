@@ -30,7 +30,15 @@ struct InlinePlayerView: View {
                     controller: controller
                 )
             } else if let error {
-                Text(error).foregroundStyle(.red).font(.caption)
+                VStack(spacing: 4) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .foregroundStyle(.secondary)
+                    Text(error)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(width: 120, height: 60)
             } else {
                 ProgressView()
                     .frame(width: 120, height: 120)
@@ -51,7 +59,13 @@ struct InlinePlayerView: View {
             let tempURL = try await storage.downloadVideo(remotePath: message.videoUrl)
             localURL = try cacheService.storeDownload(roomId: message.roomId, messageId: id, sourceTemp: tempURL)
         } catch let err {
-            error = err.localizedDescription
+            let desc = err.localizedDescription
+            if desc.contains("Object not found") || desc.contains("404") || desc.contains("not found") {
+                error = "영상이 만료되어 더 이상 재생할 수 없어요."
+            } else {
+                error = "영상 로드 실패: \(desc)"
+            }
+            NSLog("InlinePlayerView load failed: \(err) — message=\(id) videoUrl=\(message.videoUrl)")
         }
     }
 

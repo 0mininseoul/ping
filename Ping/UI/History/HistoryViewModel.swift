@@ -245,7 +245,7 @@ final class HistoryViewModel: ObservableObject {
         let sorted = items.compactMap { item -> (Date, TimelineItem)? in
             guard let d = item.createdAt else { return nil }
             return (d, item)
-        }.sorted { $0.0 > $1.0 }
+        }.sorted { $0.0 < $1.0 }  // ascending: oldest first
 
         var groups: [DayGroup] = []
         var currentDate: Date?

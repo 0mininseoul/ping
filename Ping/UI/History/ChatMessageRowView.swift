@@ -26,12 +26,15 @@ struct ChatMessageRowView: View {
     }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 6) {
-            if isMine { Spacer(minLength: 40) }
+        HStack(alignment: .bottom, spacing: 6) {
+            if isMine {
+                Spacer(minLength: 40)
+                timeLabel.foregroundStyle(.tertiary)
+            }
 
             if !isMine && isHovered { hoverActions }
 
-            VStack(alignment: isMine ? .trailing : .leading, spacing: 3) {
+            VStack(alignment: isMine ? .trailing : .leading, spacing: 2) {
                 if showsSender && !isMine {
                     Text(message.senderNickname)
                         .font(.caption2)
@@ -48,13 +51,24 @@ struct ChatMessageRowView: View {
             }
             .frame(maxWidth: 360, alignment: isMine ? .trailing : .leading)
 
+            if !isMine {
+                timeLabel.foregroundStyle(.tertiary)
+            }
             if isMine && isHovered { hoverActions }
-
             if !isMine { Spacer(minLength: 40) }
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 1)
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.12)) { isHovered = hovering }
+        }
+    }
+
+    @ViewBuilder
+    private var timeLabel: some View {
+        if let date = message.createdAt {
+            Text(date.formatted(.dateTime.hour().minute()))
+                .font(.caption2)
+                .opacity(0.6)
         }
     }
 
@@ -62,10 +76,10 @@ struct ChatMessageRowView: View {
         Text(message.body)
             .font(.body)
             .foregroundStyle(isMine ? .white : Color.primary)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+            .padding(.horizontal, 11)
+            .padding(.vertical, 6)
             .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .fill(isMine ? Color.accentColor : Color.gray.opacity(0.18))
             )
             .textSelection(.enabled)

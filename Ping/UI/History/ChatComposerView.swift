@@ -7,9 +7,9 @@ struct ChatComposerView: View {
     let onCancelReply: () -> Void
     let onSend: () -> Void
 
-    @State private var calculatedHeight: CGFloat = 32
+    @State private var calculatedHeight: CGFloat = 36
 
-    private let minHeight: CGFloat = 32
+    private let minHeight: CGFloat = 36
     private let maxHeight: CGFloat = 120
 
     var body: some View {
@@ -43,7 +43,7 @@ struct ChatComposerView: View {
                             .font(.body)
                             .foregroundStyle(.tertiary)
                             .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
+                            .padding(.vertical, 8)
                             .allowsHitTesting(false)
                     }
                     ComposerTextEditor(
@@ -114,7 +114,7 @@ private struct ComposerTextEditor: NSViewRepresentable {
         textView.isEditable = true
         textView.allowsUndo = true
         textView.font = NSFont.systemFont(ofSize: NSFont.systemFontSize)
-        textView.textContainerInset = NSSize(width: 10, height: 6)
+        textView.textContainerInset = NSSize(width: 10, height: 8)
         textView.delegate = context.coordinator
         textView.textContainer?.lineFragmentPadding = 0
         textView.string = text
