@@ -25,6 +25,9 @@ packages:
   Sparkle:
     url: https://github.com/sparkle-project/Sparkle
     from: "2.6.0"
+  Supabase:
+    url: https://github.com/supabase/supabase-swift
+    from: "2.20.0"
 
 targets:
   Ping:
@@ -81,6 +84,8 @@ targets:
     dependencies:
       - package: KeyboardShortcuts
       - package: Sparkle
+      - package: Supabase
+        product: Realtime
 
   PingTests:
     type: bundle.unit-test
