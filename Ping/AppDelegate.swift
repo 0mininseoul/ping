@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import OSLog
 import SwiftUI
 
@@ -29,6 +30,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let notifiedMessageIdsKey = "ping.notifications.notifiedMessageIds"
 
     private var notifiedChatMessageIds: Set<String> = []
+    private var cancellables: Set<AnyCancellable> = []
 
     private var roomObserverTask: Task<Void, Never>?
     private var invitationObserverTask: Task<Void, Never>?
@@ -107,11 +109,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         if !ProcessInfo.processInfo.isRunningUnitTests {
-            Task { @MainActor in
-                for await event in chatRealtime.$lastEvent.compactMap({ $0 }).values {
-                    self.handleChatRealtimeEvent(event)
+            chatRealtime.$lastEvent
+                .compactMap { $0 }
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] event in
+                    self?.handleChatRealtimeEvent(event)
                 }
-            }
+                .store(in: &cancellables)
         }
     }
 
