@@ -38,10 +38,10 @@ struct ChatComposerView: View {
 
             HStack(alignment: .bottom, spacing: 8) {
                 ZStack(alignment: .topLeading) {
-                    // Hidden sizing helper
+                    // Hidden sizing helper (동일 padding)
                     Text(draft.isEmpty ? " " : draft)
                         .font(.body)
-                        .padding(.horizontal, 12)
+                        .padding(.horizontal, 10)
                         .padding(.vertical, 6)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .background(
@@ -57,7 +57,7 @@ struct ChatComposerView: View {
                         Text("메시지 입력…")
                             .font(.body)
                             .foregroundStyle(.tertiary)
-                            .padding(.horizontal, 12)
+                            .padding(.horizontal, 10)
                             .padding(.vertical, 6)
                             .allowsHitTesting(false)
                     }
@@ -65,8 +65,8 @@ struct ChatComposerView: View {
                     TextEditor(text: $draft)
                         .font(.body)
                         .scrollContentBackground(.hidden)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 2)
+                        .padding(.horizontal, 5)  // TextEditor 내부에 textContainerInset 약 5pt가 있어 -5 보정
+                        .padding(.vertical, 0)
                 }
                 .frame(height: max(minHeight, min(calculatedHeight, maxHeight)))
                 .background(Color.gray.opacity(0.08))

@@ -85,7 +85,23 @@ final class HistoryViewModel: ObservableObject {
             groups = Self.groupTimelineByDay(videos: loadedVideos, chats: loadedChats, calendar: .current)
             await refreshReactions()
         } catch {
-            let errorMsg = "히스토리 로드 실패: \(error.localizedDescription)"
+            let errorMsg: String
+            if let decodingError = error as? DecodingError {
+                switch decodingError {
+                case .keyNotFound(let key, let context):
+                    errorMsg = "히스토리 디코딩 실패 (키 누락: \(key.stringValue), 경로: \(context.codingPath.map(\.stringValue).joined(separator: ".")))"
+                case .typeMismatch(let type, let context):
+                    errorMsg = "히스토리 디코딩 실패 (타입 불일치: \(type), 경로: \(context.codingPath.map(\.stringValue).joined(separator: ".")))"
+                case .valueNotFound(let type, let context):
+                    errorMsg = "히스토리 디코딩 실패 (값 없음: \(type), 경로: \(context.codingPath.map(\.stringValue).joined(separator: ".")))"
+                case .dataCorrupted(let context):
+                    errorMsg = "히스토리 디코딩 실패 (데이터 손상: \(context.debugDescription))"
+                @unknown default:
+                    errorMsg = "히스토리 로드 실패: \(error.localizedDescription)"
+                }
+            } else {
+                errorMsg = "히스토리 로드 실패: \(error.localizedDescription)"
+            }
             lastErrorMessage = errorMsg
             NSLog("History load failed: \(error) — roomId=\(roomId)")
         }
