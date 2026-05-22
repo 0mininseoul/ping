@@ -7,10 +7,11 @@ struct ChatComposerView: View {
     let onSend: () -> Void
 
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 0) {
             if let replyTarget {
-                HStack {
+                HStack(spacing: 6) {
                     Image(systemName: "arrowshape.turn.up.left.fill")
+                        .font(.caption2)
                         .foregroundStyle(.secondary)
                     Text(replyPreviewText(replyTarget))
                         .font(.caption)
@@ -18,27 +19,47 @@ struct ChatComposerView: View {
                         .lineLimit(1)
                     Spacer()
                     Button(action: onCancelReply) {
-                        Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
-                    }.buttonStyle(.plain)
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
                 }
                 .padding(.horizontal, 12)
-                .padding(.vertical, 4)
-                .background(Color.gray.opacity(0.08))
+                .padding(.vertical, 6)
+                .background(Color(NSColor.controlBackgroundColor).opacity(0.6))
             }
+
             HStack(alignment: .bottom, spacing: 8) {
-                TextEditor(text: $draft)
-                    .font(.body)
-                    .frame(minHeight: 32, maxHeight: 132)
-                    .scrollContentBackground(.hidden)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 6)
-                    .background(Color.gray.opacity(0.06))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                ZStack(alignment: .topLeading) {
+                    if draft.isEmpty {
+                        Text("메시지 입력…")
+                            .font(.body)
+                            .foregroundStyle(.tertiary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .allowsHitTesting(false)
+                    }
+                    TextEditor(text: $draft)
+                        .font(.body)
+                        .scrollContentBackground(.hidden)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .frame(minHeight: 32, maxHeight: 96)
+                }
+                .background(Color.gray.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .strokeBorder(Color.gray.opacity(0.18), lineWidth: 0.5)
+                )
+
                 Button(action: onSend) {
                     Image(systemName: "paperplane.fill")
-                        .padding(8)
-                        .background(canSend ? Color.accentColor : Color.gray.opacity(0.3))
-                        .foregroundStyle(.white)
+                        .font(.body)
+                        .foregroundStyle(canSend ? .white : .secondary)
+                        .frame(width: 32, height: 32)
+                        .background(canSend ? Color.accentColor : Color.gray.opacity(0.18))
                         .clipShape(Circle())
                 }
                 .buttonStyle(.plain)

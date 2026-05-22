@@ -34,10 +34,12 @@ final class HistoryViewModel: ObservableObject {
     @Published var expandedMessageId: String?
     @Published var replyTarget: ReplyTarget?
     @Published var reactionsByTargetId: [String: [String: ReactionAggregate]] = [:]
+    @Published var lastErrorMessage: String?
 
     let inlineController = InlinePlayerController()
 
     private let messageService: MessageService
+    private let appState: AppState
     private let chatService: ChatMessageService
     private let reactionService: ReactionService
     private var loadedVideos: [VideoMessage] = []
@@ -45,10 +47,12 @@ final class HistoryViewModel: ObservableObject {
 
     init(
         messageService: MessageService,
+        appState: AppState,
         chatService: ChatMessageService = ChatMessageService(),
         reactionService: ReactionService = ReactionService()
     ) {
         self.messageService = messageService
+        self.appState = appState
         self.chatService = chatService
         self.reactionService = reactionService
     }
@@ -130,9 +134,33 @@ final class HistoryViewModel: ObservableObject {
         case .none: break
         }
 
+        let snapshotReplyTarget = replyTarget
+        replyTarget = nil
+
         do {
-            _ = try await chatService.sendChat(roomId: roomId, body: trimmed, replyToChatId: replyChatId, replyToVideoId: replyVideoId)
-            replyTarget = nil
+            let id = try await chatService.sendChat(
+                roomId: roomId,
+                body: trimmed,
+                replyToChatId: replyChatId,
+                replyToVideoId: replyVideoId
+            )
+            // Optimistic insert: place the new message in the loaded list immediately
+            let nickname = appState.currentUser?.nickname ?? ""
+            let uid = appState.currentUser?.id ?? ""
+            let optimistic = ChatMessage(
+                id: id,
+                roomId: roomId,
+                senderUid: uid,
+                senderNickname: nickname,
+                body: trimmed,
+                replyToChatId: replyChatId,
+                replyToVideoId: replyVideoId,
+                createdAt: Date()
+            )
+            if !loadedChats.contains(where: { $0.id == id }) {
+                loadedChats.append(optimistic)
+                groups = Self.groupTimelineByDay(videos: loadedVideos, chats: loadedChats, calendar: .current)
+            }
             ClientEventService.shared.log("chat_sent", properties: [
                 "room_id": roomId,
                 "body_length": trimmed.count,
@@ -141,11 +169,32 @@ final class HistoryViewModel: ObservableObject {
             ])
             await refreshReactions()
         } catch {
+            replyTarget = snapshotReplyTarget
+            lastErrorMessage = "메시지 전송 실패: \(error.localizedDescription)"
             NSLog("Send chat failed: \(error)")
         }
     }
 
     func toggleReaction(target: MessageReaction.TargetKind, targetId: String, emoji: String) async {
+        // Optimistic flip in cached aggregates
+        let key = "\(target.rawValue):\(targetId)"
+        var roomMap = reactionsByTargetId[key] ?? [:]
+        if let existing = roomMap[emoji] {
+            if existing.myReacted {
+                let newCount = max(0, existing.count - 1)
+                if newCount == 0 {
+                    roomMap.removeValue(forKey: emoji)
+                } else {
+                    roomMap[emoji] = ReactionAggregate(emoji: emoji, count: newCount, myReacted: false)
+                }
+            } else {
+                roomMap[emoji] = ReactionAggregate(emoji: emoji, count: existing.count + 1, myReacted: true)
+            }
+        } else {
+            roomMap[emoji] = ReactionAggregate(emoji: emoji, count: 1, myReacted: true)
+        }
+        reactionsByTargetId[key] = roomMap
+
         do {
             let added = try await reactionService.toggle(target: target, targetId: targetId, emoji: emoji)
             ClientEventService.shared.log(
@@ -154,7 +203,9 @@ final class HistoryViewModel: ObservableObject {
             )
             await refreshReactions()
         } catch {
+            lastErrorMessage = "반응 처리 실패: \(error.localizedDescription)"
             NSLog("Toggle reaction failed: \(error)")
+            await refreshReactions()
         }
     }
 

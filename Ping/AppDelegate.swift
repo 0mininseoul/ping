@@ -823,6 +823,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             notifiedChatMessageIds = Set(notifiedChatMessageIds.suffix(500))
         }
 
+        // Suppress notification if RoomManagerWindow is visible AND that room is selected.
+        let suppressed: Bool = {
+            guard let window = roomManagerWindow, window.isVisible else { return false }
+            return appState.pendingRoomFocusId == msg.roomId
+                || appState.lastSelectedRoomId == msg.roomId
+        }()
+
+        if suppressed { return }
+
         let roomName = appState.rooms.first(where: { $0.id == msg.roomId })?.name ?? "룸"
         LocalNotificationCenter.shared.notifyIncomingChat(msg, roomName: roomName)
     }

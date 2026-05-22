@@ -85,15 +85,33 @@ struct RoomManagerView: View {
         }
         .frame(minWidth: 800, minHeight: 560)
         .sheet(isPresented: $isSearchPresented) {
-            RoomSearchView(
-                viewModel: searchViewModel,
-                appState: appState,
-                initialTab: searchInitialTab,
-                onJoinRoom: joinRoom,
-                onInviteUser: onInvite,
-                onJoinInviteLink: onJoinInviteLink
-            )
-            .frame(minWidth: 700, minHeight: 560)
+            VStack(spacing: 0) {
+                HStack {
+                    Button(action: { isSearchPresented = false }) {
+                        Circle()
+                            .fill(Color(red: 1.0, green: 0.36, blue: 0.36))
+                            .frame(width: 12, height: 12)
+                    }
+                    .buttonStyle(.plain)
+                    .keyboardShortcut(.escape, modifiers: [])
+                    .help("닫기")
+
+                    Spacer()
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(.regularMaterial)
+
+                RoomSearchView(
+                    viewModel: searchViewModel,
+                    appState: appState,
+                    initialTab: searchInitialTab,
+                    onJoinRoom: joinRoom,
+                    onInviteUser: onInvite,
+                    onJoinInviteLink: onJoinInviteLink
+                )
+            }
+            .frame(minWidth: 700, minHeight: 600)
         }
         .onAppear {
             if opensSearchOnAppear {
@@ -104,6 +122,9 @@ struct RoomManagerView: View {
             guard let roomId else { return }
             selectedRoomId = roomId
             appState.pendingRoomFocusId = nil
+        }
+        .onChange(of: selectedRoomId) { newValue in
+            appState.lastSelectedRoomId = newValue
         }
     }
 

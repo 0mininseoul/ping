@@ -11,6 +11,7 @@ final class AppState: ObservableObject {
     @Published var sendMode: SendMode = .singlePartner
     @Published var backendStatusMessage: String?
     @Published var pendingRoomFocusId: String?
+    @Published var lastSelectedRoomId: String?
 
     init() {}
 

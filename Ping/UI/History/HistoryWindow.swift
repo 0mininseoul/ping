@@ -20,7 +20,7 @@ final class HistoryWindow: NSWindow {
         self.isReleasedWhenClosed = false
         self.center()
 
-        let viewModel = HistoryViewModel(messageService: messageService)
+        let viewModel = HistoryViewModel(messageService: messageService, appState: appState)
         let host = NSHostingView(rootView:
             HistoryView(appState: appState, viewModel: viewModel, realtime: realtime, cacheService: cacheService)
         )

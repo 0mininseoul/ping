@@ -91,6 +91,14 @@ struct RoomTimelineView: View {
                 self.composerKeyMonitor = nil
             }
         }
+        .alert("오류", isPresented: Binding<Bool>(
+            get: { viewModel.lastErrorMessage != nil },
+            set: { if !$0 { viewModel.lastErrorMessage = nil } }
+        ), actions: {
+            Button("확인") { viewModel.lastErrorMessage = nil }
+        }, message: {
+            Text(viewModel.lastErrorMessage ?? "")
+        })
     }
 
     private func sendDraft() {
