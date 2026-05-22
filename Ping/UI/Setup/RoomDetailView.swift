@@ -11,6 +11,7 @@ struct RoomDetailView: View {
     var roomService: RoomService?
 
     @StateObject private var viewModel: HistoryViewModel
+    @State private var isMembersPopoverPresented: Bool = false
 
     init(
         roomId: String,
@@ -50,6 +51,17 @@ struct RoomDetailView: View {
                     }
 
                     Spacer()
+
+                    Button(action: { isMembersPopoverPresented.toggle() }) {
+                        Label("멤버", systemImage: "person.2.fill")
+                            .labelStyle(.iconOnly)
+                    }
+                    .buttonStyle(.borderless)
+                    .help("룸 멤버")
+                    .padding(.horizontal, 4)
+                    .popover(isPresented: $isMembersPopoverPresented, arrowEdge: .top) {
+                        membersPopoverContent
+                    }
 
                     if room.memberUids.count < RoomLimits.maxMembersPerRoom,
                        let onCopyInviteLink {
@@ -98,6 +110,45 @@ struct RoomDetailView: View {
         }
     }
 
+    private var membersPopoverContent: some View {
+        MembersPopoverView(
+            memberUids: sortedMemberUids,
+            totalCount: currentRoom?.memberUids.count ?? 0,
+            ownerUid: currentRoom?.ownerUid ?? "",
+            myUid: appState.currentUser?.id ?? "",
+            nameForUid: displayName(for:),
+            letterForUid: initialLetter(for:),
+            colorForUid: avatarColor(for:)
+        )
+    }
+
+    private var sortedMemberUids: [String] {
+        guard let room = currentRoom else { return [] }
+        let myUid = appState.currentUser?.id ?? ""
+        return room.memberUids.sorted { lhs, rhs in
+            if lhs == myUid { return true }
+            if rhs == myUid { return false }
+            if lhs == room.ownerUid { return true }
+            if rhs == room.ownerUid { return false }
+            return (room.memberNicknames[lhs] ?? "") < (room.memberNicknames[rhs] ?? "")
+        }
+    }
+
+    private func displayName(for uid: String) -> String {
+        currentRoom?.memberNicknames[uid] ?? "(알 수 없음)"
+    }
+
+    private func initialLetter(for uid: String) -> String {
+        let name = displayName(for: uid)
+        return name.first.map { String($0).uppercased() } ?? "?"
+    }
+
+    private func avatarColor(for uid: String) -> Color {
+        let palette: [Color] = [.blue, .purple, .pink, .orange, .green, .teal, .indigo, .red]
+        let hash = uid.unicodeScalars.reduce(0) { $0 &+ Int($1.value) }
+        return palette[abs(hash) % palette.count]
+    }
+
     private func renameRoom(_ room: Room) {
         let alert = NSAlert()
         alert.messageText = "룸 이름 변경"
@@ -135,5 +186,76 @@ struct RoomDetailView: View {
                 NSLog("Leave failed: \(error)")
             }
         }
+    }
+}
+
+private struct MembersPopoverView: View {
+    let memberUids: [String]
+    let totalCount: Int
+    let ownerUid: String
+    let myUid: String
+    let nameForUid: (String) -> String
+    let letterForUid: (String) -> String
+    let colorForUid: (String) -> Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text("멤버")
+                    .font(.headline)
+                Spacer()
+                Text("\(totalCount)명")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 14)
+            .padding(.top, 12)
+            .padding(.bottom, 6)
+
+            Divider()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(memberUids, id: \.self) { (uid: String) in
+                        HStack(spacing: 10) {
+                            ZStack {
+                                Circle()
+                                    .fill(colorForUid(uid))
+                                    .frame(width: 32, height: 32)
+                                Text(letterForUid(uid))
+                                    .font(.callout.weight(.semibold))
+                                    .foregroundStyle(.white)
+                            }
+                            HStack(spacing: 6) {
+                                Text(nameForUid(uid))
+                                    .font(.body)
+                                if uid == myUid {
+                                    Text("나")
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                        .padding(.horizontal, 5)
+                                        .padding(.vertical, 1)
+                                        .background(Color.gray.opacity(0.18))
+                                        .clipShape(Capsule())
+                                }
+                                if uid == ownerUid {
+                                    Text("방장")
+                                        .font(.caption2)
+                                        .foregroundStyle(PingDesign.ColorToken.accent)
+                                        .padding(.horizontal, 5)
+                                        .padding(.vertical, 1)
+                                        .background(PingDesign.ColorToken.accent.opacity(0.15))
+                                        .clipShape(Capsule())
+                                }
+                            }
+                            Spacer()
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                    }
+                }
+            }
+        }
+        .frame(width: 260, height: min(CGFloat(totalCount * 48 + 60), 360))
     }
 }
