@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct ChatComposerView: View {
     @Binding var draft: String
@@ -10,7 +11,6 @@ struct ChatComposerView: View {
 
     private let minHeight: CGFloat = 32
     private let maxHeight: CGFloat = 120
-    private let lineHeight: CGFloat = 20  // approx for .body font
 
     var body: some View {
         VStack(spacing: 0) {
@@ -38,21 +38,6 @@ struct ChatComposerView: View {
 
             HStack(alignment: .bottom, spacing: 8) {
                 ZStack(alignment: .topLeading) {
-                    // Hidden sizing helper (동일 padding)
-                    Text(draft.isEmpty ? " " : draft)
-                        .font(.body)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(
-                            GeometryReader { proxy in
-                                Color.clear
-                                    .preference(key: ComposerHeightKey.self, value: proxy.size.height)
-                            }
-                        )
-                        .opacity(0)
-                        .allowsHitTesting(false)
-
                     if draft.isEmpty {
                         Text("메시지 입력…")
                             .font(.body)
@@ -61,12 +46,12 @@ struct ChatComposerView: View {
                             .padding(.vertical, 6)
                             .allowsHitTesting(false)
                     }
-
-                    TextEditor(text: $draft)
-                        .font(.body)
-                        .scrollContentBackground(.hidden)
-                        .padding(.horizontal, 5)  // TextEditor 내부에 textContainerInset 약 5pt가 있어 -5 보정
-                        .padding(.vertical, 0)
+                    ComposerTextEditor(
+                        text: $draft,
+                        calculatedHeight: $calculatedHeight,
+                        minHeight: minHeight,
+                        maxHeight: maxHeight
+                    )
                 }
                 .frame(height: max(minHeight, min(calculatedHeight, maxHeight)))
                 .background(Color.gray.opacity(0.08))
@@ -75,9 +60,6 @@ struct ChatComposerView: View {
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .strokeBorder(Color.gray.opacity(0.18), lineWidth: 0.5)
                 )
-                .onPreferenceChange(ComposerHeightKey.self) { newHeight in
-                    calculatedHeight = newHeight
-                }
 
                 Button(action: onSend) {
                     Image(systemName: "paperplane.fill")
@@ -111,9 +93,73 @@ struct ChatComposerView: View {
     }
 }
 
-private struct ComposerHeightKey: PreferenceKey {
-    nonisolated(unsafe) static var defaultValue: CGFloat = 32
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = nextValue()
+/// NSTextView wrapper with explicit textContainerInset matching placeholder padding.
+/// Padding 10 horizontal / 6 vertical → cursor aligns with the placeholder Text view.
+private struct ComposerTextEditor: NSViewRepresentable {
+    @Binding var text: String
+    @Binding var calculatedHeight: CGFloat
+    let minHeight: CGFloat
+    let maxHeight: CGFloat
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let scroll = NSTextView.scrollableTextView()
+        scroll.drawsBackground = false
+        scroll.hasVerticalScroller = true
+        scroll.autohidesScrollers = true
+        scroll.borderType = .noBorder
+
+        let textView = scroll.documentView as! NSTextView
+        textView.drawsBackground = false
+        textView.isRichText = false
+        textView.isEditable = true
+        textView.allowsUndo = true
+        textView.font = NSFont.systemFont(ofSize: NSFont.systemFontSize)
+        textView.textContainerInset = NSSize(width: 10, height: 6)
+        textView.delegate = context.coordinator
+        textView.textContainer?.lineFragmentPadding = 0
+        textView.string = text
+
+        return scroll
+    }
+
+    func updateNSView(_ scroll: NSScrollView, context: Context) {
+        guard let textView = scroll.documentView as? NSTextView else { return }
+        if textView.string != text {
+            let selected = textView.selectedRange()
+            textView.string = text
+            textView.setSelectedRange(selected)
+        }
+        Task { @MainActor in
+            recalculateHeight(textView: textView)
+        }
+    }
+
+    @MainActor
+    private func recalculateHeight(textView: NSTextView) {
+        guard let layoutManager = textView.layoutManager,
+              let textContainer = textView.textContainer else { return }
+        layoutManager.ensureLayout(for: textContainer)
+        let used = layoutManager.usedRect(for: textContainer)
+        let inset = textView.textContainerInset
+        let target = used.height + inset.height * 2
+        let clamped = max(minHeight, min(target, maxHeight))
+        if abs(calculatedHeight - clamped) > 0.5 {
+            calculatedHeight = clamped
+        }
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    final class Coordinator: NSObject, NSTextViewDelegate {
+        var parent: ComposerTextEditor
+        init(_ parent: ComposerTextEditor) { self.parent = parent }
+
+        func textDidChange(_ notification: Notification) {
+            guard let textView = notification.object as? NSTextView else { return }
+            parent.text = textView.string
+            Task { @MainActor in
+                parent.recalculateHeight(textView: textView)
+            }
+        }
     }
 }
