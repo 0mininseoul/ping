@@ -20,6 +20,7 @@ final class LocalNotificationCenter: NSObject, UNUserNotificationCenterDelegate 
     var onOpenInvitations: (() -> Void)?
     var onAcceptInvitation: ((String) -> Void)?
     var onRejectInvitation: ((String) -> Void)?
+    var onViewChatMessage: ((_ chatId: String, _ roomId: String) -> Void)?
 
     private override init() {
         super.init()
@@ -85,6 +86,27 @@ final class LocalNotificationCenter: NSObject, UNUserNotificationCenterDelegate 
         UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
     }
 
+    func notifyIncomingChat(_ message: ChatMessage, roomName: String) {
+        let content = UNMutableNotificationContent()
+        content.title = "\(message.senderNickname) · \(roomName)"
+        let body = message.body
+        content.body = body.count > 200 ? String(body.prefix(200)) + "…" : body
+        content.sound = .default
+        content.userInfo = [
+            "type": "chat",
+            "chat_id": message.id ?? "",
+            "room_id": message.roomId
+        ]
+        let request = UNNotificationRequest(
+            identifier: "chat-\(message.id ?? UUID().uuidString)",
+            content: content,
+            trigger: nil
+        )
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error { NSLog("notifyIncomingChat failed: \(error)") }
+        }
+    }
+
     func notifyIncomingInvitation(_ invitation: Invitation) {
         let inviteId = invitation.id ?? UUID().uuidString
         let content = UNMutableNotificationContent()
@@ -111,8 +133,18 @@ final class LocalNotificationCenter: NSObject, UNUserNotificationCenterDelegate 
         let info = response.notification.request.content.userInfo
         let messageId = info["messageId"] as? String
         let inviteId = info["inviteId"] as? String
+        let infoType = info["type"] as? String
+        let chatId = info["chat_id"] as? String
+        let chatRoomId = info["room_id"] as? String
 
         Task { @MainActor in
+            // Chat notifications are identified by their "type" key.
+            if infoType == "chat",
+               let chatId, let chatRoomId {
+                onViewChatMessage?(chatId, chatRoomId)
+                return
+            }
+
             switch actionIdentifier {
             case Action.viewMessage.rawValue, UNNotificationDefaultActionIdentifier:
                 if let messageId {

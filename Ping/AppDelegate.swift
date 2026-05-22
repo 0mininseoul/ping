@@ -28,6 +28,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let appStartTime = Date()
     private let notifiedMessageIdsKey = "ping.notifications.notifiedMessageIds"
 
+    private var notifiedChatMessageIds: Set<String> = []
+
     private var roomObserverTask: Task<Void, Never>?
     private var invitationObserverTask: Task<Void, Never>?
     private var incomingMessageTask: Task<Void, Never>?
@@ -99,6 +101,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         LocalNotificationCenter.shared.onRejectInvitation = { [weak self] inviteId in
             self?.rejectInvitation(inviteId: inviteId)
+        }
+        LocalNotificationCenter.shared.onViewChatMessage = { [weak self] chatId, roomId in
+            self?.openHistoryAndFocus(chatId: chatId, roomId: roomId)
+        }
+
+        if !ProcessInfo.processInfo.isRunningUnitTests {
+            Task { @MainActor in
+                for await event in chatRealtime.$lastEvent.compactMap({ $0 }).values {
+                    self.handleChatRealtimeEvent(event)
+                }
+            }
         }
     }
 
@@ -801,6 +814,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Task {
             try? await invitationService.reject(inviteId: inviteId)
         }
+    }
+
+    @MainActor
+    private func handleChatRealtimeEvent(_ event: ChatRealtimeService.Event) {
+        guard case .chatInserted(let msg) = event else { return }
+        guard msg.senderUid != appState.currentUser?.id else { return }
+        guard let id = msg.id, !notifiedChatMessageIds.contains(id) else { return }
+        notifiedChatMessageIds.insert(id)
+        if notifiedChatMessageIds.count > 500 {
+            notifiedChatMessageIds = Set(notifiedChatMessageIds.suffix(500))
+        }
+
+        let suppressed = historyWindow != nil
+        guard !suppressed else { return }
+
+        let roomName = appState.rooms.first(where: { $0.id == msg.roomId })?.name ?? "룸"
+        LocalNotificationCenter.shared.notifyIncomingChat(msg, roomName: roomName)
+    }
+
+    @MainActor
+    private func openHistoryAndFocus(chatId: String, roomId: String) {
+        if historyWindow == nil {
+            toggleHistory()
+        }
+        // Future: focus on chatId via viewModel.selectedRoomId + scroll. For now opening history is sufficient.
+        _ = chatId
+        _ = roomId
     }
 
     private func shouldNotify(messageId: String, message: VideoMessage) -> Bool {
