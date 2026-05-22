@@ -835,6 +835,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @MainActor
     private func openHistoryAndFocus(chatId: String, roomId: String) {
+        ClientEventService.shared.log("chat_notification_clicked", properties: ["room_id": roomId])
         if historyWindow == nil {
             toggleHistory()
         }

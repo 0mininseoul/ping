@@ -61,6 +61,7 @@ final class HistoryViewModel: ObservableObject {
         reactionsByTargetId = [:]
         await loadMore()
         try? await chatService.markRoomRead(roomId: roomId)
+        ClientEventService.shared.log("chat_received_view", properties: ["room_id": roomId])
     }
 
     func loadMore() async {
@@ -132,6 +133,12 @@ final class HistoryViewModel: ObservableObject {
         do {
             _ = try await chatService.sendChat(roomId: roomId, body: trimmed, replyToChatId: replyChatId, replyToVideoId: replyVideoId)
             replyTarget = nil
+            ClientEventService.shared.log("chat_sent", properties: [
+                "room_id": roomId,
+                "body_length": trimmed.count,
+                "is_reply": (replyChatId != nil || replyVideoId != nil),
+                "reply_kind": replyChatId != nil ? "chat" : (replyVideoId != nil ? "video" : "none")
+            ])
             await refreshReactions()
         } catch {
             NSLog("Send chat failed: \(error)")
@@ -140,7 +147,11 @@ final class HistoryViewModel: ObservableObject {
 
     func toggleReaction(target: MessageReaction.TargetKind, targetId: String, emoji: String) async {
         do {
-            _ = try await reactionService.toggle(target: target, targetId: targetId, emoji: emoji)
+            let added = try await reactionService.toggle(target: target, targetId: targetId, emoji: emoji)
+            ClientEventService.shared.log(
+                added ? "reaction_added" : "reaction_removed",
+                properties: ["target_kind": target.rawValue, "emoji": emoji]
+            )
             await refreshReactions()
         } catch {
             NSLog("Toggle reaction failed: \(error)")

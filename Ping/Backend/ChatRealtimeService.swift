@@ -90,6 +90,7 @@ final class ChatRealtimeService: ObservableObject {
 
         if !didConnect {
             connectionState = .fallbackPolling
+            ClientEventService.shared.log("realtime_disconnected")
             startPolling()
         }
     }
@@ -244,10 +245,12 @@ final class ChatRealtimeService: ObservableObject {
                             svc.pollingTask?.cancel()
                             svc.pollingTask = nil
                             svc.connectionState = .connected
+                            ClientEventService.shared.log("realtime_reconnected")
                         }
                     case .disconnected:
                         if svc.connectionState == .connected {
                             svc.connectionState = .fallbackPolling
+                            ClientEventService.shared.log("realtime_disconnected")
                             svc.startPolling()
                         }
                     case .connecting:
