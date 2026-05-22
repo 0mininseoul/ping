@@ -24,6 +24,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let invitationService = InvitationService()
     private let storageService = StorageService()
     private let cleanupService = CleanupService()
+    private let chatRealtime = ChatRealtimeService()
     private let appStartTime = Date()
     private let notifiedMessageIdsKey = "ping.notifications.notifiedMessageIds"
 
@@ -57,6 +58,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         incomingMessageTask?.cancel()
         cameraStartTask?.cancel()
         camera.stop()
+        Task { await chatRealtime.unsubscribeAll() }
     }
 
     func application(_ application: NSApplication, open urls: [URL]) {
@@ -158,6 +160,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
             for await rooms in roomService.observeMyRooms(uid: uid) {
                 appState.rooms = rooms
+                Task { @MainActor in
+                    let roomIds = rooms.compactMap(\.id)
+                    if let url = try? SupabaseClient.shared.configURL,
+                       let anonKey = try? SupabaseClient.shared.configAnonKey {
+                        let token = await SupabaseClient.shared.currentAccessToken()
+                        await self.chatRealtime.subscribe(
+                            roomIds: roomIds,
+                            supabaseURL: url,
+                            anonKey: anonKey,
+                            accessToken: token
+                        )
+                    }
+                }
                 if !rooms.isEmpty {
                     UserDefaults.standard.set(false, forKey: PingPreferenceKeys.roomSetupDeferred)
                 }
@@ -232,7 +247,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let window = HistoryWindow(
             appState: appState,
             messageService: messageService,
-            cacheService: HistoryCacheService.shared
+            cacheService: HistoryCacheService.shared,
+            realtime: chatRealtime
         )
         window.makeKeyAndOrderFront(nil)
         historyWindow = window

@@ -121,6 +121,18 @@ final class SupabaseClient: ObservableObject {
         self.urlSession = urlSession
     }
 
+    var configURL: URL {
+        get throws { try requireConfiguration().url }
+    }
+
+    var configAnonKey: String {
+        get throws { try requireConfiguration().anonKey }
+    }
+
+    func currentAccessToken() async -> String? {
+        try? await accessToken()
+    }
+
     func configureIfNeeded() throws {
         guard !isConfigured else { return }
 

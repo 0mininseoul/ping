@@ -6,7 +6,8 @@ final class HistoryWindow: NSWindow {
     init(
         appState: AppState,
         messageService: MessageService,
-        cacheService: HistoryCacheService
+        cacheService: HistoryCacheService,
+        realtime: ChatRealtimeService
     ) {
         super.init(
             contentRect: NSRect(x: 0, y: 0, width: 900, height: 600),
@@ -21,7 +22,7 @@ final class HistoryWindow: NSWindow {
 
         let viewModel = HistoryViewModel(messageService: messageService)
         let host = NSHostingView(rootView:
-            HistoryView(appState: appState, viewModel: viewModel, cacheService: cacheService)
+            HistoryView(appState: appState, viewModel: viewModel, realtime: realtime, cacheService: cacheService)
         )
         host.frame = contentView!.bounds
         host.autoresizingMask = [.width, .height]
