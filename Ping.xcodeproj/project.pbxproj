@@ -55,6 +55,7 @@
 		776C909E046ADCF36EFB3CB8 /* UserService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 260A034212C7DCDAE4B05B4E /* UserService.swift */; };
 		7D6820A9720716BA8CC598CE /* WindowPositioning.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73B2E5B2B85836038B79C18B /* WindowPositioning.swift */; };
 		8034FE36123AC61C5D2661DD /* ChatMessageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCF184494526CD00335EC49D /* ChatMessageService.swift */; };
+		D8BF690E76AD3825793C9E4F /* ChatRealtimeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A8B7C5931058D1D968CAB38 /* ChatRealtimeService.swift */; };
 		81AD9AA639E624B9BD249F74 /* VideoRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06B4B9E0137AD6A34F151BF2 /* VideoRecorder.swift */; };
 		81CF775CFAC24B82B2F8043A /* GlassChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFDFDDA4D6E69A3184DC445F /* GlassChip.swift */; };
 		82489619708A93D7397D5172 /* MenuBarIconContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B34FE34A23EC76CE975F980D /* MenuBarIconContractTests.swift */; };
@@ -195,6 +196,7 @@
 		C719C9C94BAE6A852AD90D7A /* SupabaseClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseClient.swift; sourceTree = "<group>"; };
 		C98008817B561907D8035DB2 /* Typography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Typography.swift; sourceTree = "<group>"; };
 		CCF184494526CD00335EC49D /* ChatMessageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessageService.swift; sourceTree = "<group>"; };
+		4A8B7C5931058D1D968CAB38 /* ChatRealtimeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRealtimeService.swift; sourceTree = "<group>"; };
 		CEBA01FC9DCA088BE83E5C4F /* SmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmokeTests.swift; sourceTree = "<group>"; };
 		CFDFDDA4D6E69A3184DC445F /* GlassChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassChip.swift; sourceTree = "<group>"; };
 		D09E2E7CA36EC901ED5EE3FB /* SupabaseSessionContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseSessionContractTests.swift; sourceTree = "<group>"; };
@@ -295,6 +297,7 @@
 			isa = PBXGroup;
 			children = (
 				CCF184494526CD00335EC49D /* ChatMessageService.swift */,
+				4A8B7C5931058D1D968CAB38 /* ChatRealtimeService.swift */,
 				196AE189C92F647078653279 /* CleanupService.swift */,
 				A628BE96FDE0D4A8AE65516D /* ClientEventService.swift */,
 				B110C3699C333F4B8A9E7E7C /* HistoryCacheService.swift */,
@@ -736,6 +739,7 @@
 				55964F9C1885CA8604192FDC /* CameraManager.swift in Sources */,
 				D12F7E997BB6376FEF3F220D /* CameraPreviewView.swift in Sources */,
 				8034FE36123AC61C5D2661DD /* ChatMessageService.swift in Sources */,
+				D8BF690E76AD3825793C9E4F /* ChatRealtimeService.swift in Sources */,
 				CBA9098946084A74F1DDD04C /* CleanupService.swift in Sources */,
 				9F82291BBB72BBCE49382029 /* ClientEventService.swift in Sources */,
 				5587D2DEE80A1085ACF53044 /* ExpandedPlaybackWindow.swift in Sources */,
