@@ -24,19 +24,13 @@ struct GlassChip: View {
             Image(systemName: "chevron.down")
                 .font(.system(size: 9, weight: .semibold))
         }
+        .foregroundStyle(.white)
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
         .background {
             Capsule()
-                .fill(PingDesign.Surface.rowFill.opacity(isHover ? 0.95 : 0.78))
+                .fill(Color.black.opacity(isHover ? 0.65 : 0.55))
                 .pingGlassEffect()
-                .overlay {
-                    Capsule()
-                        .strokeBorder(
-                            PingDesign.Surface.strongHairline.opacity(isHover ? 0.86 : 0.56),
-                            lineWidth: 0.8
-                        )
-                }
         }
         .animation(.easeInOut(duration: 0.15), value: isHover)
     }

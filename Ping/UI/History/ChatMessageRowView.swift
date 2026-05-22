@@ -11,8 +11,6 @@ struct ChatMessageRowView: View {
     let onDelete: () -> Void
     let onToggleReaction: (String) -> Void
 
-    @State private var isHovered: Bool = false
-
     enum ReplyPreview {
         case chat(sender: String, body: String)
         case video(sender: String, captureMode: CaptureMode)
@@ -27,12 +25,7 @@ struct ChatMessageRowView: View {
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 6) {
-            if isMine {
-                Spacer(minLength: 40)
-                timeLabel.foregroundStyle(.tertiary)
-            }
-
-            if !isMine && isHovered { hoverActions }
+            if isMine { Spacer(minLength: 40) }
 
             VStack(alignment: isMine ? .trailing : .leading, spacing: 2) {
                 if showsSender && !isMine {
@@ -49,27 +42,25 @@ struct ChatMessageRowView: View {
                     reactionStrip
                 }
             }
-            .frame(maxWidth: 360, alignment: isMine ? .trailing : .leading)
-
-            if !isMine {
-                timeLabel.foregroundStyle(.tertiary)
+            .frame(maxWidth: 280, alignment: isMine ? .trailing : .leading)
+            .contextMenu {
+                Button(action: onReply) {
+                    Label("답장", systemImage: "arrowshape.turn.up.left")
+                }
+                Button(action: onReact) {
+                    Label("이모지 반응", systemImage: "face.smiling")
+                }
+                if isMine {
+                    Divider()
+                    Button(role: .destructive, action: onDelete) {
+                        Label("삭제", systemImage: "trash")
+                    }
+                }
             }
-            if isMine && isHovered { hoverActions }
+
             if !isMine { Spacer(minLength: 40) }
         }
         .padding(.vertical, 1)
-        .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.12)) { isHovered = hovering }
-        }
-    }
-
-    @ViewBuilder
-    private var timeLabel: some View {
-        if let date = message.createdAt {
-            Text(date.formatted(.dateTime.hour().minute()))
-                .font(.caption2)
-                .opacity(0.6)
-        }
     }
 
     private var bubble: some View {
@@ -135,21 +126,4 @@ struct ChatMessageRowView: View {
         }
     }
 
-    private var hoverActions: some View {
-        HStack(spacing: 6) {
-            Button(action: onReply) {
-                Image(systemName: "arrowshape.turn.up.left").imageScale(.small)
-            }.buttonStyle(.plain)
-            Button(action: onReact) {
-                Image(systemName: "face.smiling").imageScale(.small)
-            }.buttonStyle(.plain)
-            if isMine {
-                Button(action: onDelete) {
-                    Image(systemName: "trash").imageScale(.small)
-                }.buttonStyle(.plain)
-            }
-        }
-        .padding(.horizontal, 4)
-        .foregroundStyle(.secondary)
-    }
 }

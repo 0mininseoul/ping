@@ -14,8 +14,6 @@ struct MessageRowView: View {
     let onDelete: () -> Void
     let onToggleReaction: (String) -> Void
 
-    @State private var isHovered: Bool = false
-
     var body: some View {
         HStack {
             if isMine { Spacer() }
@@ -46,24 +44,26 @@ struct MessageRowView: View {
                     }
                 }
             }
-            if isHovered && !isExpanded {
-                HStack(spacing: 6) {
-                    Button(action: onReply) { Image(systemName: "arrowshape.turn.up.left").imageScale(.small) }.buttonStyle(.plain)
-                    Button(action: onReact) { Image(systemName: "face.smiling").imageScale(.small) }.buttonStyle(.plain)
-                    Button(action: onSave) { Image(systemName: "arrow.down.circle").imageScale(.small) }.buttonStyle(.plain)
-                    Button(action: onDelete) { Image(systemName: "trash").imageScale(.small) }.buttonStyle(.plain)
+            .contextMenu {
+                Button(action: onReply) {
+                    Label("답장", systemImage: "arrowshape.turn.up.left")
                 }
-                .foregroundStyle(.secondary)
-                .transition(.opacity)
+                Button(action: onReact) {
+                    Label("이모지 반응", systemImage: "face.smiling")
+                }
+                Button(action: onSave) {
+                    Label("저장", systemImage: "arrow.down.circle")
+                }
+                Divider()
+                Button(role: .destructive, action: onDelete) {
+                    Label("삭제", systemImage: "trash")
+                }
             }
             if !isMine { Spacer() }
         }
         .padding(.vertical, 1)
         .contentShape(Rectangle())
         .onTapGesture { onTap() }
-        .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.15)) { isHovered = hovering }
-        }
     }
 
     private var thumbnail: some View {
@@ -95,10 +95,6 @@ struct MessageRowView: View {
                 Image(systemName: "rectangle.fill").font(.caption2)
             } else {
                 Image(systemName: "circle.fill").font(.caption2)
-            }
-            if let date = message.createdAt {
-                Text(date.formatted(.dateTime.hour().minute()))
-                    .font(.caption)
             }
         }
         .foregroundStyle(.secondary)

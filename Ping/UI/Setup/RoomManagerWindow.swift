@@ -5,14 +5,14 @@ import SwiftUI
 final class RoomManagerWindow: NSWindow {
     init<Content: View>(rootView: Content) {
         super.init(
-            contentRect: NSRect(x: 0, y: 0, width: 860, height: 640),
+            contentRect: NSRect(x: 0, y: 0, width: 680, height: 600),
             styleMask: [.titled, .closable, .resizable],
             backing: .buffered,
             defer: false
         )
 
         title = "내 룸"
-        minSize = NSSize(width: 800, height: 560)
+        minSize = NSSize(width: 480, height: 560)
         contentView = NSHostingView(rootView: rootView)
         isReleasedWhenClosed = false
         center()
@@ -79,11 +79,11 @@ struct RoomManagerView: View {
     var body: some View {
         NavigationSplitView {
             sidebarContent
-                .frame(minWidth: 240, idealWidth: 260)
+                .frame(minWidth: 200, idealWidth: 220, maxWidth: 260)
         } detail: {
             detailContent
         }
-        .frame(minWidth: 800, minHeight: 560)
+        .frame(minWidth: 480, minHeight: 560)
         .sheet(isPresented: $isSearchPresented) {
             VStack(spacing: 0) {
                 HStack {

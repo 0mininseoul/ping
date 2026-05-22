@@ -10,6 +10,8 @@ struct RoomTimelineView: View {
     @State private var reactionPickerTargetKind: MessageReaction.TargetKind?
     @State private var reactionPickerTargetId: String?
     @State private var composerKeyMonitor: Any?
+    @State private var revealOffset: CGFloat = 0
+    private let revealMax: CGFloat = -68
 
     var body: some View {
         VStack(spacing: 0) {
@@ -20,6 +22,17 @@ struct RoomTimelineView: View {
                             Section(header: dayHeader(group.date)) {
                                 ForEach(group.items) { item in
                                     rowFor(item: item)
+                                        .offset(x: revealOffset)
+                                        .overlay(alignment: .trailing) {
+                                            if let date = item.createdAt {
+                                                Text(date.formatted(.dateTime.hour().minute()))
+                                                    .font(.caption2)
+                                                    .foregroundStyle(.tertiary)
+                                                    .frame(width: 60, alignment: .leading)
+                                                    .offset(x: -revealOffset + 4)
+                                                    .opacity(min(1, abs(revealOffset) / 50))
+                                            }
+                                        }
                                         .id(item.id)
                                 }
                             }
@@ -40,6 +53,21 @@ struct RoomTimelineView: View {
                         scrollProxy.scrollTo(lastId, anchor: .bottom)
                     }
                 }
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 10)
+                        .onChanged { value in
+                            if abs(value.translation.width) > abs(value.translation.height) {
+                                if value.translation.width < 0 {
+                                    revealOffset = max(revealMax, value.translation.width)
+                                }
+                            }
+                        }
+                        .onEnded { _ in
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                revealOffset = 0
+                            }
+                        }
+                )
             }
 
             ChatComposerView(

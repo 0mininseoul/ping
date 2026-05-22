@@ -460,12 +460,7 @@ struct HintCapsuleView: View {
             .padding(.vertical, 5)
             .background {
                 Capsule()
-                    .fill(PingDesign.Surface.rowFill.opacity(0.84))
-                    .pingGlassEffect()
-                    .overlay {
-                        Capsule()
-                            .strokeBorder(PingDesign.Surface.strongHairline.opacity(0.48), lineWidth: 0.8)
-                    }
+                    .fill(Color.black.opacity(0.55))
             }
             .opacity(opacity)
             .onAppear {
