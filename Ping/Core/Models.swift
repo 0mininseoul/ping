@@ -219,3 +219,94 @@ struct InviteLink: Codable, Identifiable, Hashable {
         case expiresAt = "expires_at"
     }
 }
+
+struct ChatMessage: Codable, Identifiable, Hashable {
+    var id: String?
+    var roomId: String
+    var senderUid: String
+    var senderNickname: String
+    var body: String
+    var replyToChatId: String?
+    var replyToVideoId: String?
+    var createdAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case roomId = "room_id"
+        case senderUid = "sender_uid"
+        case senderNickname = "sender_nickname"
+        case body
+        case replyToChatId = "reply_to_chat_id"
+        case replyToVideoId = "reply_to_video_id"
+        case createdAt = "created_at"
+    }
+
+    init(
+        id: String? = nil,
+        roomId: String,
+        senderUid: String,
+        senderNickname: String,
+        body: String,
+        replyToChatId: String? = nil,
+        replyToVideoId: String? = nil,
+        createdAt: Date? = nil
+    ) {
+        self.id = id
+        self.roomId = roomId
+        self.senderUid = senderUid
+        self.senderNickname = senderNickname
+        self.body = body
+        self.replyToChatId = replyToChatId
+        self.replyToVideoId = replyToVideoId
+        self.createdAt = createdAt
+    }
+}
+
+struct MessageReaction: Codable, Hashable, Identifiable {
+    enum TargetKind: String, Codable {
+        case chat
+        case video
+    }
+
+    var targetKind: TargetKind
+    var targetId: String
+    var emoji: String
+    var totalCount: Int
+    var myReacted: Bool
+
+    var id: String { "\(targetKind.rawValue):\(targetId):\(emoji)" }
+
+    enum CodingKeys: String, CodingKey {
+        case targetKind = "target_kind"
+        case targetId = "target_id"
+        case emoji
+        case totalCount = "total_count"
+        case myReacted = "my_reacted"
+    }
+}
+
+enum TimelineItem: Identifiable, Hashable {
+    case video(VideoMessage)
+    case chat(ChatMessage)
+
+    var id: String {
+        switch self {
+        case .video(let m): return "video:" + (m.id ?? UUID().uuidString)
+        case .chat(let m): return "chat:" + (m.id ?? UUID().uuidString)
+        }
+    }
+
+    var createdAt: Date? {
+        switch self {
+        case .video(let m): return m.createdAt
+        case .chat(let m): return m.createdAt
+        }
+    }
+
+    var senderUid: String {
+        switch self {
+        case .video(let m): return m.senderUid
+        case .chat(let m): return m.senderUid
+        }
+    }
+}
