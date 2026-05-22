@@ -14,11 +14,25 @@ final class SupabaseSessionContractTests: XCTestCase {
     func testSupabaseSessionPersistsOutsideLegacyUserDefaults() throws {
         let clientSource = try readSourceFile("Ping/Backend/SupabaseClient.swift")
 
-        XCTAssertTrue(clientSource.contains("import Security"))
-        XCTAssertTrue(clientSource.contains("SecItemCopyMatching"))
-        XCTAssertTrue(clientSource.contains("SecItemAdd"))
         XCTAssertTrue(clientSource.contains("applicationSupportDirectory"))
         XCTAssertTrue(clientSource.contains("loadLegacyDefaultsSession"))
+        XCTAssertTrue(clientSource.contains("saveFileData(data)"))
+        XCTAssertTrue(clientSource.contains("UserDefaults.standard.set(data, forKey: defaultsKey)"))
+    }
+
+    func testSupabaseSessionAvoidsAutomaticKeychainAccess() throws {
+        let clientSource = try readSourceFile("Ping/Backend/SupabaseClient.swift")
+
+        XCTAssertTrue(clientSource.contains("loadFileSession() ?? loadLegacyDefaultsSession()"))
+        XCTAssertTrue(clientSource.contains("savePortableCopy(session)"))
+        XCTAssertFalse(clientSource.contains("import Security"))
+        XCTAssertFalse(clientSource.contains("import LocalAuthentication"))
+        XCTAssertFalse(clientSource.contains("SecItemCopyMatching"))
+        XCTAssertFalse(clientSource.contains("SecItemAdd"))
+        XCTAssertFalse(clientSource.contains("SecItemUpdate"))
+        XCTAssertFalse(clientSource.contains("SecItemDelete"))
+        XCTAssertFalse(clientSource.contains("saveKeychainData"))
+        XCTAssertFalse(clientSource.contains("loadKeychainSession"))
     }
 
     func testRefreshFailureDoesNotSilentlyCreateNewAnonymousUser() throws {

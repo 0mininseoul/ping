@@ -1,5 +1,4 @@
 import Foundation
-import Security
 
 enum SupabaseJSON {
     static let decoder: JSONDecoder = {
@@ -366,17 +365,11 @@ final class SupabaseClient: ObservableObject {
 
 private enum SupabaseSessionStore {
     private static let defaultsKey = "ping.supabase.session"
-    private static let keychainService = "com.youngminpark.ping.supabase"
-    private static let keychainAccount = "anonymous-session"
     private static let fileName = "SupabaseSession.json"
 
     static func load() -> SupabaseSession? {
-        if let session = loadKeychainSession() {
-            return session
-        }
-
         if let session = loadFileSession() ?? loadLegacyDefaultsSession() {
-            save(session)
+            savePortableCopy(session)
             return session
         }
 
@@ -386,52 +379,15 @@ private enum SupabaseSessionStore {
     static func save(_ session: SupabaseSession) {
         guard let data = try? JSONEncoder().encode(session) else { return }
 
-        saveKeychainData(data)
         saveFileData(data)
         UserDefaults.standard.set(data, forKey: defaultsKey)
     }
 
     static func clear() {
-        SecItemDelete(keychainQuery() as CFDictionary)
         if let url = sessionFileURL() {
             try? FileManager.default.removeItem(at: url)
         }
         UserDefaults.standard.removeObject(forKey: defaultsKey)
-    }
-
-    private static func loadKeychainSession() -> SupabaseSession? {
-        var query = keychainQuery()
-        query[kSecReturnData as String] = true
-        query[kSecMatchLimit as String] = kSecMatchLimitOne
-
-        var item: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &item)
-        guard status == errSecSuccess, let data = item as? Data else {
-            return nil
-        }
-
-        return decode(data)
-    }
-
-    private static func saveKeychainData(_ data: Data) {
-        var query = keychainQuery()
-        query[kSecValueData as String] = data
-
-        let status = SecItemAdd(query as CFDictionary, nil)
-        if status == errSecDuplicateItem {
-            SecItemUpdate(
-                keychainQuery() as CFDictionary,
-                [kSecValueData as String: data] as CFDictionary
-            )
-        }
-    }
-
-    private static func keychainQuery() -> [String: Any] {
-        [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: keychainService,
-            kSecAttrAccount as String: keychainAccount
-        ]
     }
 
     private static func loadFileSession() -> SupabaseSession? {
@@ -446,6 +402,13 @@ private enum SupabaseSessionStore {
     private static func saveFileData(_ data: Data) {
         guard let url = sessionFileURL() else { return }
         try? data.write(to: url, options: .atomic)
+    }
+
+    private static func savePortableCopy(_ session: SupabaseSession) {
+        guard let data = try? JSONEncoder().encode(session) else { return }
+
+        saveFileData(data)
+        UserDefaults.standard.set(data, forKey: defaultsKey)
     }
 
     private static func sessionFileURL() -> URL? {

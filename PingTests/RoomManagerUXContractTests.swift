@@ -32,6 +32,40 @@ final class RoomManagerUXContractTests: XCTestCase {
         XCTAssertTrue(source.contains("룸 찾기"))
     }
 
+    func testRoomManagerRestoresAValidRoomSelectionWhenOpened() throws {
+        let source = try readSourceFile("Ping/UI/Setup/RoomManagerWindow.swift")
+
+        XCTAssertTrue(source.contains("selectInitialRoomIfNeeded()"))
+        XCTAssertTrue(source.contains("appState.lastSelectedRoomId"))
+        XCTAssertTrue(source.contains("appState.defaultRoom?.id"))
+        XCTAssertTrue(source.contains("appState.rooms.contains(where: { $0.id == selectedRoomId })"))
+    }
+
+    func testHistoryTimelineDoesNotStartVideoDownloadsForCollapsedRows() throws {
+        let messageRowSource = try readSourceFile("Ping/UI/History/MessageRowView.swift")
+        let thumbnailSource = try readSourceFile("Ping/UI/History/VideoThumbnailView.swift")
+        let collapsedThumbnail = try sourceSlice(
+            in: messageRowSource,
+            from: "private var thumbnail",
+            to: "private var metadata"
+        )
+
+        XCTAssertFalse(collapsedThumbnail.contains("VideoThumbnailView"))
+        XCTAssertTrue(thumbnailSource.contains("VideoThumbnailView is reserved for expanded playback"))
+    }
+
+    func testChatComposerUsesCommandEnterForSendAndPlainEnterForNewline() throws {
+        let source = try readSourceFile("Ping/UI/History/RoomTimelineView.swift")
+        let monitor = try sourceSlice(
+            in: source,
+            from: "composerKeyMonitor = NSEvent.addLocalMonitorForEvents",
+            to: ".onDisappear"
+        )
+
+        XCTAssertTrue(monitor.contains("flags == .command"))
+        XCTAssertFalse(monitor.contains("flags.isEmpty || flags == .command"))
+    }
+
     func testRoomCreateAndInlineRenameUpdateLocalRoomsWithoutWaitingForPolling() throws {
         let roomManagerSource = try readSourceFile("Ping/UI/Setup/RoomManagerWindow.swift")
         let roomListSource = try readSourceFile("Ping/UI/Setup/RoomListView.swift")

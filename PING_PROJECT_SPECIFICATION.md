@@ -4,6 +4,8 @@
 
 **Ping**은 macOS 13 Ventura 이상에서 동작하는 2초 영상 메시지 메뉴바 앱이다. Option+P로 원형 카메라 거울을 띄우고, Enter로 정확히 2초 녹화한 뒤 Supabase를 통해 파트너에게 전송한다. 수신자는 로컬 알림을 클릭하면 발신자가 보낸 위치에 2초 원형 재생창이 뜬다.
 
+> 현재 구현(v0.3.14)은 v0.2.1 amendment를 반영해 녹화 길이를 3초로 사용한다. Option+P는 얼굴만, Option+L은 화면+얼굴 캡쳐, Option+O는 내 룸/히스토리 창 진입점이다.
+
 ### 초기 검증 환경
 
 - 박영민 Apple Silicon Mac
@@ -154,7 +156,8 @@ Supabase Dashboard에서 Anonymous sign-ins가 켜져 있어야 한다.
 ### 인증
 
 - Supabase Anonymous Auth만 사용한다.
-- `SupabaseClient`는 access/refresh token을 Keychain과 Application Support 파일에 저장한다.
+- `SupabaseClient`는 access/refresh token을 sandboxed Application Support의 `SupabaseSession.json`에 저장하고, legacy `UserDefaults` 세션만 fallback으로 읽는다.
+- ad-hoc으로 자주 교체 배포하는 현재 배포 방식에서는 macOS Keychain ACL 승인 팝업이 재발할 수 있으므로 앱 런타임 세션 저장/갱신 경로에서 Keychain을 사용하지 않는다. Sparkle appcast 서명용 개인키 Keychain 사용과는 별개다.
 - 기존 세션 refresh가 실패하면 보존된 사용자 데이터를 잃지 않도록 새 익명 사용자로 자동 전환하지 않고 `supabaseSessionExpired`를 띄운다.
 
 ### 데이터 모델

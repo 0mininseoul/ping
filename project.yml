@@ -11,8 +11,8 @@ settings:
   base:
     SWIFT_VERSION: "6.0"
     MACOSX_DEPLOYMENT_TARGET: "13.0"
-    MARKETING_VERSION: "0.3.12"
-    CURRENT_PROJECT_VERSION: "21"
+    MARKETING_VERSION: "0.3.14"
+    CURRENT_PROJECT_VERSION: "23"
     PRODUCT_NAME: Ping
     ENABLE_HARDENED_RUNTIME: YES
     CODE_SIGN_STYLE: Manual
@@ -79,8 +79,8 @@ targets:
         SUPublicEDKey: ZmfTayyDvfWn3zo/4+FoWUFi9MplFtZsjsrZcbijLnM=
         SUEnableInstallerLauncherService: true
         SUEnableAutomaticChecks: true
-        SUScheduledCheckInterval: 86400
-        SUAutomaticallyUpdate: true
+        SUScheduledCheckInterval: 3600
+        SUAutomaticallyUpdate: false
     dependencies:
       - package: KeyboardShortcuts
       - package: Sparkle
@@ -120,6 +120,9 @@ targets:
           cp "$PROJECT_DIR/Ping/UI/Setup/RoomManagerWindow.swift" "$DST/RoomManagerWindow.swift"
           cp "$PROJECT_DIR/Ping/UI/Setup/RoomSearchView.swift" "$DST/RoomSearchView.swift"
           cp "$PROJECT_DIR/Ping/UI/Setup/SettingsScene.swift" "$DST/SettingsScene.swift"
+          cp "$PROJECT_DIR/Ping/UI/History/RoomTimelineView.swift" "$DST/RoomTimelineView.swift"
+          cp "$PROJECT_DIR/Ping/UI/History/MessageRowView.swift" "$DST/MessageRowView.swift"
+          cp "$PROJECT_DIR/Ping/UI/History/VideoThumbnailView.swift" "$DST/VideoThumbnailView.swift"
           cp "$PROJECT_DIR/Ping/Hotkey/HotkeyManager.swift" "$DST/HotkeyManager.swift"
           cp "$PROJECT_DIR/Ping/Core/UserPreferences.swift" "$DST/UserPreferences.swift"
           cp "$PROJECT_DIR/Ping/Core/InviteLink.swift" "$DST/InviteLink.swift"
@@ -141,6 +144,7 @@ targets:
           cp "$PROJECT_DIR/scripts/generate-icons.swift" "$DST/generate-icons.swift"
           cp "$PROJECT_DIR/Ping.entitlements" "$DST/Ping.entitlements"
           cp "$PROJECT_DIR/docs/DESIGN_SYSTEM.md" "$DST/DESIGN_SYSTEM.md"
+          cp "$PROJECT_DIR/docs/AUTO_UPDATE_SETUP.md" "$DST/AUTO_UPDATE_SETUP.md"
           cp "$PROJECT_DIR/supabase/migrations/20260517000100_create_ping_backend.sql" "$DST/20260517000100_create_ping_backend.sql"
           cp "$PROJECT_DIR/supabase/migrations/20260518003000_room_capacity_limits.sql" "$DST/20260518003000_room_capacity_limits.sql"
           cp "$PROJECT_DIR/supabase/migrations/20260518113000_invite_user_reuses_pending_room.sql" "$DST/20260518113000_invite_user_reuses_pending_room.sql"
@@ -167,6 +171,9 @@ targets:
           - "$(PROJECT_DIR)/Ping/UI/Setup/RoomManagerWindow.swift"
           - "$(PROJECT_DIR)/Ping/UI/Setup/RoomSearchView.swift"
           - "$(PROJECT_DIR)/Ping/UI/Setup/SettingsScene.swift"
+          - "$(PROJECT_DIR)/Ping/UI/History/RoomTimelineView.swift"
+          - "$(PROJECT_DIR)/Ping/UI/History/MessageRowView.swift"
+          - "$(PROJECT_DIR)/Ping/UI/History/VideoThumbnailView.swift"
           - "$(PROJECT_DIR)/Ping/Hotkey/HotkeyManager.swift"
           - "$(PROJECT_DIR)/Ping/Core/UserPreferences.swift"
           - "$(PROJECT_DIR)/Ping/Core/InviteLink.swift"
@@ -188,6 +195,7 @@ targets:
           - "$(PROJECT_DIR)/scripts/generate-icons.swift"
           - "$(PROJECT_DIR)/Ping.entitlements"
           - "$(PROJECT_DIR)/docs/DESIGN_SYSTEM.md"
+          - "$(PROJECT_DIR)/docs/AUTO_UPDATE_SETUP.md"
           - "$(PROJECT_DIR)/supabase/migrations/20260517000100_create_ping_backend.sql"
           - "$(PROJECT_DIR)/supabase/migrations/20260518003000_room_capacity_limits.sql"
           - "$(PROJECT_DIR)/supabase/migrations/20260518113000_invite_user_reuses_pending_room.sql"
@@ -214,6 +222,9 @@ targets:
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/RoomManagerWindow.swift"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/RoomSearchView.swift"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/SettingsScene.swift"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/RoomTimelineView.swift"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/MessageRowView.swift"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/VideoThumbnailView.swift"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/HotkeyManager.swift"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/UserPreferences.swift"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/InviteLink.swift"
@@ -235,6 +246,7 @@ targets:
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/generate-icons.swift"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/Ping.entitlements"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/DESIGN_SYSTEM.md"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/AUTO_UPDATE_SETUP.md"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/20260517000100_create_ping_backend.sql"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/20260518003000_room_capacity_limits.sql"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/20260518113000_invite_user_reuses_pending_room.sql"

@@ -3,6 +3,8 @@ import AVFoundation
 import AppKit
 
 struct VideoThumbnailView: View {
+    // VideoThumbnailView is reserved for expanded playback and future explicit
+    // thumbnail generation paths; collapsed rows must not start video downloads.
     let message: VideoMessage
     let cacheService: HistoryCacheService
 

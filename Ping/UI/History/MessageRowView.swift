@@ -69,14 +69,13 @@ struct MessageRowView: View {
     private var thumbnail: some View {
         Group {
             if message.captureMode == .faceOnly {
-                VideoThumbnailView(message: message, cacheService: cacheService)
+                Circle()
+                    .fill(Color.gray.opacity(0.18))
                     .frame(width: 60, height: 60)
-                    .clipShape(Circle())
             } else {
-                VideoThumbnailView(message: message, cacheService: cacheService)
-                    .aspectRatio(message.aspectRatio ?? 1.78, contentMode: .fit)
-                    .frame(maxWidth: 90)
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(Color.gray.opacity(0.18))
+                    .frame(width: 90, height: 90 / thumbnailAspectRatio)
             }
         }
         .overlay(
@@ -87,6 +86,10 @@ struct MessageRowView: View {
                 .background(Circle().fill(Color.black.opacity(0.35)))
                 .allowsHitTesting(false)
         )
+    }
+
+    private var thumbnailAspectRatio: CGFloat {
+        CGFloat(max(0.5, min(3.0, message.aspectRatio ?? 1.78)))
     }
 
     private var metadata: some View {

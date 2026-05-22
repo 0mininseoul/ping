@@ -12,6 +12,7 @@ Ping은 [Sparkle 2](https://sparkle-project.org/) 로 사용자 측 자동 업�
 
 이 스크립트는 SPM이 다운로드한 Sparkle CLI(`generate_keys`)를 실행한다.
 실행하면 **개인키는 macOS 로그인 Keychain에 저장**되고, **공개키 한 줄**이 stdout에 찍힌다.
+이 Keychain 항목은 Sparkle appcast 서명용이며, 앱 런타임의 Supabase 세션 저장소와는 별개다.
 
 ## 2. 공개키 박기
 
@@ -38,9 +39,10 @@ Ping은 [Sparkle 2](https://sparkle-project.org/) 로 사용자 측 자동 업�
 
 ## 4. 사용자 측 동작
 
-- 앱 실행 시 Sparkle이 백그라운드로 appcast을 폴링한다 (`SUScheduledCheckInterval = 86400` = 24시간).
-- 새 버전 감지 → 표준 Sparkle 다이얼로그가 떠서 다운로드/설치/재시작까지 자동 진행.
-- `SUAutomaticallyUpdate = true` 라 사용자가 한 번 동의하면 이후 무음 업데이트도 가능.
+- 앱 실행 시 Sparkle이 백그라운드로 appcast을 폴링한다 (`SUScheduledCheckInterval = 3600` = 1시간).
+- 새 버전 감지 → 표준 Sparkle 다이얼로그가 떠서 사용자에게 업데이트 여부를 묻는다.
+- 사용자가 승인하면 다운로드/설치/재시작까지 진행된다.
+- `SUAutomaticallyUpdate = false` 로 유지해 새 버전마다 사용자 승인 없이 무음 설치하지 않는다.
 - 메뉴바 → "업데이트 확인…" 으로 수동 강제 체크도 가능.
 
 ## 5. 첫 릴리스 주의

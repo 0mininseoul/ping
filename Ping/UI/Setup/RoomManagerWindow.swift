@@ -114,9 +114,13 @@ struct RoomManagerView: View {
             .frame(minWidth: 700, minHeight: 600)
         }
         .onAppear {
+            selectInitialRoomIfNeeded()
             if opensSearchOnAppear {
                 isSearchPresented = true
             }
+        }
+        .onChange(of: appState.rooms.map(\.id)) { _ in
+            selectInitialRoomIfNeeded()
         }
         .onChange(of: appState.pendingRoomFocusId) { roomId in
             guard let roomId else { return }
@@ -209,6 +213,22 @@ struct RoomManagerView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+    }
+
+    private func selectInitialRoomIfNeeded() {
+        if let selectedRoomId,
+           appState.rooms.contains(where: { $0.id == selectedRoomId }) {
+            return
+        }
+
+        let persistedId = appState.lastSelectedRoomId
+        if let persistedId,
+           appState.rooms.contains(where: { $0.id == persistedId }) {
+            selectedRoomId = persistedId
+            return
+        }
+
+        selectedRoomId = appState.defaultRoom?.id ?? appState.rooms.first?.id
     }
 
     private func joinRoom(_ room: Room) {

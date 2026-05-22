@@ -23,7 +23,7 @@ Ping은 v0.1.4부터 **macOS 13 Ventura 이상**을 지원합니다. 학습 데�
 
 ## 1. 프로젝트 개요
 
-**Ping** — macOS 13 Ventura 이상에서 동작하는 2초 영상 메시지 메뉴바 앱. Option+P로 즉시 카메라 원형 거울이 뜨고, Enter로 정확히 2초 녹화하여 Supabase 경유로 파트너에게 전송. 수신자는 발신자가 지정한 위치에 그대로 2초간 재생.
+**Ping** — macOS 13 Ventura 이상에서 동작하는 3초 영상 메시지 메뉴바 앱. Option+P로 얼굴만 거울, Option+L로 화면+얼굴 거울이 뜨고, Enter로 녹화한 뒤 리뷰 화면에서 승인해 Supabase 경유로 파트너에게 전송. 수신자는 발신자가 지정한 위치에 그대로 재생한다.
 
 ### 핵심 문서 (반드시 모두 읽고 작업 시작)
 1. **`PING_PROJECT_SPECIFICATION.md`** — 기능/아키텍처/보안 명세 (v2.2)
@@ -51,7 +51,7 @@ Supabase CLI 작업은 `npx supabase`로 수행합니다. 새 계정/프로젝�
 ### Supabase Free 저장소
 영상은 Supabase Storage의 비공개 `ping-videos` 버킷에 `<senderUid>/<videoId>.mp4` 경로로 저장합니다. 테이블/RLS/RPC/Storage 정책은 `supabase/migrations/20260517000100_create_ping_backend.sql`이 단일 진실 출처입니다. 서버 예약 작업 없이 앱 실행 시 `ping_cleanup_expired_data()` RPC로 만료 데이터를 best-effort 정리합니다.
 
-### App 버전 — `0.1.4`
+### App 버전 — `0.3.14`
 - `project.yml` → `settings.base.MARKETING_VERSION`
 - `scripts/build-release.sh` → 빌드 산출물 자동 추출
 - `README.md` 의 DMG 파일명 예시
@@ -187,6 +187,9 @@ Day 4 Task 4.3 에서 임시 EmptyView로 윈도우를 만든 뒤 `contentView` 
 
 ### Sparkle 자동 업데이트
 앱은 Sparkle 2로 자동 업데이트한다. `project.yml`의 `SUPublicEDKey`는 빌드 머신 Keychain에 있는 EdDSA 개인키와 짝을 이뤄야 한다. `Ping/Info.plist`는 XcodeGen 산출물이므로 직접 편집하지 말 것. 한 번도 셋업이 안 된 환경이라면 `docs/AUTO_UPDATE_SETUP.md` 의 1~2단계를 먼저 실행해야 빌드가 의미 있는 appcast를 만든다. `SUFeedURL`을 임의로 바꾸지 말 것 — `https://ping0min.vercel.app/appcast.xml` 이 단일 진실 출처다.
+
+### Supabase 세션 저장과 Keychain 팝업
+앱 런타임의 Supabase Anonymous Auth 세션은 sandboxed Application Support의 `SupabaseSession.json`에 저장한다. ad-hoc 서명 앱을 `/Applications/Ping.app`로 자주 교체하면 기존 Keychain 항목 ACL이 "Ping이 저장된 비밀 정보를 사용하려고 합니다" 승인 팝업을 띄울 수 있으므로, `SupabaseSessionStore`의 자동 load/save/clear 경로에 `SecItem*` 호출을 다시 넣지 마세요. Sparkle appcast 서명용 Keychain 개인키는 별도 개념이다.
 
 ### Sandbox + 글로벌 단축키
 `KeyboardShortcuts` 는 Sandbox 안에서 동작합니다. 만약 단축키가 안 잡히면 entitlements 의 `com.apple.security.app-sandbox` 를 의심하기 전에 **시스템 설정 → 개인정보 보호 및 보안 → 입력 모니터링** 권한을 먼저 확인하세요.

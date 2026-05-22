@@ -125,7 +125,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             onCaptureFace: { [weak self] in self?.toggleMirror(mode: .faceOnly) },
             onAppearanceToggle: { [weak self] in self?.toggleAppearanceMode() },
             onCaptureScreenFace: { [weak self] in self?.toggleMirror(mode: .screenFace) },
-            onHistoryToggle: { [weak self] in self?.showRoomManager() }
+            onHistoryToggle: { [weak self] in self?.toggleRoomManager() }
         )
     }
 
@@ -654,6 +654,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func showRoomManager() {
+        presentRoomManager()
+    }
+
+    private func toggleRoomManager() {
+        if let roomManagerWindow, roomManagerWindow.isVisible {
+            roomManagerWindow.close()
+            return
+        }
+
         presentRoomManager()
     }
 

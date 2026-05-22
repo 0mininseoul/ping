@@ -138,8 +138,8 @@ struct RoomTimelineView: View {
                 if flags.contains(.shift) {
                     return event
                 }
-                // Plain Enter or Cmd+Enter → send
-                if flags.isEmpty || flags == .command {
+                // Cmd+Enter sends. Plain Enter remains a newline in the TextEditor.
+                if flags == .command {
                     sendDraft()
                     return nil
                 }
