@@ -1,5 +1,4 @@
 import SwiftUI
-import AVKit
 
 struct MessageRowView: View {
     let message: VideoMessage
@@ -8,8 +7,12 @@ struct MessageRowView: View {
     let onTap: () -> Void
     let cacheService: HistoryCacheService
     @ObservedObject var inlineController: InlinePlayerController
+    let reactions: [HistoryViewModel.ReactionAggregate]
+    let onReply: () -> Void
+    let onReact: () -> Void
     let onSave: () -> Void
     let onDelete: () -> Void
+    let onToggleReaction: (String) -> Void
 
     @State private var isHovered: Bool = false
 
@@ -23,16 +26,34 @@ struct MessageRowView: View {
                     thumbnail
                 }
                 metadata
+                if !reactions.isEmpty {
+                    HStack(spacing: 4) {
+                        ForEach(reactions, id: \.emoji) { agg in
+                            Button(action: { onToggleReaction(agg.emoji) }) {
+                                HStack(spacing: 2) {
+                                    Text(agg.emoji)
+                                    if agg.count > 1 {
+                                        Text("\(agg.count)").font(.caption2).foregroundStyle(.secondary)
+                                    }
+                                }
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(agg.myReacted ? Color.accentColor.opacity(0.2) : Color.gray.opacity(0.1))
+                                .clipShape(Capsule())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
             }
             if isHovered && !isExpanded {
-                HStack(spacing: 8) {
-                    Button(action: onSave) {
-                        Image(systemName: "arrow.down.circle").imageScale(.small)
-                    }.buttonStyle(.plain)
-                    Button(action: onDelete) {
-                        Image(systemName: "trash").imageScale(.small)
-                    }.buttonStyle(.plain)
+                HStack(spacing: 6) {
+                    Button(action: onReply) { Image(systemName: "arrowshape.turn.up.left").imageScale(.small) }.buttonStyle(.plain)
+                    Button(action: onReact) { Image(systemName: "face.smiling").imageScale(.small) }.buttonStyle(.plain)
+                    Button(action: onSave) { Image(systemName: "arrow.down.circle").imageScale(.small) }.buttonStyle(.plain)
+                    Button(action: onDelete) { Image(systemName: "trash").imageScale(.small) }.buttonStyle(.plain)
                 }
+                .foregroundStyle(.secondary)
                 .transition(.opacity)
             }
             if !isMine { Spacer() }
