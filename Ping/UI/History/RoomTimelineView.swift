@@ -10,8 +10,11 @@ struct RoomTimelineView: View {
     @State private var reactionPickerTargetKind: MessageReaction.TargetKind?
     @State private var reactionPickerTargetId: String?
     @State private var composerKeyMonitor: Any?
+    @State private var scrollWheelMonitor: Any?
     @State private var revealOffset: CGFloat = 0
     private let revealMax: CGFloat = -68
+    // 시간 라벨이 평소엔 row trailing + 60pt 우측 (화면 밖). row가 좌측으로 이동하면 함께 들어옴.
+    private let labelOutset: CGFloat = 60
 
     var body: some View {
         VStack(spacing: 0) {
@@ -22,17 +25,18 @@ struct RoomTimelineView: View {
                             Section(header: dayHeader(group.date)) {
                                 ForEach(group.items) { item in
                                     rowFor(item: item)
-                                        .offset(x: revealOffset)
                                         .overlay(alignment: .trailing) {
                                             if let date = item.createdAt {
                                                 Text(date.formatted(.dateTime.hour().minute()))
                                                     .font(.caption2)
                                                     .foregroundStyle(.tertiary)
-                                                    .frame(width: 60, alignment: .leading)
-                                                    .offset(x: -revealOffset + 4)
+                                                    .frame(width: labelOutset, alignment: .leading)
+                                                    // 평소 화면 밖 우측에 위치. row offset이 -labelOutset이면 정확히 trailing edge에 들어옴.
+                                                    .offset(x: labelOutset)
                                                     .opacity(min(1, abs(revealOffset) / 50))
                                             }
                                         }
+                                        .offset(x: revealOffset)
                                         .id(item.id)
                                 }
                             }
@@ -51,6 +55,30 @@ struct RoomTimelineView: View {
                 .onAppear {
                     if let lastId = viewModel.groups.last?.items.last?.id {
                         scrollProxy.scrollTo(lastId, anchor: .bottom)
+                    }
+                    if scrollWheelMonitor == nil {
+                        scrollWheelMonitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { [self] event in
+                            // 수평 swipe만 처리 (수직 스크롤은 ScrollView에 위임)
+                            guard abs(event.scrollingDeltaX) > abs(event.scrollingDeltaY) else { return event }
+                            let delta = event.scrollingDeltaX
+                            if delta < 0 {
+                                // 좌측 swipe → 시간 라벨 노출
+                                revealOffset = max(revealMax, revealOffset + delta * 0.6)
+                            } else {
+                                // 우측 swipe → 복원 방향 허용
+                                revealOffset = min(0, revealOffset + delta * 0.6)
+                            }
+                            // 스크롤 제스처 종료 감지 → spring 복원
+                            let isEnded = event.phase == .ended || event.phase == .cancelled
+                                || event.momentumPhase == .ended || event.momentumPhase == .cancelled
+                            if isEnded {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                    revealOffset = 0
+                                }
+                            }
+                            // 이벤트 소비 (ScrollView 수평 스크롤 방지)
+                            return nil
+                        }
                     }
                 }
                 .simultaneousGesture(
@@ -122,6 +150,10 @@ struct RoomTimelineView: View {
             if let composerKeyMonitor {
                 NSEvent.removeMonitor(composerKeyMonitor)
                 self.composerKeyMonitor = nil
+            }
+            if let scrollWheelMonitor {
+                NSEvent.removeMonitor(scrollWheelMonitor)
+                self.scrollWheelMonitor = nil
             }
         }
         .alert("오류", isPresented: Binding<Bool>(

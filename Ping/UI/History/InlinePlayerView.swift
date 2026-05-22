@@ -76,15 +76,24 @@ struct InlinePlayerView: View {
         @ObservedObject var controller: InlinePlayerController
 
         func makeNSView(context: Context) -> NSView {
-            let container = NSView()
+            let container = NSView(frame: NSRect(x: 0, y: 0, width: 1, height: 1))
             container.wantsLayer = true
             let item = AVPlayerItem(url: url)
             let player = AVPlayer(playerItem: item)
-            let layer = AVPlayerLayer(player: player)
-            layer.videoGravity = .resizeAspectFill
-            container.layer?.addSublayer(layer)
+            let playerLayer = AVPlayerLayer(player: player)
+            playerLayer.videoGravity = .resizeAspectFill
+            // frame을 즉시 설정 (zero frame guard)
+            playerLayer.frame = container.bounds
+            container.layer?.addSublayer(playerLayer)
             controller.player = player
-            context.coordinator.observer = NotificationCenter.default.addObserver(
+
+            // KVO: AVPlayerItem status 변화 logging
+            context.coordinator.statusObserver = item.observe(\.status, options: [.new]) { item, _ in
+                NSLog("PlayerBox status=\(item.status.rawValue) error=\(String(describing: item.error)) url=\(url)")
+            }
+
+            // 재생 실패 logging
+            context.coordinator.endObserver = NotificationCenter.default.addObserver(
                 forName: .AVPlayerItemDidPlayToEndTime,
                 object: item,
                 queue: .main
@@ -92,15 +101,24 @@ struct InlinePlayerView: View {
                 player?.pause()
                 Task { @MainActor in controller.isPaused = true }
             }
+            NotificationCenter.default.addObserver(
+                forName: AVPlayerItem.failedToPlayToEndTimeNotification,
+                object: item,
+                queue: .main
+            ) { note in
+                NSLog("PlayerBox failedToPlayToEnd: \(note.userInfo ?? [:]) url=\(url)")
+            }
+
             player.play()
             return container
         }
 
         func updateNSView(_ nsView: NSView, context: Context) {
-            if let layer = nsView.layer?.sublayers?.first as? AVPlayerLayer {
-                layer.frame = nsView.bounds
+            DispatchQueue.main.async {
+                guard let playerLayer = nsView.layer?.sublayers?.first as? AVPlayerLayer else { return }
+                playerLayer.frame = nsView.bounds
                 let mask = CAShapeLayer()
-                if isCircle {
+                if self.isCircle {
                     let dim = min(nsView.bounds.width, nsView.bounds.height)
                     mask.path = CGPath(ellipseIn: CGRect(x: (nsView.bounds.width - dim) / 2, y: (nsView.bounds.height - dim) / 2, width: dim, height: dim), transform: nil)
                 } else {
@@ -113,8 +131,12 @@ struct InlinePlayerView: View {
         func makeCoordinator() -> Coord { Coord() }
 
         final class Coord {
-            var observer: Any?
-            deinit { if let o = observer { NotificationCenter.default.removeObserver(o) } }
+            var statusObserver: NSKeyValueObservation?
+            var endObserver: Any?
+            deinit {
+                statusObserver?.invalidate()
+                if let o = endObserver { NotificationCenter.default.removeObserver(o) }
+            }
         }
     }
 }

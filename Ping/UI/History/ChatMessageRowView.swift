@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct ChatMessageRowView: View {
     let message: ChatMessage
@@ -43,20 +44,6 @@ struct ChatMessageRowView: View {
                 }
             }
             .frame(maxWidth: 280, alignment: isMine ? .trailing : .leading)
-            .contextMenu {
-                Button(action: onReply) {
-                    Label("답장", systemImage: "arrowshape.turn.up.left")
-                }
-                Button(action: onReact) {
-                    Label("이모지 반응", systemImage: "face.smiling")
-                }
-                if isMine {
-                    Divider()
-                    Button(role: .destructive, action: onDelete) {
-                        Label("삭제", systemImage: "trash")
-                    }
-                }
-            }
 
             if !isMine { Spacer(minLength: 40) }
         }
@@ -64,16 +51,48 @@ struct ChatMessageRowView: View {
     }
 
     private var bubble: some View {
-        Text(message.body)
-            .font(.body)
-            .foregroundStyle(isMine ? .white : Color.primary)
-            .padding(.horizontal, 11)
-            .padding(.vertical, 6)
-            .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(isMine ? Color.accentColor : Color.gray.opacity(0.18))
-            )
-            .textSelection(.enabled)
+        SelectableTextView(
+            text: message.body,
+            font: NSFont.systemFont(ofSize: NSFont.systemFontSize),
+            textColor: isMine ? .white : NSColor.labelColor,
+            maxWidth: 280,
+            menuProvider: { makeContextMenu() }
+        )
+        .padding(.horizontal, 11)
+        .padding(.vertical, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(isMine ? Color.accentColor : Color.gray.opacity(0.18))
+        )
+    }
+
+    private func makeContextMenu() -> NSMenu {
+        let menu = NSMenu()
+
+        let copyItem = NSMenuItem(title: "복사", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        menu.addItem(copyItem)
+
+        menu.addItem(.separator())
+
+        let replyItem = NSMenuItem(title: "답장", action: #selector(ContextMenuTarget.handle(_:)), keyEquivalent: "")
+        replyItem.target = ContextMenuTarget.shared
+        replyItem.representedObject = ContextMenuAction(action: onReply)
+        menu.addItem(replyItem)
+
+        let reactItem = NSMenuItem(title: "이모지 반응", action: #selector(ContextMenuTarget.handle(_:)), keyEquivalent: "")
+        reactItem.target = ContextMenuTarget.shared
+        reactItem.representedObject = ContextMenuAction(action: onReact)
+        menu.addItem(reactItem)
+
+        if isMine {
+            menu.addItem(.separator())
+            let deleteItem = NSMenuItem(title: "삭제", action: #selector(ContextMenuTarget.handle(_:)), keyEquivalent: "")
+            deleteItem.target = ContextMenuTarget.shared
+            deleteItem.representedObject = ContextMenuAction(action: onDelete)
+            menu.addItem(deleteItem)
+        }
+
+        return menu
     }
 
     @ViewBuilder

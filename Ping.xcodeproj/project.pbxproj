@@ -18,6 +18,7 @@
 		18F76346F0F837EF6E0BA48D /* Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = C98008817B561907D8035DB2 /* Typography.swift */; };
 		19E9FFCD74332CB8A9D4EFE1 /* SearchableTextTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EFC208F3B2DEB94FA5BF469 /* SearchableTextTests.swift */; };
 		1A981B3A55999C6FDE480C3B /* HistoryCacheService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B110C3699C333F4B8A9E7E7C /* HistoryCacheService.swift */; };
+		1DBFF4CDA565E60DE4F12837 /* SelectableTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5C19898F5FCEE8CFE97D3ED /* SelectableTextView.swift */; };
 		1F498DA0EBF60E7D1E23D2DC /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDF74D004DFD2F009A5DA36B /* Models.swift */; };
 		2006F4A3A3CB42615561BE56 /* ChatMessageRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA666286E2E8E8B3B489D815 /* ChatMessageRowView.swift */; };
 		20190C7134FAB36ACA18CBBC /* RoomManagerUXContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90A916C7BE813E0B77E80E22 /* RoomManagerUXContractTests.swift */; };
@@ -224,6 +225,7 @@
 		EB469BD2ECF2AC4459C1A4D1 /* LocalArchive.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalArchive.swift; sourceTree = "<group>"; };
 		ECAF925EB5EB36A31683069F /* InlinePlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InlinePlayerView.swift; sourceTree = "<group>"; };
 		F2F40CF1E71B9600941F2BE1 /* StatusMenuBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusMenuBuilderTests.swift; sourceTree = "<group>"; };
+		F5C19898F5FCEE8CFE97D3ED /* SelectableTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectableTextView.swift; sourceTree = "<group>"; };
 		F758F3123EB5B3CD54F783B9 /* ChatRealtimeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRealtimeService.swift; sourceTree = "<group>"; };
 		F760D624DE03E352A8514854 /* ScreenCoordinates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenCoordinates.swift; sourceTree = "<group>"; };
 		F7DD9D4337004D4575FF0FC3 /* PingApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PingApp.swift; sourceTree = "<group>"; };
@@ -343,6 +345,7 @@
 				6FD73952C51CA80616FFA8E6 /* MessageRowView.swift */,
 				3847490D60B97829AB0CA7B6 /* ReactionPickerView.swift */,
 				7EE33710D375112C559C3B9B /* RoomTimelineView.swift */,
+				F5C19898F5FCEE8CFE97D3ED /* SelectableTextView.swift */,
 				178B779BE40BB245CFDED469 /* VideoThumbnailView.swift */,
 			);
 			path = History;
@@ -808,6 +811,7 @@
 				6D10BA31F2FBF6ADCB3D99B1 /* ScreenCoordinates.swift in Sources */,
 				2B1F29CDBE52BC6936DCE599 /* ScreenFaceRecorder.swift in Sources */,
 				4933DD31B57294089191AC57 /* SearchableText.swift in Sources */,
+				1DBFF4CDA565E60DE4F12837 /* SelectableTextView.swift in Sources */,
 				8998769E27D9629FBA3B8388 /* SettingsScene.swift in Sources */,
 				45CDCD2993C1E53FB62356A1 /* StatusMenuBuilder.swift in Sources */,
 				3B5117F35AEE41A4224D9837 /* StorageService.swift in Sources */,
@@ -944,7 +948,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 20;
+				CURRENT_PROJECT_VERSION = 21;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -964,7 +968,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 0.3.11;
+				MARKETING_VERSION = 0.3.12;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -1012,7 +1016,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 20;
+				CURRENT_PROJECT_VERSION = 21;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1026,7 +1030,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 0.3.11;
+				MARKETING_VERSION = 0.3.12;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = Ping;
