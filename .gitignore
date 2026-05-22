@@ -38,3 +38,4 @@ supabase/.temp/
 *.dmg
 !web/public/downloads/*.dmg
 dist/
+default.profraw

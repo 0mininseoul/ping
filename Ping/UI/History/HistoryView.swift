@@ -47,6 +47,11 @@ struct HistoryView: View {
     }
 
     private func handleKey(_ event: NSEvent) -> Bool {
+        // If a text input (TextEditor/NSTextView) has focus, don't intercept any keys.
+        if let responder = NSApp.keyWindow?.firstResponder,
+           responder.isKind(of: NSTextView.self) {
+            return false
+        }
         let allItems = viewModel.groups.flatMap(\.items)
         let videoOnlyIds: [String] = allItems.compactMap { item in
             if case .video(let v) = item { return v.id } else { return nil }

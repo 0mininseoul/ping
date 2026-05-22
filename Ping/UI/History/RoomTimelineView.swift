@@ -44,7 +44,7 @@ struct RoomTimelineView: View {
                 onSend: sendDraft
             )
         }
-        .overlay(alignment: .top) {
+        .overlay(alignment: .bottom) {
             if let targetKind = reactionPickerTargetKind, let targetId = reactionPickerTargetId {
                 ReactionPickerView(
                     onPick: { emoji in
@@ -58,12 +58,27 @@ struct RoomTimelineView: View {
                         reactionPickerTargetId = nil
                     }
                 )
-                .padding(.top, 60)
+                .padding(.bottom, 80)
+                .transition(.opacity)
             }
         }
         .onAppear {
             composerKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-                if event.keyCode == 36 && event.modifierFlags.contains(.command) {
+                // Only intercept when TextEditor inside this view has focus
+                guard let responder = NSApp.keyWindow?.firstResponder,
+                      responder.isKind(of: NSTextView.self) else {
+                    return event
+                }
+                // keyCode 36 = Return
+                guard event.keyCode == 36 else { return event }
+
+                let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+                // Shift+Enter → newline (let TextEditor handle)
+                if flags.contains(.shift) {
+                    return event
+                }
+                // Plain Enter or Cmd+Enter → send
+                if flags.isEmpty || flags == .command {
                     sendDraft()
                     return nil
                 }
