@@ -66,6 +66,30 @@ final class RoomManagerUXContractTests: XCTestCase {
         XCTAssertFalse(monitor.contains("flags.isEmpty || flags == .command"))
     }
 
+    func testEmptyTimelineShowsAQuietEmptyState() throws {
+        let source = try readSourceFile("Ping/UI/History/RoomTimelineView.swift")
+
+        XCTAssertTrue(source.contains("emptyTimelineState"))
+        XCTAssertTrue(source.contains("viewModel.groups.isEmpty, !viewModel.isLoading"))
+        XCTAssertTrue(source.contains("\"아직 기록 없음\""))
+    }
+
+    func testRoomDetailRenameUsesInlineHeaderEditorInsteadOfAlert() throws {
+        let source = try readSourceFile("Ping/UI/Setup/RoomDetailView.swift")
+        let renameSection = try sourceSlice(
+            in: source,
+            from: "private func inlineRoomNameEditor",
+            to: "private func leaveRoom"
+        )
+
+        XCTAssertTrue(renameSection.contains("TextField(\"\", text: $editingRoomName)"))
+        XCTAssertTrue(source.contains("Button(action: { beginRenaming(room) })"))
+        XCTAssertTrue(renameSection.contains("commitRename(room)"))
+        XCTAssertTrue(renameSection.contains("renameLocalRoom(roomId: roomId, newName: newName)"))
+        XCTAssertFalse(renameSection.contains("NSAlert"))
+        XCTAssertFalse(renameSection.contains("runModal"))
+    }
+
     func testRoomCreateAndInlineRenameUpdateLocalRoomsWithoutWaitingForPolling() throws {
         let roomManagerSource = try readSourceFile("Ping/UI/Setup/RoomManagerWindow.swift")
         let roomListSource = try readSourceFile("Ping/UI/Setup/RoomListView.swift")

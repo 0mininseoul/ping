@@ -108,6 +108,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.appState.pendingRoomFocusId = roomId
             self?.showRoomManager()
         }
+        LocalNotificationCenter.shared.onCheckForUpdates = {
+            UpdaterController.shared.checkForUpdates(nil)
+        }
 
         if !ProcessInfo.processInfo.isRunningUnitTests {
             chatRealtime.$lastEvent

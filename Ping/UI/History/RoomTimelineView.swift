@@ -21,23 +21,27 @@ struct RoomTimelineView: View {
             ScrollViewReader { scrollProxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 2, pinnedViews: [.sectionHeaders]) {
-                        ForEach(viewModel.groups) { group in
-                            Section(header: dayHeader(group.date)) {
-                                ForEach(group.items) { item in
-                                    rowFor(item: item)
-                                        .overlay(alignment: .trailing) {
-                                            if let date = item.createdAt {
-                                                Text(date.formatted(.dateTime.hour().minute()))
-                                                    .font(.caption2)
-                                                    .foregroundStyle(.tertiary)
-                                                    .frame(width: labelOutset, alignment: .leading)
-                                                    // 평소 화면 밖 우측에 위치. row offset이 -labelOutset이면 정확히 trailing edge에 들어옴.
-                                                    .offset(x: labelOutset)
-                                                    .opacity(min(1, abs(revealOffset) / 50))
+                        if viewModel.groups.isEmpty, !viewModel.isLoading {
+                            emptyTimelineState
+                        } else {
+                            ForEach(viewModel.groups) { group in
+                                Section(header: dayHeader(group.date)) {
+                                    ForEach(group.items) { item in
+                                        rowFor(item: item)
+                                            .overlay(alignment: .trailing) {
+                                                if let date = item.createdAt {
+                                                    Text(date.formatted(.dateTime.hour().minute()))
+                                                        .font(.caption2)
+                                                        .foregroundStyle(.tertiary)
+                                                        .frame(width: labelOutset, alignment: .leading)
+                                                        // 평소 화면 밖 우측에 위치. row offset이 -labelOutset이면 정확히 trailing edge에 들어옴.
+                                                        .offset(x: labelOutset)
+                                                        .opacity(min(1, abs(revealOffset) / 50))
+                                                }
                                             }
-                                        }
-                                        .offset(x: revealOffset)
-                                        .id(item.id)
+                                            .offset(x: revealOffset)
+                                            .id(item.id)
+                                    }
                                 }
                             }
                         }
@@ -271,6 +275,19 @@ struct RoomTimelineView: View {
             .padding(.vertical, 6)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color(NSColor.windowBackgroundColor))
+    }
+
+    private var emptyTimelineState: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "bubble.left.and.bubble.right")
+                .font(.system(size: 30, weight: .semibold))
+                .foregroundStyle(.tertiary)
+
+            Text("아직 기록 없음")
+                .font(.callout.weight(.semibold))
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, minHeight: 360)
     }
 
     private func dayLabel(_ date: Date) -> String {

@@ -8,12 +8,14 @@ final class LocalNotificationCenter: NSObject, UNUserNotificationCenterDelegate 
     enum Category: String {
         case incomingMessage = "ping.message"
         case incomingInvitation = "ping.invitation"
+        case availableUpdate = "ping.update"
     }
 
     enum Action: String {
         case viewMessage = "ping.view"
         case acceptInvite = "ping.accept"
         case rejectInvite = "ping.reject"
+        case viewUpdate = "ping.update.view"
     }
 
     var onViewMessage: ((String) -> Void)?
@@ -21,6 +23,7 @@ final class LocalNotificationCenter: NSObject, UNUserNotificationCenterDelegate 
     var onAcceptInvitation: ((String) -> Void)?
     var onRejectInvitation: ((String) -> Void)?
     var onViewChatMessage: ((_ chatId: String, _ roomId: String) -> Void)?
+    var onCheckForUpdates: (() -> Void)?
 
     private override init() {
         super.init()
@@ -68,7 +71,23 @@ final class LocalNotificationCenter: NSObject, UNUserNotificationCenterDelegate 
             options: []
         )
 
-        UNUserNotificationCenter.current().setNotificationCategories([messageCategory, invitationCategory])
+        let viewUpdate = UNNotificationAction(
+            identifier: Action.viewUpdate.rawValue,
+            title: "업데이트 보기",
+            options: [.foreground]
+        )
+        let updateCategory = UNNotificationCategory(
+            identifier: Category.availableUpdate.rawValue,
+            actions: [viewUpdate],
+            intentIdentifiers: [],
+            options: []
+        )
+
+        UNUserNotificationCenter.current().setNotificationCategories([
+            messageCategory,
+            invitationCategory,
+            updateCategory
+        ])
     }
 
     func notifyIncomingMessage(senderNickname: String, messageId: String) {
@@ -124,6 +143,28 @@ final class LocalNotificationCenter: NSObject, UNUserNotificationCenterDelegate 
         UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
     }
 
+    func notifyUpdateAvailable(version: String) {
+        let content = UNMutableNotificationContent()
+        content.title = "Ping \(version) 업데이트 가능"
+        content.body = "클릭하면 변경 내용을 확인하고 바로 설치할 수 있습니다."
+        content.sound = .default
+        content.categoryIdentifier = Category.availableUpdate.rawValue
+        content.userInfo = ["type": "update"]
+
+        let request = UNNotificationRequest(
+            identifier: "ping.update.available",
+            content: content,
+            trigger: nil
+        )
+        UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
+    }
+
+    func clearUpdateAvailableNotification() {
+        UNUserNotificationCenter.current().removeDeliveredNotifications(
+            withIdentifiers: ["ping.update.available"]
+        )
+    }
+
     nonisolated func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse,
@@ -138,6 +179,12 @@ final class LocalNotificationCenter: NSObject, UNUserNotificationCenterDelegate 
         let chatRoomId = info["room_id"] as? String
 
         Task { @MainActor in
+            if infoType == "update",
+               actionIdentifier == Action.viewUpdate.rawValue || actionIdentifier == UNNotificationDefaultActionIdentifier {
+                onCheckForUpdates?()
+                return
+            }
+
             // Chat notifications are identified by their "type" key.
             if infoType == "chat",
                let chatId, let chatRoomId {

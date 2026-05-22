@@ -2,19 +2,45 @@ import AppKit
 import Sparkle
 
 @MainActor
-final class UpdaterController {
+final class UpdaterController: NSObject, @preconcurrency SPUStandardUserDriverDelegate {
     static let shared = UpdaterController()
 
-    private let controller: SPUStandardUpdaterController
+    private var controller: SPUStandardUpdaterController!
 
     var updater: SPUUpdater { controller.updater }
 
-    private init() {
+    private override init() {
+        super.init()
         controller = SPUStandardUpdaterController(
             startingUpdater: false,
             updaterDelegate: nil,
-            userDriverDelegate: nil
+            userDriverDelegate: self
         )
+    }
+
+    var supportsGentleScheduledUpdateReminders: Bool {
+        true
+    }
+
+    func standardUserDriverWillHandleShowingUpdate(
+        _ handleShowingUpdate: Bool,
+        forUpdate update: SUAppcastItem,
+        state: SPUUserUpdateState
+    ) {
+        NSApp.setActivationPolicy(.regular)
+
+        guard !state.userInitiated else { return }
+        NSApp.dockTile.badgeLabel = "1"
+        LocalNotificationCenter.shared.notifyUpdateAvailable(version: update.displayVersionString)
+    }
+
+    func standardUserDriverDidReceiveUserAttention(forUpdate update: SUAppcastItem) {
+        clearUpdateReminder()
+    }
+
+    func standardUserDriverWillFinishUpdateSession() {
+        clearUpdateReminder()
+        NSApp.setActivationPolicy(.accessory)
     }
 
     func start() {
@@ -23,5 +49,10 @@ final class UpdaterController {
 
     @objc func checkForUpdates(_ sender: Any?) {
         controller.checkForUpdates(sender)
+    }
+
+    private func clearUpdateReminder() {
+        NSApp.dockTile.badgeLabel = ""
+        LocalNotificationCenter.shared.clearUpdateAvailableNotification()
     }
 }

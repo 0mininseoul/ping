@@ -4,7 +4,7 @@
 
 **Ping**은 macOS 13 Ventura 이상에서 동작하는 2초 영상 메시지 메뉴바 앱이다. Option+P로 원형 카메라 거울을 띄우고, Enter로 정확히 2초 녹화한 뒤 Supabase를 통해 파트너에게 전송한다. 수신자는 로컬 알림을 클릭하면 발신자가 보낸 위치에 2초 원형 재생창이 뜬다.
 
-> 현재 구현(v0.3.14)은 v0.2.1 amendment를 반영해 녹화 길이를 3초로 사용한다. Option+P는 얼굴만, Option+L은 화면+얼굴 캡쳐, Option+O는 내 룸/히스토리 창 진입점이다.
+> 현재 구현(v0.3.15)은 v0.2.1 amendment를 반영해 녹화 길이를 3초로 사용한다. Option+P는 얼굴만, Option+L은 화면+얼굴 캡쳐, Option+O는 내 룸/히스토리 창 진입점이다.
 
 ### 초기 검증 환경
 
@@ -44,7 +44,7 @@ macOS 26 이상에서는 `.pingGlassEffect()` wrapper가 SwiftUI 네이티브 `.
 - 글로벌 단축키: 기본 `Option + P`, `KeyboardShortcuts` 패키지 사용.
 - 메뉴바 상주 앱: `NSStatusItem`, Dock 아이콘 숨김, `LSUIElement = true`.
 - 로그인 시 자동 시작: `SMAppService.mainApp` 기반 Settings 토글.
-- 자동 업데이트: Sparkle 2, `SUFeedURL = https://ping0min.vercel.app/appcast.xml`.
+- 자동 업데이트: Sparkle 2, `SUFeedURL = https://ping0min.vercel.app/appcast.xml`, scheduled update는 gentle reminder 알림을 함께 표시.
 
 ### 권한
 

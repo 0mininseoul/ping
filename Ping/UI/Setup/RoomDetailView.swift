@@ -12,6 +12,9 @@ struct RoomDetailView: View {
 
     @StateObject private var viewModel: HistoryViewModel
     @State private var isMembersPopoverPresented: Bool = false
+    @State private var editingRoomId: String?
+    @State private var editingRoomName = ""
+    @FocusState private var focusedEditingRoomId: String?
 
     init(
         roomId: String,
@@ -42,9 +45,13 @@ struct RoomDetailView: View {
             if let room = currentRoom {
                 HStack(spacing: 8) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(room.name)
-                            .font(.headline)
-                            .lineLimit(1)
+                        if isEditing(room) {
+                            inlineRoomNameEditor(for: room)
+                        } else {
+                            Text(room.name)
+                                .font(.headline)
+                                .lineLimit(1)
+                        }
                         Text("\(room.memberUids.count)명")
                             .font(.caption)
                             .foregroundStyle(.secondary)
@@ -74,7 +81,7 @@ struct RoomDetailView: View {
                         .padding(.horizontal, 4)
                     }
 
-                    Button(action: { renameRoom(room) }) {
+                    Button(action: { beginRenaming(room) }) {
                         Label("이름 변경", systemImage: "pencil")
                             .labelStyle(.iconOnly)
                     }
@@ -149,24 +156,99 @@ struct RoomDetailView: View {
         return palette[abs(hash) % palette.count]
     }
 
-    private func renameRoom(_ room: Room) {
-        let alert = NSAlert()
-        alert.messageText = "룸 이름 변경"
-        alert.informativeText = "새 룸 이름을 입력하세요."
-        alert.addButton(withTitle: "변경")
-        alert.addButton(withTitle: "취소")
-        let input = NSTextField(string: room.name)
-        input.frame = NSRect(x: 0, y: 0, width: 280, height: 24)
-        alert.accessoryView = input
-        guard alert.runModal() == .alertFirstButtonReturn else { return }
-        let newName = input.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !newName.isEmpty, newName != room.name else { return }
+    @ViewBuilder
+    private func inlineRoomNameEditor(for room: Room) -> some View {
+        if let roomId = room.id {
+            TextField("", text: $editingRoomName)
+                .font(.headline)
+                .textFieldStyle(.plain)
+                .lineLimit(1)
+                .focused($focusedEditingRoomId, equals: roomId)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .frame(minWidth: 120, idealWidth: 180, maxWidth: 260)
+                .background {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(PingDesign.Surface.inputFieldFocusedFill)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .strokeBorder(PingDesign.ColorToken.accent.opacity(0.45), lineWidth: 1)
+                        }
+                }
+                .onSubmit { commitRename(room) }
+                .onExitCommand { cancelRename() }
+                .onAppear { focusedEditingRoomId = roomId }
+                .onChange(of: focusedEditingRoomId) { newValue in
+                    if editingRoomId == roomId, newValue != roomId {
+                        commitRename(room)
+                    }
+                }
+        } else {
+            Text(room.name)
+                .font(.headline)
+                .lineLimit(1)
+        }
+    }
+
+    private func isEditing(_ room: Room) -> Bool {
+        room.id != nil && editingRoomId == room.id
+    }
+
+    private func beginRenaming(_ room: Room) {
+        guard let currentUid = appState.currentUser?.id,
+              room.memberUids.contains(currentUid),
+              let roomId = room.id else {
+            return
+        }
+
+        editingRoomId = roomId
+        editingRoomName = room.name
+        focusedEditingRoomId = roomId
+    }
+
+    private func commitRename(_ room: Room) {
+        guard let currentUid = appState.currentUser?.id,
+              room.memberUids.contains(currentUid),
+              let roomId = room.id,
+              editingRoomId == roomId else {
+            cancelRename()
+            return
+        }
+
+        let newName = editingRoomName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !newName.isEmpty, newName != room.name else {
+            cancelRename()
+            return
+        }
+        guard let roomService else {
+            cancelRename()
+            return
+        }
+
         Task { @MainActor in
             do {
-                try await roomService?.renameRoom(roomId: roomId, newName: newName)
+                try await roomService.renameRoom(roomId: roomId, newName: newName)
+                renameLocalRoom(roomId: roomId, newName: newName)
+                cancelRename()
             } catch {
-                NSLog("Rename failed: \(error)")
+                appState.backendStatusMessage = error.localizedDescription
             }
+        }
+    }
+
+    private func cancelRename() {
+        editingRoomId = nil
+        editingRoomName = ""
+        focusedEditingRoomId = nil
+    }
+
+    private func renameLocalRoom(roomId: String, newName: String) {
+        guard let index = appState.rooms.firstIndex(where: { $0.id == roomId }) else { return }
+
+        appState.rooms[index].name = newName
+        appState.rooms[index].searchableName = SearchableText.normalize(newName)
+        appState.rooms.sort { lhs, rhs in
+            lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
         }
     }
 

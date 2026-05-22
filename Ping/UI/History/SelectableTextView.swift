@@ -42,16 +42,7 @@ struct SelectableTextView: NSViewRepresentable {
     }
 
     func sizeThatFits(_ proposal: ProposedViewSize, nsView: ContextMenuTextView, context: Context) -> CGSize? {
-        let width = min(proposal.width ?? maxWidth, maxWidth)
-        let storage = NSTextStorage(string: text, attributes: [.font: font])
-        let container = NSTextContainer(size: NSSize(width: width, height: .greatestFiniteMagnitude))
-        container.lineFragmentPadding = 0
-        let lm = NSLayoutManager()
-        lm.addTextContainer(container)
-        storage.addLayoutManager(lm)
-        lm.ensureLayout(for: container)
-        let usedRect = lm.usedRect(for: container)
-        return CGSize(width: width, height: ceil(usedRect.height))
+        SelectableTextLayout.size(text: text, font: font, maxWidth: maxWidth, proposedWidth: proposal.width)
     }
 
     private func applyText(to tv: ContextMenuTextView) {
@@ -60,6 +51,26 @@ struct SelectableTextView: NSViewRepresentable {
             .foregroundColor: textColor
         ]
         tv.textStorage?.setAttributedString(NSAttributedString(string: text, attributes: attrs))
+    }
+}
+
+enum SelectableTextLayout {
+    static func size(text: String, font: NSFont, maxWidth: CGFloat, proposedWidth: CGFloat?) -> CGSize {
+        let wrappingWidth = max(1, min(proposedWidth ?? maxWidth, maxWidth))
+        let storage = NSTextStorage(string: text, attributes: [.font: font])
+        let container = NSTextContainer(size: NSSize(width: wrappingWidth, height: .greatestFiniteMagnitude))
+        container.lineFragmentPadding = 0
+        let layoutManager = NSLayoutManager()
+        layoutManager.addTextContainer(container)
+        storage.addLayoutManager(layoutManager)
+        layoutManager.ensureLayout(for: container)
+
+        let usedRect = layoutManager.usedRect(for: container)
+        let minimumLineHeight = ceil(font.ascender - font.descender + font.leading)
+        return CGSize(
+            width: ceil(max(1, min(wrappingWidth, usedRect.width))),
+            height: ceil(max(minimumLineHeight, usedRect.height))
+        )
     }
 }
 

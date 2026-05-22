@@ -12,6 +12,25 @@ final class UpdaterBehaviorContractTests: XCTestCase {
         XCTAssertTrue(docs.contains("사용자가 승인하면 다운로드/설치/재시작까지 진행"))
     }
 
+    func testBackgroundSparkleUpdatesUseGentleReminderNotification() throws {
+        let updater = try readSourceFile("UpdaterController.swift")
+        let notifications = try readSourceFile("LocalNotificationCenter.swift")
+        let appDelegate = try readSourceFile("AppDelegate.swift")
+
+        XCTAssertTrue(updater.contains("SPUStandardUserDriverDelegate"))
+        XCTAssertTrue(updater.contains("userDriverDelegate: self"))
+        XCTAssertTrue(updater.contains("supportsGentleScheduledUpdateReminders"))
+        XCTAssertTrue(updater.contains("notifyUpdateAvailable(version: update.displayVersionString)"))
+        XCTAssertTrue(updater.contains("standardUserDriverDidReceiveUserAttention"))
+        XCTAssertTrue(updater.contains("controller.checkForUpdates(sender)"))
+
+        XCTAssertTrue(notifications.contains("case availableUpdate = \"ping.update\""))
+        XCTAssertTrue(notifications.contains("case viewUpdate = \"ping.update.view\""))
+        XCTAssertTrue(notifications.contains("func notifyUpdateAvailable(version: String)"))
+        XCTAssertTrue(notifications.contains("onCheckForUpdates?()"))
+        XCTAssertTrue(appDelegate.contains("LocalNotificationCenter.shared.onCheckForUpdates"))
+    }
+
     private func readSourceFile(_ relativePath: String) throws -> String {
         let fileName = URL(fileURLWithPath: relativePath).lastPathComponent
         let fileURL = try XCTUnwrap(Bundle(for: Self.self).resourceURL?.appendingPathComponent(fileName))
