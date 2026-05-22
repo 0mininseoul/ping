@@ -12,6 +12,7 @@
 		06AFB9CF51890A927220471E /* HistoryViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4768EC8284B544E3649C4507 /* HistoryViewModelTests.swift */; };
 		0C63FD5926C2755B5048FA20 /* RoomCapacityContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 186228D198F99431A3E1EBCE /* RoomCapacityContractTests.swift */; };
 		106539313B2378466650F94D /* PartnerPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A06C0316F0F1AFE5297BE0C /* PartnerPicker.swift */; };
+		13BB58129EF1392D96B3753A /* RoomDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 961E0B236B19718866C9702B /* RoomDetailView.swift */; };
 		15FA5EA0B50E0383E9791360 /* UserPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = A998B4DE490C410DD8C04545 /* UserPreferences.swift */; };
 		18C48517F57EFCA192AD3E54 /* VideoCropper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4741EB3E3614D20DF3C78279 /* VideoCropper.swift */; };
 		18F76346F0F837EF6E0BA48D /* Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = C98008817B561907D8035DB2 /* Typography.swift */; };
@@ -172,6 +173,7 @@
 		8F013D14C65D1B797C6EF367 /* PairingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingViewModel.swift; sourceTree = "<group>"; };
 		8F441B1B93C9D79CB77E24D4 /* PartnerCyclingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PartnerCyclingTests.swift; sourceTree = "<group>"; };
 		90A916C7BE813E0B77E80E22 /* RoomManagerUXContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomManagerUXContractTests.swift; sourceTree = "<group>"; };
+		961E0B236B19718866C9702B /* RoomDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomDetailView.swift; sourceTree = "<group>"; };
 		97150E02C17DE9AEBD26BF13 /* RainbowBorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RainbowBorder.swift; sourceTree = "<group>"; };
 		982866D64B1FD3C9C3E0ACDB /* PingTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PingTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		9B138D453327DB1DC53FA2EF /* VideoMessageCodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoMessageCodingTests.swift; sourceTree = "<group>"; };
@@ -404,6 +406,7 @@
 				050A0147A7508D00A8E2DE3B /* OnboardingWindow.swift */,
 				5B86EF836E41F27EB9EA7504 /* PairingView.swift */,
 				8F013D14C65D1B797C6EF367 /* PairingViewModel.swift */,
+				961E0B236B19718866C9702B /* RoomDetailView.swift */,
 				4CD854FC545A367784978698 /* RoomListView.swift */,
 				B2F526895AEBD9128DA1538F /* RoomManagerWindow.swift */,
 				6B5BE5E27DBD69263538CCD7 /* RoomSearchView.swift */,
@@ -790,6 +793,7 @@
 				F9F01F4FE990F1A34D5E5FCF /* RainbowBorder.swift in Sources */,
 				9417A23D794D6424D2530EB3 /* ReactionPickerView.swift in Sources */,
 				BF23CABA33619C05D34368D9 /* ReactionService.swift in Sources */,
+				13BB58129EF1392D96B3753A /* RoomDetailView.swift in Sources */,
 				55EE1904D3FFDC0BCA14BB78 /* RoomLimits.swift in Sources */,
 				D94A00EE205AF8CCF9BE4393 /* RoomListView.swift in Sources */,
 				AE0BAABF032564CD75C6AC48 /* RoomManagerWindow.swift in Sources */,
@@ -936,7 +940,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 12;
+				CURRENT_PROJECT_VERSION = 13;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -956,7 +960,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 0.3.3;
+				MARKETING_VERSION = 0.3.4;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -1004,7 +1008,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 12;
+				CURRENT_PROJECT_VERSION = 13;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1018,7 +1022,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 0.3.3;
+				MARKETING_VERSION = 0.3.4;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = Ping;

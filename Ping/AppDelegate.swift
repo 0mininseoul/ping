@@ -10,7 +10,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var onboardingWindow: OnboardingWindow?
     private var roomManagerWindow: RoomManagerWindow?
     private var settingsWindow: SettingsWindow?
-    private var historyWindow: HistoryWindow?
     private var playbackWindows: [PlaybackWindow] = []
     private var playbackCache: [String: URL] = [:]
     private var playbackPrefetchTasks: [String: Task<URL, Error>] = [:]
@@ -105,7 +104,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.rejectInvitation(inviteId: inviteId)
         }
         LocalNotificationCenter.shared.onViewChatMessage = { [weak self] chatId, roomId in
-            self?.openHistoryAndFocus(chatId: chatId, roomId: roomId)
+            ClientEventService.shared.log("chat_notification_clicked", properties: ["room_id": roomId])
+            self?.appState.pendingRoomFocusId = roomId
+            self?.showRoomManager()
         }
 
         if !ProcessInfo.processInfo.isRunningUnitTests {
@@ -124,7 +125,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             onCaptureFace: { [weak self] in self?.toggleMirror(mode: .faceOnly) },
             onAppearanceToggle: { [weak self] in self?.toggleAppearanceMode() },
             onCaptureScreenFace: { [weak self] in self?.toggleMirror(mode: .screenFace) },
-            onHistoryToggle: { [weak self] in self?.toggleHistory() }
+            onHistoryToggle: { [weak self] in self?.showRoomManager() }
         )
     }
 
@@ -249,27 +250,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func toggleAppearanceMode() {
         PingAppearanceMode.toggleLightDark()
-    }
-
-    @objc func toggleHistoryAction() {
-        toggleHistory()
-    }
-
-    private func toggleHistory() {
-        if let historyWindow {
-            historyWindow.orderOut(nil)
-            self.historyWindow = nil
-            return
-        }
-        let window = HistoryWindow(
-            appState: appState,
-            messageService: messageService,
-            cacheService: HistoryCacheService.shared,
-            realtime: chatRealtime
-        )
-        window.makeKeyAndOrderFront(nil)
-        historyWindow = window
-        ClientEventService.shared.log("history_opened")
     }
 
     private func toggleMirror(mode: CaptureMode) {
@@ -694,6 +674,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 invitationService: invitationService,
                 initialTab: initialTab,
                 searchInitialTab: searchInitialTab,
+                chatRealtime: chatRealtime,
+                messageService: messageService,
+                cacheService: HistoryCacheService.shared,
                 onCopyInviteLink: { [weak self] room in
                     self?.copyInviteLink(for: room)
                 },
@@ -840,22 +823,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             notifiedChatMessageIds = Set(notifiedChatMessageIds.suffix(500))
         }
 
-        let suppressed = historyWindow != nil
-        guard !suppressed else { return }
-
         let roomName = appState.rooms.first(where: { $0.id == msg.roomId })?.name ?? "룸"
         LocalNotificationCenter.shared.notifyIncomingChat(msg, roomName: roomName)
-    }
-
-    @MainActor
-    private func openHistoryAndFocus(chatId: String, roomId: String) {
-        ClientEventService.shared.log("chat_notification_clicked", properties: ["room_id": roomId])
-        if historyWindow == nil {
-            toggleHistory()
-        }
-        // Future: focus on chatId via viewModel.selectedRoomId + scroll. For now opening history is sufficient.
-        _ = chatId
-        _ = roomId
     }
 
     private func shouldNotify(messageId: String, message: VideoMessage) -> Bool {

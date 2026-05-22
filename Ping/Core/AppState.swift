@@ -10,6 +10,7 @@ final class AppState: ObservableObject {
     @Published var pendingInvitations: [Invitation] = []
     @Published var sendMode: SendMode = .singlePartner
     @Published var backendStatusMessage: String?
+    @Published var pendingRoomFocusId: String?
 
     init() {}
 

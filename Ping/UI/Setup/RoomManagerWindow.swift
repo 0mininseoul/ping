@@ -5,14 +5,14 @@ import SwiftUI
 final class RoomManagerWindow: NSWindow {
     init<Content: View>(rootView: Content) {
         super.init(
-            contentRect: NSRect(x: 0, y: 0, width: 600, height: 700),
+            contentRect: NSRect(x: 0, y: 0, width: 860, height: 640),
             styleMask: [.titled, .closable, .resizable],
             backing: .buffered,
             defer: false
         )
 
         title = "내 룸"
-        minSize = NSSize(width: 600, height: 700)
+        minSize = NSSize(width: 800, height: 560)
         contentView = NSHostingView(rootView: rootView)
         isReleasedWhenClosed = false
         center()
@@ -33,9 +33,17 @@ struct RoomManagerView: View {
     var onJoinInviteLink: (String) -> Void
     var onInvite: (PingUser) -> Void
 
-    @State private var selectedTab: RoomManagerTab
+    // Injected services for RoomDetailView
+    var chatRealtime: ChatRealtimeService?
+    var messageService: MessageService?
+    var cacheService: HistoryCacheService?
+
+    @State private var selectedRoomId: String?
+    @State private var isSearchPresented: Bool = false
+
     @StateObject private var searchViewModel: RoomSearchViewModel
     private let searchInitialTab: RoomSearchTab
+    private let opensSearchOnAppear: Bool
 
     init(
         appState: AppState,
@@ -43,6 +51,9 @@ struct RoomManagerView: View {
         invitationService: InvitationService,
         initialTab: RoomManagerTab = .rooms,
         searchInitialTab: RoomSearchTab = .rooms,
+        chatRealtime: ChatRealtimeService? = nil,
+        messageService: MessageService? = nil,
+        cacheService: HistoryCacheService? = nil,
         onJoinRoom: ((Room) -> Void)? = nil,
         onCopyInviteLink: @escaping (Room) -> Void = { _ in },
         onJoinInviteLink: @escaping (String) -> Void = { _ in },
@@ -51,37 +62,29 @@ struct RoomManagerView: View {
         self.appState = appState
         self.roomService = roomService
         self.invitationService = invitationService
+        self.chatRealtime = chatRealtime
+        self.messageService = messageService
+        self.cacheService = cacheService
         self.onJoinRoom = onJoinRoom
         self.onCopyInviteLink = onCopyInviteLink
         self.onJoinInviteLink = onJoinInviteLink
         self.onInvite = onInvite
         self.searchInitialTab = searchInitialTab
-        _selectedTab = State(initialValue: initialTab)
+        self.opensSearchOnAppear = (initialTab == .search)
         _searchViewModel = StateObject(
             wrappedValue: RoomSearchViewModel(excludingUid: appState.currentUser?.id)
         )
     }
 
     var body: some View {
-        TabView(selection: $selectedTab) {
-            VStack(spacing: 0) {
-                if !appState.pendingInvitations.isEmpty {
-                    invitationsStrip
-                }
-
-                RoomListView(
-                    appState: appState,
-                    roomService: roomService,
-                    onCopyInviteLink: onCopyInviteLink,
-                    onCreateRoom: createRoom,
-                    onFindRoom: { selectedTab = .search }
-                )
-            }
-            .tabItem {
-                Label("내 룸", systemImage: "person.2.fill")
-            }
-            .tag(RoomManagerTab.rooms)
-
+        NavigationSplitView {
+            sidebarContent
+                .frame(minWidth: 240, idealWidth: 260)
+        } detail: {
+            detailContent
+        }
+        .frame(minWidth: 800, minHeight: 560)
+        .sheet(isPresented: $isSearchPresented) {
             RoomSearchView(
                 viewModel: searchViewModel,
                 appState: appState,
@@ -90,37 +93,101 @@ struct RoomManagerView: View {
                 onInviteUser: onInvite,
                 onJoinInviteLink: onJoinInviteLink
             )
-            .tabItem {
-                Label("룸 찾기", systemImage: "magnifyingglass")
-            }
-            .tag(RoomManagerTab.search)
+            .frame(minWidth: 700, minHeight: 560)
         }
-        .frame(minWidth: 600, minHeight: 700)
+        .onAppear {
+            if opensSearchOnAppear {
+                isSearchPresented = true
+            }
+        }
+        .onChange(of: appState.pendingRoomFocusId) { roomId in
+            guard let roomId else { return }
+            selectedRoomId = roomId
+            appState.pendingRoomFocusId = nil
+        }
     }
 
-    private var invitationsStrip: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("받은 초대")
-                .font(PingFont.label)
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 20)
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
+    @ViewBuilder
+    private var sidebarContent: some View {
+        List(selection: $selectedRoomId) {
+            if !appState.pendingInvitations.isEmpty {
+                Section("받은 초대") {
                     ForEach(appState.pendingInvitations) { invitation in
                         InvitationCard(
                             invitation: invitation,
                             onAccept: { acceptInvitation(invitation) },
                             onReject: { rejectInvitation(invitation) }
                         )
-                        .frame(width: 270)
+                        .padding(.vertical, 2)
+                        // Not selectable — use a nil tag so it doesn't affect selectedRoomId
+                        .tag(Optional<String>.none)
                     }
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 4)
+            }
+
+            Section("내 룸") {
+                if appState.rooms.isEmpty {
+                    Text("룸이 없습니다")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(.vertical, 4)
+                } else {
+                    ForEach(appState.rooms, id: \.id) { room in
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(room.name)
+                                .font(.body)
+                                .lineLimit(1)
+                            Text("\(room.memberUids.count)명")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.vertical, 4)
+                        .tag(room.id)
+                    }
+                }
             }
         }
-        .padding(.top, 16)
+        .listStyle(.sidebar)
+        .toolbar {
+            ToolbarItemGroup(placement: .automatic) {
+                Button(action: { createRoom() }) {
+                    Label("새 룸 만들기", systemImage: "plus")
+                }
+                .help("새 룸 만들기")
+
+                Button(action: { isSearchPresented = true }) {
+                    Label("룸 찾기", systemImage: "magnifyingglass")
+                }
+                .help("룸 찾기")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var detailContent: some View {
+        if let roomId = selectedRoomId,
+           let realtime = chatRealtime,
+           let msgService = messageService,
+           let cache = cacheService {
+            RoomDetailView(
+                roomId: roomId,
+                appState: appState,
+                realtime: realtime,
+                messageService: msgService,
+                cacheService: cache,
+                onCopyInviteLink: onCopyInviteLink,
+                roomService: roomService
+            )
+        } else {
+            VStack(spacing: 12) {
+                Image(systemName: "person.2")
+                    .font(.system(size: 48))
+                    .foregroundStyle(.tertiary)
+                Text("좌측에서 룸을 선택하세요")
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
     }
 
     private func joinRoom(_ room: Room) {
@@ -138,7 +205,7 @@ struct RoomManagerView: View {
         Task { @MainActor in
             do {
                 try await roomService.joinRoom(roomId: roomId, uid: uid, nickname: currentUser.nickname)
-                selectedTab = .rooms
+                isSearchPresented = false
             } catch {
                 appState.backendStatusMessage = error.localizedDescription
             }
@@ -195,7 +262,7 @@ struct RoomManagerView: View {
                 )
                 insertOrReplaceRoom(createdRoom)
                 UserDefaults.standard.set(false, forKey: PingPreferenceKeys.roomSetupDeferred)
-                selectedTab = .rooms
+                selectedRoomId = createdRoom.id
             } catch {
                 appState.backendStatusMessage = error.localizedDescription
             }
@@ -210,10 +277,6 @@ struct RoomManagerView: View {
             appState.rooms.append(room)
         }
 
-        sortRooms()
-    }
-
-    private func sortRooms() {
         appState.rooms.sort { lhs, rhs in
             lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
         }

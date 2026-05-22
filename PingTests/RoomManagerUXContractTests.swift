@@ -25,10 +25,11 @@ final class RoomManagerUXContractTests: XCTestCase {
     func testRoomManagerCanCreateRoomFromRoomsTab() throws {
         let source = try readSourceFile("Ping/UI/Setup/RoomManagerWindow.swift")
 
+        // NavigationSplitView-based room manager provides create and search actions via toolbar
         XCTAssertTrue(source.contains("createRoom()"))
         XCTAssertTrue(source.contains("roomService.createRoom"))
-        XCTAssertTrue(source.contains("onCreateRoom: createRoom"))
-        XCTAssertTrue(source.contains("onFindRoom: { selectedTab = .search }"))
+        XCTAssertTrue(source.contains("새 룸 만들기"))
+        XCTAssertTrue(source.contains("룸 찾기"))
     }
 
     func testRoomCreateAndInlineRenameUpdateLocalRoomsWithoutWaitingForPolling() throws {
