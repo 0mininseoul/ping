@@ -79,12 +79,15 @@ final class HistoryViewModel: ObservableObject {
         do {
             let videos = try await videosTask
             let chats = try await chatsTask
+            NSLog("History load OK: roomId=\(roomId) videos=\(videos.count) chats=\(chats.count)")
             loadedVideos.append(contentsOf: videos)
             loadedChats.append(contentsOf: chats)
             groups = Self.groupTimelineByDay(videos: loadedVideos, chats: loadedChats, calendar: .current)
             await refreshReactions()
         } catch {
-            NSLog("History load failed: \(error)")
+            let errorMsg = "히스토리 로드 실패: \(error.localizedDescription)"
+            lastErrorMessage = errorMsg
+            NSLog("History load failed: \(error) — roomId=\(roomId)")
         }
     }
 

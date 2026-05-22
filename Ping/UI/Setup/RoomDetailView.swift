@@ -59,6 +59,7 @@ struct RoomDetailView: View {
                         }
                         .buttonStyle(.borderless)
                         .help("초대링크 복사")
+                        .padding(.horizontal, 4)
                     }
 
                     Button(action: { renameRoom(room) }) {
@@ -67,6 +68,7 @@ struct RoomDetailView: View {
                     }
                     .buttonStyle(.borderless)
                     .help("룸 이름 변경")
+                    .padding(.horizontal, 4)
 
                     Button(action: { leaveRoom(room) }) {
                         Label("나가기", systemImage: "rectangle.portrait.and.arrow.right")
@@ -74,6 +76,7 @@ struct RoomDetailView: View {
                     }
                     .buttonStyle(.borderless)
                     .help("룸 나가기")
+                    .padding(.horizontal, 4)
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)

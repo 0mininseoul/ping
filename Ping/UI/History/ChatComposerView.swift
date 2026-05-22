@@ -6,6 +6,12 @@ struct ChatComposerView: View {
     let onCancelReply: () -> Void
     let onSend: () -> Void
 
+    @State private var calculatedHeight: CGFloat = 32
+
+    private let minHeight: CGFloat = 32
+    private let maxHeight: CGFloat = 120
+    private let lineHeight: CGFloat = 20  // approx for .body font
+
     var body: some View {
         VStack(spacing: 0) {
             if let replyTarget {
@@ -32,33 +38,52 @@ struct ChatComposerView: View {
 
             HStack(alignment: .bottom, spacing: 8) {
                 ZStack(alignment: .topLeading) {
+                    // Hidden sizing helper
+                    Text(draft.isEmpty ? " " : draft)
+                        .font(.body)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            GeometryReader { proxy in
+                                Color.clear
+                                    .preference(key: ComposerHeightKey.self, value: proxy.size.height)
+                            }
+                        )
+                        .opacity(0)
+                        .allowsHitTesting(false)
+
                     if draft.isEmpty {
                         Text("메시지 입력…")
                             .font(.body)
                             .foregroundStyle(.tertiary)
                             .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
+                            .padding(.vertical, 6)
                             .allowsHitTesting(false)
                     }
+
                     TextEditor(text: $draft)
                         .font(.body)
                         .scrollContentBackground(.hidden)
                         .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .frame(minHeight: 32, maxHeight: 96)
+                        .padding(.vertical, 2)
                 }
+                .frame(height: max(minHeight, min(calculatedHeight, maxHeight)))
                 .background(Color.gray.opacity(0.08))
-                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .strokeBorder(Color.gray.opacity(0.18), lineWidth: 0.5)
                 )
+                .onPreferenceChange(ComposerHeightKey.self) { newHeight in
+                    calculatedHeight = newHeight
+                }
 
                 Button(action: onSend) {
                     Image(systemName: "paperplane.fill")
                         .font(.body)
                         .foregroundStyle(canSend ? .white : .secondary)
-                        .frame(width: 32, height: 32)
+                        .frame(width: 30, height: 30)
                         .background(canSend ? Color.accentColor : Color.gray.opacity(0.18))
                         .clipShape(Circle())
                 }
@@ -83,5 +108,12 @@ struct ChatComposerView: View {
             let label = mode == .faceOnly ? "얼굴 영상" : "화면+얼굴 영상"
             return "\(sender): \(label)"
         }
+    }
+}
+
+private struct ComposerHeightKey: PreferenceKey {
+    nonisolated(unsafe) static var defaultValue: CGFloat = 32
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
     }
 }
