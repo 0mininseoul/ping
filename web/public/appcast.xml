@@ -3,6 +3,22 @@
     <channel>
         <title>Ping</title>
         <item>
+            <title>0.3.10</title>
+            <pubDate>Sat, 23 May 2026 02:01:42 +0900</pubDate>
+            <link>https://ping0min.vercel.app</link>
+            <sparkle:version>19</sparkle:version>
+            <sparkle:shortVersionString>0.3.10</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <enclosure url="https://ping0min.vercel.app/downloads/Ping-v0.3.10.dmg" length="7008884" type="application/octet-stream" sparkle:edSignature="WxYKmUGFbmNDz1gV+O3l0f+7b3UhPXst12SvZTzfKcsXn14cmU29+ApEN+09dalcHGoanQDkaxZeWI40gWTNAQ=="/>
+            <sparkle:deltas>
+                <enclosure url="https://ping0min.vercel.app/downloads/Ping19-18.delta" sparkle:deltaFrom="18" length="358542" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="cwxhV0gdBnx6ybChb0/na52bAJ3U16IojrhuTnpienwDkQ1zPBars+VsyFBxV6FhxW+6v0KXpMhrigT+lpJoCQ=="/>
+                <enclosure url="https://ping0min.vercel.app/downloads/Ping19-17.delta" sparkle:deltaFrom="17" length="424854" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="/m2H8nUOqdYgFjAtCkOp5rBbMTuZSRgEWJG3cr5DmA126FEmp8nXQ6D0/3HkV6xFcTah2EJIMRZCvtJYn1g6Cg=="/>
+                <enclosure url="https://ping0min.vercel.app/downloads/Ping19-15.delta" sparkle:deltaFrom="15" length="466702" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="6eU4CEHxq3Q0QtKghoHsbVYfzphQhrGMhFtLkcOQNf096OgNT9aWWsqvK1Y8rVaETJnuZ5qrAHc7Axmj4B6zDw=="/>
+                <enclosure url="https://ping0min.vercel.app/downloads/Ping19-14.delta" sparkle:deltaFrom="14" length="475826" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="uKRjXBU5pw0gbZjT357IV0Mr+MKh34I+e/IRtB333uoG8XpnG560IrV9xA89ybZM57AoAVRuQGj7XoyxPc9gAA=="/>
+            </sparkle:deltas>
+        </item>
+        <item>
             <title>0.3.9</title>
             <pubDate>Sat, 23 May 2026 01:55:39 +0900</pubDate>
             <link>https://ping0min.vercel.app</link>
@@ -11,13 +27,6 @@
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <enclosure url="https://ping0min.vercel.app/downloads/Ping-v0.3.9.dmg" length="6985296" type="application/octet-stream" sparkle:edSignature="uk73a+C5lxJRQCR4U1P92FTRQsKZwvL9SzZtNk3S0Chy11kOM00oQd65ys2Fe1EfsIlLHACUICFnZhTzdXogCA=="/>
-            <sparkle:deltas>
-                <enclosure url="https://ping0min.vercel.app/downloads/Ping18-17.delta" sparkle:deltaFrom="17" length="373870" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="uHZD2A9DOxuk6uhGuD9krvJr0l0hgcMV0GTJC+k5IOjqFO9YdPZ/DuH+h4jSXRp5TsycCtQxM0PC3i6OAvX1Cg=="/>
-                <enclosure url="https://ping0min.vercel.app/downloads/Ping18-16.delta" sparkle:deltaFrom="16" length="410398" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="fzT0QrbDhq9oSkJOzq6R3ynGAWVFoXOF1h6JZejVeE/Mhy3HN+AvzQgXJYbqsf5AXoutmMzpTvikwhIjx/VKCw=="/>
-                <enclosure url="https://ping0min.vercel.app/downloads/Ping18-15.delta" sparkle:deltaFrom="15" length="417190" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="4ywQD/eCZMMyv7FsoSpj4F39bQl6DEWLCaunwhu4BGSpcVcSfZQ9ZSG07pPrQBqvwP9ZBrMRe9FPac0HQdLiCg=="/>
-                <enclosure url="https://ping0min.vercel.app/downloads/Ping18-14.delta" sparkle:deltaFrom="14" length="429498" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="rNg1hwUckhoRFOraDki5cbxblkYYEfngOKJDOPEESpup66c0D4qLbijg8NrSwFV/px0HvWuT8W5ZEvstqNoIAQ=="/>
-                <enclosure url="https://ping0min.vercel.app/downloads/Ping18-13.delta" sparkle:deltaFrom="13" length="476526" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="hsePNQaqVsq1C0roXR5gn2zp88eSmqkHzC4Pg4sOXUJtOumt26BjuZNvih2NcpKwg+Ka7dfuDOAxGm9kbaCuBQ=="/>
-            </sparkle:deltas>
         </item>
         <item>
             <title>0.3.8</title>
@@ -98,16 +107,6 @@
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <enclosure url="https://ping0min.vercel.app/downloads/Ping-v0.3.1.dmg" length="7003354" type="application/octet-stream" sparkle:edSignature="WrG2kYaZPrIbnwYpb22ZPHv9XKWYbDtKfks0T/3BvCAp91qhBo4w7t3KtZEhjJhXLWpnXgBda/36sN4k8DNDBQ=="/>
-        </item>
-        <item>
-            <title>0.3.0</title>
-            <pubDate>Fri, 22 May 2026 09:52:08 +0900</pubDate>
-            <link>https://ping0min.vercel.app</link>
-            <sparkle:version>9</sparkle:version>
-            <sparkle:shortVersionString>0.3.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <enclosure url="https://ping0min.vercel.app/downloads/Ping-v0.3.0.dmg" length="7003156" type="application/octet-stream" sparkle:edSignature="UnArun8zK82gU1TYrneFn+VFxUajKczrrV6piOx1/7Ov3LdtmC0m4ZlnhmsN1Xf0EXLL3DncZcRnOyPUPCWZAg=="/>
         </item>
         <item>
             <title>0.1.3</title>
