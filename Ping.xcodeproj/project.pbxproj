@@ -106,6 +106,7 @@
 		FD8BF2F2378B4C65870EE6E0 /* ChatMessageRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DB153452D2A4985BB5DC734 /* ChatMessageRowView.swift */; };
 		F34AF31AD573EE56678B959E /* RoomTimelineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EE33710D375112C559C3B9B /* RoomTimelineView.swift */; };
 		211CA29E1BCF4FB0A3F55ACF /* ChatComposerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 047E8A4C9A4B40DD9292C091 /* ChatComposerView.swift */; };
+		994AD5174B6B4D15AB1DC0C3 /* ReactionPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9521208FC06A4B01B3163F2C /* ReactionPickerView.swift */; };
 		F82A4ECB45A5581D811B4F3C /* OnboardingInputContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E1A841BBD8BDD965C164BF8 /* OnboardingInputContractTests.swift */; };
 		F9F01F4FE990F1A34D5E5FCF /* RainbowBorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97150E02C17DE9AEBD26BF13 /* RainbowBorder.swift */; };
 		FF645ABE2A696D7110266F3C /* PairingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F013D14C65D1B797C6EF367 /* PairingViewModel.swift */; };
@@ -188,6 +189,7 @@
 		7DB153452D2A4985BB5DC734 /* ChatMessageRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessageRowView.swift; sourceTree = "<group>"; };
 		047E8A4C9A4B40DD9292C091 /* ChatComposerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatComposerView.swift; sourceTree = "<group>"; };
 		B4C8ECCC44B398DBC07CB2C3 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
+		9521208FC06A4B01B3163F2C /* ReactionPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReactionPickerView.swift; sourceTree = "<group>"; };
 		B5C8F83E9CBB7B5717E22773 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		B6D978D1D0ADEFE94F8E2D9D /* HotkeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyManager.swift; sourceTree = "<group>"; };
 		BA897CE96651014C4A14D9FF /* WindowPositioningTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowPositioningTests.swift; sourceTree = "<group>"; };
@@ -335,6 +337,7 @@
 				D8344102772E903458A39D6D /* HistoryWindow.swift */,
 				ECAF925EB5EB36A31683069F /* InlinePlayerView.swift */,
 				6FD73952C51CA80616FFA8E6 /* MessageRowView.swift */,
+				9521208FC06A4B01B3163F2C /* ReactionPickerView.swift */,
 				7EE33710D375112C559C3B9B /* RoomTimelineView.swift */,
 			);
 			path = History;
@@ -768,6 +771,7 @@
 				211CA29E1BCF4FB0A3F55ACF /* ChatComposerView.swift in Sources */,
 				FD8BF2F2378B4C65870EE6E0 /* ChatMessageRowView.swift in Sources */,
 				ED2A3EB3872996158DA65761 /* MessageRowView.swift in Sources */,
+				994AD5174B6B4D15AB1DC0C3 /* ReactionPickerView.swift in Sources */,
 				5D89DB1CFC8A93880FABEB80 /* MessageService.swift in Sources */,
 				8B5A766E6D79F4D8014F7AB4 /* MirrorView.swift in Sources */,
 				86FC0DE057AA315B2F2E87AB /* MirrorViewModel.swift in Sources */,
