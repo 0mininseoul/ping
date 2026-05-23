@@ -60,6 +60,14 @@ final class RoomManagerUXContractTests: XCTestCase {
         XCTAssertFalse(sidebar.contains(".toolbar"))
     }
 
+    func testRoomHistoryWindowDefaultsToCompactWidth() throws {
+        let source = try readSourceFile("Ping/UI/Setup/RoomManagerWindow.swift")
+
+        XCTAssertTrue(source.contains("contentRect: NSRect(x: 0, y: 0, width: 500, height: 592)"))
+        XCTAssertTrue(source.contains("minSize = NSSize(width: 480, height: 560)"))
+        XCTAssertTrue(source.contains(".frame(minWidth: 480, minHeight: 560)"))
+    }
+
     func testRoomSidebarUsesCompactWidthThatGrowsWithCappedRoomNames() throws {
         let roomManagerSource = try readSourceFile("Ping/UI/Setup/RoomManagerWindow.swift")
         let roomListSource = try readSourceFile("Ping/UI/Setup/RoomListView.swift")
@@ -120,13 +128,124 @@ final class RoomManagerUXContractTests: XCTestCase {
             from: "scrollWheelMonitor = NSEvent.addLocalMonitorForEvents",
             to: ".simultaneousGesture"
         )
+        let rowLayout = try sourceSlice(
+            in: source,
+            from: "private func timelineRow(for item: TimelineItem)",
+            to: "@ViewBuilder\n    private func rowFor(item: TimelineItem)"
+        )
 
         XCTAssertTrue(source.contains("@State private var revealResetTask"))
         XCTAssertTrue(source.contains("private let timestampGap: CGFloat = 16"))
         XCTAssertTrue(source.contains("private let timestampWidth: CGFloat = 78"))
-        XCTAssertTrue(source.contains(".offset(x: timestampGap)"))
-        XCTAssertTrue(scrollMonitor.contains("scheduleRevealReset()"))
+        XCTAssertTrue(rowLayout.contains("ZStack(alignment: .trailing)"))
+        XCTAssertTrue(rowLayout.contains("timestampLabel(for: item)"))
+        XCTAssertTrue(rowLayout.contains("rowFor(item: item)"))
+        XCTAssertTrue(rowLayout.contains(".offset(x: revealOffset)"))
+        XCTAssertFalse(rowLayout.contains(".overlay(alignment: .trailing)"))
+        XCTAssertTrue(scrollMonitor.contains("event.momentumPhase != []"))
         XCTAssertTrue(scrollMonitor.contains("resetRevealOffset()"))
+        XCTAssertFalse(scrollMonitor.contains("event.momentumPhase == .ended"))
+        XCTAssertTrue(scrollMonitor.contains("scheduleRevealReset(after: 60_000_000)"))
+    }
+
+    func testTimestampRevealDoesNotConsumeVerticalMomentumOrRestartResetStorms() throws {
+        let source = try readSourceFile("Ping/UI/History/RoomTimelineView.swift")
+        let scrollMonitor = try sourceSlice(
+            in: source,
+            from: "scrollWheelMonitor = NSEvent.addLocalMonitorForEvents",
+            to: ".simultaneousGesture"
+        )
+        let resetHelper = try sourceSlice(
+            in: source,
+            from: "private func resetRevealOffset()",
+            to: "private func timelineRow(for item: TimelineItem)"
+        )
+
+        XCTAssertTrue(scrollMonitor.contains("guard abs(event.scrollingDeltaX) > abs(event.scrollingDeltaY) else { return event }"))
+        let horizontalGuardIndex = scrollMonitor.distance(
+            from: scrollMonitor.startIndex,
+            to: try XCTUnwrap(scrollMonitor.range(of: "guard abs(event.scrollingDeltaX) > abs(event.scrollingDeltaY)")).lowerBound
+        )
+        let endedIndex = scrollMonitor.distance(
+            from: scrollMonitor.startIndex,
+            to: try XCTUnwrap(scrollMonitor.range(of: "phase.contains(.ended) || phase.contains(.cancelled)")).lowerBound
+        )
+        let momentumIndex = scrollMonitor.distance(
+            from: scrollMonitor.startIndex,
+            to: try XCTUnwrap(scrollMonitor.range(of: "if event.momentumPhase != []")).lowerBound
+        )
+        XCTAssertLessThan(endedIndex, horizontalGuardIndex)
+        XCTAssertLessThan(horizontalGuardIndex, momentumIndex)
+        XCTAssertTrue(scrollMonitor.contains("if revealOffset != 0 { resetRevealOffset() }"))
+        XCTAssertTrue(resetHelper.contains("guard revealOffset != 0 else { return }"))
+    }
+
+    func testTimelineKeepsBreathingRoomAboveComposer() throws {
+        let source = try readSourceFile("Ping/UI/History/RoomTimelineView.swift")
+
+        XCTAssertTrue(source.contains("private let timelineBottomInset: CGFloat = 24"))
+        XCTAssertTrue(source.contains(".padding(.bottom, timelineBottomInset)"))
+        XCTAssertTrue(source.contains("scrollProxy.scrollTo(lastId, anchor: .bottom)"))
+    }
+
+    func testInlineVideoPlayerKeepsAStableVisibleFrameWhenExpanded() throws {
+        let source = try readSourceFile("Ping/UI/History/InlinePlayerView.swift")
+
+        XCTAssertTrue(source.contains("private var playerSize: CGSize"))
+        XCTAssertTrue(source.contains(".frame(width: playerSize.width, height: playerSize.height)"))
+        XCTAssertTrue(source.contains("CGSize(width: 128, height: 128)"))
+        XCTAssertTrue(source.contains("let width: CGFloat = 280"))
+        XCTAssertTrue(source.contains("max(0.5, min(3.0"))
+        XCTAssertFalse(source.contains(".frame(maxWidth: message.captureMode == .faceOnly ? 180 : 360)"))
+    }
+
+    func testVideoExpansionUsesNonBouncyEaseOutAnimation() throws {
+        let source = try readSourceFile("Ping/UI/History/RoomTimelineView.swift")
+        let videoCase = try sourceSlice(
+            in: source,
+            from: "case .video(let v):",
+            to: "case .chat(let c):"
+        )
+
+        XCTAssertTrue(source.contains("private let videoExpansionAnimation: Animation = .easeOut(duration: 0.18)"))
+        XCTAssertTrue(videoCase.contains("withAnimation(videoExpansionAnimation)"))
+        XCTAssertFalse(videoCase.contains(".spring("))
+        XCTAssertFalse(videoCase.contains(".bouncy"))
+    }
+
+    func testInlinePlayerLayerUpdatesDoNotQueueMainAsyncWork() throws {
+        let source = try readSourceFile("Ping/UI/History/InlinePlayerView.swift")
+        let playerBox = try sourceSlice(
+            in: source,
+            from: "struct PlayerBox: NSViewRepresentable",
+            to: "final class Coord"
+        )
+
+        XCTAssertTrue(playerBox.contains("applyLayerLayout(in: nsView, context: context)"))
+        XCTAssertFalse(playerBox.contains("DispatchQueue.main.async"))
+        XCTAssertTrue(source.contains("var lastBounds: CGRect = .null"))
+        XCTAssertTrue(source.contains("var lastIsCircle: Bool?"))
+    }
+
+    func testInlinePlayerStartsPlaybackOnlyAfterVisibleLayout() throws {
+        let source = try readSourceFile("Ping/UI/History/InlinePlayerView.swift")
+        let makeView = try sourceSlice(
+            in: source,
+            from: "func makeNSView(context: Context) -> NSView",
+            to: "func updateNSView"
+        )
+        let updateView = try sourceSlice(
+            in: source,
+            from: "func updateNSView(_ nsView: NSView, context: Context)",
+            to: "private func applyLayerLayout"
+        )
+
+        XCTAssertFalse(makeView.contains("player.play()"))
+        XCTAssertTrue(updateView.contains("startPlaybackIfReady(in: nsView, context: context)"))
+        XCTAssertTrue(source.contains("private func startPlaybackIfReady(in nsView: NSView, context: Context)"))
+        XCTAssertTrue(source.contains("guard bounds.width > 8, bounds.height > 8"))
+        XCTAssertTrue(source.contains("guard !context.coordinator.didStartPlayback"))
+        XCTAssertTrue(source.contains("var didStartPlayback = false"))
     }
 
     func testChatComposerUsesCommandEnterForSendAndPlainEnterForNewline() throws {

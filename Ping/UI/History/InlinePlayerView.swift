@@ -31,6 +31,7 @@ struct InlinePlayerView: View {
                     isCircle: message.captureMode == .faceOnly,
                     controller: controller
                 )
+                .frame(width: playerSize.width, height: playerSize.height)
             } else if let error {
                 VStack(spacing: 4) {
                     Image(systemName: "exclamationmark.triangle")
@@ -40,14 +41,23 @@ struct InlinePlayerView: View {
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                 }
-                .frame(width: 120, height: 60)
+                .frame(width: playerSize.width, height: playerSize.height)
             } else {
                 ProgressView()
-                    .frame(width: 120, height: 120)
+                    .frame(width: playerSize.width, height: playerSize.height)
             }
         }
-        .frame(maxWidth: message.captureMode == .faceOnly ? 180 : 360)
         .task { await load() }
+    }
+
+    private var playerSize: CGSize {
+        if message.captureMode == .faceOnly {
+            return CGSize(width: 128, height: 128)
+        }
+
+        let width: CGFloat = 280
+        let aspectRatio = CGFloat(max(0.5, min(3.0, message.aspectRatio ?? 1.78)))
+        return CGSize(width: width, height: width / aspectRatio)
     }
 
     private func load() async {
@@ -117,7 +127,7 @@ struct InlinePlayerView: View {
                 player?.pause()
                 Task { @MainActor in controller.isPaused = true }
             }
-            NotificationCenter.default.addObserver(
+            context.coordinator.failureObserver = NotificationCenter.default.addObserver(
                 forName: AVPlayerItem.failedToPlayToEndTimeNotification,
                 object: item,
                 queue: .main
@@ -125,23 +135,52 @@ struct InlinePlayerView: View {
                 NSLog("PlayerBox failedToPlayToEnd: \(note.userInfo ?? [:]) url=\(url)")
             }
 
-            player.play()
+            applyLayerLayout(in: container, context: context)
             return container
         }
 
         func updateNSView(_ nsView: NSView, context: Context) {
-            DispatchQueue.main.async {
-                guard let playerLayer = nsView.layer?.sublayers?.first as? AVPlayerLayer else { return }
-                playerLayer.frame = nsView.bounds
-                let mask = CAShapeLayer()
-                if self.isCircle {
-                    let dim = min(nsView.bounds.width, nsView.bounds.height)
-                    mask.path = CGPath(ellipseIn: CGRect(x: (nsView.bounds.width - dim) / 2, y: (nsView.bounds.height - dim) / 2, width: dim, height: dim), transform: nil)
-                } else {
-                    mask.path = CGPath(roundedRect: nsView.bounds, cornerWidth: 12, cornerHeight: 12, transform: nil)
-                }
-                nsView.layer?.mask = mask
+            applyLayerLayout(in: nsView, context: context)
+            startPlaybackIfReady(in: nsView, context: context)
+        }
+
+        private func startPlaybackIfReady(in nsView: NSView, context: Context) {
+            let bounds = nsView.bounds
+            guard bounds.width > 8, bounds.height > 8 else { return }
+            guard !context.coordinator.didStartPlayback else { return }
+            guard let playerLayer = nsView.layer?.sublayers?.first as? AVPlayerLayer,
+                  let player = playerLayer.player else { return }
+
+            context.coordinator.didStartPlayback = true
+            controller.isPaused = false
+            player.seek(to: .zero)
+            player.play()
+        }
+
+        private func applyLayerLayout(in nsView: NSView, context: Context) {
+            let bounds = nsView.bounds
+            guard context.coordinator.lastBounds != bounds || context.coordinator.lastIsCircle != isCircle else { return }
+            guard let playerLayer = nsView.layer?.sublayers?.first as? AVPlayerLayer else { return }
+
+            playerLayer.frame = bounds
+            let mask = CAShapeLayer()
+            if isCircle {
+                let dim = min(bounds.width, bounds.height)
+                mask.path = CGPath(
+                    ellipseIn: CGRect(
+                        x: (bounds.width - dim) / 2,
+                        y: (bounds.height - dim) / 2,
+                        width: dim,
+                        height: dim
+                    ),
+                    transform: nil
+                )
+            } else {
+                mask.path = CGPath(roundedRect: bounds, cornerWidth: 12, cornerHeight: 12, transform: nil)
             }
+            nsView.layer?.mask = mask
+            context.coordinator.lastBounds = bounds
+            context.coordinator.lastIsCircle = isCircle
         }
 
         func makeCoordinator() -> Coord { Coord() }
@@ -149,9 +188,14 @@ struct InlinePlayerView: View {
         final class Coord {
             var statusObserver: NSKeyValueObservation?
             var endObserver: Any?
+            var failureObserver: Any?
+            var lastBounds: CGRect = .null
+            var lastIsCircle: Bool?
+            var didStartPlayback = false
             deinit {
                 statusObserver?.invalidate()
                 if let o = endObserver { NotificationCenter.default.removeObserver(o) }
+                if let o = failureObserver { NotificationCenter.default.removeObserver(o) }
             }
         }
     }

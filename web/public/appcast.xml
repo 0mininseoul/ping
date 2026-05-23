@@ -3,6 +3,23 @@
     <channel>
         <title>Ping</title>
         <item>
+            <title>0.3.17</title>
+            <pubDate>Sat, 23 May 2026 14:27:45 +0900</pubDate>
+            <link>https://ping0min.vercel.app</link>
+            <sparkle:version>27</sparkle:version>
+            <sparkle:shortVersionString>0.3.17</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <enclosure url="https://ping0min.vercel.app/downloads/Ping-v0.3.17.dmg" length="7098648" type="application/octet-stream" sparkle:edSignature="wgX+GkTm+83IsTFBUC7ePgR31AhsN4pdMEdyCz61qlqk3sOYfaY71Oa9U0TyVLB0m837WUZoirQnwcZ00hHtBA=="/>
+            <sparkle:deltas>
+                <enclosure url="https://ping0min.vercel.app/downloads/Ping27-26.delta" sparkle:deltaFrom="26" length="246242" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="HDpdoBdlTuiZbTxiy/czH1ugSWsXjq68Yiez45lb0DSPT5Cz0JMm1XcduktFlp0a8sSUbi8IAQusdGI+ldllAQ=="/>
+                <enclosure url="https://ping0min.vercel.app/downloads/Ping27-24.delta" sparkle:deltaFrom="24" length="516082" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="e9KUEEpwbPbFWTmKgAAfqRM8zCQSmhw5LEekWzRS+1riIaTjcTZ3eawJ/0OazRie8fL6xsq53ReWj8av7PAgBw=="/>
+                <enclosure url="https://ping0min.vercel.app/downloads/Ping27-23.delta" sparkle:deltaFrom="23" length="555870" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="4TMcQzIvpTcvbYTyUgIwiEovzArV8gQ6vaW08IL4eu5JshPcPTtq4tKakp3+OuG2I0KZV0uzHaugTazjKcKxBA=="/>
+                <enclosure url="https://ping0min.vercel.app/downloads/Ping27-21.delta" sparkle:deltaFrom="21" length="542506" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="7wK93Wq+lw/wfGzLhO/jKpyIgCZS2RnN4/frWef0xbCRen2zRzjJS6X+60/OzTuWV5QCYxy6BkZxPyJlP4B2Cg=="/>
+                <enclosure url="https://ping0min.vercel.app/downloads/Ping27-20.delta" sparkle:deltaFrom="20" length="581902" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="XQi30shEnuu/JAfzoYzw7IxQh1GpJ+JOt6QXI+CkKezN3Ww+oR0sem6FxeVySzEMzX/giA764IQSOeKAtHAaDA=="/>
+            </sparkle:deltas>
+        </item>
+        <item>
             <title>0.3.16</title>
             <pubDate>Sat, 23 May 2026 13:30:07 +0900</pubDate>
             <link>https://ping0min.vercel.app</link>
@@ -11,13 +28,6 @@
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <enclosure url="https://ping0min.vercel.app/downloads/Ping-v0.3.16.dmg" length="7096986" type="application/octet-stream" sparkle:edSignature="GQl9VXtvGdhXnK1G+HPpWAIXiLausu0L9grHi0L0iMVcWVht5Mx1I8ON2xZ7gwhSoJI7C7V1JqKbrlvP7Sw7BA=="/>
-            <sparkle:deltas>
-                <enclosure url="https://ping0min.vercel.app/downloads/Ping26-24.delta" sparkle:deltaFrom="24" length="499358" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="sjAS7BmdhGNrQaIMzlc9jQBzuA94JvCywniNF+GZ/55FmAt+8fm091TzwF0jF03vN5KqZ/6WyNKo1Bg0mLVdAA=="/>
-                <enclosure url="https://ping0min.vercel.app/downloads/Ping26-23.delta" sparkle:deltaFrom="23" length="555346" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="LA8FS2rM9hpCFKcxR0wxRbLm78SGQ825Y69OET61aT3IrUnXCQOYz/j57495pl5T9ou7m71aCffz9KHe1o/HDg=="/>
-                <enclosure url="https://ping0min.vercel.app/downloads/Ping26-21.delta" sparkle:deltaFrom="21" length="532750" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="PhkHn7f6O3iEmJI3AVJA6V30SSProq9BkouDUwkbnExo2X0Zodn+NIZWD7YSp9gQkC2BSKdltGhfxitI62e6Cw=="/>
-                <enclosure url="https://ping0min.vercel.app/downloads/Ping26-20.delta" sparkle:deltaFrom="20" length="582542" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="W3Xo+UzPk1GP1g8o3TvN0KE9wGpJS96P8R9u7XgdocL45Cd6whWcMMFt3lPuKOJaeXq/KpTRCkB30mT3Vgg3Aw=="/>
-                <enclosure url="https://ping0min.vercel.app/downloads/Ping26-19.delta" sparkle:deltaFrom="19" length="601070" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977616" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="HRew6KvYGkwcFaMfF7ILVhatbP11XRRShwhYabsgh/VLvZQE3K6SD6ibCELv48dOOkwGO5Vd6BaqBvmlgl7tCw=="/>
-            </sparkle:deltas>
         </item>
         <item>
             <title>0.3.15</title>
@@ -98,16 +108,6 @@
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <enclosure url="https://ping0min.vercel.app/downloads/Ping-v0.3.7.dmg" length="6957609" type="application/octet-stream" sparkle:edSignature="0WeqDl6Kx35tvFEXD99Vjbxr2ib6Ty2/UvdMDeisOUAL9sScC8Z9VRwqWes7K7mmY8fywf/bRH26rqkPEKmNBA=="/>
-        </item>
-        <item>
-            <title>0.3.6</title>
-            <pubDate>Sat, 23 May 2026 00:51:44 +0900</pubDate>
-            <link>https://ping0min.vercel.app</link>
-            <sparkle:version>15</sparkle:version>
-            <sparkle:shortVersionString>0.3.6</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <enclosure url="https://ping0min.vercel.app/downloads/Ping-v0.3.6.dmg" length="6952314" type="application/octet-stream" sparkle:edSignature="9pr4b+G7MMyRxHq0XKs9NJZTTMFfbP7MRNlsSwpPDtnPgy/VxAzbPogmtVtZ6i3dcflT2Zsg5sWeOHH+shP+CQ=="/>
         </item>
         <item>
             <title>0.1.3</title>

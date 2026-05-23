@@ -20,7 +20,7 @@ final class RoomManagerWindow: NSWindow {
 
     init<Content: View>(rootView: Content) {
         super.init(
-            contentRect: NSRect(x: 0, y: 0, width: 680, height: 600),
+            contentRect: NSRect(x: 0, y: 0, width: 500, height: 592),
             styleMask: [.titled, .closable, .resizable],
             backing: .buffered,
             defer: false

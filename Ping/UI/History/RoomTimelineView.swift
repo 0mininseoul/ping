@@ -15,6 +15,9 @@ struct RoomTimelineView: View {
     @State private var revealOffset: CGFloat = 0
     private let timestampWidth: CGFloat = 78
     private let timestampGap: CGFloat = 16
+    private let timelineBottomInset: CGFloat = 24
+    private let videoExpansionAnimation: Animation = .easeOut(duration: 0.18)
+    private let revealResetAnimation: Animation = .easeOut(duration: 0.10)
     private var revealMax: CGFloat { -(timestampWidth + timestampGap) }
 
     var body: some View {
@@ -28,19 +31,7 @@ struct RoomTimelineView: View {
                             ForEach(viewModel.groups) { group in
                                 Section(header: dayHeader(group.date)) {
                                     ForEach(group.items) { item in
-                                        rowFor(item: item)
-                                            .overlay(alignment: .trailing) {
-                                                if let date = item.createdAt {
-                                                    Text(date.formatted(.dateTime.hour().minute()))
-                                                        .font(.caption2)
-                                                        .foregroundStyle(.tertiary)
-                                                        .frame(width: timestampWidth, alignment: .leading)
-                                                        .offset(x: timestampGap)
-                                                        .opacity(min(1, abs(revealOffset) / (timestampWidth * 0.7)))
-                                                        .allowsHitTesting(false)
-                                                }
-                                            }
-                                            .offset(x: revealOffset)
+                                        timelineRow(for: item)
                                             .id(item.id)
                                     }
                                 }
@@ -51,6 +42,7 @@ struct RoomTimelineView: View {
                         }
                     }
                     .padding(.horizontal, 16)
+                    .padding(.bottom, timelineBottomInset)
                 }
                 .onChange(of: viewModel.groups.last?.items.last?.id) { _ in
                     if let lastId = viewModel.groups.last?.items.last?.id {
@@ -63,23 +55,31 @@ struct RoomTimelineView: View {
                     }
                     if scrollWheelMonitor == nil {
                         scrollWheelMonitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { [self] event in
-                            // 수평 swipe만 처리 (수직 스크롤은 ScrollView에 위임)
+                            let phase = event.phase
+                            if phase.contains(.ended) || phase.contains(.cancelled) {
+                                let shouldConsume = revealOffset != 0
+                                if revealOffset != 0 { resetRevealOffset() }
+                                return shouldConsume ? nil : event
+                            }
                             guard abs(event.scrollingDeltaX) > abs(event.scrollingDeltaY) else { return event }
                             let delta = event.scrollingDeltaX
+
+                            if event.momentumPhase != [] {
+                                if revealOffset != 0 { resetRevealOffset() }
+                                return nil
+                            }
+
                             if delta < 0 {
                                 // 좌측 swipe → 시간 라벨 노출
-                                revealOffset = max(revealMax, revealOffset + delta * 0.6)
+                                updateRevealOffset(revealOffset + delta * 0.6)
                             } else {
                                 // 우측 swipe → 복원 방향 허용
-                                revealOffset = min(0, revealOffset + delta * 0.6)
+                                updateRevealOffset(revealOffset + delta * 0.6)
                             }
-                            // 스크롤 제스처 종료 감지 → spring 복원
-                            let isEnded = event.phase == .ended || event.phase == .cancelled
-                                || event.momentumPhase == .ended || event.momentumPhase == .cancelled
-                            if isEnded {
-                                resetRevealOffset()
+                            if phase == [] {
+                                scheduleRevealReset(after: 60_000_000)
                             } else {
-                                scheduleRevealReset()
+                                revealResetTask?.cancel()
                             }
                             // 이벤트 소비 (ScrollView 수평 스크롤 방지)
                             return nil
@@ -91,7 +91,7 @@ struct RoomTimelineView: View {
                         .onChanged { value in
                             if abs(value.translation.width) > abs(value.translation.height) {
                                 if value.translation.width < 0 {
-                                    revealOffset = max(revealMax, value.translation.width)
+                                    updateRevealOffset(value.translation.width)
                                 }
                             }
                         }
@@ -186,10 +186,41 @@ struct RoomTimelineView: View {
         }
     }
 
+    private func updateRevealOffset(_ value: CGFloat) {
+        let clamped = min(0, max(revealMax, value))
+        guard abs(clamped - revealOffset) >= 0.5 else { return }
+        var transaction = Transaction()
+        transaction.animation = nil
+        withTransaction(transaction) {
+            revealOffset = clamped
+        }
+    }
+
     private func resetRevealOffset() {
         revealResetTask?.cancel()
-        withAnimation(.spring(response: 0.28, dampingFraction: 0.78)) {
+        guard revealOffset != 0 else { return }
+        withAnimation(revealResetAnimation) {
             revealOffset = 0
+        }
+    }
+
+    private func timelineRow(for item: TimelineItem) -> some View {
+        ZStack(alignment: .trailing) {
+            timestampLabel(for: item)
+            rowFor(item: item)
+                .offset(x: revealOffset)
+        }
+    }
+
+    @ViewBuilder
+    private func timestampLabel(for item: TimelineItem) -> some View {
+        if let date = item.createdAt {
+            Text(date.formatted(.dateTime.hour().minute()))
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+                .frame(width: timestampWidth, alignment: .leading)
+                .opacity(min(1, abs(revealOffset) / (timestampWidth * 0.7)))
+                .allowsHitTesting(false)
         }
     }
 
@@ -206,10 +237,12 @@ struct RoomTimelineView: View {
                 isMine: isMine,
                 isExpanded: viewModel.expandedMessageId == v.id,
                 onTap: {
-                    if viewModel.expandedMessageId == v.id {
-                        viewModel.expandedMessageId = nil
-                    } else {
-                        viewModel.expandedMessageId = v.id
+                    withAnimation(videoExpansionAnimation) {
+                        if viewModel.expandedMessageId == v.id {
+                            viewModel.expandedMessageId = nil
+                        } else {
+                            viewModel.expandedMessageId = v.id
+                        }
                     }
                 },
                 cacheService: cacheService,

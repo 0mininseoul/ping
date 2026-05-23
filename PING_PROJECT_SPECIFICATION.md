@@ -4,8 +4,8 @@
 
 **Ping**은 macOS 13 Ventura 이상에서 동작하는 2초 영상 메시지 메뉴바 앱이다. Option+P로 원형 카메라 거울을 띄우고, Enter로 정확히 2초 녹화한 뒤 Supabase를 통해 파트너에게 전송한다. 수신자는 로컬 알림을 클릭하면 발신자가 보낸 위치에 2초 원형 재생창이 뜬다.
 
-> 현재 구현(v0.3.16)은 v0.2.1 amendment를 반영해 녹화 길이를 3초로 사용한다. Option+P는 얼굴만, Option+L은 화면+얼굴 캡쳐, Option+O는 내 룸/히스토리 창 진입점이다.
-> v0.3.16은 히스토리 타임스탬프 swipe reveal 복귀, 룸 매니저 우측 툴바 고정, 컴팩트 사이드바와 16자 룸 이름 제한, 로컬 sent/received 아카이브 기반 히스토리 썸네일/인라인 재생 fallback을 포함한다.
+> 현재 구현(v0.3.17)은 v0.2.1 amendment를 반영해 녹화 길이를 3초로 사용한다. Option+P는 얼굴만, Option+L은 화면+얼굴 캡쳐, Option+O는 내 룸/히스토리 창 진입점이다.
+> v0.3.17은 히스토리 타임스탬프 swipe reveal 즉시 복귀와 고정 timestamp lane, delta 0 release/cancel 처리, 수직 momentum pass-through 및 reset storm 방지, 입력 필드 위 리스트 하단 여백, 더 큰 인라인 영상 player frame과 overshoot 없는 확대 모션, 실제 layout 이후 0초부터 시작하는 인라인 영상 재생, bounds 변경시에만 갱신되는 인라인 영상 layer layout, 룸 매니저 우측 툴바 고정, 컴팩트 사이드바와 16자 룸 이름 제한, 로컬 sent/received 아카이브 기반 히스토리 썸네일/인라인 재생 fallback을 포함한다.
 
 ### 초기 검증 환경
 
