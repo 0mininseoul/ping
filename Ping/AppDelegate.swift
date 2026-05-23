@@ -39,6 +39,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var pendingInviteToken: String?
     private var currentMirrorMode: CaptureMode?
 
+    private var showsOnboardingForQA: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.arguments.contains("--show-onboarding")
+        #else
+        false
+        #endif
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         PingAppearanceMode.applyCurrent()
@@ -49,6 +57,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setupHotkey()
 
         if !ProcessInfo.processInfo.isRunningUnitTests {
+            if showsOnboardingForQA {
+                showOnboardingPreviewForQA()
+                return
+            }
+
             UpdaterController.shared.start()
             startBootstrapTaskIfNeeded()
         }
@@ -583,6 +596,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.addButton(withTitle: "확인")
         NSApp.activate(ignoringOtherApps: true)
         alert.runModal()
+    }
+
+    private func showOnboardingPreviewForQA() {
+        if let onboardingWindow {
+            onboardingWindow.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+
+        let viewModel = PairingViewModel()
+        let view = PairingView(viewModel: viewModel, excludingUid: "qa-preview") { [weak self] _ in
+            Task { @MainActor in
+                self?.onboardingWindow?.close()
+                self?.onboardingWindow = nil
+            }
+        }
+
+        onboardingWindow = OnboardingWindow(rootView: view)
+        onboardingWindow?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     private func showOnboarding(uid: String) {
