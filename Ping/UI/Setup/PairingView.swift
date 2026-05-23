@@ -17,6 +17,10 @@ struct PairingView: View {
         case roomName
     }
 
+    private enum Layout {
+        static let headerHeight: CGFloat = 82
+    }
+
     init(
         viewModel: PairingViewModel,
         excludingUid: String? = nil,
@@ -31,6 +35,7 @@ struct PairingView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
+                .frame(height: Layout.headerHeight, alignment: .top)
 
             ZStack {
                 switch viewModel.step {
@@ -50,9 +55,11 @@ struct PairingView: View {
                     doneStep
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
-        .padding(28)
+        .padding(.horizontal, 28)
+        .padding(.top, 22)
+        .padding(.bottom, 24)
         .frame(width: 480, height: 600)
         .background {
             onboardingBackground
@@ -108,19 +115,26 @@ struct PairingView: View {
                     .monospacedDigit()
             }
 
-            GeometryReader { proxy in
-                ZStack(alignment: .leading) {
-                    Capsule()
-                        .fill(PingDesign.Surface.progressTrack)
-                    Capsule()
-                        .fill(PingDesign.ColorToken.accent)
-                        .frame(width: max(0, proxy.size.width * viewModel.progress))
-                        .animation(reduceMotion ? nil : PingDesign.Motion.progressGauge, value: viewModel.progress)
-                }
-            }
-            .frame(height: 5)
+            onboardingProgressBar(progress: viewModel.progress)
         }
-        .padding(.bottom, 24)
+    }
+
+    private func onboardingProgressBar(progress: Double) -> some View {
+        GeometryReader { proxy in
+            let width = max(1, proxy.size.width)
+
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(PingDesign.Surface.progressTrack)
+                Capsule()
+                    .fill(PingDesign.ColorToken.accent)
+                    .frame(width: width)
+                    .scaleEffect(x: min(max(progress, 0), 1), y: 1, anchor: .leading)
+            }
+            .animation(reduceMotion ? nil : PingDesign.Motion.progressGauge, value: progress)
+            .clipped()
+        }
+        .frame(height: 5)
     }
 
     private var headerLogo: some View {
@@ -172,20 +186,16 @@ struct PairingView: View {
     }
 
     private var permissionsStep: some View {
-        VStack(spacing: 0) {
-            stepHeading(
-                title: "필수 권한 허용",
-                subtitle: "카메라와 마이크는 보내기에, 알림은 받은 Ping 확인에 필요합니다."
-            )
-            .padding(.bottom, 22)
+        VStack(spacing: 14) {
+            permissionStepHeader
 
             VStack(spacing: 10) {
                 permissionRow(
                     title: "카메라",
                     detail: "원형 거울 미리보기와 녹화",
                     icon: "camera.fill",
-                    granted: viewModel.cameraGranted,
-                    blocked: viewModel.cameraPermission.needsSystemSettings
+                    state: viewModel.cameraPermission,
+                    actionTitle: viewModel.cameraPermission.needsSystemSettings ? "설정" : "허용"
                 ) {
                     if viewModel.cameraPermission.needsSystemSettings {
                         viewModel.openSystemPermissionSettings(for: .camera)
@@ -198,8 +208,8 @@ struct PairingView: View {
                     title: "마이크",
                     detail: "2초 영상의 음성 녹음",
                     icon: "mic.fill",
-                    granted: viewModel.audioGranted,
-                    blocked: viewModel.audioPermission.needsSystemSettings
+                    state: viewModel.audioPermission,
+                    actionTitle: viewModel.audioPermission.needsSystemSettings ? "설정" : "허용"
                 ) {
                     if viewModel.audioPermission.needsSystemSettings {
                         viewModel.openSystemPermissionSettings(for: .audio)
@@ -212,8 +222,8 @@ struct PairingView: View {
                     title: "알림",
                     detail: "상대가 보낸 Ping 배너 표시",
                     icon: "bell.badge.fill",
-                    granted: viewModel.notificationGranted,
-                    blocked: viewModel.notificationPermission.needsSystemSettings
+                    state: viewModel.notificationPermission,
+                    actionTitle: viewModel.notificationPermission.needsSystemSettings ? "설정" : "허용"
                 ) {
                     if viewModel.notificationPermission.needsSystemSettings {
                         viewModel.openSystemPermissionSettings(for: .notifications)
@@ -226,13 +236,12 @@ struct PairingView: View {
                     title: "화면 녹화",
                     detail: "화면+얼굴 모드 녹화",
                     icon: "rectangle.on.rectangle.fill",
-                    granted: viewModel.screenRecordingGranted,
-                    blocked: viewModel.screenRecordingPermission.needsSystemSettings
+                    state: viewModel.screenRecordingPermission,
+                    actionTitle: "설정 열기"
                 ) {
                     viewModel.requestScreenRecording()
                 }
             }
-            .padding(.bottom, 14)
 
             if let notice = viewModel.permissionNotice {
                 permissionNoticeView(notice)
@@ -240,7 +249,7 @@ struct PairingView: View {
                 inlineMessage(error)
             }
 
-            Spacer(minLength: 14)
+            Spacer(minLength: 0)
 
             HStack(spacing: 10) {
                 GlassButton("이전") {
@@ -270,6 +279,44 @@ struct PairingView: View {
             }
             .frame(maxWidth: .infinity)
         }
+    }
+
+    private var permissionStepHeader: some View {
+        HStack(alignment: .top, spacing: 16) {
+            VStack(alignment: .leading, spacing: 7) {
+                Text("권한 체크")
+                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                    .foregroundStyle(.primary)
+                Text("보내기와 받기에 필요한 항목만 켭니다. 화면 녹화는 macOS 설정에서 확인합니다.")
+                    .font(PingFont.caption)
+                    .foregroundStyle(.secondary)
+                    .lineSpacing(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 8)
+
+            VStack(spacing: 3) {
+                Text("\(viewModel.grantedPermissionCount)")
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                Text("/ 4")
+                    .font(PingFont.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .foregroundStyle(viewModel.canProceedFromPermissions ? PingDesign.ColorToken.success : PingDesign.ColorToken.accent)
+            .padding(.horizontal, 13)
+            .padding(.vertical, 9)
+            .background {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(PingDesign.Surface.chipFill)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .strokeBorder(PingDesign.Surface.strongHairline, lineWidth: 0.8)
+                    }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var nicknameStep: some View {
@@ -688,14 +735,17 @@ struct PairingView: View {
         title: String,
         detail: String,
         icon: String,
-        granted: Bool,
-        blocked: Bool = false,
+        state: SetupPermissionState,
+        actionTitle: String,
         request: @escaping () -> Void
     ) -> some View {
-        HStack(spacing: 14) {
+        let granted = state.isGranted
+        let blocked = state.needsSystemSettings
+
+        return HStack(spacing: 12) {
             ZStack {
                 RoundedRectangle(cornerRadius: PingDesign.Radius.iconTile, style: .continuous)
-                    .fill(granted ? PingDesign.ColorToken.success.opacity(0.16) : PingDesign.ColorToken.accent.opacity(0.10))
+                    .fill(permissionAccent(for: state).opacity(granted ? 0.16 : 0.10))
                     .overlay {
                         RoundedRectangle(cornerRadius: PingDesign.Radius.iconTile, style: .continuous)
                             .strokeBorder(PingDesign.Surface.hairline, lineWidth: 0.7)
@@ -703,9 +753,9 @@ struct PairingView: View {
 
                 Image(systemName: icon)
                     .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(granted ? PingDesign.ColorToken.success : Color.primary.opacity(0.82))
+                    .foregroundStyle(granted ? PingDesign.ColorToken.success : Color.primary.opacity(0.78))
             }
-            .frame(width: 44, height: 44)
+            .frame(width: 40, height: 40)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
@@ -719,20 +769,18 @@ struct PairingView: View {
             Spacer()
 
             if granted {
-                HStack(spacing: 5) {
-                    Image(systemName: "checkmark.circle.fill")
-                    Text("허용됨")
-                }
-                .font(PingFont.label)
-                .foregroundStyle(PingDesign.ColorToken.success)
+                permissionStatusPill("켜짐", icon: "checkmark", color: PingDesign.ColorToken.success)
             } else {
-                GlassButton(blocked ? "설정" : "허용") {
-                    request()
+                HStack(spacing: 8) {
+                    permissionStatusPill(blocked ? "필요" : "대기", icon: blocked ? "gearshape.fill" : "circle", color: permissionAccent(for: state))
+                    GlassButton(actionTitle) {
+                        request()
+                    }
                 }
             }
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 12)
+        .padding(.vertical, 10)
         .background {
             RoundedRectangle(cornerRadius: PingDesign.Radius.row, style: .continuous)
                 .fill(PingDesign.Surface.rowFill)
@@ -746,6 +794,38 @@ struct PairingView: View {
                         .strokeBorder(PingDesign.Surface.strongHairline.opacity(0.48), lineWidth: 0.6)
                 }
                 .pingShadow(PingDesign.Shadow.control)
+        }
+    }
+
+    private func permissionStatusPill(_ title: String, icon: String, color: Color) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 10, weight: .bold))
+            Text(title)
+                .font(PingFont.caption)
+                .lineLimit(1)
+        }
+        .foregroundStyle(color)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background {
+            Capsule()
+                .fill(color.opacity(0.10))
+                .overlay {
+                    Capsule()
+                        .strokeBorder(color.opacity(0.20), lineWidth: 0.7)
+                }
+        }
+    }
+
+    private func permissionAccent(for state: SetupPermissionState) -> Color {
+        switch state {
+        case .granted:
+            return PingDesign.ColorToken.success
+        case .denied, .restricted:
+            return PingDesign.Status.warning
+        case .notDetermined:
+            return PingDesign.ColorToken.accent
         }
     }
 

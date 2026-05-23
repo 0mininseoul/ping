@@ -158,6 +158,12 @@ final class PairingViewModel: ObservableObject {
         cameraGranted && audioGranted && notificationGranted && screenRecordingGranted
     }
 
+    var grantedPermissionCount: Int {
+        [cameraGranted, audioGranted, notificationGranted, screenRecordingGranted]
+            .filter { $0 }
+            .count
+    }
+
     var permissionNotice: PermissionNotice? {
         PermissionGuidance.notice(
             camera: cameraPermission,
@@ -281,8 +287,11 @@ final class PairingViewModel: ObservableObject {
         cameraPermission = await requestMediaAccess(for: .video)
         audioPermission = await requestMediaAccess(for: .audio)
         notificationPermission = await requestNotificationAccess()
+        await refreshScreenRecordingPermission()
 
-        errorMessage = nil
+        errorMessage = notificationPermission == .notDetermined
+            ? "알림 허용 창이 보이지 않으면 시스템 설정 > 알림에서 Ping을 켜주세요."
+            : nil
     }
 
     func requestCamera() async {
@@ -296,8 +305,11 @@ final class PairingViewModel: ObservableObject {
     }
 
     func requestNotifications() async {
+        NSApp.activate(ignoringOtherApps: true)
         notificationPermission = await requestNotificationAccess()
-        errorMessage = nil
+        errorMessage = notificationPermission == .notDetermined
+            ? "알림 허용 창이 보이지 않으면 시스템 설정 > 알림에서 Ping을 켜주세요."
+            : nil
     }
 
     func requestScreenRecording() {
