@@ -78,8 +78,8 @@ enum PermissionGuidance {
         guard !blockedKinds.isEmpty else { return nil }
 
         return PermissionNotice(
-            title: "시스템 설정에서 켜야 합니다",
-            message: "\(blockedKinds.joined(separator: ", ")) 권한이 macOS에서 꺼져 있습니다. 시스템 설정에서 Ping 스위치를 켠 뒤 이 창으로 돌아오세요."
+            title: "\(blockedKinds.joined(separator: ", ")) 설정 확인 필요",
+            message: ""
         )
     }
 }
@@ -117,6 +117,7 @@ final class PairingViewModel: ObservableObject {
     @Published private(set) var notificationPermission: SetupPermissionState = .notDetermined
     @Published private(set) var screenRecordingPermission: SetupPermissionState = .notDetermined
     @Published private(set) var isRequestingPermissions = false
+    @Published private(set) var activePermissionRequest: SetupPermissionKind?
     @Published var isCompleting = false
     @Published var errorMessage: String?
 
@@ -142,6 +143,10 @@ final class PairingViewModel: ObservableObject {
         screenRecordingPermission.isGranted
     }
 
+    var allPermissionsGranted: Bool {
+        cameraGranted && audioGranted && notificationGranted && screenRecordingGranted
+    }
+
     var trimmedNickname: String {
         nickname.trimmingCharacters(in: .whitespacesAndNewlines)
     }
@@ -155,13 +160,11 @@ final class PairingViewModel: ObservableObject {
     }
 
     var canProceedFromPermissions: Bool {
-        cameraGranted && audioGranted && notificationGranted && screenRecordingGranted
+        true
     }
 
-    var grantedPermissionCount: Int {
-        [cameraGranted, audioGranted, notificationGranted, screenRecordingGranted]
-            .filter { $0 }
-            .count
+    func isRequesting(_ kind: SetupPermissionKind) -> Bool {
+        isRequestingPermissions || activePermissionRequest == kind
     }
 
     var permissionNotice: PermissionNotice? {
@@ -287,7 +290,7 @@ final class PairingViewModel: ObservableObject {
         cameraPermission = await requestMediaAccess(for: .video)
         audioPermission = await requestMediaAccess(for: .audio)
         notificationPermission = await requestNotificationAccess()
-        await refreshScreenRecordingPermission()
+        await requestScreenRecordingIfNeeded()
 
         errorMessage = notificationPermission == .notDetermined
             ? "알림 허용 창이 보이지 않으면 시스템 설정 > 알림에서 Ping을 켜주세요."
@@ -295,16 +298,25 @@ final class PairingViewModel: ObservableObject {
     }
 
     func requestCamera() async {
+        activePermissionRequest = .camera
+        defer { activePermissionRequest = nil }
+
         cameraPermission = await requestMediaAccess(for: .video)
         errorMessage = nil
     }
 
     func requestAudio() async {
+        activePermissionRequest = .audio
+        defer { activePermissionRequest = nil }
+
         audioPermission = await requestMediaAccess(for: .audio)
         errorMessage = nil
     }
 
     func requestNotifications() async {
+        activePermissionRequest = .notifications
+        defer { activePermissionRequest = nil }
+
         NSApp.activate(ignoringOtherApps: true)
         notificationPermission = await requestNotificationAccess()
         errorMessage = notificationPermission == .notDetermined
@@ -312,10 +324,16 @@ final class PairingViewModel: ObservableObject {
             : nil
     }
 
-    func requestScreenRecording() {
-        // Screen recording permission cannot be requested programmatically;
-        // guide the user to system settings.
-        openSystemPermissionSettings(for: .screenRecording)
+    func requestScreenRecording() async {
+        activePermissionRequest = .screenRecording
+        defer { activePermissionRequest = nil }
+
+        await requestScreenRecordingIfNeeded()
+        if !screenRecordingGranted {
+            errorMessage = "시스템 설정에서 화면 녹화를 켠 뒤 Ping을 종료하고 다시 열어야 적용됩니다."
+        } else {
+            errorMessage = nil
+        }
     }
 
     func refreshPermissionStates() async {
@@ -339,6 +357,15 @@ final class PairingViewModel: ObservableObject {
         }
     }
 
+    private func requestScreenRecordingIfNeeded() async {
+        await refreshScreenRecordingPermission()
+        guard !screenRecordingGranted else { return }
+
+        _ = ScreenCapturePermission.requestPermission()
+        try? await Task.sleep(for: .milliseconds(350))
+        await refreshScreenRecordingPermission()
+    }
+
     func openSystemPermissionSettings(for kind: SetupPermissionKind? = nil) {
         let target = kind ?? firstBlockedPermissionKind() ?? .camera
         guard let url = target.settingsURL else {
@@ -355,12 +382,6 @@ final class PairingViewModel: ObservableObject {
             errorMessage = nil
             return true
         case .permissions:
-            guard canProceedFromPermissions else {
-                errorMessage = permissionNotice == nil
-                    ? "남은 권한을 허용하면 다음으로 넘어갈 수 있습니다."
-                    : nil
-                return false
-            }
             errorMessage = nil
             return true
         case .nickname:
@@ -411,7 +432,7 @@ final class PairingViewModel: ObservableObject {
         case .authorized:
             return .granted
         case .notDetermined:
-            let granted = await AVCaptureDevice.requestAccess(for: mediaType)
+            let granted = await requestMediaAccessWithTimeout(for: mediaType)
             if granted {
                 return .granted
             }
@@ -420,6 +441,20 @@ final class PairingViewModel: ObservableObject {
             return permissionState(for: AVCaptureDevice.authorizationStatus(for: mediaType))
         @unknown default:
             return .restricted
+        }
+    }
+
+    private func requestMediaAccessWithTimeout(for mediaType: AVMediaType) async -> Bool {
+        await withCheckedContinuation { continuation in
+            let box = PermissionRequestContinuationBox(continuation)
+
+            AVCaptureDevice.requestAccess(for: mediaType) { granted in
+                box.finish(granted)
+            }
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+                box.finish(false)
+            }
         }
     }
 
@@ -465,5 +500,23 @@ final class PairingViewModel: ObservableObject {
         @unknown default:
             return .restricted
         }
+    }
+}
+
+private final class PermissionRequestContinuationBox: @unchecked Sendable {
+    private let lock = NSLock()
+    private var didResume = false
+    private let continuation: CheckedContinuation<Bool, Never>
+
+    init(_ continuation: CheckedContinuation<Bool, Never>) {
+        self.continuation = continuation
+    }
+
+    func finish(_ granted: Bool) {
+        lock.lock()
+        defer { lock.unlock() }
+        guard !didResume else { return }
+        didResume = true
+        continuation.resume(returning: granted)
     }
 }

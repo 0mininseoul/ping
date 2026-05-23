@@ -30,6 +30,10 @@ final class LocalNotificationCenter: NSObject, UNUserNotificationCenterDelegate 
         UNUserNotificationCenter.current().delegate = self
     }
 
+    func configure() {
+        registerCategories()
+    }
+
     func requestAuthorization() async -> Bool {
         do {
             let granted = try await UNUserNotificationCenter.current()

@@ -87,9 +87,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func setupNotifications() {
-        Task {
-            _ = await LocalNotificationCenter.shared.requestAuthorization()
-        }
+        LocalNotificationCenter.shared.configure()
 
         LocalNotificationCenter.shared.onViewMessage = { [weak self] messageId in
             self?.playMessage(messageId: messageId)

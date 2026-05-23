@@ -30,6 +30,12 @@ codesign --force --deep --sign - \
   --entitlements Ping.entitlements \
   "$APP"
 
+codesign --force --sign - \
+  --options runtime \
+  --entitlements Ping.entitlements \
+  --requirements '=designated => identifier "com.youngminpark.ping.Ping"' \
+  "$APP"
+
 codesign --verify --deep --strict --verbose=2 "$APP"
 
 VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APP/Contents/Info.plist")

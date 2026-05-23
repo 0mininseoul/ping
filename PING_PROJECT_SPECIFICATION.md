@@ -4,8 +4,8 @@
 
 **Ping**은 macOS 13 Ventura 이상에서 동작하는 2초 영상 메시지 메뉴바 앱이다. Option+P로 원형 카메라 거울을 띄우고, Enter로 정확히 2초 녹화한 뒤 Supabase를 통해 파트너에게 전송한다. 수신자는 로컬 알림을 클릭하면 발신자가 보낸 위치에 2초 원형 재생창이 뜬다.
 
-> 현재 구현(v0.3.21)은 v0.2.1 amendment를 반영해 녹화 길이를 3초로 사용한다. Option+P는 얼굴만, Option+L은 화면+얼굴 캡쳐, Option+O는 내 룸/히스토리 창 진입점이다.
-> v0.3.21은 히스토리 타임스탬프 swipe reveal 즉시 복귀와 고정 timestamp lane, delta 0 release/cancel 처리, 수직 momentum pass-through 및 reset storm 방지, 입력 필드 위 리스트 하단 여백, 더 큰 인라인 영상 player frame과 overshoot 없는 확대 모션, AppKit view layout 이후 0초부터 시작하는 인라인 영상 재생, SwiftUI context를 캡처하지 않는 인라인 영상 layer layout으로 영상 클릭 후 CPU 100% 레이아웃 루프 방지, 3명 이상 룸에서 상대 영상 메시지 sender label 표시, 다크모드 날짜 header 배경 바 제거, 온보딩 권한 화면의 고정 header/progress와 상태 중심 permission checklist, 룸 매니저 우측 툴바 고정, 컴팩트 사이드바와 16자 룸 이름 제한, 로컬 sent/received 아카이브 기반 히스토리 썸네일/인라인 재생 fallback을 포함한다.
+> 현재 구현(v0.3.23)은 v0.2.1 amendment를 반영해 녹화 길이를 3초로 사용한다. Option+P는 얼굴만, Option+L은 화면+얼굴 캡쳐, Option+O는 내 룸/히스토리 창 진입점이다.
+> v0.3.23은 온보딩 권한 화면에서 macOS 권한 재확인이 지연돼도 이후 3~7단계를 계속 볼 수 있게 하고, 릴리즈 앱의 ad-hoc designated requirement를 bundle id 기준으로 고정해 업데이트 후 TCC 권한 판정이 빌드 해시 변화에 흔들리지 않도록 한다. v0.3.22의 온보딩 header/progress 고정, 미니멀 권한 체크리스트, 알림 프롬프트 시작 시점 소모 방지도 포함한다. 화면 녹화 권한의 passive check는 시스템 프롬프트를 띄우지 않는 CoreGraphics preflight만 사용하며, macOS가 요구하는 앱 재시작 안내를 표시한다. 기존 v0.3.21의 히스토리 타임스탬프 swipe reveal, 인라인 영상 재생 안정화, 그룹 룸 sender label, 다크모드 날짜 header 정리, 컴팩트 사이드바와 로컬 아카이브 fallback도 포함한다.
 
 ### 초기 검증 환경
 
@@ -158,6 +158,7 @@ Supabase Dashboard에서 Anonymous sign-ins가 켜져 있어야 한다.
 
 - Supabase Anonymous Auth만 사용한다.
 - `SupabaseClient`는 access/refresh token을 sandboxed Application Support의 `SupabaseSession.json`에 저장하고, legacy `UserDefaults` 세션만 fallback으로 읽는다.
+- Sparkle 업데이트나 `/Applications/Ping.app` 교체는 앱 번들만 바꾸며, bundle id `com.youngminpark.ping.Ping`과 위 세션 파일 경로를 유지해야 기존 익명 계정과 룸이 그대로 연결된다.
 - ad-hoc으로 자주 교체 배포하는 현재 배포 방식에서는 macOS Keychain ACL 승인 팝업이 재발할 수 있으므로 앱 런타임 세션 저장/갱신 경로에서 Keychain을 사용하지 않는다. Sparkle appcast 서명용 개인키 Keychain 사용과는 별개다.
 - 기존 세션 refresh가 실패하면 보존된 사용자 데이터를 잃지 않도록 새 익명 사용자로 자동 전환하지 않고 `supabaseSessionExpired`를 띄운다.
 

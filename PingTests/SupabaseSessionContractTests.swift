@@ -47,6 +47,22 @@ final class SupabaseSessionContractTests: XCTestCase {
         """))
     }
 
+    func testSparkleAppUpdatesKeepAnonymousSessionLinkageStable() throws {
+        let clientSource = try readSourceFile("Ping/Backend/SupabaseClient.swift")
+        let projectSource = try readSourceFile("project.yml")
+        let releaseScript = try readSourceFile("build-release.sh")
+        let readme = try readSourceFile("README.md")
+
+        XCTAssertTrue(projectSource.contains("bundleIdPrefix: com.youngminpark.ping"))
+        XCTAssertTrue(projectSource.contains("name: Ping"))
+        XCTAssertTrue(clientSource.contains("private static let fileName = \"SupabaseSession.json\""))
+        XCTAssertTrue(clientSource.contains("applicationSupportDirectory"))
+        XCTAssertFalse(clientSource.contains("MARKETING_VERSION"))
+        XCTAssertFalse(clientSource.contains("CURRENT_PROJECT_VERSION"))
+        XCTAssertTrue(releaseScript.contains("designated => identifier \"com.youngminpark.ping.Ping\""))
+        XCTAssertTrue(readme.contains("일반 업데이트나 `Ping.app` 교체는 기존 룸을 유지"))
+    }
+
     private func readSourceFile(_ relativePath: String) throws -> String {
         let fileName = URL(fileURLWithPath: relativePath).lastPathComponent
         let fileURL = try XCTUnwrap(Bundle(for: Self.self).resourceURL?.appendingPathComponent(fileName))
