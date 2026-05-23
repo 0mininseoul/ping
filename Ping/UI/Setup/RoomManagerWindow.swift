@@ -3,6 +3,21 @@ import SwiftUI
 
 @MainActor
 final class RoomManagerWindow: NSWindow {
+    private let titlebarActionHandler = RoomManagerTitlebarActionHandler()
+    private let titlebarActionController = NSTitlebarAccessoryViewController()
+    private var isSuppressingDefaultToolbar = false
+
+    override var toolbar: NSToolbar? {
+        didSet {
+            guard toolbar != nil, !isSuppressingDefaultToolbar else { return }
+            isSuppressingDefaultToolbar = true
+            DispatchQueue.main.async { [weak self] in
+                self?.toolbar = nil
+                self?.isSuppressingDefaultToolbar = false
+            }
+        }
+    }
+
     init<Content: View>(rootView: Content) {
         super.init(
             contentRect: NSRect(x: 0, y: 0, width: 680, height: 600),
@@ -15,7 +30,107 @@ final class RoomManagerWindow: NSWindow {
         minSize = NSSize(width: 480, height: 560)
         contentView = NSHostingView(rootView: rootView)
         isReleasedWhenClosed = false
+        installTitlebarActions()
+        suppressDefaultSidebarToolbar()
         center()
+    }
+
+    private func installTitlebarActions() {
+        titlebarActionController.layoutAttribute = .right
+        titlebarActionController.view = RoomManagerTitlebarActionHandler.makeAccessoryView(
+            target: titlebarActionHandler
+        )
+        addTitlebarAccessoryViewController(titlebarActionController)
+    }
+
+    private func suppressDefaultSidebarToolbar() {
+        let delays: [TimeInterval] = [0, 0.05, 0.25, 1.0]
+        for delay in delays {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                self?.toolbar = nil
+            }
+        }
+    }
+}
+
+private enum RoomManagerToolbarNotification {
+    static let createRoom = Notification.Name("PingRoomManagerCreateRoomRequested")
+    static let searchRoom = Notification.Name("PingRoomManagerSearchRoomRequested")
+}
+
+@MainActor
+private final class RoomManagerTitlebarActionHandler: NSObject {
+    static func makeAccessoryView(target: RoomManagerTitlebarActionHandler) -> NSView {
+        let stackView = NSStackView()
+        stackView.orientation = .horizontal
+        stackView.alignment = .centerY
+        stackView.spacing = 12
+        stackView.translatesAutoresizingMaskIntoConstraints = false
+
+        let buttons: [NSButton] = [
+            iconButton(
+                label: "새 룸 만들기",
+                symbolName: "plus",
+                target: target,
+                action: #selector(createRoom(_:))
+            ),
+            iconButton(
+                label: "룸 찾기",
+                symbolName: "magnifyingglass",
+                target: target,
+                action: #selector(searchRoom(_:))
+            ),
+            iconButton(
+                label: "사이드바",
+                symbolName: "sidebar.left",
+                target: target,
+                action: #selector(toggleSidebar(_:))
+            )
+        ]
+        buttons.forEach(stackView.addArrangedSubview)
+
+        let container = NSView(frame: NSRect(x: 0, y: 0, width: 124, height: 32))
+        container.addSubview(stackView)
+        NSLayoutConstraint.activate([
+            stackView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            stackView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            stackView.centerYAnchor.constraint(equalTo: container.centerYAnchor)
+        ])
+        return container
+    }
+
+    private static func iconButton(
+        label: String,
+        symbolName: String,
+        target: AnyObject,
+        action: Selector
+    ) -> NSButton {
+        let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: label)
+        let button = NSButton(title: "", image: image ?? NSImage(), target: target, action: action)
+        button.bezelStyle = .texturedRounded
+        button.isBordered = false
+        button.imageScaling = .scaleProportionallyDown
+        button.contentTintColor = .secondaryLabelColor
+        button.toolTip = label
+        button.setAccessibilityLabel(label)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            button.widthAnchor.constraint(equalToConstant: 28),
+            button.heightAnchor.constraint(equalToConstant: 28)
+        ])
+        return button
+    }
+
+    @objc private func toggleSidebar(_ sender: Any?) {
+        NSApp.sendAction(#selector(NSSplitViewController.toggleSidebar(_:)), to: nil, from: sender)
+    }
+
+    @objc private func createRoom(_ sender: Any?) {
+        NotificationCenter.default.post(name: RoomManagerToolbarNotification.createRoom, object: nil)
+    }
+
+    @objc private func searchRoom(_ sender: Any?) {
+        NotificationCenter.default.post(name: RoomManagerToolbarNotification.searchRoom, object: nil)
     }
 }
 
@@ -79,10 +194,13 @@ struct RoomManagerView: View {
     var body: some View {
         NavigationSplitView {
             sidebarContent
-                .frame(minWidth: 200, idealWidth: 220, maxWidth: 260)
+                .frame(minWidth: 148, idealWidth: sidebarWidth, maxWidth: 240)
+                .navigationSplitViewColumnWidth(min: 148, ideal: sidebarWidth, max: 240)
         } detail: {
             detailContent
         }
+        .removingDefaultSidebarToggle()
+        .toolbar(.hidden, for: .windowToolbar)
         .frame(minWidth: 480, minHeight: 560)
         .sheet(isPresented: $isSearchPresented) {
             VStack(spacing: 0) {
@@ -119,6 +237,12 @@ struct RoomManagerView: View {
                 isSearchPresented = true
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: RoomManagerToolbarNotification.createRoom)) { _ in
+            createRoom()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: RoomManagerToolbarNotification.searchRoom)) { _ in
+            isSearchPresented = true
+        }
         .onChange(of: appState.rooms.map(\.id)) { _ in
             selectInitialRoomIfNeeded()
         }
@@ -130,6 +254,14 @@ struct RoomManagerView: View {
         .onChange(of: selectedRoomId) { newValue in
             appState.lastSelectedRoomId = newValue
         }
+    }
+
+    private var sidebarWidth: CGFloat {
+        let longestNameLength = appState.rooms
+            .map { RoomLimits.sanitizedRoomName($0.name).count }
+            .max() ?? 0
+        let measuredWidth = 132 + CGFloat(longestNameLength) * 7
+        return min(240, max(156, measuredWidth))
     }
 
     @ViewBuilder
@@ -159,9 +291,10 @@ struct RoomManagerView: View {
                 } else {
                     ForEach(appState.rooms, id: \.id) { room in
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(room.name)
-                                .font(.body)
+                            Text(RoomLimits.sanitizedRoomName(room.name))
+                                .font(.callout.weight(.semibold))
                                 .lineLimit(1)
+                                .truncationMode(.tail)
                             Text("\(room.memberUids.count)명")
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
@@ -173,19 +306,6 @@ struct RoomManagerView: View {
             }
         }
         .listStyle(.sidebar)
-        .toolbar {
-            ToolbarItemGroup(placement: .automatic) {
-                Button(action: { createRoom() }) {
-                    Label("새 룸 만들기", systemImage: "plus")
-                }
-                .help("새 룸 만들기")
-
-                Button(action: { isSearchPresented = true }) {
-                    Label("룸 찾기", systemImage: "magnifyingglass")
-                }
-                .help("룸 찾기")
-            }
-        }
     }
 
     @ViewBuilder
@@ -326,7 +446,7 @@ struct RoomManagerView: View {
     private func promptForRoomName(currentName: String) -> String? {
         let alert = NSAlert()
         alert.messageText = "룸 만들기"
-        alert.informativeText = "새 룸 이름을 입력하세요."
+        alert.informativeText = "새 룸 이름을 입력하세요. 최대 \(RoomLimits.maxRoomNameLength)자까지 사용할 수 있습니다."
         alert.addButton(withTitle: "만들기")
         alert.addButton(withTitle: "취소")
 
@@ -336,6 +456,17 @@ struct RoomManagerView: View {
 
         let response = alert.runModal()
         guard response == .alertFirstButtonReturn else { return nil }
-        return input.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        return RoomLimits.sanitizedRoomName(input.stringValue)
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func removingDefaultSidebarToggle() -> some View {
+        if #available(macOS 14.0, *) {
+            toolbar(removing: .sidebarToggle)
+        } else {
+            self
+        }
     }
 }

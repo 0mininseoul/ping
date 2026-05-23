@@ -48,7 +48,7 @@ struct RoomDetailView: View {
                         if isEditing(room) {
                             inlineRoomNameEditor(for: room)
                         } else {
-                            Text(room.name)
+                            Text(RoomLimits.sanitizedRoomName(room.name))
                                 .font(.headline)
                                 .lineLimit(1)
                         }
@@ -176,6 +176,9 @@ struct RoomDetailView: View {
                         }
                 }
                 .onSubmit { commitRename(room) }
+                .onChange(of: editingRoomName) { newValue in
+                    limitRoomNameInput(newValue)
+                }
                 .onExitCommand { cancelRename() }
                 .onAppear { focusedEditingRoomId = roomId }
                 .onChange(of: focusedEditingRoomId) { newValue in
@@ -184,7 +187,7 @@ struct RoomDetailView: View {
                     }
                 }
         } else {
-            Text(room.name)
+            Text(RoomLimits.sanitizedRoomName(room.name))
                 .font(.headline)
                 .lineLimit(1)
         }
@@ -202,7 +205,7 @@ struct RoomDetailView: View {
         }
 
         editingRoomId = roomId
-        editingRoomName = room.name
+        editingRoomName = RoomLimits.sanitizedRoomName(room.name)
         focusedEditingRoomId = roomId
     }
 
@@ -215,7 +218,7 @@ struct RoomDetailView: View {
             return
         }
 
-        let newName = editingRoomName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let newName = RoomLimits.sanitizedRoomName(editingRoomName)
         guard !newName.isEmpty, newName != room.name else {
             cancelRename()
             return
@@ -240,6 +243,13 @@ struct RoomDetailView: View {
         editingRoomId = nil
         editingRoomName = ""
         focusedEditingRoomId = nil
+    }
+
+    private func limitRoomNameInput(_ value: String) {
+        let cappedName = RoomLimits.sanitizedRoomName(value)
+        if cappedName != value {
+            editingRoomName = cappedName
+        }
     }
 
     private func renameLocalRoom(roomId: String, newName: String) {

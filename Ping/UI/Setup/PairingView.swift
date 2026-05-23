@@ -352,7 +352,7 @@ struct PairingView: View {
                 text: $viewModel.roomName,
                 field: .roomName,
                 message: roomNameFieldMessage,
-                count: nil,
+                count: "\(viewModel.trimmedRoomName.count)/\(RoomLimits.maxRoomNameLength)",
                 isWarning: roomNameFieldIsWarning,
                 onSubmit: { viewModel.completeCreateRoom() }
             )
@@ -409,9 +409,9 @@ struct PairingView: View {
 
     private var roomNameFieldMessage: String {
         if viewModel.trimmedRoomName.isEmpty {
-            return "초대받은 사람이 확인할 수 있는 이름입니다."
+            return "초대받은 사람이 확인할 수 있는 이름입니다. 최대 \(RoomLimits.maxRoomNameLength)자."
         }
-        return "이 이름으로 1:1 룸을 만듭니다."
+        return viewModel.roomNameValidationMessage ?? "이 이름으로 1:1 룸을 만듭니다."
     }
 
     private var roomNameFieldIsWarning: Bool {
@@ -810,6 +810,13 @@ struct PairingView: View {
                 }
                 .focused($focusedField, equals: field)
                 .onSubmit(onSubmit)
+                .onChange(of: text.wrappedValue) { newValue in
+                    guard field == .roomName else { return }
+                    let cappedName = RoomLimits.sanitizedRoomName(newValue)
+                    if cappedName != newValue {
+                        text.wrappedValue = cappedName
+                    }
+                }
 
             HStack(alignment: .firstTextBaseline) {
                 Text(message)

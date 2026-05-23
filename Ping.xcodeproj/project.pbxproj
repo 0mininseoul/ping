@@ -629,6 +629,7 @@
 				"$(PROJECT_DIR)/Ping/UI/Setup/SettingsScene.swift",
 				"$(PROJECT_DIR)/Ping/UI/History/RoomTimelineView.swift",
 				"$(PROJECT_DIR)/Ping/UI/History/MessageRowView.swift",
+				"$(PROJECT_DIR)/Ping/UI/History/InlinePlayerView.swift",
 				"$(PROJECT_DIR)/Ping/UI/History/ChatMessageRowView.swift",
 				"$(PROJECT_DIR)/Ping/UI/History/ChatComposerView.swift",
 				"$(PROJECT_DIR)/Ping/UI/History/SelectableTextView.swift",
@@ -645,6 +646,7 @@
 				"$(PROJECT_DIR)/Ping/AppDelegate.swift",
 				"$(PROJECT_DIR)/Ping/Updater/UpdaterController.swift",
 				"$(PROJECT_DIR)/Ping/Notifications/LocalNotificationCenter.swift",
+				"$(PROJECT_DIR)/Ping/Backend/RoomService.swift",
 				"$(PROJECT_DIR)/Ping/Backend/InvitationService.swift",
 				"$(PROJECT_DIR)/Ping/Backend/MessageService.swift",
 				"$(PROJECT_DIR)/Ping/Backend/SupabaseClient.swift",
@@ -662,6 +664,7 @@
 				"$(PROJECT_DIR)/supabase/migrations/20260518113000_invite_user_reuses_pending_room.sql",
 				"$(PROJECT_DIR)/supabase/migrations/20260518131500_allow_member_room_rename.sql",
 				"$(PROJECT_DIR)/supabase/migrations/20260519021000_fix_accept_invite_link_id_ambiguity.sql",
+				"$(PROJECT_DIR)/supabase/migrations/20260523000600_room_name_length_limit.sql",
 				"$(PROJECT_DIR)/project.yml",
 				"$(PROJECT_DIR)/AGENTS.md",
 				"$(PROJECT_DIR)/PING_PROJECT_SPECIFICATION.md",
@@ -690,6 +693,7 @@
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/SettingsScene.swift",
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/RoomTimelineView.swift",
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/MessageRowView.swift",
+				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/InlinePlayerView.swift",
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/ChatMessageRowView.swift",
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/ChatComposerView.swift",
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/SelectableTextView.swift",
@@ -706,6 +710,7 @@
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/AppDelegate.swift",
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/UpdaterController.swift",
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/LocalNotificationCenter.swift",
+				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/RoomService.swift",
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/InvitationService.swift",
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/MessageService.swift",
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/SupabaseClient.swift",
@@ -723,6 +728,7 @@
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/20260518113000_invite_user_reuses_pending_room.sql",
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/20260518131500_allow_member_room_rename.sql",
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/20260519021000_fix_accept_invite_link_id_ambiguity.sql",
+				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/20260523000600_room_name_length_limit.sql",
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/project.yml",
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/AGENTS.md",
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/PING_PROJECT_SPECIFICATION.md",
@@ -732,7 +738,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -euo pipefail\n\nDST=\"$TARGET_BUILD_DIR/$CONTENTS_FOLDER_PATH/Resources\"\nmkdir -p \"$DST\"\n\ncp \"$PROJECT_DIR/Ping/UI/Glass/GlassButton.swift\" \"$DST/GlassButton.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Glass/GlassChip.swift\" \"$DST/GlassChip.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Glass/GlassEffectCompat.swift\" \"$DST/GlassEffectCompat.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Glass/GlassPanel.swift\" \"$DST/GlassPanel.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Glass/PingDesign.swift\" \"$DST/PingDesign.swift\"\ncp \"$PROJECT_DIR/Ping/Capture/CameraManager.swift\" \"$DST/CameraManager.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Mirror/MirrorView.swift\" \"$DST/MirrorView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Mirror/PartnerPicker.swift\" \"$DST/PartnerPicker.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/PairingView.swift\" \"$DST/PairingView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/PairingViewModel.swift\" \"$DST/PairingViewModel.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/RoomListView.swift\" \"$DST/RoomListView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/RoomManagerWindow.swift\" \"$DST/RoomManagerWindow.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/RoomDetailView.swift\" \"$DST/RoomDetailView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/RoomSearchView.swift\" \"$DST/RoomSearchView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/SettingsScene.swift\" \"$DST/SettingsScene.swift\"\ncp \"$PROJECT_DIR/Ping/UI/History/RoomTimelineView.swift\" \"$DST/RoomTimelineView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/History/MessageRowView.swift\" \"$DST/MessageRowView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/History/ChatMessageRowView.swift\" \"$DST/ChatMessageRowView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/History/ChatComposerView.swift\" \"$DST/ChatComposerView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/History/SelectableTextView.swift\" \"$DST/SelectableTextView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/History/VideoThumbnailView.swift\" \"$DST/VideoThumbnailView.swift\"\ncp \"$PROJECT_DIR/Ping/Hotkey/HotkeyManager.swift\" \"$DST/HotkeyManager.swift\"\ncp \"$PROJECT_DIR/Ping/Core/UserPreferences.swift\" \"$DST/UserPreferences.swift\"\ncp \"$PROJECT_DIR/Ping/Core/InviteLink.swift\" \"$DST/InviteLink.swift\"\ncp \"$PROJECT_DIR/Ping/Core/AppState.swift\" \"$DST/AppState.swift\"\ncp \"$PROJECT_DIR/Ping/Core/RoomLimits.swift\" \"$DST/RoomLimits.swift\"\ncp \"$PROJECT_DIR/Ping/Core/PingError.swift\" \"$DST/PingError.swift\"\ncp \"$PROJECT_DIR/Ping/Capture/LocalArchive.swift\" \"$DST/LocalArchive.swift\"\ncp \"$PROJECT_DIR/Ping/Capture/VideoRecorder.swift\" \"$DST/VideoRecorder.swift\"\ncp \"$PROJECT_DIR/Ping/Capture/VideoCropper.swift\" \"$DST/VideoCropper.swift\"\ncp \"$PROJECT_DIR/Ping/AppDelegate.swift\" \"$DST/AppDelegate.swift\"\ncp \"$PROJECT_DIR/Ping/Updater/UpdaterController.swift\" \"$DST/UpdaterController.swift\"\ncp \"$PROJECT_DIR/Ping/Notifications/LocalNotificationCenter.swift\" \"$DST/LocalNotificationCenter.swift\"\ncp \"$PROJECT_DIR/Ping/Backend/InvitationService.swift\" \"$DST/InvitationService.swift\"\ncp \"$PROJECT_DIR/Ping/Backend/MessageService.swift\" \"$DST/MessageService.swift\"\ncp \"$PROJECT_DIR/Ping/Backend/SupabaseClient.swift\" \"$DST/SupabaseClient.swift\"\ncp \"$PROJECT_DIR/web/src/App.tsx\" \"$DST/App.tsx\"\ncp \"$PROJECT_DIR/web/src/routes.tsx\" \"$DST/routes.tsx\"\ncp \"$PROJECT_DIR/web/src/components/sections/FinalCTA.tsx\" \"$DST/FinalCTA.tsx\"\ncp \"$PROJECT_DIR/scripts/build-release.sh\" \"$DST/build-release.sh\"\ncp \"$PROJECT_DIR/.gitignore\" \"$DST/.gitignore\"\ncp \"$PROJECT_DIR/scripts/generate-icons.swift\" \"$DST/generate-icons.swift\"\ncp \"$PROJECT_DIR/Ping.entitlements\" \"$DST/Ping.entitlements\"\ncp \"$PROJECT_DIR/docs/DESIGN_SYSTEM.md\" \"$DST/DESIGN_SYSTEM.md\"\ncp \"$PROJECT_DIR/docs/AUTO_UPDATE_SETUP.md\" \"$DST/AUTO_UPDATE_SETUP.md\"\ncp \"$PROJECT_DIR/supabase/migrations/20260517000100_create_ping_backend.sql\" \"$DST/20260517000100_create_ping_backend.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260518003000_room_capacity_limits.sql\" \"$DST/20260518003000_room_capacity_limits.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260518113000_invite_user_reuses_pending_room.sql\" \"$DST/20260518113000_invite_user_reuses_pending_room.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260518131500_allow_member_room_rename.sql\" \"$DST/20260518131500_allow_member_room_rename.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260519021000_fix_accept_invite_link_id_ambiguity.sql\" \"$DST/20260519021000_fix_accept_invite_link_id_ambiguity.sql\"\ncp \"$PROJECT_DIR/project.yml\" \"$DST/project.yml\"\ncp \"$PROJECT_DIR/AGENTS.md\" \"$DST/AGENTS.md\"\ncp \"$PROJECT_DIR/PING_PROJECT_SPECIFICATION.md\" \"$DST/PING_PROJECT_SPECIFICATION.md\"\ncp \"$PROJECT_DIR/Ping/Info.plist\" \"$DST/Info.plist\"\ncp \"$PROJECT_DIR/README.md\" \"$DST/README.md\"\ncp \"$PROJECT_DIR/Resources/Supabase.example.plist\" \"$DST/Supabase.example.plist\"\n";
+			shellScript = "set -euo pipefail\n\nDST=\"$TARGET_BUILD_DIR/$CONTENTS_FOLDER_PATH/Resources\"\nmkdir -p \"$DST\"\n\ncp \"$PROJECT_DIR/Ping/UI/Glass/GlassButton.swift\" \"$DST/GlassButton.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Glass/GlassChip.swift\" \"$DST/GlassChip.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Glass/GlassEffectCompat.swift\" \"$DST/GlassEffectCompat.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Glass/GlassPanel.swift\" \"$DST/GlassPanel.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Glass/PingDesign.swift\" \"$DST/PingDesign.swift\"\ncp \"$PROJECT_DIR/Ping/Capture/CameraManager.swift\" \"$DST/CameraManager.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Mirror/MirrorView.swift\" \"$DST/MirrorView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Mirror/PartnerPicker.swift\" \"$DST/PartnerPicker.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/PairingView.swift\" \"$DST/PairingView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/PairingViewModel.swift\" \"$DST/PairingViewModel.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/RoomListView.swift\" \"$DST/RoomListView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/RoomManagerWindow.swift\" \"$DST/RoomManagerWindow.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/RoomDetailView.swift\" \"$DST/RoomDetailView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/RoomSearchView.swift\" \"$DST/RoomSearchView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/SettingsScene.swift\" \"$DST/SettingsScene.swift\"\ncp \"$PROJECT_DIR/Ping/UI/History/RoomTimelineView.swift\" \"$DST/RoomTimelineView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/History/MessageRowView.swift\" \"$DST/MessageRowView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/History/InlinePlayerView.swift\" \"$DST/InlinePlayerView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/History/ChatMessageRowView.swift\" \"$DST/ChatMessageRowView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/History/ChatComposerView.swift\" \"$DST/ChatComposerView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/History/SelectableTextView.swift\" \"$DST/SelectableTextView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/History/VideoThumbnailView.swift\" \"$DST/VideoThumbnailView.swift\"\ncp \"$PROJECT_DIR/Ping/Hotkey/HotkeyManager.swift\" \"$DST/HotkeyManager.swift\"\ncp \"$PROJECT_DIR/Ping/Core/UserPreferences.swift\" \"$DST/UserPreferences.swift\"\ncp \"$PROJECT_DIR/Ping/Core/InviteLink.swift\" \"$DST/InviteLink.swift\"\ncp \"$PROJECT_DIR/Ping/Core/AppState.swift\" \"$DST/AppState.swift\"\ncp \"$PROJECT_DIR/Ping/Core/RoomLimits.swift\" \"$DST/RoomLimits.swift\"\ncp \"$PROJECT_DIR/Ping/Core/PingError.swift\" \"$DST/PingError.swift\"\ncp \"$PROJECT_DIR/Ping/Capture/LocalArchive.swift\" \"$DST/LocalArchive.swift\"\ncp \"$PROJECT_DIR/Ping/Capture/VideoRecorder.swift\" \"$DST/VideoRecorder.swift\"\ncp \"$PROJECT_DIR/Ping/Capture/VideoCropper.swift\" \"$DST/VideoCropper.swift\"\ncp \"$PROJECT_DIR/Ping/AppDelegate.swift\" \"$DST/AppDelegate.swift\"\ncp \"$PROJECT_DIR/Ping/Updater/UpdaterController.swift\" \"$DST/UpdaterController.swift\"\ncp \"$PROJECT_DIR/Ping/Notifications/LocalNotificationCenter.swift\" \"$DST/LocalNotificationCenter.swift\"\ncp \"$PROJECT_DIR/Ping/Backend/RoomService.swift\" \"$DST/RoomService.swift\"\ncp \"$PROJECT_DIR/Ping/Backend/InvitationService.swift\" \"$DST/InvitationService.swift\"\ncp \"$PROJECT_DIR/Ping/Backend/MessageService.swift\" \"$DST/MessageService.swift\"\ncp \"$PROJECT_DIR/Ping/Backend/SupabaseClient.swift\" \"$DST/SupabaseClient.swift\"\ncp \"$PROJECT_DIR/web/src/App.tsx\" \"$DST/App.tsx\"\ncp \"$PROJECT_DIR/web/src/routes.tsx\" \"$DST/routes.tsx\"\ncp \"$PROJECT_DIR/web/src/components/sections/FinalCTA.tsx\" \"$DST/FinalCTA.tsx\"\ncp \"$PROJECT_DIR/scripts/build-release.sh\" \"$DST/build-release.sh\"\ncp \"$PROJECT_DIR/.gitignore\" \"$DST/.gitignore\"\ncp \"$PROJECT_DIR/scripts/generate-icons.swift\" \"$DST/generate-icons.swift\"\ncp \"$PROJECT_DIR/Ping.entitlements\" \"$DST/Ping.entitlements\"\ncp \"$PROJECT_DIR/docs/DESIGN_SYSTEM.md\" \"$DST/DESIGN_SYSTEM.md\"\ncp \"$PROJECT_DIR/docs/AUTO_UPDATE_SETUP.md\" \"$DST/AUTO_UPDATE_SETUP.md\"\ncp \"$PROJECT_DIR/supabase/migrations/20260517000100_create_ping_backend.sql\" \"$DST/20260517000100_create_ping_backend.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260518003000_room_capacity_limits.sql\" \"$DST/20260518003000_room_capacity_limits.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260518113000_invite_user_reuses_pending_room.sql\" \"$DST/20260518113000_invite_user_reuses_pending_room.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260518131500_allow_member_room_rename.sql\" \"$DST/20260518131500_allow_member_room_rename.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260519021000_fix_accept_invite_link_id_ambiguity.sql\" \"$DST/20260519021000_fix_accept_invite_link_id_ambiguity.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260523000600_room_name_length_limit.sql\" \"$DST/20260523000600_room_name_length_limit.sql\"\ncp \"$PROJECT_DIR/project.yml\" \"$DST/project.yml\"\ncp \"$PROJECT_DIR/AGENTS.md\" \"$DST/AGENTS.md\"\ncp \"$PROJECT_DIR/PING_PROJECT_SPECIFICATION.md\" \"$DST/PING_PROJECT_SPECIFICATION.md\"\ncp \"$PROJECT_DIR/Ping/Info.plist\" \"$DST/Info.plist\"\ncp \"$PROJECT_DIR/README.md\" \"$DST/README.md\"\ncp \"$PROJECT_DIR/Resources/Supabase.example.plist\" \"$DST/Supabase.example.plist\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -976,7 +982,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 24;
+				CURRENT_PROJECT_VERSION = 26;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -996,7 +1002,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 0.3.15;
+				MARKETING_VERSION = 0.3.16;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -1044,7 +1050,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 24;
+				CURRENT_PROJECT_VERSION = 26;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1058,7 +1064,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 0.3.15;
+				MARKETING_VERSION = 0.3.16;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = Ping;

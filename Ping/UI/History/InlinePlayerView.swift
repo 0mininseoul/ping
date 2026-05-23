@@ -14,6 +14,8 @@ final class InlinePlayerController: ObservableObject {
 
 struct InlinePlayerView: View {
     let message: VideoMessage
+    let isMine: Bool
+    let archivePeerName: String
     let cacheService: HistoryCacheService
     @ObservedObject var controller: InlinePlayerController
 
@@ -54,6 +56,10 @@ struct InlinePlayerView: View {
             localURL = cached
             return
         }
+        if let archived = archivedVideoURL() {
+            localURL = archived
+            return
+        }
         do {
             let storage = StorageService()
             let tempURL = try await storage.downloadVideo(remotePath: message.videoUrl)
@@ -67,6 +73,16 @@ struct InlinePlayerView: View {
             }
             NSLog("InlinePlayerView load failed: \(err) — message=\(id) videoUrl=\(message.videoUrl)")
         }
+    }
+
+    private func archivedVideoURL() -> URL? {
+        guard let createdAt = message.createdAt else { return nil }
+        let direction: LocalArchive.Direction = isMine ? .sent : .received
+        return LocalArchive.existingVideoURL(
+            direction: direction,
+            nickname: archivePeerName,
+            date: createdAt
+        )
     }
 
     struct PlayerBox: NSViewRepresentable {

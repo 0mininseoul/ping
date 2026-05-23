@@ -7,6 +7,7 @@ struct MessageRowView: View {
     let onTap: () -> Void
     let cacheService: HistoryCacheService
     @ObservedObject var inlineController: InlinePlayerController
+    let archivePeerName: String
     let reactions: [HistoryViewModel.ReactionAggregate]
     let onReply: () -> Void
     let onReact: () -> Void
@@ -19,11 +20,16 @@ struct MessageRowView: View {
             if isMine { Spacer() }
             VStack(alignment: isMine ? .trailing : .leading, spacing: 4) {
                 if isExpanded {
-                    InlinePlayerView(message: message, cacheService: cacheService, controller: inlineController)
+                    InlinePlayerView(
+                        message: message,
+                        isMine: isMine,
+                        archivePeerName: archivePeerName,
+                        cacheService: cacheService,
+                        controller: inlineController
+                    )
                 } else {
                     thumbnail
                 }
-                metadata
                 if !reactions.isEmpty {
                     HStack(spacing: 4) {
                         ForEach(reactions, id: \.emoji) { agg in
@@ -67,17 +73,7 @@ struct MessageRowView: View {
     }
 
     private var thumbnail: some View {
-        Group {
-            if message.captureMode == .faceOnly {
-                Circle()
-                    .fill(Color.gray.opacity(0.18))
-                    .frame(width: 60, height: 60)
-            } else {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(Color.gray.opacity(0.18))
-                    .frame(width: 90, height: 90 / thumbnailAspectRatio)
-            }
-        }
+        thumbnailBase
         .overlay(
             Image(systemName: "play.fill")
                 .font(.caption)
@@ -88,18 +84,38 @@ struct MessageRowView: View {
         )
     }
 
-    private var thumbnailAspectRatio: CGFloat {
-        CGFloat(max(0.5, min(3.0, message.aspectRatio ?? 1.78)))
+    @ViewBuilder
+    private var thumbnailBase: some View {
+        if message.captureMode == .faceOnly {
+            thumbnailImage
+                .frame(width: thumbnailSize.width, height: thumbnailSize.height)
+                .clipShape(Circle())
+        } else {
+            thumbnailImage
+                .frame(width: thumbnailSize.width, height: thumbnailSize.height)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        }
     }
 
-    private var metadata: some View {
-        HStack(spacing: 6) {
-            if message.captureMode == .screenFace {
-                Image(systemName: "rectangle.fill").font(.caption2)
-            } else {
-                Image(systemName: "circle.fill").font(.caption2)
-            }
+    private var thumbnailImage: some View {
+        VideoThumbnailView(
+            message: message,
+            isMine: isMine,
+            archivePeerName: archivePeerName,
+            cacheService: cacheService,
+            allowsRemoteFetch: false
+        )
+    }
+
+    private var thumbnailSize: CGSize {
+        if message.captureMode == .faceOnly {
+            return CGSize(width: 60, height: 60)
         }
-        .foregroundStyle(.secondary)
+
+        return CGSize(width: 90, height: 90 / thumbnailAspectRatio)
+    }
+
+    private var thumbnailAspectRatio: CGFloat {
+        CGFloat(max(0.5, min(3.0, message.aspectRatio ?? 1.78)))
     }
 }

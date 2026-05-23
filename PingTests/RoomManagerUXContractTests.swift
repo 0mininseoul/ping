@@ -25,11 +25,60 @@ final class RoomManagerUXContractTests: XCTestCase {
     func testRoomManagerCanCreateRoomFromRoomsTab() throws {
         let source = try readSourceFile("Ping/UI/Setup/RoomManagerWindow.swift")
 
-        // NavigationSplitView-based room manager provides create and search actions via toolbar
+        // Room manager provides create and search actions via titlebar controls scoped to the window.
         XCTAssertTrue(source.contains("createRoom()"))
         XCTAssertTrue(source.contains("roomService.createRoom"))
         XCTAssertTrue(source.contains("새 룸 만들기"))
         XCTAssertTrue(source.contains("룸 찾기"))
+        XCTAssertTrue(source.contains("RoomManagerToolbarNotification.createRoom"))
+        XCTAssertTrue(source.contains("RoomManagerToolbarNotification.searchRoom"))
+    }
+
+    func testRoomManagerTitlebarActionsStayWindowScopedInsteadOfSidebarScoped() throws {
+        let source = try readSourceFile("Ping/UI/Setup/RoomManagerWindow.swift")
+        let sidebar = try sourceSlice(
+            in: source,
+            from: "private var sidebarContent",
+            to: "private var detailContent"
+        )
+        let window = try sourceSlice(
+            in: source,
+            from: "final class RoomManagerWindow",
+            to: "enum RoomManagerTab"
+        )
+
+        XCTAssertTrue(window.contains("NSTitlebarAccessoryViewController"))
+        XCTAssertTrue(window.contains("layoutAttribute = .right"))
+        XCTAssertTrue(window.contains("RoomManagerTitlebarActionHandler.makeAccessoryView"))
+        XCTAssertTrue(window.contains("NSApp.sendAction(#selector(NSSplitViewController.toggleSidebar"))
+        XCTAssertTrue(window.contains("suppressDefaultSidebarToolbar()"))
+        XCTAssertTrue(window.contains("override var toolbar: NSToolbar?"))
+        XCTAssertTrue(window.contains("isSuppressingDefaultToolbar"))
+        XCTAssertTrue(window.contains("self?.toolbar = nil"))
+        XCTAssertTrue(source.contains("toolbar(removing: .sidebarToggle)"))
+        XCTAssertTrue(source.contains(".toolbar(.hidden, for: .windowToolbar)"))
+        XCTAssertFalse(sidebar.contains(".toolbar"))
+    }
+
+    func testRoomSidebarUsesCompactWidthThatGrowsWithCappedRoomNames() throws {
+        let roomManagerSource = try readSourceFile("Ping/UI/Setup/RoomManagerWindow.swift")
+        let roomListSource = try readSourceFile("Ping/UI/Setup/RoomListView.swift")
+        let roomDetailSource = try readSourceFile("Ping/UI/Setup/RoomDetailView.swift")
+        let pairingViewSource = try readSourceFile("Ping/UI/Setup/PairingView.swift")
+        let pairingViewModelSource = try readSourceFile("Ping/UI/Setup/PairingViewModel.swift")
+
+        XCTAssertTrue(roomManagerSource.contains("private var sidebarWidth"))
+        XCTAssertTrue(roomManagerSource.contains(".navigationSplitViewColumnWidth(min: 148, ideal: sidebarWidth, max: 240)"))
+        XCTAssertTrue(roomManagerSource.contains("RoomLimits.sanitizedRoomName($0.name).count"))
+        XCTAssertTrue(roomManagerSource.contains("RoomLimits.sanitizedRoomName(room.name)"))
+        XCTAssertTrue(roomListSource.contains("limitRoomNameInput"))
+        XCTAssertTrue(roomListSource.contains("RoomLimits.sanitizedRoomName(editingName)"))
+        XCTAssertTrue(roomDetailSource.contains("limitRoomNameInput"))
+        XCTAssertTrue(roomDetailSource.contains("RoomLimits.sanitizedRoomName(editingRoomName)"))
+        XCTAssertTrue(pairingViewSource.contains("RoomLimits.maxRoomNameLength"))
+        XCTAssertTrue(pairingViewSource.contains(".onChange(of: text.wrappedValue)"))
+        XCTAssertTrue(pairingViewModelSource.contains("RoomLimits.isValidRoomName(roomName)"))
+        XCTAssertTrue(pairingViewModelSource.contains("startAction = .createRoom(name: sanitizedRoomName)"))
     }
 
     func testRoomManagerRestoresAValidRoomSelectionWhenOpened() throws {
@@ -41,17 +90,43 @@ final class RoomManagerUXContractTests: XCTestCase {
         XCTAssertTrue(source.contains("appState.rooms.contains(where: { $0.id == selectedRoomId })"))
     }
 
-    func testHistoryTimelineDoesNotStartVideoDownloadsForCollapsedRows() throws {
+    func testHistoryTimelineUsesLocalThumbnailsWithoutRemoteFetchForCollapsedRows() throws {
         let messageRowSource = try readSourceFile("Ping/UI/History/MessageRowView.swift")
         let thumbnailSource = try readSourceFile("Ping/UI/History/VideoThumbnailView.swift")
+        let inlineSource = try readSourceFile("Ping/UI/History/InlinePlayerView.swift")
         let collapsedThumbnail = try sourceSlice(
             in: messageRowSource,
             from: "private var thumbnail",
-            to: "private var metadata"
+            to: "private var thumbnailSize"
         )
 
-        XCTAssertFalse(collapsedThumbnail.contains("VideoThumbnailView"))
-        XCTAssertTrue(thumbnailSource.contains("VideoThumbnailView is reserved for expanded playback"))
+        XCTAssertTrue(collapsedThumbnail.contains("VideoThumbnailView"))
+        XCTAssertTrue(collapsedThumbnail.contains("allowsRemoteFetch: false"))
+        XCTAssertTrue(thumbnailSource.contains("LocalArchive.existingVideoURL"))
+        XCTAssertTrue(inlineSource.contains("LocalArchive.existingVideoURL"))
+    }
+
+    func testVideoRowsDoNotRenderRedundantModeDotBelowThumbnails() throws {
+        let source = try readSourceFile("Ping/UI/History/MessageRowView.swift")
+
+        XCTAssertFalse(source.contains("circle.fill"))
+        XCTAssertFalse(source.contains("rectangle.fill"))
+    }
+
+    func testTimestampRevealSpringsBackAndKeepsGapFromBubble() throws {
+        let source = try readSourceFile("Ping/UI/History/RoomTimelineView.swift")
+        let scrollMonitor = try sourceSlice(
+            in: source,
+            from: "scrollWheelMonitor = NSEvent.addLocalMonitorForEvents",
+            to: ".simultaneousGesture"
+        )
+
+        XCTAssertTrue(source.contains("@State private var revealResetTask"))
+        XCTAssertTrue(source.contains("private let timestampGap: CGFloat = 16"))
+        XCTAssertTrue(source.contains("private let timestampWidth: CGFloat = 78"))
+        XCTAssertTrue(source.contains(".offset(x: timestampGap)"))
+        XCTAssertTrue(scrollMonitor.contains("scheduleRevealReset()"))
+        XCTAssertTrue(scrollMonitor.contains("resetRevealOffset()"))
     }
 
     func testChatComposerUsesCommandEnterForSendAndPlainEnterForNewline() throws {

@@ -11,10 +11,11 @@ struct RoomTimelineView: View {
     @State private var reactionPickerTargetId: String?
     @State private var composerKeyMonitor: Any?
     @State private var scrollWheelMonitor: Any?
+    @State private var revealResetTask: Task<Void, Never>?
     @State private var revealOffset: CGFloat = 0
-    private let revealMax: CGFloat = -68
-    // 시간 라벨이 평소엔 row trailing + 60pt 우측 (화면 밖). row가 좌측으로 이동하면 함께 들어옴.
-    private let labelOutset: CGFloat = 60
+    private let timestampWidth: CGFloat = 78
+    private let timestampGap: CGFloat = 16
+    private var revealMax: CGFloat { -(timestampWidth + timestampGap) }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -33,10 +34,10 @@ struct RoomTimelineView: View {
                                                     Text(date.formatted(.dateTime.hour().minute()))
                                                         .font(.caption2)
                                                         .foregroundStyle(.tertiary)
-                                                        .frame(width: labelOutset, alignment: .leading)
-                                                        // 평소 화면 밖 우측에 위치. row offset이 -labelOutset이면 정확히 trailing edge에 들어옴.
-                                                        .offset(x: labelOutset)
-                                                        .opacity(min(1, abs(revealOffset) / 50))
+                                                        .frame(width: timestampWidth, alignment: .leading)
+                                                        .offset(x: timestampGap)
+                                                        .opacity(min(1, abs(revealOffset) / (timestampWidth * 0.7)))
+                                                        .allowsHitTesting(false)
                                                 }
                                             }
                                             .offset(x: revealOffset)
@@ -76,9 +77,9 @@ struct RoomTimelineView: View {
                             let isEnded = event.phase == .ended || event.phase == .cancelled
                                 || event.momentumPhase == .ended || event.momentumPhase == .cancelled
                             if isEnded {
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                    revealOffset = 0
-                                }
+                                resetRevealOffset()
+                            } else {
+                                scheduleRevealReset()
                             }
                             // 이벤트 소비 (ScrollView 수평 스크롤 방지)
                             return nil
@@ -95,9 +96,7 @@ struct RoomTimelineView: View {
                             }
                         }
                         .onEnded { _ in
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                revealOffset = 0
-                            }
+                            resetRevealOffset()
                         }
                 )
             }
@@ -159,6 +158,8 @@ struct RoomTimelineView: View {
                 NSEvent.removeMonitor(scrollWheelMonitor)
                 self.scrollWheelMonitor = nil
             }
+            revealResetTask?.cancel()
+            revealResetTask = nil
         }
         .alert("오류", isPresented: Binding<Bool>(
             get: { viewModel.lastErrorMessage != nil },
@@ -176,6 +177,22 @@ struct RoomTimelineView: View {
         Task { await viewModel.sendChat(body: body) }
     }
 
+    private func scheduleRevealReset(after delay: UInt64 = 160_000_000) {
+        revealResetTask?.cancel()
+        revealResetTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: delay)
+            guard !Task.isCancelled else { return }
+            resetRevealOffset()
+        }
+    }
+
+    private func resetRevealOffset() {
+        revealResetTask?.cancel()
+        withAnimation(.spring(response: 0.28, dampingFraction: 0.78)) {
+            revealOffset = 0
+        }
+    }
+
     @ViewBuilder
     private func rowFor(item: TimelineItem) -> some View {
         let myUid = appState.currentUser?.id
@@ -183,9 +200,10 @@ struct RoomTimelineView: View {
         case .video(let v):
             let key = "video:" + (v.id ?? "")
             let aggs = (viewModel.reactionsByTargetId[key] ?? [:]).values.sorted(by: { $0.count > $1.count })
+            let isMine = v.senderUid == myUid
             MessageRowView(
                 message: v,
-                isMine: v.senderUid == myUid,
+                isMine: isMine,
                 isExpanded: viewModel.expandedMessageId == v.id,
                 onTap: {
                     if viewModel.expandedMessageId == v.id {
@@ -196,6 +214,7 @@ struct RoomTimelineView: View {
                 },
                 cacheService: cacheService,
                 inlineController: viewModel.inlineController,
+                archivePeerName: archivePeerName(for: v, isMine: isMine, myUid: myUid),
                 reactions: Array(aggs),
                 onReply: {
                     viewModel.replyTarget = .video(id: v.id ?? "", sender: v.senderNickname, captureMode: v.captureMode)
@@ -257,6 +276,22 @@ struct RoomTimelineView: View {
             }
         }
         return nil
+    }
+
+    private func archivePeerName(for message: VideoMessage, isMine: Bool, myUid: String?) -> String {
+        guard isMine else { return message.senderNickname }
+        guard let room = appState.rooms.first(where: { $0.id == message.roomId }) else {
+            return message.senderNickname
+        }
+
+        let otherNames = room.memberUids
+            .filter { $0 != myUid }
+            .compactMap { room.memberNicknames[$0] }
+        if otherNames.count == 1 {
+            return otherNames[0]
+        }
+
+        return room.name
     }
 
     private func findVideo(by id: String) -> VideoMessage? {

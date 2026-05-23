@@ -3,13 +3,15 @@ import AVFoundation
 import AppKit
 
 struct VideoThumbnailView: View {
-    // VideoThumbnailView is reserved for expanded playback and future explicit
-    // thumbnail generation paths; collapsed rows must not start video downloads.
     let message: VideoMessage
+    let isMine: Bool
+    let archivePeerName: String
     let cacheService: HistoryCacheService
+    let allowsRemoteFetch: Bool
 
     @State private var thumbnail: NSImage?
     @State private var hasFailed: Bool = false
+    @State private var isLocalOnlyMiss: Bool = false
 
     var body: some View {
         Group {
@@ -19,16 +21,25 @@ struct VideoThumbnailView: View {
                     .aspectRatio(contentMode: .fill)
             } else if hasFailed {
                 placeholderView(color: Color.gray.opacity(0.18))
-                    .overlay(
-                        Image(systemName: "exclamationmark.triangle")
-                            .foregroundStyle(.secondary)
-                    )
+                    .overlay(failureOverlay)
             } else {
                 placeholderView(color: Color.gray.opacity(0.3))
-                    .overlay(ProgressView().scaleEffect(0.6))
+                    .overlay {
+                        if allowsRemoteFetch {
+                            ProgressView().scaleEffect(0.6)
+                        }
+                    }
             }
         }
         .task(id: message.id) { await load() }
+    }
+
+    @ViewBuilder
+    private var failureOverlay: some View {
+        if !isLocalOnlyMiss {
+            Image(systemName: "exclamationmark.triangle")
+                .foregroundStyle(.secondary)
+        }
     }
 
     @ViewBuilder
@@ -49,6 +60,17 @@ struct VideoThumbnailView: View {
         if let cached = cacheService.cachedFile(roomId: message.roomId, messageId: id) {
             thumbnail = await extractFrame(from: cached)
             if thumbnail == nil { hasFailed = true }
+            return
+        }
+        if let archived = archivedVideoURL() {
+            thumbnail = await extractFrame(from: archived)
+            if thumbnail == nil { hasFailed = true }
+            return
+        }
+
+        guard allowsRemoteFetch else {
+            isLocalOnlyMiss = true
+            hasFailed = true
             return
         }
 
@@ -82,5 +104,15 @@ struct VideoThumbnailView: View {
             NSLog("VideoThumbnailView: frame extract failed: \(error)")
             return nil
         }
+    }
+
+    private func archivedVideoURL() -> URL? {
+        guard let createdAt = message.createdAt else { return nil }
+        let direction: LocalArchive.Direction = isMine ? .sent : .received
+        return LocalArchive.existingVideoURL(
+            direction: direction,
+            nickname: archivePeerName,
+            date: createdAt
+        )
     }
 }

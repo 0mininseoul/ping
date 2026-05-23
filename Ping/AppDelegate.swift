@@ -723,7 +723,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         Task {
             do {
-                let roomName = "\(currentUser.nickname) ↔ \(user.nickname)"
+                let roomName = RoomLimits.directRoomName(
+                    myNickname: currentUser.nickname,
+                    otherNickname: user.nickname
+                )
                 let room = try await invitationService.inviteUser(
                     toUid: theirUid,
                     fromNickname: currentUser.nickname,

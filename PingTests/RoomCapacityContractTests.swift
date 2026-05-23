@@ -13,6 +13,25 @@ final class RoomCapacityContractTests: XCTestCase {
         XCTAssertTrue(migration.contains("case when current_count >= 4 then 'full' else 'open' end"))
     }
 
+    func testRoomNameLimitIsSixteenCharactersAcrossAppAndDatabase() throws {
+        let limitsSource = try readSourceFile("Ping/Core/RoomLimits.swift")
+        let roomServiceSource = try readSourceFile("Ping/Backend/RoomService.swift")
+        let invitationServiceSource = try readSourceFile("Ping/Backend/InvitationService.swift")
+        let appDelegateSource = try readSourceFile("Ping/AppDelegate.swift")
+        let migration = try readSourceFile("20260523000600_room_name_length_limit.sql")
+
+        XCTAssertTrue(limitsSource.contains("maxRoomNameLength = 16"))
+        XCTAssertTrue(limitsSource.contains("sanitizedRoomName"))
+        XCTAssertTrue(limitsSource.contains("directRoomName(myNickname: String, otherNickname: String)"))
+        XCTAssertTrue(roomServiceSource.contains("RoomLimits.sanitizedRoomName(name)"))
+        XCTAssertTrue(roomServiceSource.contains("RoomLimits.sanitizedRoomName(newName)"))
+        XCTAssertTrue(invitationServiceSource.contains("RoomLimits.sanitizedRoomName(roomName)"))
+        XCTAssertTrue(appDelegateSource.contains("RoomLimits.directRoomName"))
+        XCTAssertTrue(migration.contains("rooms_name_length_limit"))
+        XCTAssertTrue(migration.contains("char_length(btrim(name)) between 1 and 16"))
+        XCTAssertTrue(migration.contains("not valid"))
+    }
+
     func testAppAndMessageSendingUseGroupRoomMembershipRules() throws {
         let appStateSource = try readSourceFile("Ping/Core/AppState.swift")
         let messageSource = try readSourceFile("Ping/Backend/MessageService.swift")

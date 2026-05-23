@@ -150,6 +150,10 @@ final class PairingViewModel: ObservableObject {
         roomName.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    var sanitizedRoomName: String {
+        RoomLimits.sanitizedRoomName(roomName)
+    }
+
     var canProceedFromPermissions: Bool {
         cameraGranted && audioGranted && notificationGranted && screenRecordingGranted
     }
@@ -168,7 +172,7 @@ final class PairingViewModel: ObservableObject {
     }
 
     var canProceedFromCreateRoom: Bool {
-        !trimmedRoomName.isEmpty
+        RoomLimits.isValidRoomName(roomName)
     }
 
     var nicknameValidationMessage: String? {
@@ -184,6 +188,9 @@ final class PairingViewModel: ObservableObject {
     var roomNameValidationMessage: String? {
         if trimmedRoomName.isEmpty {
             return "룸 이름을 입력하세요."
+        }
+        if trimmedRoomName.count > RoomLimits.maxRoomNameLength {
+            return "룸 이름은 \(RoomLimits.maxRoomNameLength)자 이하여야 합니다."
         }
         return nil
     }
@@ -256,7 +263,7 @@ final class PairingViewModel: ObservableObject {
         }
 
         errorMessage = nil
-        startAction = .createRoom(name: trimmedRoomName)
+        startAction = .createRoom(name: sanitizedRoomName)
         step = .done
     }
 

@@ -13,9 +13,12 @@ final class RoomService {
 
     @discardableResult
     func createRoom(name: String, ownerUid: String, ownerNickname: String) async throws -> Room {
+        let roomName = RoomLimits.sanitizedRoomName(name)
+        guard RoomLimits.isValidRoomName(roomName) else { throw PingError.invalidRoomName }
+
         let rooms: [Room] = try await client.rpcArray("ping_create_room", body: [
-            "room_name": name,
-            "searchable_room_name": SearchableText.normalize(name),
+            "room_name": roomName,
+            "searchable_room_name": SearchableText.normalize(roomName),
             "owner_nickname": ownerNickname
         ])
 
@@ -70,10 +73,13 @@ final class RoomService {
     }
 
     func renameRoom(roomId: String, newName: String) async throws {
+        let roomName = RoomLimits.sanitizedRoomName(newName)
+        guard RoomLimits.isValidRoomName(roomName) else { throw PingError.invalidRoomName }
+
         try await client.rpcVoid("ping_rename_room", body: [
             "room_uuid": roomId,
-            "new_name": newName,
-            "new_searchable_name": SearchableText.normalize(newName)
+            "new_name": roomName,
+            "new_searchable_name": SearchableText.normalize(roomName)
         ])
     }
 }

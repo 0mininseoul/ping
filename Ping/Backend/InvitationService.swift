@@ -12,21 +12,27 @@ final class InvitationService {
     }
 
     func send(fromUid: String, fromNickname: String, toUid: String, roomId: String, roomName: String) async throws {
+        let displayName = RoomLimits.sanitizedRoomName(roomName)
+        guard RoomLimits.isValidRoomName(displayName) else { throw PingError.invalidRoomName }
+
         let _: String = try await client.rpcValue("ping_send_invitation", body: [
             "to_uid": toUid,
             "room_uuid": roomId,
             "from_nickname": fromNickname,
-            "room_name_text": roomName
+            "room_name_text": displayName
         ])
     }
 
     @discardableResult
     func inviteUser(toUid: String, fromNickname: String, roomName: String) async throws -> Room {
+        let displayName = RoomLimits.sanitizedRoomName(roomName)
+        guard RoomLimits.isValidRoomName(displayName) else { throw PingError.invalidRoomName }
+
         let rooms: [Room] = try await client.rpcArray("ping_invite_user", body: [
             "target_uid": toUid,
             "inviter_nickname_text": fromNickname,
-            "room_name_text": roomName,
-            "searchable_room_name": SearchableText.normalize(roomName)
+            "room_name_text": displayName,
+            "searchable_room_name": SearchableText.normalize(displayName)
         ])
 
         guard let room = rooms.first else { throw PingError.supabaseUnavailable }

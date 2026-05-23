@@ -17,7 +17,7 @@ struct InvitationCard: View {
                         Text("\(invitation.fromNickname)님의 초대")
                             .font(PingFont.body)
                             .lineLimit(1)
-                        Text(invitation.roomName)
+                        Text(RoomLimits.sanitizedRoomName(invitation.roomName))
                             .font(PingFont.caption)
                             .foregroundStyle(.secondary)
                             .lineLimit(2)
