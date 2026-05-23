@@ -36,7 +36,7 @@
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>Ping은 2초 영상 메시지 촬영을 위해 카메라를 사용합니다.</string>
+	<string>Ping은 3초 영상 메시지 촬영을 위해 카메라를 사용합니다.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Ping은 영상 메시지의 음성 녹음을 위해 마이크를 사용합니다.</string>
 	<key>SUAutomaticallyUpdate</key>

@@ -14,6 +14,9 @@ final class EntitlementsTests: XCTestCase {
 
         XCTAssertTrue(project.contains("CODE_SIGN_ENTITLEMENTS: Ping.entitlements"))
         XCTAssertTrue(project.contains("CODE_SIGN_ENTITLEMENTS: PingDebug.entitlements"))
+        XCTAssertTrue(project.contains("OTHER_CODE_SIGN_FLAGS: \"--requirements '=designated => identifier \\\"com.youngminpark.ping.Ping\\\"'\""))
+        XCTAssertTrue(project.contains("NSCameraUsageDescription: \"Ping은 3초 영상 메시지 촬영을 위해 카메라를 사용합니다.\""))
+        XCTAssertFalse(project.contains("NSCameraUsageDescription: \"Ping은 2초"))
         XCTAssertFalse(project.contains("com.apple.security.device.microphone: true"))
     }
 

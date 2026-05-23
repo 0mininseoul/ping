@@ -119,7 +119,7 @@ struct PairingView: View {
                         .font(PingFont.wordmark)
                 }
                 Spacer()
-                Text("\(viewModel.step.rawValue + 1) / \(PairingViewModel.Step.allCases.count)")
+                Text("\(viewModel.displayedStepNumber) / \(viewModel.displayedStepCount)")
                     .font(PingFont.caption)
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
@@ -183,7 +183,7 @@ struct PairingView: View {
 
             HStack(spacing: 8) {
                 setupChip("Option+P", icon: "keyboard")
-                setupChip("2초", icon: "timer")
+                setupChip("3초", icon: "timer")
                 setupChip("메뉴바", icon: "menubar.rectangle")
             }
 
@@ -247,7 +247,7 @@ struct PairingView: View {
                 }
 
                 permissionRow(
-                    title: "화면 녹화",
+                    title: "화면 및 시스템 오디오 녹음",
                     icon: "rectangle.inset.filled.and.person.filled",
                     kind: .screenRecording,
                     state: viewModel.screenRecordingPermission,

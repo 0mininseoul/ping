@@ -17,6 +17,7 @@ settings:
     ENABLE_HARDENED_RUNTIME: YES
     CODE_SIGN_STYLE: Manual
     CODE_SIGN_IDENTITY: "-"
+    OTHER_CODE_SIGN_FLAGS: "--requirements '=designated => identifier \"com.youngminpark.ping.Ping\"'"
 
 packages:
   KeyboardShortcuts:
@@ -69,7 +70,7 @@ targets:
         CFBundleDisplayName: Ping
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
-        NSCameraUsageDescription: "Ping은 2초 영상 메시지 촬영을 위해 카메라를 사용합니다."
+        NSCameraUsageDescription: "Ping은 3초 영상 메시지 촬영을 위해 카메라를 사용합니다."
         NSMicrophoneUsageDescription: "Ping은 영상 메시지의 음성 녹음을 위해 마이크를 사용합니다."
         CFBundleURLTypes:
           - CFBundleURLName: com.youngminpark.ping.invite

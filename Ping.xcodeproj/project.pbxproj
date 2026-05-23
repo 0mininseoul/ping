@@ -32,6 +32,7 @@
 		3B5117F35AEE41A4224D9837 /* StorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0323B3DFE22413AC6BB3627D /* StorageService.swift */; };
 		3E8747EC3C02819DE0808A7E /* GlassButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8841413A695A3C64F0B3F247 /* GlassButton.swift */; };
 		3F281D7BAAC12DAA86E5E838 /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = 1A17C43CDDC3D0D57F6CA5D4 /* Realtime */; };
+		43072A8619301C054B30BC7C /* OnboardingFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05A1A2EA9F9A191DE3263C29 /* OnboardingFlowTests.swift */; };
 		44DC21E6B318CF6969918DE9 /* CompatibilityContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7BA291155ACBFF85185B36B /* CompatibilityContractTests.swift */; };
 		45CDCD2993C1E53FB62356A1 /* StatusMenuBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CAAECC60F6BE44D405DF213 /* StatusMenuBuilder.swift */; };
 		4817EF4ACB6DAD760DDDF3E2 /* OnboardingCopyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F542186B03D30E2C8BE833E /* OnboardingCopyTests.swift */; };
@@ -133,6 +134,7 @@
 		0194505B84DC32C2BA700F6C /* InviteLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteLink.swift; sourceTree = "<group>"; };
 		0323B3DFE22413AC6BB3627D /* StorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageService.swift; sourceTree = "<group>"; };
 		050A0147A7508D00A8E2DE3B /* OnboardingWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingWindow.swift; sourceTree = "<group>"; };
+		05A1A2EA9F9A191DE3263C29 /* OnboardingFlowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlowTests.swift; sourceTree = "<group>"; };
 		06B4B9E0137AD6A34F151BF2 /* VideoRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoRecorder.swift; sourceTree = "<group>"; };
 		0DB8EE7896F96DFAC0EFCA86 /* ScreenCoordinatesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenCoordinatesTests.swift; sourceTree = "<group>"; };
 		178B779BE40BB245CFDED469 /* VideoThumbnailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoThumbnailView.swift; sourceTree = "<group>"; };
@@ -450,6 +452,7 @@
 				B34FE34A23EC76CE975F980D /* MenuBarIconContractTests.swift */,
 				3F670415508116D43886183A /* MirrorViewModelStateTests.swift */,
 				4F542186B03D30E2C8BE833E /* OnboardingCopyTests.swift */,
+				05A1A2EA9F9A191DE3263C29 /* OnboardingFlowTests.swift */,
 				4E1A841BBD8BDD965C164BF8 /* OnboardingInputContractTests.swift */,
 				8F441B1B93C9D79CB77E24D4 /* PartnerCyclingTests.swift */,
 				C68B271420DEF87D935A0913 /* PermissionUXContractTests.swift */,
@@ -761,6 +764,7 @@
 				82489619708A93D7397D5172 /* MenuBarIconContractTests.swift in Sources */,
 				C5B52473A941591B9CEBDCF0 /* MirrorViewModelStateTests.swift in Sources */,
 				4817EF4ACB6DAD760DDDF3E2 /* OnboardingCopyTests.swift in Sources */,
+				43072A8619301C054B30BC7C /* OnboardingFlowTests.swift in Sources */,
 				F82A4ECB45A5581D811B4F3C /* OnboardingInputContractTests.swift in Sources */,
 				5139C6DCAD42CCBAE2E11258 /* PIPCompositorTests.swift in Sources */,
 				5EE98B4867742225FE567CD4 /* PartnerCyclingTests.swift in Sources */,
@@ -1008,6 +1012,7 @@
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
+				OTHER_CODE_SIGN_FLAGS = "--requirements '=designated => identifier \"com.youngminpark.ping.Ping\"'";
 				PRODUCT_NAME = Ping;
 				SDKROOT = macosx;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
@@ -1069,6 +1074,7 @@
 				MARKETING_VERSION = 0.3.23;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
+				OTHER_CODE_SIGN_FLAGS = "--requirements '=designated => identifier \"com.youngminpark.ping.Ping\"'";
 				PRODUCT_NAME = Ping;
 				SDKROOT = macosx;
 				SWIFT_COMPILATION_MODE = wholemodule;

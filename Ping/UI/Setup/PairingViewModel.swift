@@ -34,7 +34,7 @@ enum SetupPermissionKind: String, CaseIterable {
         case .notifications:
             return "알림"
         case .screenRecording:
-            return "화면 녹화"
+            return "화면 및 시스템 오디오 녹음"
         }
     }
 
@@ -210,7 +210,35 @@ final class PairingViewModel: ObservableObject {
     }
 
     var progress: Double {
-        Double(step.rawValue + 1) / Double(Step.allCases.count)
+        Double(displayedStepNumber) / Double(displayedStepCount)
+    }
+
+    var displayedStepNumber: Int {
+        switch step {
+        case .welcome:
+            return 1
+        case .permissions:
+            return 2
+        case .nickname:
+            return 3
+        case .connectionChoice:
+            return 4
+        case .createRoom, .joinRoom:
+            return 5
+        case .done:
+            return displayedStepCount
+        }
+    }
+
+    var displayedStepCount: Int {
+        switch startAction {
+        case .later:
+            return 5
+        case .createRoom, .joinRoom:
+            return 6
+        case nil:
+            return 6
+        }
     }
 
     func next() {
@@ -330,7 +358,7 @@ final class PairingViewModel: ObservableObject {
 
         await requestScreenRecordingIfNeeded()
         if !screenRecordingGranted {
-            errorMessage = "시스템 설정에서 화면 녹화를 켠 뒤 Ping을 종료하고 다시 열어야 적용됩니다."
+            errorMessage = "시스템 설정에서 화면 및 시스템 오디오 녹음을 켠 뒤 Ping을 종료하고 다시 열어야 적용됩니다."
         } else {
             errorMessage = nil
         }
