@@ -5,7 +5,7 @@ const beats = [
   {
     n: "01",
     title: "불러오기",
-    body: "메뉴바의 Ping을 Option+P로 깨우면, 데스크탑 위에 원형 거울이 떠오릅니다.",
+    body: "Option+P는 얼굴만, Option+L은 화면+얼굴. 데스크탑 위에 원형 거울이 떠오릅니다.",
     visual: <BeatDesktop />,
   },
   {
@@ -16,8 +16,8 @@ const beats = [
   },
   {
     n: "03",
-    title: "2초 보내기",
-    body: "Enter 한 번이면 끝. 정확히 2초가 지나면 영상이 사라지고 상대에게 전달됩니다.",
+    title: "3초 보내기",
+    body: "Enter로 3초를 찍고 리뷰 화면에서 승인하세요. 확인한 영상만 상대에게 전달됩니다.",
     visual: <BeatCountdown />,
   },
 ];
@@ -34,9 +34,9 @@ export default function DemoStrip() {
             FLOW
           </p>
           <h2 className="text-balance text-[clamp(2rem,4.4vw,3.6rem)] leading-[1.05]">
-            Option+P{" "}
-            <span className="text-muted">→</span> 2초{" "}
-            <span className="text-muted">→</span> 끝.
+            Option+P/L{" "}
+            <span className="text-muted">→</span> 3초{" "}
+            <span className="text-muted">→</span> 리뷰 후 전송.
           </h2>
           <p className="mt-4 max-w-xl text-muted">
             설명보다 빠르게 도착하는 작은 신호. 세 컷이면 충분합니다.
@@ -136,7 +136,7 @@ function BeatCountdown() {
         />
       </svg>
       <span className="absolute font-mono text-3xl font-bold text-fg">
-        2.0
+        3.0
       </span>
       <span className="absolute bottom-5 left-1/2 -translate-x-1/2 rounded border border-border bg-fg/5 px-2.5 py-1 font-mono text-[10px] text-subtle">
         Enter

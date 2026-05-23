@@ -35,7 +35,7 @@ export default function Hero({ downloadUrl, version }: HeroProps) {
               <BrandMark size={16} className="rounded-[28%]" />
               <span className="font-medium text-fg">Ping</span>
               <span className="text-faint">·</span>
-              <span className="font-mono tracking-tight">Option + P</span>
+              <span className="font-mono tracking-tight">Option + P / L</span>
             </div>
 
             <h1 className="mb-5 overflow-visible pb-[0.05em] text-balance text-[clamp(2.6rem,6.2vw,5.4rem)] font-bold leading-[1.1]">
@@ -55,8 +55,8 @@ export default function Hero({ downloadUrl, version }: HeroProps) {
             </h1>
 
             <p className="mb-9 max-w-[36rem] text-balance text-base leading-relaxed text-muted md:text-lg">
-              Ping은 Option+P로 원형 카메라 거울을 열고, Enter 한 번으로 정확히
-              2초짜리 영상 메시지를 보내는 작은 Mac 앱입니다.
+              Ping은 Option+P로 얼굴 거울을, Option+L로 화면+얼굴 거울을
+              열고, 3초짜리 영상 메시지를 리뷰 후 보내는 작은 Mac 앱입니다.
             </p>
 
             <div className="mb-10 flex flex-wrap items-center gap-3">
@@ -80,8 +80,8 @@ export default function Hero({ downloadUrl, version }: HeroProps) {
               className="grid max-w-[34rem] grid-cols-3 gap-x-6 border-t border-border pt-5"
               aria-label="Ping 요약"
             >
-              <FactItem term="단축키" value="Option + P" />
-              <FactItem term="길이" value="정확히 2초" />
+              <FactItem term="단축키" value="Option + P/L" />
+              <FactItem term="길이" value="정확히 3초" />
               <FactItem term="배포" value="DMG 설치" />
             </dl>
           </div>
@@ -99,7 +99,7 @@ export default function Hero({ downloadUrl, version }: HeroProps) {
               className="absolute left-1/2 top-3 -translate-x-1/2"
             >
               <span className="block h-1.5 w-1.5 rounded-full bg-[color:var(--color-record)] shadow-[0_0_8px_var(--color-record)]" />
-              REC · 2.0s
+              REC · 3.0s
             </Badge>
           </div>
         </div>
@@ -128,7 +128,7 @@ function MirrorPreview() {
           "inset 0 1px 22px rgba(255,255,255,0.6), 0 18px 42px rgba(10,11,9,0.14)",
       }}
     >
-      <span className="font-mono tracking-tight">Option+P</span>
+      <span className="font-mono tracking-tight">Option+P/L</span>
       <span
         aria-hidden
         className="absolute top-4 h-2 w-2 rounded-full bg-[color:var(--color-record)] shadow-[0_0_18px_rgba(255,90,71,0.55)]"

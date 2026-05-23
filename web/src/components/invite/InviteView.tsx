@@ -54,7 +54,7 @@ export default function InviteView({
             </h1>
             <p className="mt-5 max-w-md text-base text-muted md:text-lg">
               Ping을 설치하고 아래 코드를 앱 안에 붙여 넣으면, 같은 방에서
-              2초짜리 신호를 주고받을 수 있어요.
+              3초짜리 신호를 주고받을 수 있어요.
             </p>
 
             <div className="mt-8 max-w-xl space-y-3">

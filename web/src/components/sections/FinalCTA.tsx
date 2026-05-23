@@ -28,10 +28,10 @@ export default function FinalCTA({ downloadUrl, version }: FinalCTAProps) {
                   Ping {version}
                 </Badge>
                 <h2 className="text-balance text-[clamp(2.2rem,5vw,4rem)] leading-[1.05]">
-                  2초면 충분합니다.
+                  3초면 충분합니다.
                 </h2>
                 <p className="mt-5 max-w-md text-muted">
-                  Mac에 Ping을 설치하고, Option+P 한 번으로 작은 신호를
+                  Mac에 Ping을 설치하고, Option+P 또는 Option+L로 작은 신호를
                   보내보세요.
                 </p>
               </div>
@@ -53,7 +53,7 @@ export default function FinalCTA({ downloadUrl, version }: FinalCTAProps) {
                   </a>
                 </ClickSpark>
                 <p className="text-xs text-subtle md:text-right">
-                  Apple Silicon 권장 · macOS 13 Ventura+ · ~24MB
+                  Apple Silicon 권장 · macOS 13 Ventura+ · ~7MB
                 </p>
               </div>
             </div>

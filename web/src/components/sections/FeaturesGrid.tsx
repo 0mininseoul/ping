@@ -26,23 +26,23 @@ export default function FeaturesGrid() {
     },
     {
       icon: <Keyboard aria-hidden className="h-5 w-5" />,
-      title: "Option + P 단축키",
-      body: "어떤 앱에 있든 메뉴바 위로 거울을 즉시 호출. 마우스 한 번 닿을 필요가 없습니다.",
-      aside: "전역 단축키 · 컬타임 ~30ms",
+      title: "Option + P / L 단축키",
+      body: "어떤 앱에 있든 얼굴만 보내거나 화면과 얼굴을 함께 보낼 수 있습니다.",
+      aside: "전역 단축키 · 메뉴바 상주",
       visual: <KeycapVisual />,
     },
     {
       icon: <Timer aria-hidden className="h-5 w-5" />,
-      title: "정확히 2초",
-      body: "녹화는 0.0초에서 2.0초까지. 그 이상도 이하도 없는, 작은 신호 단위.",
+      title: "정확히 3초",
+      body: "녹화는 0.0초에서 3.0초까지. 리뷰 화면에서 확인한 뒤 전송합니다.",
       aside: "송신 후 자동으로 만료",
       visual: <CountdownVisual />,
     },
     {
       icon: <Users aria-hidden className="h-5 w-5" />,
       title: "방 단위 공유",
-      body: "초대 토큰으로 같은 방에 들어온 사람끼리만 Ping이 오갑니다. 알림 도배 없음.",
-      aside: "방마다 별도의 알림 토글",
+      body: "초대 링크로 같은 방에 들어온 사람끼리만 Ping이 오갑니다. 기록은 내 룸에서 다시 볼 수 있습니다.",
+      aside: "비공개 룸 · 초대 링크",
       visual: <RoomVisual />,
     },
   ];
@@ -91,11 +91,23 @@ export default function FeaturesGrid() {
 function KeycapVisual() {
   return (
     <div className="grid aspect-[4/3] place-items-center bg-bg-elev">
-      <div className="flex items-end gap-3">
-        <Keycap label="⌥" sub="Option" />
-        <span className="pb-4 text-2xl text-subtle">+</span>
-        <Keycap label="P" />
+      <div className="grid gap-3">
+        <ShortcutRow keyLabel="P" caption="얼굴만" />
+        <ShortcutRow keyLabel="L" caption="화면+얼굴" />
       </div>
+    </div>
+  );
+}
+
+function ShortcutRow({ keyLabel, caption }: { keyLabel: string; caption: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <Keycap label="⌥" sub="Option" />
+      <span className="pb-3 text-xl text-subtle">+</span>
+      <Keycap label={keyLabel} />
+      <span className="min-w-[4.5rem] text-xs font-medium text-muted">
+        {caption}
+      </span>
     </div>
   );
 }
@@ -103,7 +115,7 @@ function KeycapVisual() {
 function Keycap({ label, sub }: { label: string; sub?: string }) {
   return (
     <div className="flex flex-col items-center gap-1.5" aria-label={sub ?? label}>
-      <span className="grid h-16 w-16 place-items-center rounded-md border border-border bg-bg-elev font-mono text-2xl font-bold text-fg shadow-[inset_0_-2px_0_rgba(10,11,9,0.12),0_4px_0_rgba(10,11,9,0.10)]">
+      <span className="grid h-12 w-12 place-items-center rounded-md border border-border bg-bg-elev font-mono text-xl font-bold text-fg shadow-[inset_0_-2px_0_rgba(10,11,9,0.12),0_4px_0_rgba(10,11,9,0.10)]">
         {label}
       </span>
       <span className="h-3 text-[10px] font-medium text-subtle">
@@ -129,7 +141,7 @@ function CountdownVisual() {
         ))}
       </div>
       <span className="absolute right-4 top-3 font-mono text-xs text-subtle">
-        00.0 → 02.0s
+        00.0 → 03.0s
       </span>
     </div>
   );
