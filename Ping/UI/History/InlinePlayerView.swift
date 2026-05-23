@@ -102,23 +102,18 @@ struct InlinePlayerView: View {
         @ObservedObject var controller: InlinePlayerController
 
         func makeNSView(context: Context) -> NSView {
-            let container = NSView(frame: NSRect(x: 0, y: 0, width: 1, height: 1))
-            container.wantsLayer = true
+            let container = PlayerContainerView()
             let item = AVPlayerItem(url: url)
             let player = AVPlayer(playerItem: item)
             let playerLayer = AVPlayerLayer(player: player)
             playerLayer.videoGravity = .resizeAspectFill
-            // frame을 즉시 설정 (zero frame guard)
-            playerLayer.frame = container.bounds
-            container.layer?.addSublayer(playerLayer)
+            container.configure(playerLayer: playerLayer, isCircle: isCircle)
             controller.player = player
 
-            // KVO: AVPlayerItem status 변화 logging
             context.coordinator.statusObserver = item.observe(\.status, options: [.new]) { item, _ in
                 NSLog("PlayerBox status=\(item.status.rawValue) error=\(String(describing: item.error)) url=\(url)")
             }
 
-            // 재생 실패 logging
             context.coordinator.endObserver = NotificationCenter.default.addObserver(
                 forName: .AVPlayerItemDidPlayToEndTime,
                 object: item,
@@ -135,52 +130,90 @@ struct InlinePlayerView: View {
                 NSLog("PlayerBox failedToPlayToEnd: \(note.userInfo ?? [:]) url=\(url)")
             }
 
-            applyLayerLayout(in: container, context: context)
             return container
         }
 
         func updateNSView(_ nsView: NSView, context: Context) {
-            applyLayerLayout(in: nsView, context: context)
-            startPlaybackIfReady(in: nsView, context: context)
+            guard let view = nsView as? PlayerContainerView else { return }
+            view.isCircle = isCircle
         }
 
-        private func startPlaybackIfReady(in nsView: NSView, context: Context) {
-            let bounds = nsView.bounds
-            guard bounds.width > 8, bounds.height > 8 else { return }
-            guard !context.coordinator.didStartPlayback else { return }
-            guard let playerLayer = nsView.layer?.sublayers?.first as? AVPlayerLayer,
-                  let player = playerLayer.player else { return }
-
-            context.coordinator.didStartPlayback = true
-            controller.isPaused = false
-            player.seek(to: .zero)
-            player.play()
-        }
-
-        private func applyLayerLayout(in nsView: NSView, context: Context) {
-            let bounds = nsView.bounds
-            guard context.coordinator.lastBounds != bounds || context.coordinator.lastIsCircle != isCircle else { return }
-            guard let playerLayer = nsView.layer?.sublayers?.first as? AVPlayerLayer else { return }
-
-            playerLayer.frame = bounds
-            let mask = CAShapeLayer()
-            if isCircle {
-                let dim = min(bounds.width, bounds.height)
-                mask.path = CGPath(
-                    ellipseIn: CGRect(
-                        x: (bounds.width - dim) / 2,
-                        y: (bounds.height - dim) / 2,
-                        width: dim,
-                        height: dim
-                    ),
-                    transform: nil
-                )
-            } else {
-                mask.path = CGPath(roundedRect: bounds, cornerWidth: 12, cornerHeight: 12, transform: nil)
+        final class PlayerContainerView: NSView {
+            private(set) var playerLayer: AVPlayerLayer?
+            var isCircle = false {
+                didSet {
+                    guard oldValue != isCircle else { return }
+                    lastBounds = .null
+                    needsLayout = true
+                }
             }
-            nsView.layer?.mask = mask
-            context.coordinator.lastBounds = bounds
-            context.coordinator.lastIsCircle = isCircle
+            private var lastBounds: CGRect = .null
+            private var didStartPlayback = false
+
+            override init(frame frameRect: NSRect) {
+                super.init(frame: frameRect)
+                setup()
+            }
+
+            required init?(coder: NSCoder) {
+                super.init(coder: coder)
+                setup()
+            }
+
+            override func layout() {
+                super.layout()
+                updateLayerLayout()
+                startPlaybackIfReady()
+            }
+
+            func configure(playerLayer: AVPlayerLayer, isCircle: Bool) {
+                self.playerLayer?.removeFromSuperlayer()
+                self.playerLayer = playerLayer
+                self.isCircle = isCircle
+                layer?.addSublayer(playerLayer)
+                needsLayout = true
+            }
+
+            private func setup() {
+                wantsLayer = true
+                layer = CALayer()
+            }
+
+            private func updateLayerLayout() {
+                let bounds = self.bounds
+                guard lastBounds != bounds else { return }
+                guard let playerLayer else { return }
+
+                playerLayer.frame = bounds
+                let mask = CAShapeLayer()
+                if isCircle {
+                    let dim = min(bounds.width, bounds.height)
+                    mask.path = CGPath(
+                        ellipseIn: CGRect(
+                            x: (bounds.width - dim) / 2,
+                            y: (bounds.height - dim) / 2,
+                            width: dim,
+                            height: dim
+                        ),
+                        transform: nil
+                    )
+                } else {
+                    mask.path = CGPath(roundedRect: bounds, cornerWidth: 12, cornerHeight: 12, transform: nil)
+                }
+                layer?.mask = mask
+                lastBounds = bounds
+            }
+
+            private func startPlaybackIfReady() {
+                let bounds = self.bounds
+                guard bounds.width > 8, bounds.height > 8 else { return }
+                guard !didStartPlayback else { return }
+                guard let player = playerLayer?.player else { return }
+
+                didStartPlayback = true
+                player.seek(to: .zero)
+                player.play()
+            }
         }
 
         func makeCoordinator() -> Coord { Coord() }
@@ -189,9 +222,6 @@ struct InlinePlayerView: View {
             var statusObserver: NSKeyValueObservation?
             var endObserver: Any?
             var failureObserver: Any?
-            var lastBounds: CGRect = .null
-            var lastIsCircle: Bool?
-            var didStartPlayback = false
             deinit {
                 statusObserver?.invalidate()
                 if let o = endObserver { NotificationCenter.default.removeObserver(o) }

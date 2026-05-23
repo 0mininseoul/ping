@@ -121,6 +121,21 @@ final class RoomManagerUXContractTests: XCTestCase {
         XCTAssertFalse(source.contains("rectangle.fill"))
     }
 
+    func testVideoRowsShowSenderNameForGroupRooms() throws {
+        let timelineSource = try readSourceFile("Ping/UI/History/RoomTimelineView.swift")
+        let messageRowSource = try readSourceFile("Ping/UI/History/MessageRowView.swift")
+        let videoCase = try sourceSlice(
+            in: timelineSource,
+            from: "case .video(let v):",
+            to: "case .chat(let c):"
+        )
+
+        XCTAssertTrue(messageRowSource.contains("let showsSender: Bool"))
+        XCTAssertTrue(messageRowSource.contains("if showsSender && !isMine"))
+        XCTAssertTrue(videoCase.contains("let roomMemberCount = appState.rooms.first(where: { $0.id == v.roomId })?.memberUids.count ?? 0"))
+        XCTAssertTrue(videoCase.contains("showsSender: roomMemberCount >= 3"))
+    }
+
     func testTimestampRevealSpringsBackAndKeepsGapFromBubble() throws {
         let source = try readSourceFile("Ping/UI/History/RoomTimelineView.swift")
         let scrollMonitor = try sourceSlice(
@@ -221,10 +236,10 @@ final class RoomManagerUXContractTests: XCTestCase {
             to: "final class Coord"
         )
 
-        XCTAssertTrue(playerBox.contains("applyLayerLayout(in: nsView, context: context)"))
+        XCTAssertTrue(playerBox.contains("private func updateLayerLayout()"))
         XCTAssertFalse(playerBox.contains("DispatchQueue.main.async"))
         XCTAssertTrue(source.contains("var lastBounds: CGRect = .null"))
-        XCTAssertTrue(source.contains("var lastIsCircle: Bool?"))
+        XCTAssertFalse(playerBox.contains("onLayout"))
     }
 
     func testInlinePlayerStartsPlaybackOnlyAfterVisibleLayout() throws {
@@ -237,15 +252,31 @@ final class RoomManagerUXContractTests: XCTestCase {
         let updateView = try sourceSlice(
             in: source,
             from: "func updateNSView(_ nsView: NSView, context: Context)",
-            to: "private func applyLayerLayout"
+            to: "final class PlayerContainerView"
         )
 
         XCTAssertFalse(makeView.contains("player.play()"))
-        XCTAssertTrue(updateView.contains("startPlaybackIfReady(in: nsView, context: context)"))
-        XCTAssertTrue(source.contains("private func startPlaybackIfReady(in nsView: NSView, context: Context)"))
+        XCTAssertFalse(updateView.contains("player.play()"))
+        XCTAssertTrue(source.contains("private func startPlaybackIfReady()"))
         XCTAssertTrue(source.contains("guard bounds.width > 8, bounds.height > 8"))
-        XCTAssertTrue(source.contains("guard !context.coordinator.didStartPlayback"))
+        XCTAssertTrue(source.contains("guard !didStartPlayback"))
         XCTAssertTrue(source.contains("var didStartPlayback = false"))
+    }
+
+    func testInlinePlayerUsesNSViewLayoutToSizeLayerBeforePlayback() throws {
+        let source = try readSourceFile("Ping/UI/History/InlinePlayerView.swift")
+        let playerBox = try sourceSlice(
+            in: source,
+            from: "struct PlayerBox: NSViewRepresentable",
+            to: "func makeCoordinator()"
+        )
+
+        XCTAssertTrue(playerBox.contains("PlayerContainerView"))
+        XCTAssertTrue(playerBox.contains("override func layout()"))
+        XCTAssertTrue(playerBox.contains("updateLayerLayout()"))
+        XCTAssertTrue(playerBox.contains("startPlaybackIfReady()"))
+        XCTAssertFalse(playerBox.contains("onLayout ="))
+        XCTAssertFalse(playerBox.contains("controller.isPaused = false"))
     }
 
     func testChatComposerUsesCommandEnterForSendAndPlainEnterForNewline() throws {

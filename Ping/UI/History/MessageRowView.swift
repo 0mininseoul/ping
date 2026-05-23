@@ -4,6 +4,7 @@ struct MessageRowView: View {
     let message: VideoMessage
     let isMine: Bool
     let isExpanded: Bool
+    let showsSender: Bool
     let onTap: () -> Void
     let cacheService: HistoryCacheService
     @ObservedObject var inlineController: InlinePlayerController
@@ -19,6 +20,12 @@ struct MessageRowView: View {
         HStack {
             if isMine { Spacer() }
             VStack(alignment: isMine ? .trailing : .leading, spacing: 4) {
+                if showsSender && !isMine {
+                    Text(message.senderNickname)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 4)
+                }
                 if isExpanded {
                     InlinePlayerView(
                         message: message,

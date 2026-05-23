@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import LandingPage from "./pages/LandingPage";
 import InviteView from "./components/invite/InviteView";
 
-export const APP_VERSION = "v0.3.17";
-export const DOWNLOAD_URL = "/downloads/Ping-v0.3.17.dmg";
+export const APP_VERSION = "v0.3.19";
+export const DOWNLOAD_URL = "/downloads/Ping-v0.3.19.dmg";
 
 function matchInvite(pathname: string): string | null {
   const m = pathname.match(/^\/invite\/([^/]+)\/?$/);

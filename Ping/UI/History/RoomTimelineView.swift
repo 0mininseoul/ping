@@ -232,10 +232,12 @@ struct RoomTimelineView: View {
             let key = "video:" + (v.id ?? "")
             let aggs = (viewModel.reactionsByTargetId[key] ?? [:]).values.sorted(by: { $0.count > $1.count })
             let isMine = v.senderUid == myUid
+            let roomMemberCount = appState.rooms.first(where: { $0.id == v.roomId })?.memberUids.count ?? 0
             MessageRowView(
                 message: v,
                 isMine: isMine,
                 isExpanded: viewModel.expandedMessageId == v.id,
+                showsSender: roomMemberCount >= 3,
                 onTap: {
                     withAnimation(videoExpansionAnimation) {
                         if viewModel.expandedMessageId == v.id {
