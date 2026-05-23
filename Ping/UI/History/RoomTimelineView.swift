@@ -344,7 +344,6 @@ struct RoomTimelineView: View {
             .foregroundStyle(.secondary)
             .padding(.vertical, 6)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(NSColor.windowBackgroundColor))
     }
 
     private var emptyTimelineState: some View {

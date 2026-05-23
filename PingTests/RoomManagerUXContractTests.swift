@@ -203,6 +203,19 @@ final class RoomManagerUXContractTests: XCTestCase {
         XCTAssertTrue(source.contains("scrollProxy.scrollTo(lastId, anchor: .bottom)"))
     }
 
+    func testDateHeadersDoNotDrawFullWidthBackgroundBars() throws {
+        let source = try readSourceFile("Ping/UI/History/RoomTimelineView.swift")
+        let dayHeader = try sourceSlice(
+            in: source,
+            from: "private func dayHeader",
+            to: "private var emptyTimelineState"
+        )
+
+        XCTAssertTrue(dayHeader.contains("Text(dayLabel(date))"))
+        XCTAssertFalse(dayHeader.contains(".background("))
+        XCTAssertFalse(dayHeader.contains("windowBackgroundColor"))
+    }
+
     func testInlineVideoPlayerKeepsAStableVisibleFrameWhenExpanded() throws {
         let source = try readSourceFile("Ping/UI/History/InlinePlayerView.swift")
 
