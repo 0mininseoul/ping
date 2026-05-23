@@ -26,7 +26,7 @@ Ping은 v0.1.4부터 **macOS 13 Ventura 이상**을 지원합니다. 학습 데�
 **Ping** — macOS 13 Ventura 이상에서 동작하는 3초 영상 메시지 메뉴바 앱. Option+P로 얼굴만 거울, Option+L로 화면+얼굴 거울이 뜨고, Enter로 녹화한 뒤 리뷰 화면에서 승인해 Supabase 경유로 파트너에게 전송. 수신자는 발신자가 지정한 위치에 그대로 재생한다.
 
 ### 핵심 문서 (반드시 모두 읽고 작업 시작)
-1. **`PING_PROJECT_SPECIFICATION.md`** — 기능/아키텍처/보안 명세 (v2.2)
+1. **`PING_PROJECT_SPECIFICATION.md`** — 기능/아키텍처/보안 명세 (v2.3)
 2. **`docs/superpowers/plans/2026-05-17-ping-mvp.md`** — Day 1~7 bite-sized 구현 플랜
 3. (본 파일) **`AGENTS.md`** — 본 에이전트 진입점
 
@@ -106,7 +106,7 @@ xcodebuild -project Ping.xcodeproj -scheme Ping \
 
 ```
 ping/
-├── PING_PROJECT_SPECIFICATION.md    # 변경 시 v2.2 → v2.3 등 버전 표시
+├── PING_PROJECT_SPECIFICATION.md    # 변경 시 v2.3 → v2.4 등 버전 표시
 ├── AGENTS.md                        # 본 파일
 ├── README.md                        # 최종 사용자용 설치 가이드
 ├── docs/superpowers/
@@ -219,7 +219,7 @@ A: ad-hoc 서명이라 정상입니다. **우클릭 → 열기 → 다시 열기
 
 새 세션에서 코딩 시작 전 다음을 확인:
 
-- [ ] `PING_PROJECT_SPECIFICATION.md` (v2.2) 전체 읽음
+- [ ] `PING_PROJECT_SPECIFICATION.md` (v2.3) 전체 읽음
 - [ ] `docs/superpowers/plans/2026-05-17-ping-mvp.md` 의 해당 Day/Task 읽음
 - [ ] 본 `AGENTS.md` 의 "절대 하지 말 것" 4가지 숙지
 - [ ] `git status` 깨끗한가? 또는 어디까지 진행됐는가?

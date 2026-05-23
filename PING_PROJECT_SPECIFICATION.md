@@ -1,8 +1,8 @@
-# Ping — 실시간 2초 영상 메시지 macOS 앱 기획서 (v2.2)
+# Ping — 실시간 3초 영상 메시지 macOS 앱 기획서 (v2.3)
 
 ## 프로젝트 개요
 
-**Ping**은 macOS 13 Ventura 이상에서 동작하는 2초 영상 메시지 메뉴바 앱이다. Option+P로 원형 카메라 거울을 띄우고, Enter로 정확히 2초 녹화한 뒤 Supabase를 통해 파트너에게 전송한다. 수신자는 로컬 알림을 클릭하면 발신자가 보낸 위치에 2초 원형 재생창이 뜬다.
+**Ping**은 macOS 13 Ventura 이상에서 동작하는 3초 영상 메시지 메뉴바 앱이다. Option+P로 원형 카메라 거울을 띄우고, Enter로 정확히 3초 녹화한 뒤 Supabase를 통해 파트너에게 전송한다. 수신자는 로컬 알림을 클릭하면 발신자가 보낸 위치에 3초 원형 재생창이 뜬다.
 
 > 현재 구현(v0.3.23)은 v0.2.1 amendment를 반영해 녹화 길이를 3초로 사용한다. Option+P는 얼굴만, Option+L은 화면+얼굴 캡쳐, Option+O는 내 룸/히스토리 창 진입점이다.
 > v0.3.23은 온보딩 권한 화면에서 macOS 권한 재확인이 지연돼도 이후 3~7단계를 계속 볼 수 있게 하고, 릴리즈 앱의 ad-hoc designated requirement를 bundle id 기준으로 고정해 업데이트 후 TCC 권한 판정이 빌드 해시 변화에 흔들리지 않도록 한다. v0.3.22의 온보딩 header/progress 고정, 미니멀 권한 체크리스트, 알림 프롬프트 시작 시점 소모 방지도 포함한다. 화면 녹화 권한의 passive check는 시스템 프롬프트를 띄우지 않는 CoreGraphics preflight만 사용하며, macOS가 요구하는 앱 재시작 안내를 표시한다. 기존 v0.3.21의 히스토리 타임스탬프 swipe reveal, 인라인 영상 재생 안정화, 그룹 룸 sender label, 다크모드 날짜 header 정리, 컴팩트 사이드바와 로컬 아카이브 fallback도 포함한다.
@@ -109,7 +109,7 @@ macOS 26 이상에서는 `.pingGlassEffect()` wrapper가 SwiftUI 네이티브 `.
 - Supabase polling으로 새 메시지를 감지하면 로컬 알림을 띄운다.
 - 알림 클릭 또는 액션 선택 시 Storage에서 영상을 다운로드한다.
 - 발신자의 `x_ratio`, `y_ratio`를 수신자 메인 스크린 좌표로 변환하고 safe area로 clamp한다.
-- 200px 원형 playback window에서 정확히 2초 재생한 뒤 닫는다.
+- 200px 원형 playback window에서 정확히 3초 재생한 뒤 닫는다.
 - 재생 후 `ping_mark_message_seen(message_uuid)`를 호출한다.
 
 ### Settings
@@ -126,7 +126,7 @@ macOS 26 이상에서는 `.pingGlassEffect()` wrapper가 SwiftUI 네이티브 `.
 
 - `AVCaptureSession.Preset.hd1920x1080`
 - 30fps, H.264, AAC, MP4
-- `AVCaptureMovieFileOutput.maxRecordedDuration`으로 2초 제한
+- `AVCaptureMovieFileOutput.maxRecordedDuration`으로 3초 제한
 - 녹화 파일은 임시 경로로 만든 뒤 설정에 따라 `~/Documents/Ping/sent/`로 이동한다.
 - 수신 파일은 `~/Documents/Ping/received/`에 저장한다.
 
@@ -188,7 +188,7 @@ Supabase Dashboard에서 Anonymous sign-ins가 켜져 있어야 한다.
 ### 송신 플로우
 
 1. Option+P → 거울 등장 → 파트너 선택 → Enter.
-2. `VideoRecorder`가 2초 MP4를 만든다.
+2. `VideoRecorder`가 3초 MP4를 만든다.
 3. `StorageService.uploadVideo`가 `ping-videos/<senderUid>/<videoId>.mp4`로 업로드한다.
 4. `MessageService.send`가 receiver별 `ping_create_message` RPC를 호출한다.
 5. 단일 룸 송신이면 `ping_update_last_used_room`으로 기본 룸을 갱신한다.
@@ -317,7 +317,7 @@ ping/
 | Option+P | 다른 앱 포커스에서도 거울 표시 |
 | 녹화 → 전송 | 업로드와 message 생성 후 윈도우 닫힘 |
 | 수신 알림 | 중복 없이 로컬 알림 표시 |
-| 알림 클릭 → 재생 | Storage 다운로드 후 2초 재생 |
+| 알림 클릭 → 재생 | Storage 다운로드 후 3초 재생 |
 | 전체 발송 | 영상 하나를 공유하고 receiver별 메시지 생성 |
 | 자동 업데이트 | appcast와 EdDSA 서명 검증 |
 
