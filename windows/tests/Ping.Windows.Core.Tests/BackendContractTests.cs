@@ -353,6 +353,17 @@ public sealed class BackendContractTests
             JsonSerializer.Serialize(rpc.Calls[1].Body, JsonOptions.Supabase));
     }
 
+    [Fact]
+    public async Task CleanupServiceCallsSharedCleanupRpc()
+    {
+        var rpc = new RecordingRpcClient();
+        var service = new CleanupService(rpc);
+
+        await service.RunAsync();
+
+        Assert.Equal("ping_cleanup_expired_data", Assert.Single(rpc.Calls).Function);
+    }
+
     private sealed class RecordingRpcClient : ISupabaseRpcClient
     {
         public List<(string Function, object Body)> Calls { get; } = [];

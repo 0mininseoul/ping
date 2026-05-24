@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.UI.Xaml;
 using Ping.Windows.App.Capture;
 using Ping.Windows.App.History;
@@ -27,6 +28,7 @@ public sealed class AppCoordinator : IDisposable
     private readonly InvitationService invitationService;
     private readonly ChatMessageService chatService;
     private readonly ReactionService reactionService;
+    private readonly CleanupService cleanupService;
     private readonly IncomingMessagePoller incomingPoller;
     private readonly NotificationController notificationController;
     private readonly IScreenFaceCaptureEngine screenFaceCaptureEngine;
@@ -77,6 +79,7 @@ public sealed class AppCoordinator : IDisposable
         invitationService = new InvitationService(this.supabaseClient);
         chatService = new ChatMessageService(this.supabaseClient);
         reactionService = new ReactionService(this.supabaseClient);
+        cleanupService = new CleanupService(this.supabaseClient);
         incomingPoller = new IncomingMessagePoller(messageService);
         notificationController = new NotificationController(OpenMessageFromNotificationAsync);
         screenFaceCaptureEngine = new NativeCaptureEngine();
@@ -757,6 +760,7 @@ public sealed class AppCoordinator : IDisposable
         {
             currentUid = await supabaseClient.BootstrapAsync();
             var uid = currentUid;
+            await RunCleanupAsync();
             var profile = await userService.GetAsync(uid);
             remoteDefaultRoomId = profile?.LastUsedRoomId;
             rooms = await roomService.MyRoomsAsync();
@@ -782,6 +786,18 @@ public sealed class AppCoordinator : IDisposable
         catch (Exception ex)
         {
             mainWindow.HotkeyState.Text = $"Supabase setup blocked: {ex.Message}";
+        }
+    }
+
+    private async Task RunCleanupAsync()
+    {
+        try
+        {
+            await cleanupService.RunAsync();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Ping cleanup failed: {ex}");
         }
     }
 
