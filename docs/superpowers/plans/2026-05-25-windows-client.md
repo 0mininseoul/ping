@@ -85,6 +85,7 @@ Windows onboarding은 Mac 권한 화면과 같은 정보 구조를 유지하되 
 
 2. Supabase config/session
    - `Supabase.json` 누락 시 명확한 안내.
+   - `Supabase.json`이 없으면 screen-face quick send를 disabled 상태로 표시한다.
    - Anonymous session 저장 위치: `%LOCALAPPDATA%\Ping\SupabaseSession.json`.
    - Windows와 Mac은 기기별 익명 계정이다. 같은 사람의 Mac/Windows identity 이전은 v1 범위 밖이며, 룸 초대/링크로 상호 연결한다.
 

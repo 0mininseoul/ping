@@ -121,6 +121,7 @@ public sealed record OnboardingEnvironmentState(
 public sealed class OnboardingViewModel : INotifyPropertyChanged
 {
     private bool isScreenFaceQuickSendEnabled;
+    private string screenFaceQuickSendStatusText = string.Empty;
 
     public OnboardingViewModel()
         : this(OnboardingEnvironmentState.Initial())
@@ -152,6 +153,21 @@ public sealed class OnboardingViewModel : INotifyPropertyChanged
         }
     }
 
+    public string ScreenFaceQuickSendStatusText
+    {
+        get => screenFaceQuickSendStatusText;
+        private set
+        {
+            if (string.Equals(screenFaceQuickSendStatusText, value, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            screenFaceQuickSendStatusText = value;
+            OnPropertyChanged();
+        }
+    }
+
     public void Apply(OnboardingEnvironmentState state)
     {
         var rows = BuildRows(state);
@@ -163,10 +179,12 @@ public sealed class OnboardingViewModel : INotifyPropertyChanged
 
         IsScreenFaceQuickSendEnabled =
             state.WindowsStatus == WindowsSupportStatus.Supported
+            && state.IsSupabaseConfigured
             && state.Camera.Status == OnboardingProbeStatus.Available
             && state.Microphone.Status == OnboardingProbeStatus.Available
             && state.ScreenCapture.Status == OnboardingProbeStatus.Available
             && state.Hotkeys.Status == OnboardingProbeStatus.Available;
+        ScreenFaceQuickSendStatusText = QuickSendStatusText(state, IsScreenFaceQuickSendEnabled);
     }
 
     public static IReadOnlyList<OnboardingRowState> BuildRows(OnboardingEnvironmentState state) =>
@@ -287,6 +305,52 @@ public sealed class OnboardingViewModel : INotifyPropertyChanged
             OnboardingActionKind.Relaunch => "Relaunch",
             _ => "Open"
         };
+
+    private static string QuickSendStatusText(OnboardingEnvironmentState state, bool isEnabled)
+    {
+        if (isEnabled)
+        {
+            return "Screen+face quick send is ready for Alt+Shift+L.";
+        }
+
+        var blocker = QuickSendBlocker(state);
+        return $"Screen+face quick send is disabled until {blocker} is ready.";
+    }
+
+    private static string QuickSendBlocker(OnboardingEnvironmentState state)
+    {
+        if (state.WindowsStatus != WindowsSupportStatus.Supported)
+        {
+            return "Windows 11 24H2+";
+        }
+
+        if (!state.IsSupabaseConfigured)
+        {
+            return "Supabase config";
+        }
+
+        if (state.Camera.Status != OnboardingProbeStatus.Available)
+        {
+            return "camera access";
+        }
+
+        if (state.Microphone.Status != OnboardingProbeStatus.Available)
+        {
+            return "microphone access";
+        }
+
+        if (state.ScreenCapture.Status != OnboardingProbeStatus.Available)
+        {
+            return "screen capture";
+        }
+
+        if (state.Hotkeys.Status != OnboardingProbeStatus.Available)
+        {
+            return "hotkeys";
+        }
+
+        return "required checks";
+    }
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {

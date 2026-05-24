@@ -81,7 +81,7 @@
         <TextBlock
             Grid.Row="2"
             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-            Text="Screen+face quick send is enabled only when Windows 11 24H2+, camera, microphone, screen capture, and hotkeys are ready."
+            Text="{Binding ScreenFaceQuickSendStatusText}"
             TextWrapping="WrapWholeWords" />
     </Grid>
 </Window>

@@ -33,6 +33,7 @@ public sealed class OnboardingStateTests
         var model = new OnboardingViewModel(state);
 
         Assert.True(model.IsScreenFaceQuickSendEnabled);
+        Assert.Equal("Screen+face quick send is ready for Alt+Shift+L.", model.ScreenFaceQuickSendStatusText);
         Assert.All(model.Rows, row => Assert.Equal(OnboardingRowStatus.Ready, row.Status));
     }
 
@@ -53,6 +54,7 @@ public sealed class OnboardingStateTests
         Assert.Equal(expectedMessage, row.Message);
         Assert.Null(row.PrimaryAction);
         Assert.False(model.IsScreenFaceQuickSendEnabled);
+        Assert.Equal("Screen+face quick send is disabled until Windows 11 24H2+ is ready.", model.ScreenFaceQuickSendStatusText);
     }
 
     [Fact]
@@ -69,6 +71,8 @@ public sealed class OnboardingStateTests
 
         Assert.False(cameraBlocked.IsScreenFaceQuickSendEnabled);
         Assert.False(microphoneBlocked.IsScreenFaceQuickSendEnabled);
+        Assert.Equal("Screen+face quick send is disabled until camera access is ready.", cameraBlocked.ScreenFaceQuickSendStatusText);
+        Assert.Equal("Screen+face quick send is disabled until microphone access is ready.", microphoneBlocked.ScreenFaceQuickSendStatusText);
     }
 
     [Fact]
@@ -111,6 +115,8 @@ public sealed class OnboardingStateTests
         Assert.Equal(OnboardingActionKind.OpenFolder, row.PrimaryAction?.Kind);
         Assert.Equal("Open config folder", row.PrimaryAction?.Label);
         Assert.True(row.CanRetry);
+        Assert.False(model.IsScreenFaceQuickSendEnabled);
+        Assert.Equal("Screen+face quick send is disabled until Supabase config is ready.", model.ScreenFaceQuickSendStatusText);
     }
 
     [Fact]

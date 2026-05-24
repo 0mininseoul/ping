@@ -47,7 +47,7 @@ If a hotkey is already used by another app, onboarding/settings show it as confl
 
 ## Onboarding Checks
 
-1. OS support: show unsupported warning outside Windows 11 24H2+ and disable screen+face quick send when required APIs are unavailable.
+1. OS support: show unsupported warning outside Windows 11 24H2+ and disable screen+face quick send when required APIs or Supabase config are unavailable.
 2. Admin/elevated state: app notifications are not supported for elevated apps, so users should restart Ping normally.
 3. Camera: check packaged webcam capability and initialize MediaCapture.
 4. Microphone: initialize audio capture; v1 does not provide silent-video fallback.
