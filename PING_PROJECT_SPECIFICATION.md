@@ -56,6 +56,7 @@ macOS 26 이상에서는 `.pingGlassEffect()` wrapper가 SwiftUI 네이티브 `.
 - 글로벌 단축키: 기본 `Alt+P`, `Alt+L`, `Alt+Shift+L`, `Alt+O`, Win32 `RegisterHotKey` 사용.
 - 트레이 상주 앱: Win32 `Shell_NotifyIcon` 기반 notification area icon.
 - 알림: Windows App SDK app notifications. Elevated/admin 실행에서는 알림이 지원되지 않으므로 일반 권한 재실행을 안내한다.
+- 히스토리: 열린 룸은 Supabase chat/video RPC를 짧은 주기로 polling해 macOS Realtime 히스토리와 유사하게 채팅, 첨부 이미지, 답장, 반응 변경을 반영한다.
 - 패키징: Windows App SDK packaged full-trust MSIX. Windows는 Sparkle을 사용하지 않고 MSIX/App Installer 또는 Store 업데이트 채널을 사용한다.
 
 ### 권한

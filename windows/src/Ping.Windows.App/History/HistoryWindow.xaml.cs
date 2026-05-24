@@ -15,6 +15,7 @@ public sealed partial class HistoryWindow : Window
     private readonly HistoryViewModel viewModel;
     private readonly Func<VideoMessage, CancellationToken, Task<string>> downloadVideoAsync;
     private readonly MessageService messageService;
+    private readonly HistoryAutoRefreshCoordinator autoRefresh;
     private readonly List<PlaybackWindow> playbackWindows = [];
     private readonly string? initialRoomId;
     private string? selectedChatImagePath;
@@ -31,12 +32,19 @@ public sealed partial class HistoryWindow : Window
         this.initialRoomId = initialRoomId;
         InitializeComponent();
         Root.DataContext = viewModel;
+        autoRefresh = new HistoryAutoRefreshCoordinator(
+            TimeSpan.FromSeconds(5),
+            token => RunAsync(() => viewModel.LoadSelectedRoomAsync(token)));
         Root.Loaded += HandleLoaded;
+        Closed += async (_, _) => await autoRefresh.StopAsync();
     }
 
     private async void HandleLoaded(object sender, RoutedEventArgs args)
     {
-        await RunAsync(() => viewModel.LoadAsync(initialRoomId));
+        if (await RunAsync(() => viewModel.LoadAsync(initialRoomId)))
+        {
+            autoRefresh.Start();
+        }
     }
 
     public async Task FocusRoomAsync(string roomId)
@@ -97,7 +105,7 @@ public sealed partial class HistoryWindow : Window
     }
 
     private async void RefreshButton_Click(object sender, RoutedEventArgs args) =>
-        await RunAsync(() => viewModel.LoadSelectedRoomAsync());
+        await RunAsync(() => autoRefresh.RefreshOnceAsync());
 
     private async void SendChatButton_Click(object sender, RoutedEventArgs args)
     {

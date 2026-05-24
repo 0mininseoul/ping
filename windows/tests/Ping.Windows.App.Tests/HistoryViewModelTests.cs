@@ -134,6 +134,67 @@ public sealed class HistoryViewModelTests
         Assert.Collection(viewModel.Timeline, row => Assert.Equal("chat-2", row.Chat?.Message.Id));
     }
 
+    [Fact]
+    public async Task HistoryAutoRefreshCoordinator_DoesNotOverlapRefreshes()
+    {
+        var calls = 0;
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var coordinator = new HistoryAutoRefreshCoordinator(
+            TimeSpan.FromSeconds(1),
+            async _ =>
+            {
+                Interlocked.Increment(ref calls);
+                entered.TrySetResult();
+                await release.Task;
+            });
+
+        var first = coordinator.RefreshOnceAsync();
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(1));
+        await coordinator.RefreshOnceAsync().WaitAsync(TimeSpan.FromSeconds(1));
+
+        Assert.Equal(1, Volatile.Read(ref calls));
+
+        release.SetResult();
+        await first.WaitAsync(TimeSpan.FromSeconds(1));
+        await coordinator.RefreshOnceAsync().WaitAsync(TimeSpan.FromSeconds(1));
+
+        Assert.Equal(2, Volatile.Read(ref calls));
+    }
+
+    [Fact]
+    public async Task HistoryAutoRefreshCoordinator_StartIsIdempotentAndStopCancelsDelay()
+    {
+        var refreshCalls = 0;
+        var delayCalls = 0;
+        var delayEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var coordinator = new HistoryAutoRefreshCoordinator(
+            TimeSpan.FromSeconds(5),
+            _ =>
+            {
+                Interlocked.Increment(ref refreshCalls);
+                return Task.CompletedTask;
+            },
+            async (_, token) =>
+            {
+                Interlocked.Increment(ref delayCalls);
+                delayEntered.TrySetResult();
+                await Task.Delay(Timeout.InfiniteTimeSpan, token);
+            });
+
+        coordinator.Start();
+        coordinator.Start();
+        await delayEntered.Task.WaitAsync(TimeSpan.FromSeconds(1));
+
+        Assert.True(coordinator.IsRunning);
+        Assert.Equal(1, Volatile.Read(ref delayCalls));
+
+        await coordinator.StopAsync().WaitAsync(TimeSpan.FromSeconds(1));
+
+        Assert.False(coordinator.IsRunning);
+        Assert.Equal(0, Volatile.Read(ref refreshCalls));
+    }
+
     private static HistoryViewModel ViewModel(RecordingHistoryRpcClient rpc) =>
         new(
             new RoomService(rpc),

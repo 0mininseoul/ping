@@ -30,6 +30,7 @@
     <Compile Include="..\..\src\Ping.Windows.App\Capture\NativeCaptureEngine.cs" Link="Capture\NativeCaptureEngine.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Capture\QuickSendController.cs" Link="Capture\QuickSendController.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Capture\ScreenFaceMirrorViewModel.cs" Link="Capture\ScreenFaceMirrorViewModel.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\History\HistoryAutoRefreshCoordinator.cs" Link="History\HistoryAutoRefreshCoordinator.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\History\HistoryRows.cs" Link="History\HistoryRows.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\History\HistoryViewModel.cs" Link="History\HistoryViewModel.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Notifications\NotificationController.cs" Link="Notifications\NotificationController.cs" />

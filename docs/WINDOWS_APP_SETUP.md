@@ -113,7 +113,7 @@ Manual checks after install:
 - Alt+L records `screen_face`, shows review playback, then review Enter sends.
 - Alt+Shift+L records immediately to the default room after the 300ms HUD.
 - Notification click downloads from `ping-videos` and opens playback at the sender position. After the first play ends, Enter replays, Esc closes, and idle playback fades out after about 10 seconds.
-- History shows video and chat in one room timeline, supports direct video Play/double-click playback, text/image chat, reply previews, sender chat delete, received video hide, sender video delete, and quick emoji reactions.
+- History shows video and chat in one room timeline, auto-refreshes the selected room while open, and supports direct video Play/double-click playback, text/image chat, reply previews, sender chat delete, received video hide, sender video delete, and quick emoji reactions.
 - Unread room chat from another user shows one Windows notification per room, and clicking it opens History.
 - Settings can edit and save the Supabase profile nickname used for room actions and sent message labels.
 - Rooms can search users by profile nickname and invite the selected user, matching the Mac room setup flow.
