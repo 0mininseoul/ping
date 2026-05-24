@@ -81,8 +81,8 @@ final class ScreenFaceRecorder: NSObject {
                 screen: scaledScreen,
                 face: cameraImage,
                 outputSize: outputSize,
-                faceDiameterRatio: 72.0 / longSide,
-                paddingRatio: 12.0 / longSide
+                faceDiameterRatio: ScreenFaceLayout.faceDiameterRatio,
+                paddingRatio: ScreenFaceLayout.paddingRatio
             )
 
             var pbOpt: CVPixelBuffer?

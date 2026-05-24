@@ -477,14 +477,20 @@ struct ScreenFacePreview: View {
     @ObservedObject var camera: CameraManager
 
     var body: some View {
-        ZStack(alignment: .bottomTrailing) {
-            ScreenLiveImageView(screenCapture: screenCapture)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            CameraPreviewView(session: camera.session)
-                .frame(width: 72, height: 72)
-                .clipShape(Circle())
-                .padding(12)
-                .allowsHitTesting(false)
+        GeometryReader { proxy in
+            let diameter = ScreenFaceLayout.faceDiameter(in: proxy.size)
+            let padding = ScreenFaceLayout.padding(in: proxy.size)
+
+            ZStack(alignment: .bottomTrailing) {
+                ScreenLiveImageView(screenCapture: screenCapture)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                CameraPreviewView(session: camera.session)
+                    .frame(width: diameter, height: diameter)
+                    .clipShape(Circle())
+                    .padding(padding)
+                    .allowsHitTesting(false)
+            }
+            .frame(width: proxy.size.width, height: proxy.size.height)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

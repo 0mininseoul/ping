@@ -222,7 +222,7 @@ final class RoomManagerUXContractTests: XCTestCase {
         XCTAssertTrue(source.contains("private var playerSize: CGSize"))
         XCTAssertTrue(source.contains(".frame(width: playerSize.width, height: playerSize.height)"))
         XCTAssertTrue(source.contains("CGSize(width: 128, height: 128)"))
-        XCTAssertTrue(source.contains("let width: CGFloat = 280"))
+        XCTAssertTrue(source.contains("let width: CGFloat = 340"))
         XCTAssertTrue(source.contains("max(0.5, min(3.0"))
         XCTAssertFalse(source.contains(".frame(maxWidth: message.captureMode == .faceOnly ? 180 : 360)"))
     }

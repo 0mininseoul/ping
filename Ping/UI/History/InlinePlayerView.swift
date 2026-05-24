@@ -55,7 +55,7 @@ struct InlinePlayerView: View {
             return CGSize(width: 128, height: 128)
         }
 
-        let width: CGFloat = 280
+        let width: CGFloat = 340
         let aspectRatio = CGFloat(max(0.5, min(3.0, message.aspectRatio ?? 1.78)))
         return CGSize(width: width, height: width / aspectRatio)
     }
