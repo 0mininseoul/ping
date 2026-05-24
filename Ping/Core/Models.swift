@@ -240,6 +240,11 @@ struct ChatMessage: Codable, Identifiable, Hashable {
     var body: String
     var replyToChatId: String?
     var replyToVideoId: String?
+    var mediaPath: String?
+    var mediaMimeType: String?
+    var mediaWidth: Int?
+    var mediaHeight: Int?
+    var mediaFileName: String?
     var createdAt: Date?
 
     enum CodingKeys: String, CodingKey {
@@ -250,6 +255,11 @@ struct ChatMessage: Codable, Identifiable, Hashable {
         case body
         case replyToChatId = "reply_to_chat_id"
         case replyToVideoId = "reply_to_video_id"
+        case mediaPath = "media_path"
+        case mediaMimeType = "media_mime_type"
+        case mediaWidth = "media_width"
+        case mediaHeight = "media_height"
+        case mediaFileName = "media_file_name"
         case createdAt = "created_at"
     }
 
@@ -261,6 +271,11 @@ struct ChatMessage: Codable, Identifiable, Hashable {
         body: String,
         replyToChatId: String? = nil,
         replyToVideoId: String? = nil,
+        mediaPath: String? = nil,
+        mediaMimeType: String? = nil,
+        mediaWidth: Int? = nil,
+        mediaHeight: Int? = nil,
+        mediaFileName: String? = nil,
         createdAt: Date? = nil
     ) {
         self.id = id
@@ -270,7 +285,42 @@ struct ChatMessage: Codable, Identifiable, Hashable {
         self.body = body
         self.replyToChatId = replyToChatId
         self.replyToVideoId = replyToVideoId
+        self.mediaPath = mediaPath
+        self.mediaMimeType = mediaMimeType
+        self.mediaWidth = mediaWidth
+        self.mediaHeight = mediaHeight
+        self.mediaFileName = mediaFileName
         self.createdAt = createdAt
+    }
+
+    var hasImageAttachment: Bool {
+        guard let mediaPath, !mediaPath.isEmpty,
+              let mediaMimeType, mediaMimeType.hasPrefix("image/") else {
+            return false
+        }
+        return true
+    }
+
+    var previewText: String {
+        if !body.isEmpty { return body }
+        if hasImageAttachment { return "사진" }
+        return ""
+    }
+
+    var mediaFileExtension: String {
+        guard let mediaPath else { return "img" }
+        let ext = URL(fileURLWithPath: mediaPath).pathExtension.lowercased()
+        if !ext.isEmpty { return ext }
+
+        switch mediaMimeType {
+        case "image/jpeg": return "jpg"
+        case "image/png": return "png"
+        case "image/heic": return "heic"
+        case "image/heif": return "heif"
+        case "image/gif": return "gif"
+        case "image/webp": return "webp"
+        default: return "img"
+        }
     }
 }
 

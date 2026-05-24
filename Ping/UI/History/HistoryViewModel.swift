@@ -42,6 +42,7 @@ final class HistoryViewModel: ObservableObject {
     private let appState: AppState
     private let chatService: ChatMessageService
     private let reactionService: ReactionService
+    private let storageService: StorageService
     private var loadedVideos: [VideoMessage] = []
     private var loadedChats: [ChatMessage] = []
 
@@ -49,12 +50,14 @@ final class HistoryViewModel: ObservableObject {
         messageService: MessageService,
         appState: AppState,
         chatService: ChatMessageService = ChatMessageService(),
-        reactionService: ReactionService = ReactionService()
+        reactionService: ReactionService = ReactionService(),
+        storageService: StorageService = StorageService()
     ) {
         self.messageService = messageService
         self.appState = appState
         self.chatService = chatService
         self.reactionService = reactionService
+        self.storageService = storageService
     }
 
     func selectRoom(_ roomId: String) async {
@@ -191,6 +194,88 @@ final class HistoryViewModel: ObservableObject {
             replyTarget = snapshotReplyTarget
             lastErrorMessage = "메시지 전송 실패: \(error.localizedDescription)"
             NSLog("Send chat failed: \(error)")
+        }
+    }
+
+    func sendChatImage(localURL: URL, caption: String) async {
+        guard let roomId = selectedRoomId else { return }
+        guard let currentUser = appState.currentUser,
+              let uid = currentUser.id else {
+            lastErrorMessage = PingError.currentUserMissing.localizedDescription
+            return
+        }
+
+        let trimmed = caption.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count <= 2000 else {
+            lastErrorMessage = "메시지는 2000자까지 입력할 수 있습니다."
+            return
+        }
+
+        var replyChatId: String?
+        var replyVideoId: String?
+        switch replyTarget {
+        case .chat(let id, _, _): replyChatId = id
+        case .video(let id, _, _): replyVideoId = id
+        case .none: break
+        }
+
+        let snapshotReplyTarget = replyTarget
+        replyTarget = nil
+        let messageId = UUID().uuidString
+
+        do {
+            let uploaded = try await storageService.uploadChatImage(
+                localURL: localURL,
+                senderUid: uid,
+                messageId: messageId
+            )
+            let media = ChatMessageService.ChatMediaPayload(
+                path: uploaded.path,
+                mimeType: uploaded.mimeType,
+                width: uploaded.width,
+                height: uploaded.height,
+                fileName: uploaded.fileName
+            )
+            let id = try await chatService.sendChat(
+                roomId: roomId,
+                body: trimmed,
+                replyToChatId: replyChatId,
+                replyToVideoId: replyVideoId,
+                messageId: messageId,
+                media: media
+            )
+
+            let optimistic = ChatMessage(
+                id: id,
+                roomId: roomId,
+                senderUid: uid,
+                senderNickname: currentUser.nickname,
+                body: trimmed,
+                replyToChatId: replyChatId,
+                replyToVideoId: replyVideoId,
+                mediaPath: uploaded.path,
+                mediaMimeType: uploaded.mimeType,
+                mediaWidth: uploaded.width,
+                mediaHeight: uploaded.height,
+                mediaFileName: uploaded.fileName,
+                createdAt: Date()
+            )
+            if !loadedChats.contains(where: { $0.id == id }) {
+                loadedChats.append(optimistic)
+                groups = Self.groupTimelineByDay(videos: loadedVideos, chats: loadedChats, calendar: .current)
+            }
+            ClientEventService.shared.log("chat_sent", properties: [
+                "room_id": roomId,
+                "body_length": trimmed.count,
+                "has_image": true,
+                "is_reply": (replyChatId != nil || replyVideoId != nil),
+                "reply_kind": replyChatId != nil ? "chat" : (replyVideoId != nil ? "video" : "none")
+            ])
+            await refreshReactions()
+        } catch {
+            replyTarget = snapshotReplyTarget
+            lastErrorMessage = "사진 전송 실패: \(error.localizedDescription)"
+            NSLog("Send chat image failed: \(error)")
         }
     }
 

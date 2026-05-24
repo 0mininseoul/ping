@@ -11,6 +11,8 @@ enum PingError: LocalizedError {
     case invalidStorageURL
     case invalidVideoPayload
     case videoPayloadTooLarge
+    case invalidImagePayload
+    case imagePayloadTooLarge
     case invalidRoomName
     case roomUnavailable
 
@@ -36,6 +38,10 @@ enum PingError: LocalizedError {
             return "전송할 영상 파일이 올바르지 않습니다."
         case .videoPayloadTooLarge:
             return "영상 파일이 너무 큽니다. 다시 짧게 녹화해 주세요."
+        case .invalidImagePayload:
+            return "전송할 사진 파일이 올바르지 않습니다."
+        case .imagePayloadTooLarge:
+            return "사진 파일이 너무 큽니다. 더 작은 사진을 선택해 주세요."
         case .invalidRoomName:
             return "룸 이름은 1자 이상 16자 이하여야 합니다."
         case .roomUnavailable:

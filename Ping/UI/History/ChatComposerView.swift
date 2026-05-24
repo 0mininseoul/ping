@@ -6,6 +6,7 @@ struct ChatComposerView: View {
     let replyTarget: HistoryViewModel.ReplyTarget?
     let onCancelReply: () -> Void
     let onSend: () -> Void
+    let onAttachImage: () -> Void
 
     @State private var calculatedHeight: CGFloat = 36
 
@@ -37,6 +38,17 @@ struct ChatComposerView: View {
             }
 
             HStack(alignment: .bottom, spacing: 8) {
+                Button(action: onAttachImage) {
+                    Image(systemName: "photo")
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                        .frame(width: 30, height: 30)
+                        .background(Color.gray.opacity(0.12))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .help("사진 첨부")
+
                 ZStack(alignment: .topLeading) {
                     if draft.isEmpty {
                         Text("메시지 입력…")
@@ -50,7 +62,8 @@ struct ChatComposerView: View {
                         text: $draft,
                         calculatedHeight: $calculatedHeight,
                         minHeight: minHeight,
-                        maxHeight: maxHeight
+                        maxHeight: maxHeight,
+                        onSubmit: onSend
                     )
                 }
                 .frame(height: max(minHeight, min(calculatedHeight, maxHeight)))
@@ -100,6 +113,7 @@ private struct ComposerTextEditor: NSViewRepresentable {
     @Binding var calculatedHeight: CGFloat
     let minHeight: CGFloat
     let maxHeight: CGFloat
+    let onSubmit: () -> Void
 
     func makeNSView(context: Context) -> NSScrollView {
         let scroll = NSTextView.scrollableTextView()
@@ -127,7 +141,10 @@ private struct ComposerTextEditor: NSViewRepresentable {
         if textView.string != text {
             let selected = textView.selectedRange()
             textView.string = text
-            textView.setSelectedRange(selected)
+            let newLength = (text as NSString).length
+            let location = min(selected.location, newLength)
+            let length = min(selected.length, max(0, newLength - location))
+            textView.setSelectedRange(NSRange(location: location, length: length))
         }
         Task { @MainActor in
             recalculateHeight(textView: textView)
@@ -160,6 +177,25 @@ private struct ComposerTextEditor: NSViewRepresentable {
             Task { @MainActor in
                 parent.recalculateHeight(textView: textView)
             }
+        }
+
+        func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+            guard commandSelector == #selector(NSResponder.insertNewline(_:)) else {
+                return false
+            }
+            guard !textView.hasMarkedText() else {
+                return false
+            }
+
+            let flags = NSApp.currentEvent?.modifierFlags.intersection(.deviceIndependentFlagsMask) ?? []
+            if flags.contains(.shift) {
+                return false
+            }
+            if flags.isEmpty {
+                parent.onSubmit()
+                return true
+            }
+            return false
         }
     }
 }

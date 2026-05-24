@@ -94,12 +94,12 @@ final class LocalNotificationCenter: NSObject, UNUserNotificationCenterDelegate 
         ])
     }
 
-    func notifyIncomingMessage(senderNickname: String, messageId: String) {
+    func notifyIncomingMessage(senderNickname: String, messageId: String, roomId: String) {
         let content = UNMutableNotificationContent()
         content.title = "\(senderNickname)님이 영상을 보냈습니다"
         content.sound = notificationSound()
         content.categoryIdentifier = Category.incomingMessage.rawValue
-        content.userInfo = ["messageId": messageId]
+        content.userInfo = ["messageId": messageId, "room_id": roomId]
 
         let request = UNNotificationRequest(
             identifier: "ping.message.\(messageId)",
@@ -112,7 +112,7 @@ final class LocalNotificationCenter: NSObject, UNUserNotificationCenterDelegate 
     func notifyIncomingChat(_ message: ChatMessage, roomName: String) {
         let content = UNMutableNotificationContent()
         content.title = "\(message.senderNickname) · \(roomName)"
-        let body = message.body
+        let body = message.previewText.isEmpty ? "사진을 보냈습니다" : message.previewText
         content.body = body.count > 200 ? String(body.prefix(200)) + "…" : body
         content.sound = .default
         content.userInfo = [
@@ -169,6 +169,18 @@ final class LocalNotificationCenter: NSObject, UNUserNotificationCenterDelegate 
         )
     }
 
+    func clearDeliveredNotifications(roomId: String) {
+        UNUserNotificationCenter.current().getDeliveredNotifications { notifications in
+            let identifiers = notifications.compactMap { notification -> String? in
+                let info = notification.request.content.userInfo
+                guard info["room_id"] as? String == roomId else { return nil }
+                return notification.request.identifier
+            }
+            guard !identifiers.isEmpty else { return }
+            UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: identifiers)
+        }
+    }
+
     nonisolated func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse,
@@ -177,6 +189,7 @@ final class LocalNotificationCenter: NSObject, UNUserNotificationCenterDelegate 
         let actionIdentifier = response.actionIdentifier
         let info = response.notification.request.content.userInfo
         let messageId = info["messageId"] as? String
+        let messageRoomId = info["room_id"] as? String
         let inviteId = info["inviteId"] as? String
         let infoType = info["type"] as? String
         let chatId = info["chat_id"] as? String
@@ -192,6 +205,7 @@ final class LocalNotificationCenter: NSObject, UNUserNotificationCenterDelegate 
             // Chat notifications are identified by their "type" key.
             if infoType == "chat",
                let chatId, let chatRoomId {
+                clearDeliveredNotifications(roomId: chatRoomId)
                 onViewChatMessage?(chatId, chatRoomId)
                 return
             }
@@ -199,6 +213,9 @@ final class LocalNotificationCenter: NSObject, UNUserNotificationCenterDelegate 
             switch actionIdentifier {
             case Action.viewMessage.rawValue, UNNotificationDefaultActionIdentifier:
                 if let messageId {
+                    if let messageRoomId {
+                        clearDeliveredNotifications(roomId: messageRoomId)
+                    }
                     onViewMessage?(messageId)
                 } else if let inviteId {
                     _ = inviteId

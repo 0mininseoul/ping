@@ -6,11 +6,11 @@ final class ReleaseVersionContractTests: XCTestCase {
         let routes = try readSourceFile("routes.tsx")
         let readme = try readSourceFile("README.md")
 
-        XCTAssertTrue(project.contains("MARKETING_VERSION: \"0.3.26\""))
-        XCTAssertTrue(project.contains("CURRENT_PROJECT_VERSION: \"36\""))
-        XCTAssertTrue(routes.contains("APP_VERSION = \"v0.3.26\""))
-        XCTAssertTrue(routes.contains("DOWNLOAD_URL = \"/downloads/Ping-v0.3.26.dmg\""))
-        XCTAssertTrue(readme.contains("Ping-v0.3.26.dmg"))
+        XCTAssertTrue(project.contains("MARKETING_VERSION: \"0.3.27\""))
+        XCTAssertTrue(project.contains("CURRENT_PROJECT_VERSION: \"37\""))
+        XCTAssertTrue(routes.contains("APP_VERSION = \"v0.3.27\""))
+        XCTAssertTrue(routes.contains("DOWNLOAD_URL = \"/downloads/Ping-v0.3.27.dmg\""))
+        XCTAssertTrue(readme.contains("Ping-v0.3.27.dmg"))
     }
 
     private func readSourceFile(_ relativePath: String) throws -> String {

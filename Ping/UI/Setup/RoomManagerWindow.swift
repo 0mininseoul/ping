@@ -261,6 +261,9 @@ struct RoomManagerView: View {
         }
         .onChange(of: selectedRoomId) { newValue in
             appState.lastSelectedRoomId = newValue
+            if let newValue {
+                LocalNotificationCenter.shared.clearDeliveredNotifications(roomId: newValue)
+            }
             updateScreenFaceExpansion(anchor: nil, context: nil)
         }
     }

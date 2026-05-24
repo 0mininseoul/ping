@@ -337,16 +337,56 @@ final class RoomManagerUXContractTests: XCTestCase {
         XCTAssertFalse(playerBox.contains("controller.isPaused = false"))
     }
 
-    func testChatComposerUsesCommandEnterForSendAndPlainEnterForNewline() throws {
+    func testTimelineScrollsToLatestMessageAfterLayout() throws {
         let source = try readSourceFile("Ping/UI/History/RoomTimelineView.swift")
-        let monitor = try sourceSlice(
+        let scrollReader = try sourceSlice(
             in: source,
-            from: "composerKeyMonitor = NSEvent.addLocalMonitorForEvents",
-            to: ".onDisappear"
+            from: "ScrollViewReader { scrollProxy in",
+            to: "ChatComposerView("
         )
 
-        XCTAssertTrue(monitor.contains("flags == .command"))
-        XCTAssertFalse(monitor.contains("flags.isEmpty || flags == .command"))
+        XCTAssertTrue(source.contains("private func scrollToLatestTimelineItem"))
+        XCTAssertTrue(scrollReader.contains("scrollToLatestTimelineItem(using: scrollProxy"))
+        XCTAssertTrue(scrollReader.contains("await Task.yield()"))
+        XCTAssertFalse(scrollReader.contains("scrollProxy.scrollTo(lastId, anchor: .bottom)"))
+    }
+
+    func testChatComposerUsesEnterForSendAndShiftEnterForNewline() throws {
+        let source = try readSourceFile("Ping/UI/History/ChatComposerView.swift")
+
+        XCTAssertTrue(source.contains("func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool"))
+        XCTAssertTrue(source.contains("#selector(NSResponder.insertNewline(_:))"))
+        XCTAssertTrue(source.contains("flags.contains(.shift)"))
+        XCTAssertTrue(source.contains("!textView.hasMarkedText()"))
+        XCTAssertTrue(source.contains("if flags.isEmpty"))
+        XCTAssertTrue(source.contains("parent.onSubmit()"))
+        XCTAssertFalse(source.contains("composerKeyMonitor = NSEvent.addLocalMonitorForEvents"))
+    }
+
+    func testRoomChatSupportsImageAttachButtonAndDrop() throws {
+        let timelineSource = try readSourceFile("Ping/UI/History/RoomTimelineView.swift")
+        let composerSource = try readSourceFile("Ping/UI/History/ChatComposerView.swift")
+
+        XCTAssertTrue(composerSource.contains("let onAttachImage: () -> Void"))
+        XCTAssertTrue(composerSource.contains("Image(systemName: \"photo\")"))
+        XCTAssertTrue(composerSource.contains(".help(\"사진 첨부\")"))
+        XCTAssertTrue(timelineSource.contains("import UniformTypeIdentifiers"))
+        XCTAssertTrue(timelineSource.contains("openImagePicker()"))
+        XCTAssertTrue(timelineSource.contains("NSOpenPanel()"))
+        XCTAssertTrue(timelineSource.contains("panel.allowedContentTypes = [.image]"))
+        XCTAssertTrue(timelineSource.contains(".onDrop(of: [UTType.fileURL, UTType.image]"))
+        XCTAssertTrue(timelineSource.contains("sendImageAttachment"))
+    }
+
+    func testOpeningChatNotificationClearsAllDeliveredNotificationsForThatRoom() throws {
+        let notificationSource = try readSourceFile("Ping/Notifications/LocalNotificationCenter.swift")
+        let appDelegateSource = try readSourceFile("Ping/AppDelegate.swift")
+
+        XCTAssertTrue(notificationSource.contains("func clearDeliveredNotifications(roomId: String)"))
+        XCTAssertTrue(notificationSource.contains("getDeliveredNotifications"))
+        XCTAssertTrue(notificationSource.contains("info[\"room_id\"] as? String == roomId"))
+        XCTAssertTrue(notificationSource.contains("removeDeliveredNotifications(withIdentifiers: identifiers)"))
+        XCTAssertTrue(appDelegateSource.contains("LocalNotificationCenter.shared.clearDeliveredNotifications(roomId: roomId)"))
     }
 
     func testEmptyTimelineShowsAQuietEmptyState() throws {

@@ -115,6 +115,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.rejectInvitation(inviteId: inviteId)
         }
         LocalNotificationCenter.shared.onViewChatMessage = { [weak self] chatId, roomId in
+            LocalNotificationCenter.shared.clearDeliveredNotifications(roomId: roomId)
             ClientEventService.shared.log("chat_notification_clicked", properties: ["room_id": roomId])
             self?.appState.pendingRoomFocusId = roomId
             self?.showRoomManager()
@@ -239,7 +240,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 rememberNotifiedMessage(id)
                 LocalNotificationCenter.shared.notifyIncomingMessage(
                     senderNickname: message.senderNickname,
-                    messageId: id
+                    messageId: id,
+                    roomId: message.roomId
                 )
             }
         }

@@ -297,8 +297,7 @@ final class ChatRealtimeService: ObservableObject {
         guard
             let id = record["id"]?.stringValue,
             let senderUid = record["sender_uid"]?.stringValue,
-            let senderNickname = record["sender_nickname"]?.stringValue,
-            let body = record["body"]?.stringValue
+            let senderNickname = record["sender_nickname"]?.stringValue
         else { return nil }
 
         return ChatMessage(
@@ -306,11 +305,27 @@ final class ChatRealtimeService: ObservableObject {
             roomId: roomId,
             senderUid: senderUid,
             senderNickname: senderNickname,
-            body: body,
+            body: record["body"]?.stringValue ?? "",
             replyToChatId: record["reply_to_chat_id"]?.stringValue,
             replyToVideoId: record["reply_to_video_id"]?.stringValue,
-            createdAt: nil
+            mediaPath: record["media_path"]?.stringValue,
+            mediaMimeType: record["media_mime_type"]?.stringValue,
+            mediaWidth: record["media_width"]?.intValue,
+            mediaHeight: record["media_height"]?.intValue,
+            mediaFileName: record["media_file_name"]?.stringValue,
+            createdAt: parseRealtimeDate(record["created_at"]?.stringValue)
         )
+    }
+
+    private func parseRealtimeDate(_ value: String?) -> Date? {
+        guard let value else { return nil }
+        if let date = ISO8601DateFormatter.shared.date(from: value) {
+            return date
+        }
+
+        let fallback = ISO8601DateFormatter()
+        fallback.formatOptions = [.withInternetDateTime]
+        return fallback.date(from: value)
     }
 
     // MARK: - Polling fallback

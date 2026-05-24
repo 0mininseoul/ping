@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import UniformTypeIdentifiers
 
 struct RoomTimelineView: View {
     @ObservedObject var viewModel: HistoryViewModel
@@ -11,10 +12,10 @@ struct RoomTimelineView: View {
     @State private var draft: String = ""
     @State private var reactionPickerTargetKind: MessageReaction.TargetKind?
     @State private var reactionPickerTargetId: String?
-    @State private var composerKeyMonitor: Any?
     @State private var scrollWheelMonitor: Any?
     @State private var revealResetTask: Task<Void, Never>?
     @State private var revealOffset: CGFloat = 0
+    @State private var isImageDropTargeted = false
     private let timestampWidth: CGFloat = 78
     private let timestampGap: CGFloat = 16
     private let timelineBottomInset: CGFloat = 24
@@ -47,8 +48,9 @@ struct RoomTimelineView: View {
                     .padding(.bottom, timelineBottomInset)
                 }
                 .onChange(of: viewModel.groups.last?.items.last?.id) { _ in
-                    if let lastId = viewModel.groups.last?.items.last?.id {
-                        withAnimation(.easeOut) { scrollProxy.scrollTo(lastId, anchor: .bottom) }
+                    Task { @MainActor in
+                        await Task.yield()
+                        scrollToLatestTimelineItem(using: scrollProxy, animated: true)
                     }
                 }
                 .onChange(of: viewModel.expandedMessageId) { expandedMessageId in
@@ -62,8 +64,9 @@ struct RoomTimelineView: View {
                     }
                 }
                 .onAppear {
-                    if let lastId = viewModel.groups.last?.items.last?.id {
-                        scrollProxy.scrollTo(lastId, anchor: .bottom)
+                    Task { @MainActor in
+                        await Task.yield()
+                        scrollToLatestTimelineItem(using: scrollProxy, animated: false)
                     }
                     if scrollWheelMonitor == nil {
                         scrollWheelMonitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { [self] event in
@@ -117,8 +120,24 @@ struct RoomTimelineView: View {
                 draft: $draft,
                 replyTarget: viewModel.replyTarget,
                 onCancelReply: { viewModel.replyTarget = nil },
-                onSend: sendDraft
+                onSend: sendDraft,
+                onAttachImage: openImagePicker
             )
+        }
+        .onDrop(of: [UTType.fileURL, UTType.image], isTargeted: $isImageDropTargeted) { providers in
+            handleImageDrop(providers)
+        }
+        .overlay {
+            if isImageDropTargeted {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Color.accentColor.opacity(0.12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .strokeBorder(Color.accentColor.opacity(0.65), lineWidth: 2)
+                    )
+                    .padding(10)
+                    .allowsHitTesting(false)
+            }
         }
         .overlay(alignment: .bottom) {
             if let targetKind = reactionPickerTargetKind, let targetId = reactionPickerTargetId {
@@ -138,34 +157,7 @@ struct RoomTimelineView: View {
                 .transition(.opacity)
             }
         }
-        .onAppear {
-            composerKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-                // Only intercept when TextEditor inside this view has focus
-                guard let responder = NSApp.keyWindow?.firstResponder,
-                      responder.isKind(of: NSTextView.self) else {
-                    return event
-                }
-                // keyCode 36 = Return
-                guard event.keyCode == 36 else { return event }
-
-                let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-                // Shift+Enter → newline (let TextEditor handle)
-                if flags.contains(.shift) {
-                    return event
-                }
-                // Cmd+Enter sends. Plain Enter remains a newline in the TextEditor.
-                if flags == .command {
-                    sendDraft()
-                    return nil
-                }
-                return event
-            }
-        }
         .onDisappear {
-            if let composerKeyMonitor {
-                NSEvent.removeMonitor(composerKeyMonitor)
-                self.composerKeyMonitor = nil
-            }
             if let scrollWheelMonitor {
                 NSEvent.removeMonitor(scrollWheelMonitor)
                 self.scrollWheelMonitor = nil
@@ -188,6 +180,91 @@ struct RoomTimelineView: View {
         let body = draft
         draft = ""
         Task { await viewModel.sendChat(body: body) }
+    }
+
+    private func scrollToLatestTimelineItem(using scrollProxy: ScrollViewProxy, animated: Bool) {
+        guard let lastId = viewModel.groups.last?.items.last?.id else { return }
+        if animated {
+            withAnimation(.easeOut) {
+                scrollProxy.scrollTo(lastId, anchor: .bottom)
+            }
+        } else {
+            scrollProxy.scrollTo(lastId, anchor: .bottom)
+        }
+    }
+
+    private func openImagePicker() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.image]
+        panel.allowsMultipleSelection = false
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.resolvesAliases = true
+
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        sendImageAttachment(url)
+    }
+
+    private func handleImageDrop(_ providers: [NSItemProvider]) -> Bool {
+        for provider in providers {
+            if provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
+                provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) { item, _ in
+                    guard let url = Self.droppedFileURL(from: item) else { return }
+                    Task { @MainActor in
+                        sendImageAttachment(url)
+                    }
+                }
+                return true
+            }
+
+            if provider.canLoadObject(ofClass: NSImage.self) {
+                _ = provider.loadObject(ofClass: NSImage.self) { object, _ in
+                    guard let image = object as? NSImage,
+                          let url = Self.writeTemporaryPNG(image) else { return }
+                    Task { @MainActor in
+                        sendImageAttachment(url)
+                    }
+                }
+                return true
+            }
+        }
+        return false
+    }
+
+    private func sendImageAttachment(_ url: URL) {
+        let caption = draft
+        draft = ""
+        Task { await viewModel.sendChatImage(localURL: url, caption: caption) }
+    }
+
+    nonisolated private static func droppedFileURL(from item: Any?) -> URL? {
+        if let url = item as? URL {
+            return url
+        }
+        if let data = item as? Data {
+            return URL(dataRepresentation: data, relativeTo: nil)
+        }
+        if let string = item as? String {
+            return URL(string: string)
+        }
+        return nil
+    }
+
+    nonisolated private static func writeTemporaryPNG(_ image: NSImage) -> URL? {
+        guard let tiff = image.tiffRepresentation,
+              let bitmap = NSBitmapImageRep(data: tiff),
+              let data = bitmap.representation(using: .png, properties: [:]) else {
+            return nil
+        }
+
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ping-dropped-\(UUID().uuidString).png")
+        do {
+            try data.write(to: url, options: .atomic)
+            return url
+        } catch {
+            return nil
+        }
     }
 
     private func scheduleRevealReset(after delay: UInt64 = 160_000_000) {
@@ -291,9 +368,10 @@ struct RoomTimelineView: View {
                 isMine: c.senderUid == myUid,
                 showsSender: roomMemberCount >= 3,
                 replyPreview: preview,
+                cacheService: cacheService,
                 reactions: Array(aggs),
                 onReply: {
-                    viewModel.replyTarget = .chat(id: c.id ?? "", sender: c.senderNickname, preview: c.body)
+                    viewModel.replyTarget = .chat(id: c.id ?? "", sender: c.senderNickname, preview: c.previewText)
                 },
                 onReact: {
                     reactionPickerTargetKind = .chat
@@ -311,7 +389,7 @@ struct RoomTimelineView: View {
     private func replyPreview(for chat: ChatMessage) -> ChatMessageRowView.ReplyPreview? {
         if let replyChatId = chat.replyToChatId,
            let target = findChat(by: replyChatId) {
-            return .chat(sender: target.senderNickname, body: target.body)
+            return .chat(sender: target.senderNickname, body: target.previewText)
         }
         if let replyVideoId = chat.replyToVideoId,
            let target = findVideo(by: replyVideoId) {

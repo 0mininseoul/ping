@@ -6,6 +6,7 @@ struct ChatMessageRowView: View {
     let isMine: Bool
     let showsSender: Bool
     let replyPreview: ReplyPreview?
+    let cacheService: HistoryCacheService
     let reactions: [HistoryViewModel.ReactionAggregate]
     let onReply: () -> Void
     let onReact: () -> Void
@@ -51,19 +52,35 @@ struct ChatMessageRowView: View {
     }
 
     private var bubble: some View {
-        SelectableTextView(
-            text: message.body,
-            font: NSFont.systemFont(ofSize: NSFont.systemFontSize),
-            textColor: isMine ? .white : NSColor.labelColor,
-            maxWidth: 280,
-            menuProvider: { makeContextMenu() }
-        )
-        .padding(.horizontal, 11)
-        .padding(.vertical, 6)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(isMine ? Color.accentColor : Color.gray.opacity(0.18))
-        )
+        VStack(alignment: isMine ? .trailing : .leading, spacing: 6) {
+            if message.hasImageAttachment {
+                ChatImageAttachmentView(message: message, cacheService: cacheService)
+                    .contextMenu {
+                        Button("답장", action: onReply)
+                        Button("이모지 반응", action: onReact)
+                        if isMine {
+                            Divider()
+                            Button("삭제", action: onDelete)
+                        }
+                    }
+            }
+
+            if !message.body.isEmpty {
+                SelectableTextView(
+                    text: message.body,
+                    font: NSFont.systemFont(ofSize: NSFont.systemFontSize),
+                    textColor: isMine ? .white : NSColor.labelColor,
+                    maxWidth: 280,
+                    menuProvider: { makeContextMenu() }
+                )
+                .padding(.horizontal, 11)
+                .padding(.vertical, 6)
+                .background(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(isMine ? Color.accentColor : Color.gray.opacity(0.18))
+                )
+            }
+        }
     }
 
     private func makeContextMenu() -> NSMenu {

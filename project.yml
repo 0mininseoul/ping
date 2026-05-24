@@ -11,8 +11,8 @@ settings:
   base:
     SWIFT_VERSION: "6.0"
     MACOSX_DEPLOYMENT_TARGET: "13.0"
-    MARKETING_VERSION: "0.3.26"
-    CURRENT_PROJECT_VERSION: "36"
+    MARKETING_VERSION: "0.3.27"
+    CURRENT_PROJECT_VERSION: "37"
     PRODUCT_NAME: Ping
     ENABLE_HARDENED_RUNTIME: YES
     CODE_SIGN_STYLE: Manual
@@ -168,6 +168,7 @@ targets:
           cp "$PROJECT_DIR/supabase/migrations/20260523000600_room_name_length_limit.sql" "$DST/20260523000600_room_name_length_limit.sql"
           cp "$PROJECT_DIR/supabase/migrations/20260524000100_sender_local_save_permission.sql" "$DST/20260524000100_sender_local_save_permission.sql"
           cp "$PROJECT_DIR/supabase/migrations/20260524000200_storage_read_seen_messages.sql" "$DST/20260524000200_storage_read_seen_messages.sql"
+          cp "$PROJECT_DIR/supabase/migrations/20260524132828_chat_image_attachments.sql" "$DST/20260524132828_chat_image_attachments.sql"
           cp "$PROJECT_DIR/project.yml" "$DST/project.yml"
           cp "$PROJECT_DIR/AGENTS.md" "$DST/AGENTS.md"
           cp "$PROJECT_DIR/PING_PROJECT_SPECIFICATION.md" "$DST/PING_PROJECT_SPECIFICATION.md"
@@ -236,6 +237,7 @@ targets:
           - "$(PROJECT_DIR)/supabase/migrations/20260523000600_room_name_length_limit.sql"
           - "$(PROJECT_DIR)/supabase/migrations/20260524000100_sender_local_save_permission.sql"
           - "$(PROJECT_DIR)/supabase/migrations/20260524000200_storage_read_seen_messages.sql"
+          - "$(PROJECT_DIR)/supabase/migrations/20260524132828_chat_image_attachments.sql"
           - "$(PROJECT_DIR)/project.yml"
           - "$(PROJECT_DIR)/AGENTS.md"
           - "$(PROJECT_DIR)/PING_PROJECT_SPECIFICATION.md"
@@ -304,6 +306,7 @@ targets:
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/20260523000600_room_name_length_limit.sql"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/20260524000100_sender_local_save_permission.sql"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/20260524000200_storage_read_seen_messages.sql"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/20260524132828_chat_image_attachments.sql"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/project.yml"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/AGENTS.md"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/PING_PROJECT_SPECIFICATION.md"
