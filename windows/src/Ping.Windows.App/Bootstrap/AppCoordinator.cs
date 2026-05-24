@@ -16,9 +16,14 @@ public sealed class AppCoordinator : IDisposable
     private readonly TrayIconController tray;
     private readonly SupabaseClient supabaseClient;
     private readonly MessageService messageService;
+    private readonly IScreenFaceCaptureEngine screenFaceCaptureEngine;
+    private readonly QuickSendController quickSendController;
     private IReadOnlyCollection<Room> rooms = [];
     private string? currentUid;
     private FaceMirrorWindow? faceMirrorWindow;
+    private ScreenFaceMirrorWindow? screenFaceMirrorWindow;
+    private QuickSendHudWindow? quickSendHudWindow;
+    private CancellationTokenSource? quickSendCancellation;
     private bool disposed;
 
     public AppCoordinator(MainWindow mainWindow)
@@ -43,6 +48,13 @@ public sealed class AppCoordinator : IDisposable
         this.hotkeys = hotkeys;
         this.supabaseClient = supabaseClient ?? new SupabaseClient();
         messageService = new MessageService(this.supabaseClient, new StorageService(this.supabaseClient));
+        screenFaceCaptureEngine = new NativeCaptureEngine();
+        quickSendController = new QuickSendController(
+            screenFaceCaptureEngine,
+            messageService,
+            new CoordinatorQuickSendPresenter(this),
+            new ScreenFaceQuickSendPreferencesStore().Load(),
+            new LocalArchive(LocalArchive.DefaultRootDirectory()));
         this.tray = tray ?? new TrayIconController(ExecuteTrayCommand);
     }
 
@@ -68,16 +80,10 @@ public sealed class AppCoordinator : IDisposable
                 ShowFaceMirror();
                 break;
             case HotkeyCommand.ScreenFacePing:
-                ShowBlockedState(
-                    "Screen+Face Ping",
-                    "Alt+L reached Ping. Screen+face preview is blocked until capture interop lands.",
-                    "Capture window not implemented yet.");
+                ShowScreenFaceMirror();
                 break;
             case HotkeyCommand.QuickScreenFacePing:
-                ShowBlockedState(
-                    "Quick Screen+Face",
-                    "Alt+Shift+L reached Ping. Quick send is blocked until default room and capture are available.",
-                    "Needs room and capture implementation.");
+                _ = RunQuickScreenFacePingAsync();
                 break;
             case HotkeyCommand.History:
                 ShowHistory("Alt+O reached Ping. Room history shell is visible.");
@@ -97,6 +103,8 @@ public sealed class AppCoordinator : IDisposable
         hotkeys.HotkeyPressed -= HandleHotkeyPressed;
         supabaseClient.Dispose();
         hotkeys.Dispose();
+        quickSendCancellation?.Cancel();
+        quickSendCancellation?.Dispose();
         tray.Dispose();
         disposed = true;
     }
@@ -203,9 +211,7 @@ public sealed class AppCoordinator : IDisposable
             return;
         }
 
-        var sendableRooms = rooms
-            .Where(room => room.Id is not null && room.MemberUids.Contains(uid) && room.MemberUids.Count >= 2)
-            .ToArray();
+        var sendableRooms = SendableRoomsFor(uid);
         if (sendableRooms.Length == 0)
         {
             ShowBlockedState(
@@ -239,6 +245,104 @@ public sealed class AppCoordinator : IDisposable
         faceMirrorWindow.Activate();
     }
 
+    private void ShowScreenFaceMirror()
+    {
+        var uid = currentUid;
+        if (uid is null)
+        {
+            ShowBlockedState(
+                "Screen+Face Ping",
+                "Alt+L reached Ping. Supabase session is still starting or blocked by missing config.",
+                "Supabase session not ready.");
+            return;
+        }
+
+        var sendableRooms = SendableRoomsFor(uid);
+        if (sendableRooms.Length == 0)
+        {
+            ShowBlockedState(
+                "Screen+Face Ping",
+                "Alt+L reached Ping. Create or join a room before sending a screen+face ping.",
+                "No sendable room available.");
+            return;
+        }
+
+        ShowScreenFaceMirror(new ScreenFaceMirrorContext(
+            Rooms: sendableRooms,
+            SenderUid: uid,
+            SenderNickname: Environment.UserName,
+            PartnerLabel: PartnerLabelFor(sendableRooms),
+            AllowsLocalSave: false,
+            SaveSentCopy: false));
+    }
+
+    private void ShowScreenFaceMirror(ScreenFaceMirrorContext context)
+    {
+        if (screenFaceMirrorWindow is not null)
+        {
+            screenFaceMirrorWindow.Activate();
+            return;
+        }
+
+        var viewModel = new ScreenFaceMirrorViewModel(
+            context,
+            screenFaceCaptureEngine,
+            messageService,
+            new LocalArchive(LocalArchive.DefaultRootDirectory()));
+
+        screenFaceMirrorWindow = new ScreenFaceMirrorWindow(viewModel);
+        screenFaceMirrorWindow.Closed += (_, _) => screenFaceMirrorWindow = null;
+        screenFaceMirrorWindow.Activate();
+    }
+
+    private async Task RunQuickScreenFacePingAsync()
+    {
+        var uid = currentUid;
+        if (uid is null)
+        {
+            ShowBlockedState(
+                "Quick Screen+Face",
+                "Alt+Shift+L reached Ping. Supabase session is still starting or blocked by missing config.",
+                "Supabase session not ready.");
+            return;
+        }
+
+        quickSendCancellation?.Cancel();
+        var cancellation = new CancellationTokenSource();
+        quickSendCancellation = cancellation;
+        var context = new QuickSendContext(
+            Rooms: rooms,
+            SenderUid: uid,
+            SenderNickname: Environment.UserName,
+            PartnerLabel: "Default room",
+            AllowsLocalSave: false,
+            SaveSentCopy: false,
+            MirrorPosition: new MirrorPosition(0.5, 0.5),
+            Preconditions: QuickSendPreconditions.Ready());
+
+        try
+        {
+            _ = await quickSendController.ExecuteAsync(context, cancellation.Token);
+        }
+        finally
+        {
+            if (ReferenceEquals(quickSendCancellation, cancellation))
+            {
+                quickSendCancellation = null;
+            }
+
+            cancellation.Dispose();
+        }
+    }
+
+    private Room[] SendableRoomsFor(string uid) =>
+        rooms
+            .Where(room => room.Id is not null && room.MemberUids.Contains(uid) && room.MemberUids.Count >= 2)
+            .ToArray();
+
+    private static string PartnerLabelFor(IReadOnlyCollection<Room> sendableRooms) =>
+        sendableRooms.Count == 1 ? sendableRooms.First().Name : "All rooms";
+
     private async Task BootstrapAndLoadRoomsAsync()
     {
         try
@@ -253,11 +357,46 @@ public sealed class AppCoordinator : IDisposable
             mainWindow.HotkeyState.Text =
                 sendableCount == 0
                     ? "Alt+P ready, but no sendable room is available."
-                    : $"Alt+P face ready for {sendableCount} room(s). Alt+L screen+face and Alt+Shift+L quick send are pending.";
+                    : $"Alt+P face, Alt+L screen+face, and Alt+Shift+L quick send ready for {sendableCount} room(s).";
         }
         catch (Exception ex)
         {
             mainWindow.HotkeyState.Text = $"Supabase setup blocked: {ex.Message}";
+        }
+    }
+
+    private sealed class CoordinatorQuickSendPresenter(AppCoordinator owner) : IQuickSendPresenter
+    {
+        public IQuickSendHudSession ShowHud(QuickSendHudContext context)
+        {
+            owner.quickSendHudWindow?.Close();
+            var cancellation = owner.quickSendCancellation ?? new CancellationTokenSource();
+            owner.quickSendCancellation ??= cancellation;
+            owner.quickSendHudWindow = new QuickSendHudWindow(context, cancellation);
+            owner.quickSendHudWindow.Closed += (_, _) => owner.quickSendHudWindow = null;
+            owner.quickSendHudWindow.Activate();
+            return owner.quickSendHudWindow;
+        }
+
+        public void OpenScreenFaceMirror(ScreenFaceMirrorContext context)
+        {
+            owner.ShowScreenFaceMirror(context);
+        }
+
+        public void ShowRoomBlocked(string message)
+        {
+            owner.ShowBlockedState(
+                "Rooms and recent pings",
+                "Alt+Shift+L reached Ping, but there is no sendable default room.",
+                message);
+        }
+
+        public void ShowPermissionBlocked(QuickSendPermissionKind permission, string message)
+        {
+            owner.ShowBlockedState(
+                "Screen+Face permissions",
+                $"Alt+Shift+L reached Ping, but {permission} is blocked.",
+                message);
         }
     }
 }

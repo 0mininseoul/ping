@@ -1,0 +1,612 @@
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
+using System.Text.Json;
+using Ping.Windows.Core.Backend;
+using Ping.Windows.Core.LocalState;
+using Ping.Windows.Core.Models;
+
+#if WINDOWS
+using Microsoft.UI;
+using Microsoft.UI.Windowing;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Animation;
+#endif
+
+namespace Ping.Windows.App.Capture;
+
+public enum QuickSendOutcome
+{
+    RoomBlocked,
+    PermissionBlocked,
+    OpenedMirror,
+    StartedRecording,
+    Canceled,
+    Failed
+}
+
+public enum QuickSendPermissionKind
+{
+    Camera,
+    Microphone,
+    ScreenCapture
+}
+
+public sealed record ScreenFaceQuickSendPreferences(bool IsEnabled)
+{
+    public static ScreenFaceQuickSendPreferences Default { get; } = new(IsEnabled: true);
+}
+
+public sealed class ScreenFaceQuickSendPreferencesStore
+{
+    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
+    private readonly string path;
+
+    public ScreenFaceQuickSendPreferencesStore()
+        : this(Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Ping",
+            "QuickSendPreferences.json"))
+    {
+    }
+
+    public ScreenFaceQuickSendPreferencesStore(string path)
+    {
+        this.path = path;
+    }
+
+    public ScreenFaceQuickSendPreferences Load()
+    {
+        try
+        {
+            if (!File.Exists(path))
+            {
+                return ScreenFaceQuickSendPreferences.Default;
+            }
+
+            return JsonSerializer.Deserialize<ScreenFaceQuickSendPreferences>(
+                File.ReadAllText(path),
+                JsonOptions) ?? ScreenFaceQuickSendPreferences.Default;
+        }
+        catch (IOException)
+        {
+            return ScreenFaceQuickSendPreferences.Default;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return ScreenFaceQuickSendPreferences.Default;
+        }
+        catch (JsonException)
+        {
+            return ScreenFaceQuickSendPreferences.Default;
+        }
+    }
+
+    public void Save(ScreenFaceQuickSendPreferences preferences)
+    {
+        var directory = Path.GetDirectoryName(path);
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        File.WriteAllText(path, JsonSerializer.Serialize(preferences, JsonOptions));
+    }
+}
+
+public sealed record QuickSendPreconditions(
+    bool IsCameraAvailable,
+    bool IsMicrophoneAvailable,
+    bool IsScreenCaptureAvailable)
+{
+    public static QuickSendPreconditions Ready() =>
+        new(
+            IsCameraAvailable: true,
+            IsMicrophoneAvailable: true,
+            IsScreenCaptureAvailable: true);
+}
+
+public sealed record QuickSendContext(
+    IReadOnlyCollection<Room> Rooms,
+    string SenderUid,
+    string SenderNickname,
+    string PartnerLabel,
+    bool AllowsLocalSave,
+    bool SaveSentCopy,
+    MirrorPosition MirrorPosition,
+    QuickSendPreconditions Preconditions,
+    string? DefaultRoomId = null);
+
+public sealed record QuickSendHudContext(
+    string RoomName,
+    string ModeLabel);
+
+public interface IQuickSendPresenter
+{
+    IQuickSendHudSession ShowHud(QuickSendHudContext context);
+
+    void OpenScreenFaceMirror(ScreenFaceMirrorContext context);
+
+    void ShowRoomBlocked(string message);
+
+    void ShowPermissionBlocked(QuickSendPermissionKind permission, string message);
+}
+
+public interface IQuickSendHudSession
+{
+    void SetRecording();
+
+    void SetUploading();
+
+    void SetFailed(string message);
+
+    void RequestFadeOutClose();
+
+    void Hide();
+}
+
+public sealed class QuickSendController
+{
+    private static readonly TimeSpan RecordingDuration = TimeSpan.FromSeconds(3);
+    private static readonly TimeSpan HudLeadInDuration = TimeSpan.FromMilliseconds(300);
+
+    private readonly IScreenFaceCaptureEngine captureEngine;
+    private readonly Func<SendVideoInput, CancellationToken, Task> sendAsync;
+    private readonly IQuickSendPresenter presenter;
+    private readonly ScreenFaceQuickSendPreferences preferences;
+    private readonly Func<TimeSpan, CancellationToken, Task> delayAsync;
+    private readonly LocalArchive? archive;
+
+    public QuickSendController(
+        IScreenFaceCaptureEngine captureEngine,
+        MessageService messageService,
+        IQuickSendPresenter presenter,
+        ScreenFaceQuickSendPreferences preferences,
+        LocalArchive? archive = null)
+        : this(captureEngine, messageService.SendAsync, presenter, preferences, (duration, token) => Task.Delay(duration, token), archive)
+    {
+    }
+
+    public QuickSendController(
+        IScreenFaceCaptureEngine captureEngine,
+        Func<SendVideoInput, CancellationToken, Task> sendAsync,
+        IQuickSendPresenter presenter,
+        ScreenFaceQuickSendPreferences preferences,
+        Func<TimeSpan, CancellationToken, Task>? delayAsync = null,
+        LocalArchive? archive = null)
+    {
+        this.captureEngine = captureEngine;
+        this.sendAsync = sendAsync;
+        this.presenter = presenter;
+        this.preferences = preferences;
+        this.delayAsync = delayAsync ?? ((duration, token) => Task.Delay(duration, token));
+        this.archive = archive;
+    }
+
+    public async Task<QuickSendOutcome> ExecuteAsync(
+        QuickSendContext context,
+        CancellationToken cancellationToken = default)
+    {
+        var room = ResolveDefaultRoom(context);
+        if (room is null)
+        {
+            presenter.ShowRoomBlocked("Create or join a room before using screen+face quick send.");
+            return QuickSendOutcome.RoomBlocked;
+        }
+
+        var blockedPermission = BlockedPermission(context.Preconditions);
+        if (blockedPermission is not null)
+        {
+            presenter.ShowPermissionBlocked(
+                blockedPermission.Value,
+                PermissionBlockedMessage(blockedPermission.Value));
+            return QuickSendOutcome.PermissionBlocked;
+        }
+
+        if (!preferences.IsEnabled)
+        {
+            presenter.OpenScreenFaceMirror(MirrorContextFor(context, [room]));
+            return QuickSendOutcome.OpenedMirror;
+        }
+
+        var hud = presenter.ShowHud(new QuickSendHudContext(room.Name, "화면+얼굴"));
+        string? recordedPath = null;
+        var uploadStarted = false;
+        var sent = false;
+
+        try
+        {
+            await delayAsync(HudLeadInDuration, cancellationToken).ConfigureAwait(false);
+            hud.SetRecording();
+            var recording = await captureEngine.RecordAsync(RecordingDuration, monitorIndex: 0, cancellationToken)
+                .ConfigureAwait(false);
+            recordedPath = recording.FilePath;
+            hud.SetUploading();
+
+            if (context.SaveSentCopy)
+            {
+                if (archive is null)
+                {
+                    throw new InvalidOperationException("Local archive is required when sent-copy saving is enabled.");
+                }
+
+                _ = await archive.SaveSentCopyAsync(
+                    recordedPath,
+                    LocalArchiveKind.Sent,
+                    room.Name,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+            }
+
+            uploadStarted = true;
+            await sendAsync(
+                new SendVideoInput(
+                    [room],
+                    recordedPath,
+                    context.MirrorPosition,
+                    context.SenderUid,
+                    context.SenderNickname,
+                    CaptureMode.ScreenFace,
+                    recording.AspectRatio,
+                    context.AllowsLocalSave),
+                CancellationToken.None).ConfigureAwait(false);
+            sent = true;
+            hud.RequestFadeOutClose();
+            return QuickSendOutcome.StartedRecording;
+        }
+        catch (OperationCanceledException) when (!uploadStarted)
+        {
+            hud.Hide();
+            return QuickSendOutcome.Canceled;
+        }
+        catch (Exception exception)
+        {
+            hud.SetFailed(exception.Message);
+            return QuickSendOutcome.Failed;
+        }
+        finally
+        {
+            if (sent && recordedPath is not null)
+            {
+                TryDeleteTemporaryRecording(recordedPath);
+            }
+        }
+    }
+
+    public static Room? ResolveDefaultRoom(QuickSendContext context)
+    {
+        var sendableRooms = context.Rooms
+            .Where(room =>
+                room.Id is not null
+                && room.MemberUids.Contains(context.SenderUid)
+                && room.MemberUids.Count >= 2)
+            .ToArray();
+        if (sendableRooms.Length == 0)
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(context.DefaultRoomId))
+        {
+            var defaultRoom = sendableRooms.FirstOrDefault(room =>
+                string.Equals(room.Id, context.DefaultRoomId, StringComparison.Ordinal));
+            if (defaultRoom is not null)
+            {
+                return defaultRoom;
+            }
+        }
+
+        return sendableRooms
+            .OrderByDescending(room => room.CreatedAt ?? DateTimeOffset.MinValue)
+            .ThenBy(room => room.Name, StringComparer.OrdinalIgnoreCase)
+            .First();
+    }
+
+    private static ScreenFaceMirrorContext MirrorContextFor(QuickSendContext context, IReadOnlyCollection<Room> rooms) =>
+        new(
+            rooms,
+            context.SenderUid,
+            context.SenderNickname,
+            context.PartnerLabel,
+            context.AllowsLocalSave,
+            context.SaveSentCopy);
+
+    private static QuickSendPermissionKind? BlockedPermission(QuickSendPreconditions preconditions)
+    {
+        if (!preconditions.IsScreenCaptureAvailable)
+        {
+            return QuickSendPermissionKind.ScreenCapture;
+        }
+
+        if (!preconditions.IsCameraAvailable)
+        {
+            return QuickSendPermissionKind.Camera;
+        }
+
+        if (!preconditions.IsMicrophoneAvailable)
+        {
+            return QuickSendPermissionKind.Microphone;
+        }
+
+        return null;
+    }
+
+    private static string PermissionBlockedMessage(QuickSendPermissionKind permission) => permission switch
+    {
+        QuickSendPermissionKind.ScreenCapture => "Screen capture permission is required for screen+face quick send.",
+        QuickSendPermissionKind.Camera => "Camera permission is required for screen+face quick send.",
+        QuickSendPermissionKind.Microphone => "Microphone permission is required for screen+face quick send.",
+        _ => throw new ArgumentOutOfRangeException(nameof(permission), permission, "Unknown quick-send permission.")
+    };
+
+    private static void TryDeleteTemporaryRecording(string path)
+    {
+        try
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
+        }
+    }
+}
+
+public sealed class QuickSendHudViewModel : INotifyPropertyChanged
+{
+    private MirrorState state = MirrorState.Idle;
+    private string statusMessage = "Starting...";
+    private bool isCloseRequested;
+    private bool isFadeOutRequested;
+
+    public QuickSendHudViewModel(QuickSendHudContext context)
+    {
+        RoomName = context.RoomName;
+        ModeLabel = context.ModeLabel;
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    public event EventHandler? CloseRequested;
+
+    public event EventHandler? FadeOutRequested;
+
+    public string RoomName { get; }
+
+    public string ModeLabel { get; }
+
+    public MirrorState State
+    {
+        get => state;
+        private set
+        {
+            if (state == value)
+            {
+                return;
+            }
+
+            state = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(StateText));
+        }
+    }
+
+    public string StateText => State switch
+    {
+        MirrorState.Idle => "Ready",
+        MirrorState.Recording => "Recording",
+        MirrorState.Uploading => "Sending",
+        MirrorState.Failed => "Failed",
+        _ => throw new ArgumentOutOfRangeException(nameof(State), State, "Unknown HUD state.")
+    };
+
+    public string StatusMessage
+    {
+        get => statusMessage;
+        private set
+        {
+            if (string.Equals(statusMessage, value, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            statusMessage = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public bool IsCloseRequested
+    {
+        get => isCloseRequested;
+        private set
+        {
+            if (isCloseRequested == value)
+            {
+                return;
+            }
+
+            isCloseRequested = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public bool IsFadeOutRequested
+    {
+        get => isFadeOutRequested;
+        private set
+        {
+            if (isFadeOutRequested == value)
+            {
+                return;
+            }
+
+            isFadeOutRequested = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public void SetRecording()
+    {
+        State = MirrorState.Recording;
+        StatusMessage = "Recording 3 seconds...";
+    }
+
+    public void SetUploading()
+    {
+        State = MirrorState.Uploading;
+        StatusMessage = "Sending...";
+    }
+
+    public void SetFailed(string message)
+    {
+        State = MirrorState.Failed;
+        StatusMessage = $"Could not send. Press Alt+Shift+L to retry. {message}";
+    }
+
+    public void RequestFadeOutClose()
+    {
+        IsFadeOutRequested = true;
+        FadeOutRequested?.Invoke(this, EventArgs.Empty);
+        RequestClose();
+    }
+
+    public void RequestClose()
+    {
+        IsCloseRequested = true;
+        CloseRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+}
+
+#if WINDOWS
+public sealed partial class QuickSendHudWindow : Window, IQuickSendHudSession
+{
+    private readonly QuickSendHudViewModel viewModel;
+    private readonly CancellationTokenSource cancellation;
+    private AppWindow? appWindow;
+    private bool shouldCloseAfterFade;
+    private bool uploadStarted;
+
+    public QuickSendHudWindow(QuickSendHudContext context, CancellationTokenSource cancellation)
+    {
+        this.cancellation = cancellation;
+        viewModel = new QuickSendHudViewModel(context);
+        InitializeComponent();
+        Root.DataContext = viewModel;
+        Root.Loaded += HandleLoaded;
+        viewModel.PropertyChanged += HandleViewModelPropertyChanged;
+        viewModel.FadeOutRequested += HandleFadeOutRequested;
+        viewModel.CloseRequested += HandleCloseRequested;
+        SetStateBrush();
+        ConfigureWindow();
+    }
+
+    public void SetRecording() => viewModel.SetRecording();
+
+    public void SetUploading()
+    {
+        uploadStarted = true;
+        viewModel.SetUploading();
+    }
+
+    public void SetFailed(string message) => viewModel.SetFailed(message);
+
+    public void RequestFadeOutClose() => viewModel.RequestFadeOutClose();
+
+    public void Hide()
+    {
+        appWindow?.Hide();
+    }
+
+    private void HandleLoaded(object sender, RoutedEventArgs args)
+    {
+        Root.Focus(FocusState.Programmatic);
+    }
+
+    private void HandleKeyDown(object sender, KeyRoutedEventArgs args)
+    {
+        if (args.Key != Windows.System.VirtualKey.Escape)
+        {
+            return;
+        }
+
+        args.Handled = true;
+        if (!uploadStarted)
+        {
+            cancellation.Cancel();
+        }
+
+        Hide();
+    }
+
+    private void HandleViewModelPropertyChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (args.PropertyName == nameof(QuickSendHudViewModel.State))
+        {
+            SetStateBrush();
+        }
+    }
+
+    private void HandleCloseRequested(object? sender, EventArgs args)
+    {
+        if (shouldCloseAfterFade)
+        {
+            return;
+        }
+
+        Close();
+    }
+
+    private async void HandleFadeOutRequested(object? sender, EventArgs args)
+    {
+        shouldCloseAfterFade = true;
+        var animation = new DoubleAnimation
+        {
+            To = 0,
+            Duration = new Duration(TimeSpan.FromMilliseconds(300))
+        };
+        Storyboard.SetTarget(animation, Root);
+        Storyboard.SetTargetProperty(animation, nameof(Root.Opacity));
+        var storyboard = new Storyboard();
+        storyboard.Children.Add(animation);
+        var completed = new TaskCompletionSource();
+        storyboard.Completed += (_, _) => completed.SetResult();
+        storyboard.Begin();
+        await completed.Task;
+        Close();
+    }
+
+    private void ConfigureWindow()
+    {
+        var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+        var windowId = Win32Interop.GetWindowIdFromWindow(hwnd);
+        appWindow = AppWindow.GetFromWindowId(windowId);
+        appWindow.Resize(new Windows.Graphics.SizeInt32(260, 116));
+        appWindow.TitleBar.ExtendsContentIntoTitleBar = true;
+        appWindow.SetPresenter(AppWindowPresenterKind.CompactOverlay);
+    }
+
+    private void SetStateBrush()
+    {
+        var key = viewModel.State switch
+        {
+            MirrorState.Idle => "PingBorderIdleBrush",
+            MirrorState.Recording => "PingBorderRecordingBrush",
+            MirrorState.Uploading => "PingRainbowBorderBrush",
+            MirrorState.Failed => "PingBorderFailedBrush",
+            _ => "PingBorderIdleBrush"
+        };
+
+        var thickness = viewModel.State == MirrorState.Idle ? 1 : 2;
+        HudBorder.BorderBrush = Root.Resources[key] as Brush;
+        HudBorder.BorderThickness = new Thickness(thickness);
+    }
+}
+#endif
