@@ -281,6 +281,31 @@ public sealed class AppCoordinatorSourceTests
         Assert.Equal("false", startupTask.Attribute("Enabled")?.Value);
     }
 
+    [Fact]
+    public void OnboardingWindowRendersSecondaryActions()
+    {
+        var root = RepoRoot();
+        var xaml = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Onboarding",
+            "OnboardingWindow.xaml"));
+        var code = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Onboarding",
+            "OnboardingWindow.xaml.cs"));
+
+        Assert.Contains("SecondaryActionButton_Click", xaml, StringComparison.Ordinal);
+        Assert.Contains("SecondaryActionLabel", xaml, StringComparison.Ordinal);
+        Assert.Contains("HasSecondaryAction", xaml, StringComparison.Ordinal);
+        Assert.Contains("SecondaryActionButton_Click", code, StringComparison.Ordinal);
+    }
+
     private static string RepoRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

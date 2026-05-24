@@ -125,6 +125,24 @@ public sealed class OnboardingStateTests
     }
 
     [Fact]
+    public void Camera_block_includes_privacy_and_camera_settings_actions()
+    {
+        var model = new OnboardingViewModel(OnboardingEnvironmentState.Ready() with
+        {
+            Camera = OnboardingProbeState.Blocked("Camera access is blocked.", SettingsLauncher.WebcamPrivacyUri)
+        });
+
+        var camera = Assert.Single(model.Rows, row => row.Kind == OnboardingRowKind.Camera);
+        Assert.Equal(OnboardingActionKind.Settings, camera.PrimaryAction?.Kind);
+        Assert.Equal(SettingsLauncher.WebcamPrivacyUri, camera.PrimaryAction?.Uri);
+        Assert.Equal("Open settings", camera.PrimaryAction?.Label);
+        Assert.True(camera.HasSecondaryAction);
+        Assert.Equal(OnboardingActionKind.Settings, camera.SecondaryAction?.Kind);
+        Assert.Equal(SettingsLauncher.CameraSettingsUri, camera.SecondaryAction?.Uri);
+        Assert.Equal("Camera settings", camera.SecondaryAction?.Label);
+    }
+
+    [Fact]
     public void Missing_supabase_config_maps_to_open_config_action()
     {
         var model = new OnboardingViewModel(OnboardingEnvironmentState.Ready() with

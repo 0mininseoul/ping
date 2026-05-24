@@ -60,6 +60,10 @@ public sealed record OnboardingRowState(
     public bool HasPrimaryAction => PrimaryAction is not null;
 
     public string PrimaryActionLabel => PrimaryAction?.Label ?? string.Empty;
+
+    public bool HasSecondaryAction => SecondaryAction is not null;
+
+    public string SecondaryActionLabel => SecondaryAction?.Label ?? string.Empty;
 }
 
 public sealed record OnboardingProbeState(
@@ -196,7 +200,7 @@ public sealed class OnboardingViewModel : INotifyPropertyChanged
             WindowsRow(state.WindowsStatus),
             SupabaseRow(state.IsSupabaseConfigured),
             ProcessPrivilegesRow(state.IsElevated),
-            ProbeRow(OnboardingRowKind.Camera, "Camera", state.Camera),
+            CameraRow(state.Camera),
             ProbeRow(OnboardingRowKind.Microphone, "Microphone", state.Microphone),
             ProbeRow(OnboardingRowKind.ScreenCapture, "Screen capture", state.ScreenCapture),
             ProbeRow(OnboardingRowKind.Notifications, "Notifications", state.Notifications),
@@ -268,6 +272,24 @@ public sealed class OnboardingViewModel : INotifyPropertyChanged
             "Missing or invalid Supabase.json in the Ping local config folder.",
             CanRetry: true,
             PrimaryAction: new OnboardingAction(OnboardingActionKind.OpenFolder, "Open config folder"));
+    }
+
+    private static OnboardingRowState CameraRow(OnboardingProbeState probe)
+    {
+        var row = ProbeRow(OnboardingRowKind.Camera, "Camera", probe);
+        if (row.Status != OnboardingRowStatus.Blocked
+            || !string.Equals(probe.SettingsUri, SettingsLauncher.WebcamPrivacyUri, StringComparison.Ordinal))
+        {
+            return row;
+        }
+
+        return row with
+        {
+            SecondaryAction = new OnboardingAction(
+                OnboardingActionKind.Settings,
+                "Camera settings",
+                SettingsLauncher.CameraSettingsUri)
+        };
     }
 
     private static OnboardingRowState ProbeRow(

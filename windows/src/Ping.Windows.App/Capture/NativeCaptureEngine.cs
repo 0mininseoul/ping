@@ -191,7 +191,7 @@ public sealed class NativeCaptureEngine : IScreenFaceCaptureEngine
             code,
             code switch
             {
-                PingCaptureErrorCode.Success => "Screen capture is available.",
+                PingCaptureErrorCode.Success => "Screen capture is available. Windows may show a capture border and protected content may not be sent.",
                 PingCaptureErrorCode.UnsupportedOs => "Screen capture is not supported on this Windows version.",
                 PingCaptureErrorCode.AccessDenied => "Screen capture permission was denied.",
                 PingCaptureErrorCode.NoMonitor => "No monitor was available for capture.",

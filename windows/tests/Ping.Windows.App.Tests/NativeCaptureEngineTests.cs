@@ -55,6 +55,15 @@ public sealed class NativeCaptureEngineTests
         Assert.False(string.IsNullOrWhiteSpace(result.Message));
     }
 
+    [Fact]
+    public void SelfTestResult_SuccessMentionsCaptureBorderAndProtectedContent()
+    {
+        var result = NativeCaptureEngine.ToSelfTestResult((int)PingCaptureErrorCode.Success);
+
+        Assert.Contains("capture border", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("protected content", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Theory]
     [InlineData(PingCaptureErrorCode.UnsupportedOs, typeof(PlatformNotSupportedException))]
     [InlineData(PingCaptureErrorCode.AccessDenied, typeof(UnauthorizedAccessException))]

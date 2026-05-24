@@ -39,8 +39,7 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="140" />
                             <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="92" />
-                            <ColumnDefinition Width="118" />
+                            <ColumnDefinition Width="132" />
                         </Grid.ColumnDefinitions>
 
                         <StackPanel Spacing="2">
@@ -60,19 +59,28 @@
                             Text="{Binding Message}"
                             TextWrapping="WrapWholeWords" />
 
-                        <Button
+                        <StackPanel
                             Grid.Column="2"
-                            HorizontalAlignment="Stretch"
-                            Content="Retry"
-                            Click="RetryButton_Click"
-                            IsEnabled="{Binding CanRetry}" />
+                            VerticalAlignment="Center"
+                            Spacing="6">
+                            <Button
+                                HorizontalAlignment="Stretch"
+                                Content="Retry"
+                                Click="RetryButton_Click"
+                                IsEnabled="{Binding CanRetry}" />
 
-                        <Button
-                            Grid.Column="3"
-                            HorizontalAlignment="Stretch"
-                            Click="PrimaryActionButton_Click"
-                            Content="{Binding PrimaryActionLabel}"
-                            IsEnabled="{Binding HasPrimaryAction}" />
+                            <Button
+                                HorizontalAlignment="Stretch"
+                                Click="PrimaryActionButton_Click"
+                                Content="{Binding PrimaryActionLabel}"
+                                IsEnabled="{Binding HasPrimaryAction}" />
+
+                            <Button
+                                HorizontalAlignment="Stretch"
+                                Click="SecondaryActionButton_Click"
+                                Content="{Binding SecondaryActionLabel}"
+                                IsEnabled="{Binding HasSecondaryAction}" />
+                        </StackPanel>
                     </Grid>
                 </DataTemplate>
             </ListView.ItemTemplate>

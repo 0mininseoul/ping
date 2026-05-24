@@ -50,6 +50,16 @@ public sealed partial class OnboardingWindow : Window
         await ExecuteActionAsync(action);
     }
 
+    private async void SecondaryActionButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { DataContext: OnboardingRowState { SecondaryAction: { } action } })
+        {
+            return;
+        }
+
+        await ExecuteActionAsync(action);
+    }
+
     private async Task ExecuteActionAsync(OnboardingAction action)
     {
         switch (action.Kind)

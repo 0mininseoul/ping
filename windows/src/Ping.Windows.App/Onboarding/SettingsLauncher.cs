@@ -3,6 +3,7 @@ namespace Ping.Windows.App.Onboarding;
 public static class SettingsLauncher
 {
     public const string WebcamPrivacyUri = "ms-settings:privacy-webcam";
+    public const string CameraSettingsUri = "ms-settings:camera";
     public const string MicrophonePrivacyUri = "ms-settings:privacy-microphone";
     public const string NotificationsPrivacyUri = "ms-settings:privacy-notifications";
     public const string GraphicsCapturePrivacyUri = "ms-settings:privacy-graphicscaptureprogrammatic";
