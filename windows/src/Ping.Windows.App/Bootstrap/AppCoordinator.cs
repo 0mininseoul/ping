@@ -29,6 +29,7 @@ public sealed class AppCoordinator : IDisposable
     private readonly ChatMessageService chatService;
     private readonly ReactionService reactionService;
     private readonly CleanupService cleanupService;
+    private readonly LocalArchive localArchive;
     private readonly IncomingMessagePoller incomingPoller;
     private readonly NotificationController notificationController;
     private readonly IScreenFaceCaptureEngine screenFaceCaptureEngine;
@@ -80,6 +81,7 @@ public sealed class AppCoordinator : IDisposable
         chatService = new ChatMessageService(this.supabaseClient);
         reactionService = new ReactionService(this.supabaseClient);
         cleanupService = new CleanupService(this.supabaseClient);
+        localArchive = new LocalArchive(LocalArchive.DefaultRootDirectory());
         incomingPoller = new IncomingMessagePoller(messageService);
         notificationController = new NotificationController(OpenMessageFromNotificationAsync);
         screenFaceCaptureEngine = new NativeCaptureEngine();
@@ -91,7 +93,7 @@ public sealed class AppCoordinator : IDisposable
             SendVideoAndRememberRoomAsync,
             new CoordinatorQuickSendPresenter(this),
             () => quickSendSettings.Preferences,
-            archive: new LocalArchive(LocalArchive.DefaultRootDirectory()));
+            archive: localArchive);
         this.tray = tray ?? new TrayIconController(ExecuteTrayCommand);
         mainWindow.QuickSendToggleChanged += HandleQuickSendToggleChanged;
     }
@@ -299,7 +301,7 @@ public sealed class AppCoordinator : IDisposable
 
         historyWindow = new HistoryWindow(
             new HistoryViewModel(roomService, messageService, chatService, reactionService),
-            storageService,
+            DownloadVideoForPlaybackAsync,
             messageService);
         historyWindow.Closed += (_, _) => historyWindow = null;
         historyWindow.Activate();
@@ -460,7 +462,7 @@ public sealed class AppCoordinator : IDisposable
             context,
             new FaceRecorder(),
             messageService,
-            new LocalArchive(LocalArchive.DefaultRootDirectory()));
+            localArchive);
 
         faceMirrorWindow = new FaceMirrorWindow(viewModel);
         faceMirrorWindow.Closed += (_, _) => faceMirrorWindow = null;
@@ -511,7 +513,7 @@ public sealed class AppCoordinator : IDisposable
             context,
             screenFaceCaptureEngine,
             messageService,
-            new LocalArchive(LocalArchive.DefaultRootDirectory()));
+            localArchive);
 
         screenFaceMirrorWindow = new ScreenFaceMirrorWindow(viewModel);
         screenFaceMirrorWindow.Closed += (_, _) => screenFaceMirrorWindow = null;
@@ -691,7 +693,7 @@ public sealed class AppCoordinator : IDisposable
                 return;
             }
 
-            var localVideoPath = await storageService.DownloadVideoAsync(message.VideoUrl, cancellationToken);
+            var localVideoPath = await DownloadVideoForPlaybackAsync(message, cancellationToken);
             await RunOnUiThreadAsync(() => ShowPlayback(message, localVideoPath));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -717,6 +719,45 @@ public sealed class AppCoordinator : IDisposable
         window.Closed += (_, _) => playbackWindows.Remove(window);
         window.Activate();
     }
+
+    private async Task<string> DownloadVideoForPlaybackAsync(
+        VideoMessage message,
+        CancellationToken cancellationToken)
+    {
+        if (ShouldSaveReceivedCopy(message)
+            && localArchive.ExistingCopyPath(
+                LocalArchiveKind.Received,
+                message.SenderNickname,
+                message.CreatedAt) is { } existingPath)
+        {
+            return existingPath;
+        }
+
+        var localVideoPath = await storageService.DownloadVideoAsync(message.VideoUrl, cancellationToken);
+        if (!ShouldSaveReceivedCopy(message))
+        {
+            return localVideoPath;
+        }
+
+        try
+        {
+            var entry = await localArchive.SaveSentCopyAsync(
+                localVideoPath,
+                LocalArchiveKind.Received,
+                message.SenderNickname,
+                message.CreatedAt,
+                cancellationToken);
+            return entry.FilePath;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        {
+            return localVideoPath;
+        }
+    }
+
+    private bool ShouldSaveReceivedCopy(VideoMessage message) =>
+        quickSendSettings.Preferences.SaveReceivedCopy
+        && message.CanBeSavedLocally(currentUid);
 
     private Task RunOnUiThreadAsync(Action action)
     {

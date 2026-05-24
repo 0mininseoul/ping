@@ -149,6 +149,11 @@
                         OffContent="Off"
                         OnContent="On" />
                     <ToggleSwitch
+                        Header="Save received videos when allowed"
+                        IsOn="{Binding SaveReceivedCopy, Mode=TwoWay}"
+                        OffContent="Off"
+                        OnContent="On" />
+                    <ToggleSwitch
                         Header="Allow recipients to save my videos"
                         IsOn="{Binding AllowsLocalSave, Mode=TwoWay}"
                         OffContent="Off"

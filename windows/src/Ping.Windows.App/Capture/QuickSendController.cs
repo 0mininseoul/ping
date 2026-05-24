@@ -45,11 +45,13 @@ public sealed record ScreenFaceQuickSendPreferences
     public ScreenFaceQuickSendPreferences(
         bool IsEnabled,
         bool SaveSentCopy = false,
-        bool AllowsLocalSave = false)
+        bool AllowsLocalSave = false,
+        bool SaveReceivedCopy = true)
     {
         this.IsEnabled = IsEnabled;
         this.SaveSentCopy = SaveSentCopy;
         this.AllowsLocalSave = AllowsLocalSave;
+        this.SaveReceivedCopy = SaveReceivedCopy;
     }
 
     public bool IsEnabled { get; init; }
@@ -57,6 +59,8 @@ public sealed record ScreenFaceQuickSendPreferences
     public bool SaveSentCopy { get; init; }
 
     public bool AllowsLocalSave { get; init; }
+
+    public bool SaveReceivedCopy { get; init; }
 }
 
 public sealed record ScreenFaceQuickSendSettings

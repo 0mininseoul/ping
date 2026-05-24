@@ -64,15 +64,25 @@ public sealed class LocalArchive
         var folder = FolderFor(kind);
         Directory.CreateDirectory(folder);
 
-        var prefix = kind == LocalArchiveKind.Sent ? "to" : "from";
-        var fileName = $"{timestamp:yyyy-MM-dd_HH-mm-ss}_{prefix}_{safeLabel}.mp4";
-        var destination = Path.Combine(folder, fileName);
+        var fileName = ArchiveFileName(kind, safeLabel, timestamp);
+        var destination = UniqueDestinationPath(folder, fileName);
 
         await using var source = File.Open(sourceMp4Path, FileMode.Open, FileAccess.Read, FileShare.Read);
         await using var target = File.Open(destination, FileMode.CreateNew, FileAccess.Write, FileShare.None);
         await source.CopyToAsync(target, cancellationToken).ConfigureAwait(false);
 
         return new LocalArchiveEntry(kind, safeLabel, destination, timestamp);
+    }
+
+    public string? ExistingCopyPath(
+        LocalArchiveKind kind,
+        string label,
+        DateTimeOffset? createdAt)
+    {
+        var timestamp = createdAt ?? DateTimeOffset.Now;
+        var safeLabel = SanitizeLabel(label);
+        var path = Path.Combine(FolderFor(kind), ArchiveFileName(kind, safeLabel, timestamp));
+        return File.Exists(path) ? path : null;
     }
 
     public Task DeleteAsync(LocalArchiveEntry entry, CancellationToken cancellationToken = default)
@@ -130,5 +140,36 @@ public sealed class LocalArchive
             ? RootDirectory
             : RootDirectory + Path.DirectorySeparatorChar;
         return fullPath.StartsWith(root, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string ArchiveFileName(
+        LocalArchiveKind kind,
+        string safeLabel,
+        DateTimeOffset timestamp)
+    {
+        var prefix = kind == LocalArchiveKind.Sent ? "to" : "from";
+        return $"{timestamp:yyyy-MM-dd_HH-mm-ss}_{prefix}_{safeLabel}.mp4";
+    }
+
+    private static string UniqueDestinationPath(string folder, string fileName)
+    {
+        var destination = Path.Combine(folder, fileName);
+        if (!File.Exists(destination))
+        {
+            return destination;
+        }
+
+        var baseName = Path.GetFileNameWithoutExtension(fileName);
+        var extension = Path.GetExtension(fileName);
+        for (var index = 2; index < 10_000; index += 1)
+        {
+            var candidate = Path.Combine(folder, $"{baseName}-{index}{extension}");
+            if (!File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        throw new IOException("Could not create a unique local archive file name.");
     }
 }

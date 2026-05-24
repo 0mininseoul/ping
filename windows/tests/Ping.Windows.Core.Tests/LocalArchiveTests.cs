@@ -52,6 +52,36 @@ public sealed class LocalArchiveTests : IDisposable
         Assert.False(File.Exists(entry.FilePath));
     }
 
+    [Fact]
+    public async Task SaveSentCopyAsync_AddsSuffixForTimestampCollisions()
+    {
+        var source = CreateSourceVideo("clip.mp4");
+        var archive = new LocalArchive(root);
+        var timestamp = new DateTimeOffset(2026, 5, 25, 14, 30, 25, TimeSpan.Zero);
+
+        var first = await archive.SaveSentCopyAsync(source, LocalArchiveKind.Received, "Youngmin", timestamp);
+        var second = await archive.SaveSentCopyAsync(source, LocalArchiveKind.Received, "Youngmin", timestamp);
+
+        Assert.Equal(Path.Combine(root, "received", "2026-05-25_14-30-25_from_Youngmin.mp4"), first.FilePath);
+        Assert.Equal(Path.Combine(root, "received", "2026-05-25_14-30-25_from_Youngmin-2.mp4"), second.FilePath);
+    }
+
+    [Fact]
+    public async Task ExistingCopyPath_ReturnsExactTimestampCopy()
+    {
+        var source = CreateSourceVideo("clip.mp4");
+        var archive = new LocalArchive(root);
+        var timestamp = new DateTimeOffset(2026, 5, 25, 14, 30, 25, TimeSpan.Zero);
+
+        var entry = await archive.SaveSentCopyAsync(source, LocalArchiveKind.Received, "Youngmin", timestamp);
+
+        Assert.Equal(entry.FilePath, archive.ExistingCopyPath(LocalArchiveKind.Received, "Youngmin", timestamp));
+        Assert.Null(archive.ExistingCopyPath(
+            LocalArchiveKind.Received,
+            "Youngmin",
+            timestamp.AddSeconds(1)));
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(root))

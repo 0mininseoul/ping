@@ -233,6 +233,12 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
         set => UpdatePreferences(settings.Preferences with { SaveSentCopy = value });
     }
 
+    public bool SaveReceivedCopy
+    {
+        get => settings.Preferences.SaveReceivedCopy;
+        set => UpdatePreferences(settings.Preferences with { SaveReceivedCopy = value });
+    }
+
     public bool AllowsLocalSave
     {
         get => settings.Preferences.AllowsLocalSave;
@@ -283,6 +289,7 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
         settings = updatedSettings;
         OnPropertyChanged(nameof(IsQuickSendEnabled));
         OnPropertyChanged(nameof(SaveSentCopy));
+        OnPropertyChanged(nameof(SaveReceivedCopy));
         OnPropertyChanged(nameof(AllowsLocalSave));
     }
 
@@ -297,6 +304,7 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
         saveSettings(settings);
         OnPropertyChanged(nameof(IsQuickSendEnabled));
         OnPropertyChanged(nameof(SaveSentCopy));
+        OnPropertyChanged(nameof(SaveReceivedCopy));
         OnPropertyChanged(nameof(AllowsLocalSave));
     }
 

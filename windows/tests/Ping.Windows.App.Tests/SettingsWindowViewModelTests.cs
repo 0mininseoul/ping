@@ -19,10 +19,12 @@ public sealed class SettingsWindowViewModelTests
             () => { });
 
         viewModel.SaveSentCopy = true;
+        viewModel.SaveReceivedCopy = false;
         viewModel.AllowsLocalSave = true;
 
         var finalSettings = saved ?? throw new InvalidOperationException("Settings were not saved.");
         Assert.True(finalSettings.Preferences.SaveSentCopy);
+        Assert.False(finalSettings.Preferences.SaveReceivedCopy);
         Assert.True(finalSettings.Preferences.AllowsLocalSave);
     }
 

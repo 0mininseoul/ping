@@ -111,7 +111,7 @@ Manual checks after install:
 - Alt+L records and sends `screen_face`.
 - Alt+Shift+L records immediately to the default room after the 300ms HUD.
 - Notification click downloads from `ping-videos` and opens playback.
-- Settings toggles for quick send, Windows startup, sent-copy saving, and recipient local-save permission persist.
+- Settings toggles for quick send, Windows startup, sent-copy saving, received-video saving, and recipient local-save permission persist.
 - Create invite link writes the Mac-compatible `/invite/<token>` URL into the field and to the Windows clipboard.
 
 ## Cross-Platform QA Matrix

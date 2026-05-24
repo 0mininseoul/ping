@@ -159,17 +159,17 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
 public sealed partial class HistoryWindow : Window
 {
     private readonly HistoryViewModel viewModel;
-    private readonly StorageService storageService;
+    private readonly Func<VideoMessage, CancellationToken, Task<string>> downloadVideoAsync;
     private readonly MessageService messageService;
     private readonly List<PlaybackWindow> playbackWindows = [];
 
     public HistoryWindow(
         HistoryViewModel viewModel,
-        StorageService storageService,
+        Func<VideoMessage, CancellationToken, Task<string>> downloadVideoAsync,
         MessageService messageService)
     {
         this.viewModel = viewModel;
-        this.storageService = storageService;
+        this.downloadVideoAsync = downloadVideoAsync;
         this.messageService = messageService;
         InitializeComponent();
         Root.DataContext = viewModel;
@@ -201,7 +201,7 @@ public sealed partial class HistoryWindow : Window
 
         await RunAsync(async () =>
         {
-            var localPath = await storageService.DownloadVideoAsync(video.VideoUrl);
+            var localPath = await downloadVideoAsync(video, CancellationToken.None);
             var playback = new PlaybackWindow(new PlaybackViewModel(
                 video,
                 localPath,
