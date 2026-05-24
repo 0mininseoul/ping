@@ -90,7 +90,7 @@ public sealed class NativeCaptureEngine : IScreenFaceCaptureEngine
             throw new PlatformNotSupportedException("Native screen capture DLL architecture does not match this process.", exception);
         }
 
-        cancellationToken.ThrowIfCancellationRequested();
+        ThrowIfCanceledAndDeleteOutput(cancellationToken, outputPath);
 
         if (result != (int)PingCaptureErrorCode.Success)
         {
@@ -167,7 +167,7 @@ public sealed class NativeCaptureEngine : IScreenFaceCaptureEngine
             throw new PlatformNotSupportedException("Native screen capture DLL architecture does not match this process.", exception);
         }
 
-        cancellationToken.ThrowIfCancellationRequested();
+        ThrowIfCanceledAndDeleteOutput(cancellationToken, outputPath);
         if (result != (int)PingCaptureErrorCode.Success)
         {
             TryDelete(outputPath);
@@ -253,6 +253,17 @@ public sealed class NativeCaptureEngine : IScreenFaceCaptureEngine
         catch (UnauthorizedAccessException)
         {
         }
+    }
+
+    internal static void ThrowIfCanceledAndDeleteOutput(CancellationToken cancellationToken, string outputPath)
+    {
+        if (!cancellationToken.IsCancellationRequested)
+        {
+            return;
+        }
+
+        TryDelete(outputPath);
+        cancellationToken.ThrowIfCancellationRequested();
     }
 
     [DllImport(NativeLibraryName, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Unicode, ExactSpelling = true)]

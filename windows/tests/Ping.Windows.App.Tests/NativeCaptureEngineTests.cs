@@ -72,6 +72,20 @@ public sealed class NativeCaptureEngineTests
         Assert.Contains(code.ToString(), exception.Message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task CanceledNativeCapture_DeletesCompletedTemporaryOutput()
+    {
+        var tempPath = Path.Combine(Path.GetTempPath(), "PingWindowsTests", $"{Guid.NewGuid():N}.mp4");
+        Directory.CreateDirectory(Path.GetDirectoryName(tempPath)!);
+        await File.WriteAllBytesAsync(tempPath, [0x00, 0x01]);
+        using var cancellation = new CancellationTokenSource();
+        await cancellation.CancelAsync();
+
+        Assert.Throws<OperationCanceledException>(() =>
+            NativeCaptureEngine.ThrowIfCanceledAndDeleteOutput(cancellation.Token, tempPath));
+        Assert.False(File.Exists(tempPath));
+    }
+
     private static string RepoRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
