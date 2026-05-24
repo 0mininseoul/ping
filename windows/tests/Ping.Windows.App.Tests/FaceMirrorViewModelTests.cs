@@ -39,6 +39,27 @@ public sealed class FaceMirrorViewModelTests
     }
 
     [Fact]
+    public async Task Enter_ShowsRecordingCountdownWhileRecorderRuns()
+    {
+        var recorder = new BlockingFaceRecorder();
+        var model = new FaceMirrorViewModel(
+            FaceMirrorContextFor(saveSentCopy: false),
+            recorder,
+            (_, _) => Task.CompletedTask);
+
+        var recordingTask = model.HandleEnterAsync();
+        await recorder.RecordStarted.Task.WaitAsync(TimeSpan.FromSeconds(1));
+
+        Assert.Equal(MirrorState.Recording, model.State);
+        Assert.Equal("3", model.RecordingCountdownText);
+        Assert.Equal(1, model.RecordingCountdownOpacity);
+        Assert.Contains("Recording 3", model.StatusMessage, StringComparison.Ordinal);
+
+        recorder.Complete();
+        await recordingTask;
+    }
+
+    [Fact]
     public async Task Enter_WhenSendFails_KeepsFailedStateWithRetryMessage()
     {
         var model = new FaceMirrorViewModel(
@@ -209,6 +230,31 @@ public sealed class FaceMirrorViewModelTests
                 Guid.NewGuid().ToString("N"),
                 "face.mp4");
             return Task.FromResult(new FaceRecordingResult(uniquePath, duration));
+        }
+    }
+
+    private sealed class BlockingFaceRecorder : IFaceRecorder
+    {
+        private readonly TaskCompletionSource<FaceRecordingResult> recording = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource RecordStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task<FaceRecordingResult> RecordAsync(TimeSpan duration, CancellationToken cancellationToken = default)
+        {
+            _ = duration;
+            _ = cancellationToken;
+            RecordStarted.SetResult();
+            return recording.Task;
+        }
+
+        public void Complete()
+        {
+            var uniquePath = Path.Combine(
+                Path.GetTempPath(),
+                "PingFaceMirrorTests",
+                Guid.NewGuid().ToString("N"),
+                "face.mp4");
+            recording.SetResult(new FaceRecordingResult(uniquePath, TimeSpan.FromSeconds(3)));
         }
     }
 }

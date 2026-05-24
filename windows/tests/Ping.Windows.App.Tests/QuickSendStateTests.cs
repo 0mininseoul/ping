@@ -118,6 +118,20 @@ public sealed class QuickSendStateTests
         Assert.Contains("Press Enter to retry", viewModel.StatusMessage, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void RecordingHudMessage_ShowsCountdown()
+    {
+        var viewModel = new QuickSendHudViewModel(new QuickSendHudContext("Main", "화면+얼굴"));
+
+        viewModel.SetRecording();
+        viewModel.SetRecordingCountdown(2);
+
+        Assert.Equal(MirrorState.Recording, viewModel.State);
+        Assert.Equal("2", viewModel.RecordingCountdownText);
+        Assert.Equal(1, viewModel.RecordingCountdownOpacity);
+        Assert.Equal("Recording 2...", viewModel.StatusMessage);
+    }
+
     private static TestQuickSendController CreateController(
         FakeQuickSendPresenter? presenter = null,
         ScreenFaceQuickSendPreferences? preferences = null,
@@ -245,6 +259,11 @@ public sealed class QuickSendStateTests
 
         public void SetRecording()
         {
+        }
+
+        public void SetRecordingCountdown(int secondsRemaining)
+        {
+            _ = secondsRemaining;
         }
 
         public void SetUploading()

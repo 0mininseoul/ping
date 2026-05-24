@@ -168,6 +168,8 @@ public interface IQuickSendHudSession
 
     void SetRecording();
 
+    void SetRecordingCountdown(int secondsRemaining);
+
     void SetUploading();
 
     void SetFailed(string message);
@@ -245,13 +247,20 @@ public sealed class QuickSendController
         string? recordedPath = null;
         var uploadStarted = false;
         var sent = false;
+        CancellationTokenSource? countdownCancellation = null;
+        Task? countdownTask = null;
 
         try
         {
             await delayAsync(HudLeadInDuration, cancellationToken).ConfigureAwait(false);
             hud.SetRecording();
+            countdownCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            countdownTask = RunRecordingCountdownAsync(hud, countdownCancellation.Token);
             var recording = await captureEngine.RecordAsync(RecordingDuration, hud.MonitorIndex, cancellationToken)
                 .ConfigureAwait(false);
+            await StopRecordingCountdownAsync(countdownCancellation, countdownTask).ConfigureAwait(false);
+            countdownCancellation = null;
+            countdownTask = null;
             recordedPath = recording.FilePath;
             hud.SetUploading();
 
@@ -297,6 +306,7 @@ public sealed class QuickSendController
         }
         finally
         {
+            await StopRecordingCountdownAsync(countdownCancellation, countdownTask).ConfigureAwait(false);
             if (sent && recordedPath is not null)
             {
                 TryDeleteTemporaryRecording(recordedPath);
@@ -341,6 +351,46 @@ public sealed class QuickSendController
             context.PartnerLabel,
             context.AllowsLocalSave,
             context.SaveSentCopy);
+
+    private static async Task RunRecordingCountdownAsync(
+        IQuickSendHudSession hud,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            for (var secondsRemaining = (int)Math.Ceiling(RecordingDuration.TotalSeconds);
+                 secondsRemaining > 0;
+                 secondsRemaining--)
+            {
+                hud.SetRecordingCountdown(secondsRemaining);
+                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private static async Task StopRecordingCountdownAsync(CancellationTokenSource? cancellation, Task? task)
+    {
+        if (cancellation is null)
+        {
+            return;
+        }
+
+        try
+        {
+            cancellation.Cancel();
+            if (task is not null)
+            {
+                await task.ConfigureAwait(false);
+            }
+        }
+        finally
+        {
+            cancellation.Dispose();
+        }
+    }
 
     private static QuickSendPermissionKind? BlockedPermission(QuickSendPreconditions preconditions)
     {
@@ -392,6 +442,7 @@ public sealed class QuickSendHudViewModel : INotifyPropertyChanged
 {
     private MirrorState state = MirrorState.Idle;
     private string statusMessage = "Starting...";
+    private string recordingCountdownText = "3";
     private bool isCloseRequested;
     private bool isFadeOutRequested;
 
@@ -425,6 +476,7 @@ public sealed class QuickSendHudViewModel : INotifyPropertyChanged
             OnPropertyChanged();
             OnPropertyChanged(nameof(StateText));
             OnPropertyChanged(nameof(CanRetry));
+            OnPropertyChanged(nameof(RecordingCountdownOpacity));
         }
     }
 
@@ -453,6 +505,23 @@ public sealed class QuickSendHudViewModel : INotifyPropertyChanged
             OnPropertyChanged();
         }
     }
+
+    public string RecordingCountdownText
+    {
+        get => recordingCountdownText;
+        private set
+        {
+            if (string.Equals(recordingCountdownText, value, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            recordingCountdownText = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public double RecordingCountdownOpacity => State == MirrorState.Recording ? 1 : 0;
 
     public bool IsCloseRequested
     {
@@ -487,7 +556,13 @@ public sealed class QuickSendHudViewModel : INotifyPropertyChanged
     public void SetRecording()
     {
         State = MirrorState.Recording;
-        StatusMessage = "Recording 3 seconds...";
+        SetRecordingCountdown(3);
+    }
+
+    public void SetRecordingCountdown(int secondsRemaining)
+    {
+        RecordingCountdownText = Math.Max(1, secondsRemaining).ToString();
+        StatusMessage = $"Recording {RecordingCountdownText}...";
     }
 
     public void SetUploading()
@@ -548,6 +623,8 @@ public sealed partial class QuickSendHudWindow : Window, IQuickSendHudSession
     public int MonitorIndex => MonitorTargetResolver.ResolveIndexForWindow(windowHandle);
 
     public void SetRecording() => viewModel.SetRecording();
+
+    public void SetRecordingCountdown(int secondsRemaining) => viewModel.SetRecordingCountdown(secondsRemaining);
 
     public void SetUploading()
     {

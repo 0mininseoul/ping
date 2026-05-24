@@ -59,6 +59,25 @@
                         Foreground="{StaticResource PingMutedTextBrush}"
                         Text="Preview" />
                 </StackPanel>
+                <Border
+                    Width="34"
+                    Height="34"
+                    Margin="0,12,12,0"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    Background="#CCFF3B30"
+                    BorderBrush="{StaticResource PingBorderRecordingBrush}"
+                    BorderThickness="1"
+                    CornerRadius="17"
+                    Opacity="{Binding RecordingCountdownOpacity}">
+                    <TextBlock
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        FontSize="15"
+                        FontWeight="SemiBold"
+                        Foreground="{StaticResource PingTextBrush}"
+                        Text="{Binding RecordingCountdownText}" />
+                </Border>
             </Grid>
         </Border>
 

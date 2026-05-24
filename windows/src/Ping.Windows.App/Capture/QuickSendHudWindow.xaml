@@ -39,14 +39,15 @@
                     Background="#22FF3B30"
                     BorderBrush="{StaticResource PingBorderRecordingBrush}"
                     BorderThickness="1"
-                    CornerRadius="22">
+                    CornerRadius="22"
+                    Opacity="{Binding RecordingCountdownOpacity}">
                     <TextBlock
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center"
-                        FontSize="11"
+                        FontSize="15"
                         FontWeight="SemiBold"
                         Foreground="{StaticResource PingTextBrush}"
-                        Text="3s" />
+                        Text="{Binding RecordingCountdownText}" />
                 </Border>
 
                 <StackPanel

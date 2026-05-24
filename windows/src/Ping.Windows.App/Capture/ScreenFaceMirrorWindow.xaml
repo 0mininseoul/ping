@@ -86,6 +86,25 @@
                             Text="Camera" />
                     </Grid>
                 </Border>
+                <Border
+                    Width="34"
+                    Height="34"
+                    Margin="12"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    Background="#CCFF3B30"
+                    BorderBrush="{StaticResource PingBorderRecordingBrush}"
+                    BorderThickness="1"
+                    CornerRadius="17"
+                    Opacity="{Binding RecordingCountdownOpacity}">
+                    <TextBlock
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        FontSize="15"
+                        FontWeight="SemiBold"
+                        Foreground="{StaticResource PingTextBrush}"
+                        Text="{Binding RecordingCountdownText}" />
+                </Border>
             </Grid>
         </Border>
 

@@ -34,6 +34,27 @@ public sealed class ScreenFaceMirrorViewModelTests
     }
 
     [Fact]
+    public async Task Enter_ShowsRecordingCountdownWhileCaptureRuns()
+    {
+        var engine = new BlockingScreenFaceCaptureEngine();
+        var model = new ScreenFaceMirrorViewModel(
+            MultiRoomContext(),
+            engine,
+            (_, _) => Task.CompletedTask);
+
+        var recordingTask = model.HandleEnterAsync();
+        await engine.RecordStarted.Task.WaitAsync(TimeSpan.FromSeconds(1));
+
+        Assert.Equal(MirrorState.Recording, model.State);
+        Assert.Equal("3", model.RecordingCountdownText);
+        Assert.Equal(1, model.RecordingCountdownOpacity);
+        Assert.Contains("Recording 3", model.StatusMessage, StringComparison.Ordinal);
+
+        engine.Complete();
+        await recordingTask;
+    }
+
+    [Fact]
     public void TargetMenuOptions_MatchScreenFaceRooms()
     {
         var model = new ScreenFaceMirrorViewModel(
@@ -140,5 +161,46 @@ public sealed class ScreenFaceMirrorViewModelTests
 
         public Task<ScreenCaptureSelfTestResult> SelfTestAsync() =>
             Task.FromResult(new ScreenCaptureSelfTestResult(true, PingCaptureErrorCode.Success, "ok"));
+    }
+
+    private sealed class BlockingScreenFaceCaptureEngine : IScreenFaceCaptureEngine
+    {
+        private readonly TaskCompletionSource<ScreenFaceCaptureResult> recording = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource RecordStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task<ScreenFaceCaptureResult> RecordAsync(
+            TimeSpan duration,
+            int monitorIndex,
+            CancellationToken cancellationToken)
+        {
+            _ = duration;
+            _ = monitorIndex;
+            _ = cancellationToken;
+            RecordStarted.SetResult();
+            return recording.Task;
+        }
+
+        public Task<ScreenFacePreviewResult> CapturePreviewAsync(int monitorIndex, CancellationToken cancellationToken)
+        {
+            _ = monitorIndex;
+            _ = cancellationToken;
+            return Task.FromResult(new ScreenFacePreviewResult(
+                Path.Combine(Path.GetTempPath(), "preview.bmp"),
+                16.0 / 9.0));
+        }
+
+        public Task<ScreenCaptureSelfTestResult> SelfTestAsync() =>
+            Task.FromResult(new ScreenCaptureSelfTestResult(true, PingCaptureErrorCode.Success, "ok"));
+
+        public void Complete()
+        {
+            var uniquePath = Path.Combine(
+                Path.GetTempPath(),
+                "PingScreenFaceMirrorTests",
+                Guid.NewGuid().ToString("N"),
+                "screen-face.mp4");
+            recording.SetResult(new ScreenFaceCaptureResult(uniquePath, 16.0 / 9.0));
+        }
     }
 }

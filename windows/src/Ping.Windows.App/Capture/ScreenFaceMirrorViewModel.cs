@@ -38,6 +38,7 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
     private CancellationTokenSource? operationCancellation;
     private MirrorState state = MirrorState.Idle;
     private string statusMessage = "Press Enter to record.";
+    private string recordingCountdownText = "3";
     private string partnerLabel;
     private Uri? screenPreviewUri;
     private string? screenPreviewPath;
@@ -90,6 +91,7 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
             OnPropertyChanged();
             OnPropertyChanged(nameof(StateText));
             OnPropertyChanged(nameof(CanRecord));
+            OnPropertyChanged(nameof(RecordingCountdownOpacity));
         }
     }
 
@@ -116,6 +118,23 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
             OnPropertyChanged();
         }
     }
+
+    public string RecordingCountdownText
+    {
+        get => recordingCountdownText;
+        private set
+        {
+            if (string.Equals(recordingCountdownText, value, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            recordingCountdownText = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public double RecordingCountdownOpacity => State == MirrorState.Recording ? 1 : 0;
 
     public string PartnerLabel
     {
@@ -259,12 +278,18 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
         var cancellationToken = operationCancellation.Token;
         string? recordedPath = null;
         var sent = false;
+        CancellationTokenSource? countdownCancellation = null;
+        Task? countdownTask = null;
 
         try
         {
             State = MirrorState.Recording;
-            StatusMessage = "Recording screen and face...";
+            countdownCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            countdownTask = RunRecordingCountdownAsync(countdownCancellation.Token);
             var recording = await captureEngine.RecordAsync(RecordingDuration, monitorIndex, cancellationToken);
+            await StopRecordingCountdownAsync(countdownCancellation, countdownTask);
+            countdownCancellation = null;
+            countdownTask = null;
             recordedPath = recording.FilePath;
 
             State = MirrorState.Uploading;
@@ -308,6 +333,7 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
         }
         finally
         {
+            await StopRecordingCountdownAsync(countdownCancellation, countdownTask);
             operationCancellation?.Dispose();
             operationCancellation = null;
 
@@ -315,6 +341,45 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
             {
                 TryDeleteTemporaryRecording(recordedPath);
             }
+        }
+    }
+
+    private async Task RunRecordingCountdownAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            for (var secondsRemaining = (int)Math.Ceiling(RecordingDuration.TotalSeconds);
+                 secondsRemaining > 0 && State == MirrorState.Recording;
+                 secondsRemaining--)
+            {
+                RecordingCountdownText = secondsRemaining.ToString();
+                StatusMessage = $"Recording {secondsRemaining}...";
+                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private static async Task StopRecordingCountdownAsync(CancellationTokenSource? cancellation, Task? task)
+    {
+        if (cancellation is null)
+        {
+            return;
+        }
+
+        try
+        {
+            cancellation.Cancel();
+            if (task is not null)
+            {
+                await task;
+            }
+        }
+        finally
+        {
+            cancellation.Dispose();
         }
     }
 
