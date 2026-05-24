@@ -42,8 +42,9 @@ public sealed class PlaybackViewModel : INotifyPropertyChanged
     {
         get
         {
-            var ratio = Message.AspectRatio ?? (IsScreenFace ? 16.0 / 9.0 : 1);
-            return double.IsNaN(ratio) || double.IsInfinity(ratio) || ratio <= 0 ? 1 : ratio;
+            var fallback = IsScreenFace ? 16.0 / 9.0 : 1;
+            var ratio = Message.AspectRatio ?? fallback;
+            return double.IsNaN(ratio) || double.IsInfinity(ratio) || ratio <= 0 ? fallback : ratio;
         }
     }
 

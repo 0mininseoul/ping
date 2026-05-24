@@ -40,6 +40,32 @@ public sealed class PlaybackViewModelTests
         Assert.Equal(16.0 / 9.0, viewModel.AspectRatio);
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(double.NaN)]
+    [InlineData(double.PositiveInfinity)]
+    public void ScreenFace_InvalidAspectRatioFallsBackToWidescreen(double aspectRatio)
+    {
+        var viewModel = new PlaybackViewModel(
+            Message(CaptureMode.ScreenFace, aspectRatio),
+            "clip.mp4",
+            _ => Task.CompletedTask);
+
+        Assert.Equal(16.0 / 9.0, viewModel.AspectRatio);
+    }
+
+    [Fact]
+    public void FaceOnly_InvalidAspectRatioFallsBackToCircle()
+    {
+        var viewModel = new PlaybackViewModel(
+            Message(CaptureMode.FaceOnly, aspectRatio: 0),
+            "clip.mp4",
+            _ => Task.CompletedTask);
+
+        Assert.Equal(1, viewModel.AspectRatio);
+    }
+
     private static VideoMessage Message(CaptureMode captureMode, double? aspectRatio) =>
         new()
         {
