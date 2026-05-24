@@ -2,6 +2,7 @@
     x:Class="Ping.Windows.App.Capture.FaceMirrorWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Closed="HandleClosed"
     Title="Ping">
     <Grid
         x:Name="Root"
@@ -37,8 +38,12 @@
             BorderThickness="1"
             CornerRadius="{StaticResource PingMirrorCornerRadius}">
             <Grid Clip="{StaticResource PingMirrorClip}">
-                <Ellipse Fill="#1AFFFFFF" />
+                <MediaPlayerElement
+                    x:Name="PreviewElement"
+                    AreTransportControlsEnabled="False"
+                    Stretch="UniformToFill" />
                 <StackPanel
+                    x:Name="PreviewPlaceholder"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
                     Spacing="4">

@@ -10,6 +10,8 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Animation;
+using Windows.Graphics;
 #endif
 
 namespace Ping.Windows.App.Capture;
@@ -131,6 +133,8 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
     }
 
     public string PartnerLabel { get; }
+
+    public IFaceRecorder Recorder => recorder;
 
     public bool CanRecord => State is MirrorState.Idle or MirrorState.Failed;
 
@@ -302,14 +306,17 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
 public sealed partial class FaceMirrorWindow : Window
 {
     private readonly FaceMirrorViewModel viewModel;
+    private readonly FaceRecorder? previewRecorder;
     private AppWindow? appWindow;
+    private bool shouldCloseAfterFade;
 
     public FaceMirrorWindow(FaceMirrorViewModel viewModel)
     {
         this.viewModel = viewModel;
+        previewRecorder = viewModel.Recorder as FaceRecorder;
         InitializeComponent();
         Root.DataContext = viewModel;
-        Root.Loaded += (_, _) => Root.Focus(FocusState.Programmatic);
+        Root.Loaded += HandleLoaded;
         viewModel.PropertyChanged += HandleViewModelPropertyChanged;
         viewModel.FadeOutRequested += HandleFadeOutRequested;
         viewModel.CloseRequested += HandleCloseRequested;
@@ -343,12 +350,31 @@ public sealed partial class FaceMirrorWindow : Window
 
     private void HandleCloseRequested(object? sender, EventArgs args)
     {
+        if (shouldCloseAfterFade)
+        {
+            return;
+        }
+
         Close();
     }
 
-    private void HandleFadeOutRequested(object? sender, EventArgs args)
+    private async void HandleFadeOutRequested(object? sender, EventArgs args)
     {
-        Root.Opacity = 0;
+        shouldCloseAfterFade = true;
+        var animation = new DoubleAnimation
+        {
+            To = 0,
+            Duration = new Duration(TimeSpan.FromMilliseconds(300))
+        };
+        Storyboard.SetTarget(animation, Root);
+        Storyboard.SetTargetProperty(animation, nameof(Root.Opacity));
+        var storyboard = new Storyboard();
+        storyboard.Children.Add(animation);
+        var completed = new TaskCompletionSource();
+        storyboard.Completed += (_, _) => completed.SetResult();
+        storyboard.Begin();
+        await completed.Task;
+        Close();
     }
 
     private void ConfigureWindow()
@@ -359,6 +385,60 @@ public sealed partial class FaceMirrorWindow : Window
         appWindow.Resize(new Windows.Graphics.SizeInt32(260, 270));
         appWindow.TitleBar.ExtendsContentIntoTitleBar = true;
         appWindow.SetPresenter(AppWindowPresenterKind.CompactOverlay);
+        UpdatePositionFromWindow();
+        appWindow.Changed += (_, args) =>
+        {
+            if (args.DidPositionChange || args.DidSizeChange)
+            {
+                UpdatePositionFromWindow();
+            }
+        };
+    }
+
+    private async void HandleLoaded(object sender, RoutedEventArgs args)
+    {
+        Root.Focus(FocusState.Programmatic);
+        UpdatePositionFromWindow();
+        if (previewRecorder is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await previewRecorder.StartPreviewAsync(PreviewElement);
+            PreviewPlaceholder.Visibility = Visibility.Collapsed;
+        }
+        catch (Exception)
+        {
+            PreviewPlaceholder.Visibility = Visibility.Visible;
+        }
+    }
+
+    private void UpdatePositionFromWindow()
+    {
+        if (appWindow is null)
+        {
+            return;
+        }
+
+        var area = DisplayArea.GetFromWindowId(appWindow.Id, DisplayAreaFallback.Primary);
+        var workArea = area.WorkArea;
+        var position = appWindow.Position;
+        var size = appWindow.Size;
+        viewModel.UpdateMirrorPosition(
+            position.X + size.Width / 2d - workArea.X,
+            position.Y + size.Height / 2d - workArea.Y,
+            workArea.Width,
+            workArea.Height);
+    }
+
+    private async void HandleClosed(object sender, WindowEventArgs args)
+    {
+        if (previewRecorder is not null)
+        {
+            await previewRecorder.StopPreviewAsync(PreviewElement);
+        }
     }
 
     private void SetStateBrush()

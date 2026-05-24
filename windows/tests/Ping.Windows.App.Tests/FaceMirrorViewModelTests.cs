@@ -85,7 +85,12 @@ public sealed class FaceMirrorViewModelTests
         public Task<FaceRecordingResult> RecordAsync(TimeSpan duration, CancellationToken cancellationToken = default)
         {
             StateAtRecordStart = StateReader?.Invoke();
-            return Task.FromResult(new FaceRecordingResult(Path.Combine(Path.GetTempPath(), "face.mp4"), duration));
+            var uniquePath = Path.Combine(
+                Path.GetTempPath(),
+                "PingFaceMirrorTests",
+                Guid.NewGuid().ToString("N"),
+                "face.mp4");
+            return Task.FromResult(new FaceRecordingResult(uniquePath, duration));
         }
     }
 }

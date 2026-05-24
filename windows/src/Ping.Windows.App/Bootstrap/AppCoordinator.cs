@@ -1,6 +1,10 @@
 using Microsoft.UI.Xaml;
+using Ping.Windows.App.Capture;
 using Ping.Windows.App.Hotkeys;
 using Ping.Windows.App.Tray;
+using Ping.Windows.Core.Backend;
+using Ping.Windows.Core.LocalState;
+using Ping.Windows.Core.Models;
 
 namespace Ping.Windows.App.Bootstrap;
 
@@ -10,6 +14,11 @@ public sealed class AppCoordinator : IDisposable
     private readonly HotkeyPreferencesStore preferencesStore;
     private readonly GlobalHotkeyManager hotkeys;
     private readonly TrayIconController tray;
+    private readonly SupabaseClient supabaseClient;
+    private readonly MessageService messageService;
+    private IReadOnlyCollection<Room> rooms = [];
+    private string? currentUid;
+    private FaceMirrorWindow? faceMirrorWindow;
     private bool disposed;
 
     public AppCoordinator(MainWindow mainWindow)
@@ -17,7 +26,8 @@ public sealed class AppCoordinator : IDisposable
             mainWindow,
             new HotkeyPreferencesStore(),
             new GlobalHotkeyManager(),
-            null)
+            null,
+            new SupabaseClient())
     {
     }
 
@@ -25,11 +35,14 @@ public sealed class AppCoordinator : IDisposable
         MainWindow mainWindow,
         HotkeyPreferencesStore preferencesStore,
         GlobalHotkeyManager hotkeys,
-        TrayIconController? tray)
+        TrayIconController? tray,
+        SupabaseClient? supabaseClient = null)
     {
         this.mainWindow = mainWindow;
         this.preferencesStore = preferencesStore;
         this.hotkeys = hotkeys;
+        this.supabaseClient = supabaseClient ?? new SupabaseClient();
+        messageService = new MessageService(this.supabaseClient, new StorageService(this.supabaseClient));
         this.tray = tray ?? new TrayIconController(ExecuteTrayCommand);
     }
 
@@ -42,6 +55,7 @@ public sealed class AppCoordinator : IDisposable
         tray.AddOrUpdateIcon();
         ShowHistory("Ping is running. Capture commands are wired and waiting for the capture windows.");
         ShowRegistrationState(registrations);
+        _ = BootstrapAndLoadRoomsAsync();
     }
 
     public void Execute(HotkeyCommand command)
@@ -51,10 +65,7 @@ public sealed class AppCoordinator : IDisposable
         switch (command)
         {
             case HotkeyCommand.FacePing:
-                ShowBlockedState(
-                    "Face Ping",
-                    "Alt+P reached Ping. Face-only capture arrives in the next implementation task.",
-                    "Capture window not implemented yet.");
+                ShowFaceMirror();
                 break;
             case HotkeyCommand.ScreenFacePing:
                 ShowBlockedState(
@@ -84,6 +95,7 @@ public sealed class AppCoordinator : IDisposable
         }
 
         hotkeys.HotkeyPressed -= HandleHotkeyPressed;
+        supabaseClient.Dispose();
         hotkeys.Dispose();
         tray.Dispose();
         disposed = true;
@@ -177,5 +189,75 @@ public sealed class AppCoordinator : IDisposable
         }
 
         mainWindow.HotkeyState.Text = string.Join(Environment.NewLine, failures);
+    }
+
+    private void ShowFaceMirror()
+    {
+        var uid = currentUid;
+        if (uid is null)
+        {
+            ShowBlockedState(
+                "Face Ping",
+                "Alt+P reached Ping. Supabase session is still starting or blocked by missing config.",
+                "Supabase session not ready.");
+            return;
+        }
+
+        var sendableRooms = rooms
+            .Where(room => room.Id is not null && room.MemberUids.Contains(uid) && room.MemberUids.Count >= 2)
+            .ToArray();
+        if (sendableRooms.Length == 0)
+        {
+            ShowBlockedState(
+                "Face Ping",
+                "Alt+P reached Ping. Create or join a room before sending a face ping.",
+                "No sendable room available.");
+            return;
+        }
+
+        if (faceMirrorWindow is not null)
+        {
+            faceMirrorWindow.Activate();
+            return;
+        }
+
+        var context = new FaceMirrorContext(
+            Rooms: sendableRooms,
+            SenderUid: uid,
+            SenderNickname: Environment.UserName,
+            PartnerLabel: sendableRooms.Length == 1 ? sendableRooms[0].Name : "All rooms",
+            AllowsLocalSave: false,
+            SaveSentCopy: false);
+        var viewModel = new FaceMirrorViewModel(
+            context,
+            new FaceRecorder(),
+            messageService,
+            new LocalArchive(LocalArchive.DefaultRootDirectory()));
+
+        faceMirrorWindow = new FaceMirrorWindow(viewModel);
+        faceMirrorWindow.Closed += (_, _) => faceMirrorWindow = null;
+        faceMirrorWindow.Activate();
+    }
+
+    private async Task BootstrapAndLoadRoomsAsync()
+    {
+        try
+        {
+            currentUid = await supabaseClient.BootstrapAsync();
+            var uid = currentUid;
+            rooms = await supabaseClient.RpcArrayAsync<Room>("ping_my_rooms");
+            var sendableCount = rooms.Count(room =>
+                room.Id is not null
+                && room.MemberUids.Contains(uid)
+                && room.MemberUids.Count >= 2);
+            mainWindow.HotkeyState.Text =
+                sendableCount == 0
+                    ? "Alt+P ready, but no sendable room is available."
+                    : $"Alt+P face ready for {sendableCount} room(s). Alt+L screen+face and Alt+Shift+L quick send are pending.";
+        }
+        catch (Exception ex)
+        {
+            mainWindow.HotkeyState.Text = $"Supabase setup blocked: {ex.Message}";
+        }
     }
 }
