@@ -16,6 +16,7 @@ struct MessageRowView: View {
     let onDelete: () -> Void
     let onToggleReaction: (String) -> Void
     let canSave: Bool
+    let usesExternalScreenFaceExpansion: Bool
 
     var body: some View {
         HStack {
@@ -28,13 +29,7 @@ struct MessageRowView: View {
                         .padding(.horizontal, 4)
                 }
                 if isExpanded {
-                    InlinePlayerView(
-                        message: message,
-                        isMine: isMine,
-                        archivePeerName: archivePeerName,
-                        cacheService: cacheService,
-                        controller: inlineController
-                    )
+                    expandedVideo
                 } else {
                     thumbnail
                 }
@@ -80,6 +75,26 @@ struct MessageRowView: View {
         .padding(.vertical, 1)
         .contentShape(Rectangle())
         .onTapGesture { onTap() }
+    }
+
+    @ViewBuilder
+    private var expandedVideo: some View {
+        if usesExternalScreenFaceExpansion && message.captureMode == .screenFace, let id = message.id {
+            Color.clear
+                .frame(width: 1, height: InlinePlayerView.playerSize(for: message).height)
+                .anchorPreference(
+                    key: ExpandedScreenFaceVideoAnchorKey.self,
+                    value: .bounds
+                ) { [id: $0] }
+        } else {
+            InlinePlayerView(
+                message: message,
+                isMine: isMine,
+                archivePeerName: archivePeerName,
+                cacheService: cacheService,
+                controller: inlineController
+            )
+        }
     }
 
     private var thumbnail: some View {

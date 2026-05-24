@@ -50,7 +50,7 @@ struct InlinePlayerView: View {
         .task { await load() }
     }
 
-    private var playerSize: CGSize {
+    static func playerSize(for message: VideoMessage) -> CGSize {
         if message.captureMode == .faceOnly {
             return CGSize(width: 128, height: 128)
         }
@@ -58,6 +58,10 @@ struct InlinePlayerView: View {
         let width: CGFloat = 340
         let aspectRatio = CGFloat(max(0.5, min(3.0, message.aspectRatio ?? 1.78)))
         return CGSize(width: width, height: width / aspectRatio)
+    }
+
+    private var playerSize: CGSize {
+        Self.playerSize(for: message)
     }
 
     private func load() async {
@@ -107,7 +111,6 @@ struct InlinePlayerView: View {
             let item = AVPlayerItem(url: url)
             let player = AVPlayer(playerItem: item)
             let playerLayer = AVPlayerLayer(player: player)
-            playerLayer.videoGravity = .resizeAspectFill
             container.configure(playerLayer: playerLayer, isCircle: isCircle)
             controller.player = player
 
@@ -144,6 +147,7 @@ struct InlinePlayerView: View {
             var isCircle = false {
                 didSet {
                     guard oldValue != isCircle else { return }
+                    updateVideoGravity()
                     lastBounds = .null
                     needsLayout = true
                 }
@@ -171,6 +175,7 @@ struct InlinePlayerView: View {
                 self.playerLayer?.removeFromSuperlayer()
                 self.playerLayer = playerLayer
                 self.isCircle = isCircle
+                updateVideoGravity()
                 layer?.addSublayer(playerLayer)
                 needsLayout = true
             }
@@ -178,6 +183,10 @@ struct InlinePlayerView: View {
             private func setup() {
                 wantsLayer = true
                 layer = CALayer()
+            }
+
+            private func updateVideoGravity() {
+                playerLayer?.videoGravity = isCircle ? .resizeAspectFill : .resizeAspect
             }
 
             private func updateLayerLayout() {

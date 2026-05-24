@@ -11,8 +11,8 @@ settings:
   base:
     SWIFT_VERSION: "6.0"
     MACOSX_DEPLOYMENT_TARGET: "13.0"
-    MARKETING_VERSION: "0.3.23"
-    CURRENT_PROJECT_VERSION: "33"
+    MARKETING_VERSION: "0.3.24"
+    CURRENT_PROJECT_VERSION: "34"
     PRODUCT_NAME: Ping
     ENABLE_HARDENED_RUNTIME: YES
     CODE_SIGN_STYLE: Manual
@@ -122,6 +122,7 @@ targets:
           cp "$PROJECT_DIR/Ping/UI/Setup/RoomDetailView.swift" "$DST/RoomDetailView.swift"
           cp "$PROJECT_DIR/Ping/UI/Setup/RoomSearchView.swift" "$DST/RoomSearchView.swift"
           cp "$PROJECT_DIR/Ping/UI/Setup/SettingsScene.swift" "$DST/SettingsScene.swift"
+          cp "$PROJECT_DIR/Ping/UI/History/HistoryView.swift" "$DST/HistoryView.swift"
           cp "$PROJECT_DIR/Ping/UI/History/RoomTimelineView.swift" "$DST/RoomTimelineView.swift"
           cp "$PROJECT_DIR/Ping/UI/History/HistoryViewModel.swift" "$DST/HistoryViewModel.swift"
           cp "$PROJECT_DIR/Ping/UI/History/MessageRowView.swift" "$DST/MessageRowView.swift"
@@ -188,6 +189,7 @@ targets:
           - "$(PROJECT_DIR)/Ping/UI/Setup/RoomDetailView.swift"
           - "$(PROJECT_DIR)/Ping/UI/Setup/RoomSearchView.swift"
           - "$(PROJECT_DIR)/Ping/UI/Setup/SettingsScene.swift"
+          - "$(PROJECT_DIR)/Ping/UI/History/HistoryView.swift"
           - "$(PROJECT_DIR)/Ping/UI/History/RoomTimelineView.swift"
           - "$(PROJECT_DIR)/Ping/UI/History/HistoryViewModel.swift"
           - "$(PROJECT_DIR)/Ping/UI/History/MessageRowView.swift"
@@ -254,6 +256,7 @@ targets:
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/RoomDetailView.swift"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/RoomSearchView.swift"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/SettingsScene.swift"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/HistoryView.swift"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/RoomTimelineView.swift"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/HistoryViewModel.swift"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/MessageRowView.swift"

@@ -227,6 +227,28 @@ final class RoomManagerUXContractTests: XCTestCase {
         XCTAssertFalse(source.contains(".frame(maxWidth: message.captureMode == .faceOnly ? 180 : 360)"))
     }
 
+    func testScreenFaceInlinePlayerShowsWholeRecordingInsteadOfCroppingEdges() throws {
+        let source = try readSourceFile("Ping/UI/History/InlinePlayerView.swift")
+
+        XCTAssertTrue(source.contains("private func updateVideoGravity()"))
+        XCTAssertTrue(source.contains("playerLayer?.videoGravity = isCircle ? .resizeAspectFill : .resizeAspect"))
+    }
+
+    func testScreenFaceExpansionOverlaysAcrossSidebarWithoutShrinkingSidebar() throws {
+        let historySource = try readSourceFile("Ping/UI/History/HistoryView.swift")
+        let rowSource = try readSourceFile("Ping/UI/History/MessageRowView.swift")
+
+        XCTAssertTrue(historySource.contains(".frame(minWidth: 220, idealWidth: 240, maxWidth: 320)"))
+        XCTAssertTrue(historySource.contains(".overlayPreferenceValue(ExpandedScreenFaceVideoAnchorKey.self)"))
+        XCTAssertTrue(historySource.contains("private func screenFaceExpansionOverlay"))
+        XCTAssertTrue(historySource.contains("private func screenFaceOverlayX"))
+        XCTAssertTrue(historySource.contains("message.captureMode == .screenFace"))
+        XCTAssertFalse(historySource.contains("sidebarWidthRange"))
+        XCTAssertTrue(rowSource.contains("usesExternalScreenFaceExpansion"))
+        XCTAssertTrue(rowSource.contains(".anchorPreference("))
+        XCTAssertTrue(rowSource.contains("key: ExpandedScreenFaceVideoAnchorKey.self"))
+    }
+
     func testVideoExpansionUsesNonBouncyEaseOutAnimation() throws {
         let source = try readSourceFile("Ping/UI/History/RoomTimelineView.swift")
         let videoCase = try sourceSlice(

@@ -9,6 +9,19 @@ struct HistoryView: View {
 
     @State private var keyMonitor: Any?
     @State private var expandedPlaybackWindow: ExpandedPlaybackWindow?
+    private var expandedScreenFaceMessage: VideoMessage? {
+        guard let expandedMessageId = viewModel.expandedMessageId else { return nil }
+        for group in viewModel.groups {
+            for item in group.items {
+                if case .video(let message) = item {
+                    if message.id == expandedMessageId && message.captureMode == .screenFace {
+                        return message
+                    }
+                }
+            }
+        }
+        return nil
+    }
 
     var body: some View {
         HSplitView {
@@ -29,6 +42,9 @@ struct HistoryView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+        }
+        .overlayPreferenceValue(ExpandedScreenFaceVideoAnchorKey.self) { anchors in
+            screenFaceExpansionOverlay(anchors)
         }
         .onAppear {
             keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
@@ -115,5 +131,58 @@ struct HistoryView: View {
         default:
             return false
         }
+    }
+
+    @ViewBuilder
+    private func screenFaceExpansionOverlay(_ anchors: [String: Anchor<CGRect>]) -> some View {
+        GeometryReader { proxy in
+            if let message = expandedScreenFaceMessage,
+               let id = message.id,
+               let anchor = anchors[id] {
+                let rect = proxy[anchor]
+                let size = InlinePlayerView.playerSize(for: message)
+                let myUid = appState.currentUser?.id
+                let isMine = message.senderUid == myUid
+
+                InlinePlayerView(
+                    message: message,
+                    isMine: isMine,
+                    archivePeerName: archivePeerName(for: message, isMine: isMine, myUid: myUid),
+                    cacheService: cacheService,
+                    controller: viewModel.inlineController
+                )
+                .frame(width: size.width, height: size.height)
+                .position(
+                    x: screenFaceOverlayX(anchorRect: rect, size: size, containerWidth: proxy.size.width),
+                    y: rect.midY
+                )
+                .allowsHitTesting(false)
+                .zIndex(10)
+            }
+        }
+    }
+
+    private func screenFaceOverlayX(anchorRect: CGRect, size: CGSize, containerWidth: CGFloat) -> CGFloat {
+        let trailingEdge = min(containerWidth - 16, anchorRect.maxX)
+        let proposed = trailingEdge - size.width / 2
+        let minCenter = min(size.width / 2 + 16, containerWidth / 2)
+        let maxCenter = max(containerWidth - size.width / 2 - 16, containerWidth / 2)
+        return min(max(proposed, minCenter), maxCenter)
+    }
+
+    private func archivePeerName(for message: VideoMessage, isMine: Bool, myUid: String?) -> String {
+        guard isMine else { return message.senderNickname }
+        guard let room = appState.rooms.first(where: { $0.id == message.roomId }) else {
+            return message.senderNickname
+        }
+
+        let otherNames = room.memberUids
+            .filter { $0 != myUid }
+            .compactMap { room.memberNicknames[$0] }
+        if otherNames.count == 1 {
+            return otherNames[0]
+        }
+
+        return room.name
     }
 }
