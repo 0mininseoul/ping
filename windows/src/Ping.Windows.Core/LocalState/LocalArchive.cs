@@ -217,7 +217,11 @@ public sealed class LocalArchive
         DateTimeOffset timestamp)
     {
         var prefix = kind == LocalArchiveKind.Sent ? "to" : "from";
-        return $"{timestamp:yyyy-MM-dd_HH-mm-ss}_{prefix}_{safeLabel}.mp4";
+        var fractionTicks = timestamp.Ticks % TimeSpan.TicksPerSecond;
+        var timestampText = fractionTicks == 0
+            ? $"{timestamp:yyyy-MM-dd_HH-mm-ss}"
+            : $"{timestamp:yyyy-MM-dd_HH-mm-ss}-{fractionTicks:D7}";
+        return $"{timestampText}_{prefix}_{safeLabel}.mp4";
     }
 
     private static string UniqueDestinationPath(string folder, string fileName)

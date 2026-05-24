@@ -83,6 +83,22 @@ public sealed class LocalArchiveTests : IDisposable
     }
 
     [Fact]
+    public async Task ExistingCopyPath_DistinguishesFractionalTimestampsWithinSameSecond()
+    {
+        var source = CreateSourceVideo("clip.mp4");
+        var archive = new LocalArchive(root);
+        var firstTimestamp = new DateTimeOffset(2026, 5, 25, 14, 30, 25, 100, TimeSpan.Zero);
+        var secondTimestamp = new DateTimeOffset(2026, 5, 25, 14, 30, 25, 900, TimeSpan.Zero);
+
+        var first = await archive.SaveSentCopyAsync(source, LocalArchiveKind.Received, "Youngmin", firstTimestamp);
+        var second = await archive.SaveSentCopyAsync(source, LocalArchiveKind.Received, "Youngmin", secondTimestamp);
+
+        Assert.NotEqual(first.FilePath, second.FilePath);
+        Assert.Equal(first.FilePath, archive.ExistingCopyPath(LocalArchiveKind.Received, "Youngmin", firstTimestamp));
+        Assert.Equal(second.FilePath, archive.ExistingCopyPath(LocalArchiveKind.Received, "Youngmin", secondTimestamp));
+    }
+
+    [Fact]
     public void EnsureFolders_CreatesSentAndReceivedDirectories()
     {
         var archive = new LocalArchive(root);
