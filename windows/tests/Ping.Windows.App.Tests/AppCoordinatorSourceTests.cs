@@ -255,7 +255,10 @@ public sealed class AppCoordinatorSourceTests
         Assert.Contains("Application.Start", program, StringComparison.Ordinal);
         Assert.Contains("Program.Activated += HandleRedirectedActivation;", app, StringComparison.Ordinal);
         Assert.Contains("foreach (var activation in Program.TakePendingActivations())", app, StringComparison.Ordinal);
-        Assert.Contains("coordinator?.HandleNotificationActivation(", app, StringComparison.Ordinal);
+        Assert.Contains("pendingActivationArguments.Enqueue(args)", app, StringComparison.Ordinal);
+        Assert.Contains("DrainPendingActivationArguments();", app, StringComparison.Ordinal);
+        Assert.Contains("coordinator.HandleNotificationActivation(", app, StringComparison.Ordinal);
+        Assert.DoesNotContain("coordinator?.HandleNotificationActivation(", app, StringComparison.Ordinal);
         Assert.Contains("public void HandleNotificationActivation(NotificationActivationArguments? parsed)", coordinator, StringComparison.Ordinal);
     }
 

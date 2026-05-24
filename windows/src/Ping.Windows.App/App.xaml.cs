@@ -10,6 +10,7 @@ namespace Ping.Windows.App;
 public partial class App : Application
 {
     private readonly DispatcherQueue dispatcherQueue;
+    private readonly Queue<AppActivationArguments> pendingActivationArguments = new();
     private MainWindow? window;
     private AppCoordinator? coordinator;
 
@@ -33,6 +34,7 @@ public partial class App : Application
         coordinator = new AppCoordinator(window);
         coordinator.Start();
         coordinator.HandleInitialNotificationActivation();
+        DrainPendingActivationArguments();
     }
 
     private void HandleRedirectedActivation(object? sender, AppActivationArguments args)
@@ -42,14 +44,28 @@ public partial class App : Application
 
     private void HandleActivationArguments(AppActivationArguments args)
     {
-        if (args.Kind == ExtendedActivationKind.AppNotification
-            && args.Data is AppNotificationActivatedEventArgs notificationArgs)
+        if (coordinator is null || window is null)
         {
-            coordinator?.HandleNotificationActivation(NotificationActivationArguments.From(notificationArgs));
+            pendingActivationArguments.Enqueue(args);
             return;
         }
 
-        window?.ShowShell();
+        if (args.Kind == ExtendedActivationKind.AppNotification
+            && args.Data is AppNotificationActivatedEventArgs notificationArgs)
+        {
+            coordinator.HandleNotificationActivation(NotificationActivationArguments.From(notificationArgs));
+            return;
+        }
+
+        window.ShowShell();
+    }
+
+    private void DrainPendingActivationArguments()
+    {
+        while (pendingActivationArguments.Count > 0)
+        {
+            HandleActivationArguments(pendingActivationArguments.Dequeue());
+        }
     }
 
     private void HandleProcessExit(object? sender, EventArgs args)
