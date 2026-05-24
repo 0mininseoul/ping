@@ -112,6 +112,16 @@
                                         Foreground="{StaticResource PingMutedBrush}"
                                         Text="{Binding VideoId}" />
                                     <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <Button
+                                            Padding="6,2"
+                                            Click="ReplyVideoButton_Click"
+                                            Content="Reply" />
+                                        <Button
+                                            Padding="6,2"
+                                            Click="DeleteVideoButton_Click"
+                                            Content="Delete" />
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
                                         <ItemsControl ItemsSource="{Binding Reactions}">
                                             <ItemsControl.ItemsPanel>
                                                 <ItemsPanelTemplate>
@@ -180,6 +190,19 @@
                                 <StackPanel Padding="4" Spacing="5">
                                     <TextBlock FontWeight="SemiBold" Text="{Binding SenderNickname}" />
                                     <Border
+                                        Padding="8,5"
+                                        Background="#16181B"
+                                        BorderBrush="{StaticResource PingIdleBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Visibility="{Binding ReplyPreviewVisibility}">
+                                        <TextBlock
+                                            FontSize="11"
+                                            Foreground="{StaticResource PingMutedBrush}"
+                                            Text="{Binding ReplyPreview}"
+                                            TextWrapping="WrapWholeWords" />
+                                    </Border>
+                                    <Border
                                         Padding="8"
                                         Background="#1B1D20"
                                         BorderBrush="{StaticResource PingIdleBrush}"
@@ -200,6 +223,17 @@
                                         </StackPanel>
                                     </Border>
                                     <TextBlock Foreground="{StaticResource PingMutedBrush}" Text="{Binding Body}" TextWrapping="WrapWholeWords" />
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <Button
+                                            Padding="6,2"
+                                            Click="ReplyChatButton_Click"
+                                            Content="Reply" />
+                                        <Button
+                                            Padding="6,2"
+                                            Click="DeleteChatButton_Click"
+                                            Content="Delete"
+                                            Visibility="{Binding DeleteVisibility}" />
+                                    </StackPanel>
                                     <StackPanel Orientation="Horizontal" Spacing="4">
                                         <ItemsControl ItemsSource="{Binding Reactions}">
                                             <ItemsControl.ItemsPanel>
@@ -291,6 +325,30 @@
                     <StackPanel
                         Grid.Column="1"
                         Spacing="8">
+                        <Border
+                            Padding="8,6"
+                            Background="#1B1D20"
+                            BorderBrush="{StaticResource PingIdleBrush}"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Visibility="{Binding ReplyPreviewVisibility}">
+                            <Grid ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock
+                                    FontSize="11"
+                                    Foreground="{StaticResource PingMutedBrush}"
+                                    Text="{Binding ReplyPreviewText}"
+                                    TextWrapping="WrapWholeWords" />
+                                <Button
+                                    Grid.Column="1"
+                                    Padding="6,2"
+                                    Click="CancelReplyButton_Click"
+                                    Content="Cancel" />
+                            </Grid>
+                        </Border>
                         <TextBlock
                             x:Name="SelectedImageText"
                             FontSize="11"

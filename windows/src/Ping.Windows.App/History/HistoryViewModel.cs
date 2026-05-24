@@ -4,6 +4,10 @@ using System.Runtime.CompilerServices;
 using Ping.Windows.Core.Backend;
 using Ping.Windows.Core.Models;
 
+#if WINDOWS
+using Microsoft.UI.Xaml;
+#endif
+
 namespace Ping.Windows.App.History;
 
 public sealed class HistoryViewModel : INotifyPropertyChanged
@@ -17,6 +21,7 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
     private static readonly string[] QuickReactions = ["❤️", "👍", "👎", "😂", "‼️", "❓"];
     private Room? selectedRoom;
     private VideoHistoryItem? selectedVideo;
+    private HistoryReplyTarget? replyTarget;
     private string statusMessage = "History";
 
     public HistoryViewModel(
@@ -71,7 +76,27 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         }
     }
 
+    public HistoryReplyTarget? ReplyTarget
+    {
+        get => replyTarget;
+        private set
+        {
+            replyTarget = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(ReplyPreviewText));
+            OnPropertyChanged(nameof(ReplyPreviewVisibility));
+        }
+    }
+
     public string SelectedRoomName => SelectedRoom?.Name ?? "No room selected";
+
+    public string ReplyPreviewText => ReplyTarget?.DisplayText ?? string.Empty;
+
+#if WINDOWS
+    public Visibility ReplyPreviewVisibility => ReplyTarget is null ? Visibility.Collapsed : Visibility.Visible;
+#else
+    public bool ReplyPreviewVisibility => ReplyTarget is not null;
+#endif
 
     public string StatusMessage
     {
@@ -133,15 +158,27 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
             videos.Where(video => video.Id is not null).Select(video => video.Id!).ToArray(),
             cancellationToken);
         var reactionMap = ReactionMap(reactions);
+        var currentUid = currentUidProvider();
+        var chatById = chats
+            .Where(chat => chat.Id is not null)
+            .ToDictionary(chat => chat.Id!, StringComparer.Ordinal);
+        var videoById = videos
+            .Where(video => video.Id is not null)
+            .ToDictionary(video => video.Id!, StringComparer.Ordinal);
 
         foreach (var video in videos)
         {
-            Videos.Add(new VideoHistoryItem(video, QuickReactions, ReactionsFor(reactionMap, ReactionTargetKind.Video, video.Id)));
+            Videos.Add(new VideoHistoryItem(video, QuickReactions, ReactionsFor(reactionMap, ReactionTargetKind.Video, video.Id), currentUid));
         }
 
         foreach (var chat in chats)
         {
-            Chats.Add(new ChatHistoryItem(chat, QuickReactions, ReactionsFor(reactionMap, ReactionTargetKind.Chat, chat.Id)));
+            Chats.Add(new ChatHistoryItem(
+                chat,
+                QuickReactions,
+                ReactionsFor(reactionMap, ReactionTargetKind.Chat, chat.Id),
+                currentUid,
+                ReplyPreviewFor(chat, chatById, videoById)));
         }
 
         foreach (var reaction in reactions)
@@ -152,6 +189,32 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         await LoadChatImagesAsync(cancellationToken);
         await MarkSelectedRoomReadAsync(roomId, cancellationToken);
         StatusMessage = $"{Videos.Count} videos, {Chats.Count} chats, {Reactions.Count} reactions.";
+    }
+
+    public void BeginReplyToChat(ChatHistoryItem item)
+    {
+        if (string.IsNullOrWhiteSpace(item.Message.Id))
+        {
+            return;
+        }
+
+        ReplyTarget = HistoryReplyTarget.ForChat(item.Message.Id, item.SenderNickname, item.PreviewText);
+    }
+
+    public void BeginReplyToVideo(VideoHistoryItem item)
+    {
+        if (string.IsNullOrWhiteSpace(item.Message.Id))
+        {
+            return;
+        }
+
+        var preview = item.Message.CaptureMode == CaptureMode.FaceOnly ? "Face video" : "Screen + face video";
+        ReplyTarget = HistoryReplyTarget.ForVideo(item.Message.Id, item.SenderNickname, preview);
+    }
+
+    public void CancelReply()
+    {
+        ReplyTarget = null;
     }
 
     public async Task SendChatAsync(string body, string? localImagePath = null, CancellationToken cancellationToken = default)
@@ -168,6 +231,7 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
             return;
         }
 
+        var reply = ReplyTarget;
         ChatMediaPayload? media = null;
         string? messageId = null;
         if (hasImage)
@@ -191,9 +255,12 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         await chatService.SendChatAsync(
             roomId,
             trimmed,
+            replyToChatId: reply?.ChatId,
+            replyToVideoId: reply?.VideoId,
             messageId: messageId,
             media: media,
             cancellationToken: cancellationToken);
+        ReplyTarget = null;
         await LoadSelectedRoomAsync(cancellationToken);
         StatusMessage = hasImage ? "Image sent." : "Chat sent.";
     }
@@ -212,6 +279,55 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         var added = await reactionService.ToggleAsync(targetKind, targetId, emoji, cancellationToken);
         await LoadSelectedRoomAsync(cancellationToken);
         StatusMessage = added ? "Reaction added." : "Reaction removed.";
+    }
+
+    public async Task DeleteChatAsync(ChatHistoryItem item, CancellationToken cancellationToken = default)
+    {
+        if (!item.IsMine || string.IsNullOrWhiteSpace(item.Message.Id))
+        {
+            return;
+        }
+
+        await chatService.DeleteChatAsync(item.Message.Id, cancellationToken);
+        Chats.Remove(item);
+        RemoveReactions(ReactionTargetKind.Chat, item.Message.Id);
+        if (string.Equals(ReplyTarget?.ChatId, item.Message.Id, StringComparison.Ordinal))
+        {
+            ReplyTarget = null;
+        }
+
+        StatusMessage = "Chat deleted.";
+    }
+
+    public async Task DeleteVideoAsync(VideoHistoryItem item, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(item.Message.Id))
+        {
+            return;
+        }
+
+        var currentUid = currentUidProvider();
+        if (string.Equals(item.Message.SenderUid, currentUid, StringComparison.Ordinal))
+        {
+            await messageService.DeleteMessageAsync(item.Message.Id, cancellationToken);
+        }
+        else
+        {
+            await messageService.HideMessageForReceiverAsync(item.Message.Id, cancellationToken);
+        }
+
+        Videos.Remove(item);
+        RemoveReactions(ReactionTargetKind.Video, item.Message.Id);
+        if (ReferenceEquals(SelectedVideo, item))
+        {
+            SelectedVideo = null;
+        }
+        if (string.Equals(ReplyTarget?.VideoId, item.Message.Id, StringComparison.Ordinal))
+        {
+            ReplyTarget = null;
+        }
+
+        StatusMessage = "Video removed.";
     }
 
     public void ReportError(Exception exception)
@@ -311,6 +427,62 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         };
     }
 
+    private static string? ReplyPreviewFor(
+        ChatMessage message,
+        IReadOnlyDictionary<string, ChatMessage> chatById,
+        IReadOnlyDictionary<string, VideoMessage> videoById)
+    {
+        if (message.ReplyToChatId is { } chatId)
+        {
+            return chatById.TryGetValue(chatId, out var chat)
+                ? $"{chat.SenderNickname}: {PreviewText(chat)}"
+                : "Deleted message";
+        }
+
+        if (message.ReplyToVideoId is { } videoId)
+        {
+            return videoById.TryGetValue(videoId, out var video)
+                ? $"{video.SenderNickname}: {(video.CaptureMode == CaptureMode.FaceOnly ? "Face video" : "Screen + face video")}"
+                : "Deleted message";
+        }
+
+        return null;
+    }
+
+    private static string PreviewText(ChatMessage message)
+    {
+        var body = message.Body.Trim();
+        if (!string.IsNullOrWhiteSpace(body))
+        {
+            return body.Length > 60 ? $"{body[..60]}..." : body;
+        }
+
+        return string.IsNullOrWhiteSpace(message.MediaPath) ? string.Empty : "Image";
+    }
+
+    private void RemoveReactions(ReactionTargetKind targetKind, string targetId)
+    {
+        for (var index = Reactions.Count - 1; index >= 0; index--)
+        {
+            var reaction = Reactions[index];
+            if (reaction.TargetKind == targetKind && string.Equals(reaction.TargetId, targetId, StringComparison.Ordinal))
+            {
+                Reactions.RemoveAt(index);
+            }
+        }
+    }
+
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+}
+
+public sealed record HistoryReplyTarget(string? ChatId, string? VideoId, string Sender, string Preview)
+{
+    public string DisplayText => $"{Sender}: {Preview}";
+
+    public static HistoryReplyTarget ForChat(string chatId, string sender, string preview) =>
+        new(chatId, null, sender, string.IsNullOrWhiteSpace(preview) ? "Message" : preview);
+
+    public static HistoryReplyTarget ForVideo(string videoId, string sender, string preview) =>
+        new(null, videoId, sender, preview);
 }

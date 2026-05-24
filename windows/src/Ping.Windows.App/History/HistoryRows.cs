@@ -15,13 +15,15 @@ public sealed class VideoHistoryItem
     public VideoHistoryItem(
         VideoMessage message,
         IReadOnlyCollection<string> quickReactions,
-        IReadOnlyCollection<ReactionAggregate> reactions)
+        IReadOnlyCollection<ReactionAggregate> reactions,
+        string? currentUid = null)
     {
         Message = message;
         Reactions = new ObservableCollection<ReactionAggregate>(reactions);
         QuickReactions = message.Id is null
             ? []
             : quickReactions.Select(emoji => new ReactionChoice(ReactionTargetKind.Video, message.Id, emoji)).ToArray();
+        IsMine = string.Equals(message.SenderUid, currentUid, StringComparison.Ordinal);
     }
 
     public VideoMessage Message { get; }
@@ -35,6 +37,8 @@ public sealed class VideoHistoryItem
     public string VideoId => Message.VideoId;
 
     public CaptureMode CaptureMode => Message.CaptureMode;
+
+    public bool IsMine { get; }
 }
 
 public sealed class ChatHistoryItem : INotifyPropertyChanged
@@ -49,7 +53,9 @@ public sealed class ChatHistoryItem : INotifyPropertyChanged
     public ChatHistoryItem(
         ChatMessage message,
         IReadOnlyCollection<string> quickReactions,
-        IReadOnlyCollection<ReactionAggregate> reactions)
+        IReadOnlyCollection<ReactionAggregate> reactions,
+        string? currentUid = null,
+        string? replyPreview = null)
     {
         Message = message;
         Reactions = new ObservableCollection<ReactionAggregate>(reactions);
@@ -57,6 +63,8 @@ public sealed class ChatHistoryItem : INotifyPropertyChanged
             ? []
             : quickReactions.Select(emoji => new ReactionChoice(ReactionTargetKind.Chat, message.Id, emoji)).ToArray();
         attachmentStatus = message.MediaFileName ?? (HasImageAttachment ? "Image attachment" : string.Empty);
+        IsMine = string.Equals(message.SenderUid, currentUid, StringComparison.Ordinal);
+        ReplyPreview = replyPreview ?? string.Empty;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -75,16 +83,42 @@ public sealed class ChatHistoryItem : INotifyPropertyChanged
 
     public bool HasImageAttachment => !string.IsNullOrWhiteSpace(Message.MediaPath);
 
+    public bool IsMine { get; }
+
+    public string ReplyPreview { get; }
+
+    public string PreviewText
+    {
+        get
+        {
+            var body = Body.Trim();
+            if (!string.IsNullOrWhiteSpace(body))
+            {
+                return body.Length > 60 ? $"{body[..60]}..." : body;
+            }
+
+            return HasImageAttachment ? "Image" : string.Empty;
+        }
+    }
+
 #if WINDOWS
     public Visibility AttachmentVisibility => HasImageAttachment ? Visibility.Visible : Visibility.Collapsed;
 
+    public Visibility DeleteVisibility => IsMine ? Visibility.Visible : Visibility.Collapsed;
+
     public Visibility ImageVisibility => imageSource is null ? Visibility.Collapsed : Visibility.Visible;
+
+    public Visibility ReplyPreviewVisibility => string.IsNullOrWhiteSpace(ReplyPreview) ? Visibility.Collapsed : Visibility.Visible;
 
     public BitmapImage? ImageSource
 #else
     public bool AttachmentVisibility => HasImageAttachment;
 
+    public bool DeleteVisibility => IsMine;
+
     public bool ImageVisibility => imageSource is not null;
+
+    public bool ReplyPreviewVisibility => !string.IsNullOrWhiteSpace(ReplyPreview);
 
     public Uri? ImageSource
 #endif

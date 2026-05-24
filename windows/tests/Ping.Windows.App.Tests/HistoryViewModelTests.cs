@@ -30,6 +30,7 @@ public sealed class HistoryViewModelTests
             chat =>
             {
                 Assert.Equal("chat-2", chat.Message.Id);
+                Assert.Equal("Sender: Screen + face video", chat.ReplyPreview);
                 Assert.Collection(chat.Reactions, reaction => Assert.Equal("❤️", reaction.Emoji));
             });
         Assert.Equal(["room-2"], rpc.MarkedReadRoomIds);
@@ -79,6 +80,52 @@ public sealed class HistoryViewModelTests
         Assert.Equal("photo.png", item.AttachmentStatus);
     }
 
+    [Fact]
+    public async Task SendChatAsync_PreservesReplyTargetUntilSendSucceeds()
+    {
+        var rpc = new RecordingHistoryRpcClient();
+        var viewModel = ViewModel(rpc);
+        await viewModel.LoadAsync("room-2");
+
+        viewModel.BeginReplyToChat(viewModel.Chats.Single());
+        Assert.Equal("Sender: chat chat-2", viewModel.ReplyPreviewText);
+
+        await viewModel.SendChatAsync("reply body");
+
+        Assert.Null(viewModel.ReplyTarget);
+        var sent = Assert.Single(rpc.SentChatBodies);
+        var json = JsonSerializer.SerializeToElement(sent, JsonOptions.Supabase);
+        Assert.Equal("room-2", json.GetProperty("room_uuid").GetString());
+        Assert.Equal("reply body", json.GetProperty("body_text").GetString());
+        Assert.Equal("chat-2", json.GetProperty("reply_chat_uuid").GetString());
+    }
+
+    [Fact]
+    public async Task DeleteChatAsync_OnlyDeletesOwnRows()
+    {
+        var rpc = new RecordingHistoryRpcClient();
+        var viewModel = ViewModel(rpc);
+        await viewModel.LoadAsync("room-1");
+
+        await viewModel.DeleteChatAsync(viewModel.Chats.Single());
+
+        Assert.Equal(["chat-1"], rpc.DeletedChatIds);
+        Assert.Empty(viewModel.Chats);
+    }
+
+    [Fact]
+    public async Task DeleteVideoAsync_HidesReceivedRowsForCurrentUser()
+    {
+        var rpc = new RecordingHistoryRpcClient();
+        var viewModel = ViewModel(rpc);
+        await viewModel.LoadAsync("room-2");
+
+        await viewModel.DeleteVideoAsync(viewModel.Videos.Single());
+
+        Assert.Equal(["video-message-2"], rpc.HiddenVideoIds);
+        Assert.Empty(viewModel.Videos);
+    }
+
     private static HistoryViewModel ViewModel(RecordingHistoryRpcClient rpc) =>
         new(
             new RoomService(rpc),
@@ -107,20 +154,33 @@ public sealed class HistoryViewModelTests
             AspectRatio = 1.6
         };
 
-    private static ChatMessage ChatMessage(string id, string roomId) =>
+    private static ChatMessage ChatMessage(
+        string id,
+        string roomId,
+        string senderUid = "sender",
+        string? replyToVideoId = null) =>
         new()
         {
             Id = id,
             RoomId = roomId,
-            SenderUid = "sender",
-            SenderNickname = "Sender",
+            SenderUid = senderUid,
+            SenderNickname = senderUid == "receiver" ? "Receiver" : "Sender",
             Body = $"chat {id}",
+            ReplyToVideoId = replyToVideoId,
             CreatedAt = DateTimeOffset.UtcNow
         };
 
     private sealed class RecordingHistoryRpcClient : ISupabaseRpcClient
     {
         public List<string> MarkedReadRoomIds { get; } = [];
+
+        public List<object> SentChatBodies { get; } = [];
+
+        public List<string> DeletedChatIds { get; } = [];
+
+        public List<string> DeletedVideoIds { get; } = [];
+
+        public List<string> HiddenVideoIds { get; } = [];
 
         public Task<IReadOnlyList<T>> RpcArrayAsync<T>(
             string function,
@@ -143,8 +203,8 @@ public sealed class HistoryViewModelTests
                 },
                 "ping_room_chat_messages" => RoomId(body) switch
                 {
-                    "room-1" => new[] { ChatMessage("chat-1", "room-1") },
-                    "room-2" => new[] { ChatMessage("chat-2", "room-2") },
+                    "room-1" => new[] { ChatMessage("chat-1", "room-1", senderUid: "receiver") },
+                    "room-2" => new[] { ChatMessage("chat-2", "room-2", replyToVideoId: "video-message-2") },
                     _ => []
                 },
                 "ping_message_reactions" => ReactionsFor(body),
@@ -159,8 +219,13 @@ public sealed class HistoryViewModelTests
             CancellationToken cancellationToken = default)
         {
             _ = function;
-            _ = body;
             _ = cancellationToken;
+            if (function == "ping_send_chat")
+            {
+                SentChatBodies.Add(body ?? new { });
+                return Task.FromResult((T)(object)"new-chat-id");
+            }
+
             throw new NotSupportedException();
         }
 
@@ -173,6 +238,18 @@ public sealed class HistoryViewModelTests
             if (function == "ping_mark_room_read")
             {
                 MarkedReadRoomIds.Add(RoomId(body));
+            }
+            else if (function == "ping_delete_chat")
+            {
+                DeletedChatIds.Add(ChatId(body));
+            }
+            else if (function == "ping_delete_message")
+            {
+                DeletedVideoIds.Add(MessageId(body));
+            }
+            else if (function == "ping_hide_message_for_receiver")
+            {
+                HiddenVideoIds.Add(MessageId(body));
             }
 
             return Task.CompletedTask;
@@ -216,6 +293,20 @@ public sealed class HistoryViewModelTests
             var json = JsonSerializer.SerializeToElement(body, JsonOptions.Supabase);
             return json.GetProperty("room_uuid").GetString()
                 ?? throw new InvalidOperationException("RPC body did not include room_uuid.");
+        }
+
+        private static string ChatId(object? body)
+        {
+            var json = JsonSerializer.SerializeToElement(body, JsonOptions.Supabase);
+            return json.GetProperty("chat_uuid").GetString()
+                ?? throw new InvalidOperationException("RPC body did not include chat_uuid.");
+        }
+
+        private static string MessageId(object? body)
+        {
+            var json = JsonSerializer.SerializeToElement(body, JsonOptions.Supabase);
+            return json.GetProperty("message_uuid").GetString()
+                ?? throw new InvalidOperationException("RPC body did not include message_uuid.");
         }
     }
 

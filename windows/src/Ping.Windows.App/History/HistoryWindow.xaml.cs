@@ -85,6 +85,43 @@ public sealed partial class HistoryWindow : Window
         }
     }
 
+    private void ReplyVideoButton_Click(object sender, RoutedEventArgs args)
+    {
+        if ((sender as FrameworkElement)?.DataContext is VideoHistoryItem item)
+        {
+            viewModel.BeginReplyToVideo(item);
+        }
+    }
+
+    private async void DeleteVideoButton_Click(object sender, RoutedEventArgs args)
+    {
+        if ((sender as FrameworkElement)?.DataContext is VideoHistoryItem item)
+        {
+            await RunAsync(() => viewModel.DeleteVideoAsync(item));
+        }
+    }
+
+    private void ReplyChatButton_Click(object sender, RoutedEventArgs args)
+    {
+        if ((sender as FrameworkElement)?.DataContext is ChatHistoryItem item)
+        {
+            viewModel.BeginReplyToChat(item);
+        }
+    }
+
+    private async void DeleteChatButton_Click(object sender, RoutedEventArgs args)
+    {
+        if ((sender as FrameworkElement)?.DataContext is ChatHistoryItem item)
+        {
+            await RunAsync(() => viewModel.DeleteChatAsync(item));
+        }
+    }
+
+    private void CancelReplyButton_Click(object sender, RoutedEventArgs args)
+    {
+        viewModel.CancelReply();
+    }
+
     private async void AttachImageButton_Click(object sender, RoutedEventArgs args)
     {
         var picker = new FileOpenPicker();

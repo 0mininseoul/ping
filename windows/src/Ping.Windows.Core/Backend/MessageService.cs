@@ -41,6 +41,18 @@ public sealed class MessageService(ISupabaseRpcClient client, IStorageService st
             new RoomMessagesRpcBody(roomId, beforeTimestamp, limit),
             cancellationToken);
 
+    public Task DeleteMessageAsync(string messageId, CancellationToken cancellationToken = default) =>
+        client.RpcVoidAsync(
+            "ping_delete_message",
+            new MessageIdRpcBody(messageId),
+            cancellationToken);
+
+    public Task HideMessageForReceiverAsync(string messageId, CancellationToken cancellationToken = default) =>
+        client.RpcVoidAsync(
+            "ping_hide_message_for_receiver",
+            new MessageIdRpcBody(messageId),
+            cancellationToken);
+
     public async Task SendAsync(SendVideoInput input, CancellationToken cancellationToken = default)
     {
         var sendableRooms = input.Rooms
