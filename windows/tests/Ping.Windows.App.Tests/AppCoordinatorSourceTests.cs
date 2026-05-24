@@ -143,6 +143,29 @@ public sealed class AppCoordinatorSourceTests
     }
 
     [Fact]
+    public void MirrorReviewPlaybackRemainsVisibleDuringFailedUpload()
+    {
+        var root = RepoRoot();
+        var face = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Capture",
+            "FaceMirrorViewModel.cs"));
+        var screenFace = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Capture",
+            "ScreenFaceMirrorViewModel.cs"));
+
+        Assert.Contains("viewModel.State is not (MirrorState.Reviewing or MirrorState.Failed)", face, StringComparison.Ordinal);
+        Assert.Contains("viewModel.State is not (MirrorState.Reviewing or MirrorState.Failed)", screenFace, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void QuickScreenFaceHotkeyCancelsActiveQuickSendWithoutStartingOverlap()
     {
         var source = File.ReadAllText(Path.Combine(

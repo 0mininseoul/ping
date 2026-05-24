@@ -205,9 +205,11 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
 
     public IFaceRecorder Recorder => recorder;
 
-    public bool CanRecord => State is MirrorState.Idle or MirrorState.Failed;
+    public bool CanRecord => State == MirrorState.Idle || (State == MirrorState.Failed && !HasReviewedClip);
 
     public bool CanSelectTarget => State is MirrorState.Idle or MirrorState.Reviewing or MirrorState.Failed;
+
+    public bool HasReviewedClip => reviewedPath is not null;
 
     public bool IsCloseRequested
     {
@@ -266,7 +268,7 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
 
     public async Task HandleEnterAsync()
     {
-        if (State == MirrorState.Reviewing)
+        if (State == MirrorState.Reviewing || (State == MirrorState.Failed && HasReviewedClip))
         {
             await UploadReviewedClipAsync();
             return;
@@ -321,7 +323,7 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
 
     public async Task HandleRedoAsync()
     {
-        if (State != MirrorState.Reviewing)
+        if (State != MirrorState.Reviewing && !(State == MirrorState.Failed && HasReviewedClip))
         {
             return;
         }
@@ -381,7 +383,6 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
         }
         catch (Exception exception)
         {
-            ClearReviewedClip(deleteFile: true);
             State = MirrorState.Failed;
             StatusMessage = $"Could not send. Press Enter to retry. {exception.Message}";
         }
@@ -454,6 +455,8 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
     {
         reviewedPath = path;
         ReviewVideoUri = new Uri(path);
+        OnPropertyChanged(nameof(HasReviewedClip));
+        OnPropertyChanged(nameof(CanRecord));
         State = MirrorState.Reviewing;
         StatusMessage = "Press Enter to send. Backspace to redo.";
     }
@@ -463,6 +466,8 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
         var path = reviewedPath;
         reviewedPath = null;
         ReviewVideoUri = null;
+        OnPropertyChanged(nameof(HasReviewedClip));
+        OnPropertyChanged(nameof(CanRecord));
         if (deleteFile && path is not null)
         {
             TryDeleteTemporaryRecording(path);
@@ -777,7 +782,8 @@ public sealed partial class FaceMirrorWindow : Window
 
     private void UpdateReviewPlayback()
     {
-        if (viewModel.ReviewVideoUri is not { } uri || viewModel.State != MirrorState.Reviewing)
+        if (viewModel.ReviewVideoUri is not { } uri
+            || viewModel.State is not (MirrorState.Reviewing or MirrorState.Failed))
         {
             StopReviewPlayback();
             ReviewElement.Visibility = Visibility.Collapsed;

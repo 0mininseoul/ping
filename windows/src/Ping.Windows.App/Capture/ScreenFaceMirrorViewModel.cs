@@ -201,9 +201,11 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
         }
     }
 
-    public bool CanRecord => State is MirrorState.Idle or MirrorState.Failed;
+    public bool CanRecord => State == MirrorState.Idle || (State == MirrorState.Failed && !HasReviewedClip);
 
     public bool CanSelectTarget => State is MirrorState.Idle or MirrorState.Reviewing or MirrorState.Failed;
+
+    public bool HasReviewedClip => reviewedPath is not null;
 
     public bool IsCloseRequested
     {
@@ -291,7 +293,7 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
     {
         while (!cancellationToken.IsCancellationRequested && !IsCloseRequested)
         {
-            if (State is MirrorState.Idle or MirrorState.Failed)
+            if (State == MirrorState.Idle || (State == MirrorState.Failed && !HasReviewedClip))
             {
                 await LoadPreviewAsync(cancellationToken);
             }
@@ -302,7 +304,7 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
 
     public async Task HandleEnterAsync()
     {
-        if (State == MirrorState.Reviewing)
+        if (State == MirrorState.Reviewing || (State == MirrorState.Failed && HasReviewedClip))
         {
             await UploadReviewedClipAsync();
             return;
@@ -357,7 +359,7 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
 
     public async Task HandleRedoAsync()
     {
-        if (State != MirrorState.Reviewing)
+        if (State != MirrorState.Reviewing && !(State == MirrorState.Failed && HasReviewedClip))
         {
             return;
         }
@@ -417,7 +419,6 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
         }
         catch (Exception exception)
         {
-            ClearReviewedClip(deleteFile: true);
             State = MirrorState.Failed;
             StatusMessage = $"Could not send. Press Enter to retry. {exception.Message}";
         }
@@ -504,6 +505,8 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
         reviewedPath = path;
         reviewedAspectRatio = NormalizeAspectRatio(aspectRatio);
         ReviewVideoUri = new Uri(path);
+        OnPropertyChanged(nameof(HasReviewedClip));
+        OnPropertyChanged(nameof(CanRecord));
         State = MirrorState.Reviewing;
         StatusMessage = "Press Enter to send. Backspace to redo.";
     }
@@ -514,6 +517,8 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
         reviewedPath = null;
         reviewedAspectRatio = 16.0 / 9.0;
         ReviewVideoUri = null;
+        OnPropertyChanged(nameof(HasReviewedClip));
+        OnPropertyChanged(nameof(CanRecord));
         if (deleteFile && path is not null)
         {
             TryDeleteTemporaryRecording(path);
@@ -631,7 +636,7 @@ public sealed partial class ScreenFaceMirrorWindow : Window
             }
 
             await viewModel.HandleEnterAsync();
-            if (!viewModel.IsCloseRequested && viewModel.State != MirrorState.Reviewing)
+            if (!viewModel.IsCloseRequested && !viewModel.HasReviewedClip)
             {
                 _ = StartPreviewAsync();
             }
@@ -644,7 +649,7 @@ public sealed partial class ScreenFaceMirrorWindow : Window
         {
             args.Handled = true;
             await viewModel.HandleRedoAsync();
-            if (!viewModel.IsCloseRequested && viewModel.State != MirrorState.Reviewing)
+            if (!viewModel.IsCloseRequested && !viewModel.HasReviewedClip)
             {
                 _ = StartPreviewAsync();
             }
@@ -836,7 +841,7 @@ public sealed partial class ScreenFaceMirrorWindow : Window
 
     private async Task StartPreviewAsync()
     {
-        if (viewModel.State == MirrorState.Reviewing)
+        if (viewModel.State == MirrorState.Reviewing || viewModel.HasReviewedClip)
         {
             return;
         }
@@ -911,7 +916,8 @@ public sealed partial class ScreenFaceMirrorWindow : Window
 
     private void UpdateReviewPlayback()
     {
-        if (viewModel.ReviewVideoUri is not { } uri || viewModel.State != MirrorState.Reviewing)
+        if (viewModel.ReviewVideoUri is not { } uri
+            || viewModel.State is not (MirrorState.Reviewing or MirrorState.Failed))
         {
             StopReviewPlayback();
             ReviewElement.Visibility = Visibility.Collapsed;

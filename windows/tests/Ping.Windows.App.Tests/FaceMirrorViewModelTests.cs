@@ -129,6 +129,41 @@ public sealed class FaceMirrorViewModelTests
     }
 
     [Fact]
+    public async Task Enter_WhenSendFails_RetriesSameReviewedClipWithoutRecordingAgain()
+    {
+        var recorder = new FakeFaceRecorder();
+        var attempts = new List<SendVideoInput>();
+        var model = new FaceMirrorViewModel(
+            FaceMirrorContextFor(saveSentCopy: false),
+            recorder,
+            (input, _) =>
+            {
+                attempts.Add(input);
+                if (attempts.Count == 1)
+                {
+                    throw new InvalidOperationException("Upload failed.");
+                }
+
+                return Task.CompletedTask;
+            });
+
+        await model.HandleEnterAsync();
+        var reviewedUri = model.ReviewVideoUri;
+        await model.HandleEnterAsync();
+
+        Assert.Equal(MirrorState.Failed, model.State);
+        Assert.Equal(reviewedUri, model.ReviewVideoUri);
+        Assert.Equal(1, recorder.RecordCount);
+
+        await model.HandleEnterAsync();
+
+        Assert.True(model.IsCloseRequested);
+        Assert.Equal(1, recorder.RecordCount);
+        Assert.Equal(2, attempts.Count);
+        Assert.Equal(attempts[0].LocalVideoPath, attempts[1].LocalVideoPath);
+    }
+
+    [Fact]
     public async Task WindowClosed_DeletesReviewedClipWithoutRequestingCloseAgain()
     {
         var model = new FaceMirrorViewModel(
@@ -304,8 +339,11 @@ public sealed class FaceMirrorViewModelTests
 
         public MirrorState? StateAtRecordStart { get; private set; }
 
+        public int RecordCount { get; private set; }
+
         public Task<FaceRecordingResult> RecordAsync(TimeSpan duration, CancellationToken cancellationToken = default)
         {
+            RecordCount++;
             StateAtRecordStart = StateReader?.Invoke();
             var uniquePath = Path.Combine(
                 Path.GetTempPath(),
