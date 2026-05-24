@@ -129,6 +129,30 @@ public sealed class FaceMirrorViewModelTests
     }
 
     [Fact]
+    public async Task WindowClosed_DeletesReviewedClipWithoutRequestingCloseAgain()
+    {
+        var model = new FaceMirrorViewModel(
+            FaceMirrorContextFor(saveSentCopy: false),
+            new FileWritingFaceRecorder(),
+            (_, _) => Task.CompletedTask);
+        var closeRequestCount = 0;
+        model.CloseRequested += (_, _) => closeRequestCount += 1;
+
+        await model.HandleEnterAsync();
+        var reviewedPath = model.ReviewVideoUri?.LocalPath;
+
+        Assert.NotNull(reviewedPath);
+        Assert.True(File.Exists(reviewedPath));
+
+        model.HandleWindowClosed();
+
+        Assert.True(model.IsCloseRequested);
+        Assert.Null(model.ReviewVideoUri);
+        Assert.False(File.Exists(reviewedPath));
+        Assert.Equal(0, closeRequestCount);
+    }
+
+    [Fact]
     public async Task TargetShortcuts_SelectSingleRoomOrAllRoomsBeforeSending()
     {
         SendVideoInput? sentInput = null;
@@ -289,6 +313,21 @@ public sealed class FaceMirrorViewModelTests
                 Guid.NewGuid().ToString("N"),
                 "face.mp4");
             return Task.FromResult(new FaceRecordingResult(uniquePath, duration));
+        }
+    }
+
+    private sealed class FileWritingFaceRecorder : IFaceRecorder
+    {
+        public async Task<FaceRecordingResult> RecordAsync(TimeSpan duration, CancellationToken cancellationToken = default)
+        {
+            var directory = Path.Combine(
+                Path.GetTempPath(),
+                "PingFaceMirrorWindowClosedTests",
+                Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(directory);
+            var path = Path.Combine(directory, "face.mp4");
+            await File.WriteAllBytesAsync(path, [0x00, 0x01], cancellationToken);
+            return new FaceRecordingResult(path, duration);
         }
     }
 

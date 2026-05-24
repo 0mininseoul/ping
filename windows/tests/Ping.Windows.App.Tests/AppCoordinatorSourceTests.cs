@@ -83,6 +83,31 @@ public sealed class AppCoordinatorSourceTests
         Assert.Contains("args.Handled = true;", code, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void MirrorWindowsSubscribeClosedCleanupHandlers()
+    {
+        var root = RepoRoot();
+        var face = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Capture",
+            "FaceMirrorViewModel.cs"));
+        var screenFace = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Capture",
+            "ScreenFaceMirrorViewModel.cs"));
+
+        Assert.Contains("Closed += HandleClosed;", face, StringComparison.Ordinal);
+        Assert.Contains("viewModel.HandleWindowClosed();", face, StringComparison.Ordinal);
+        Assert.Contains("Closed += HandleClosed;", screenFace, StringComparison.Ordinal);
+        Assert.Contains("viewModel.HandleWindowClosed();", screenFace, StringComparison.Ordinal);
+    }
+
     private static string RepoRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

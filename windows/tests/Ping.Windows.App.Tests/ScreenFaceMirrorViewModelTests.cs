@@ -170,6 +170,37 @@ public sealed class ScreenFaceMirrorViewModelTests
         Assert.Contains("Preview unavailable", model.StatusMessage, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task WindowClosed_DeletesPreviewAndReviewedClipWithoutRequestingCloseAgain()
+    {
+        var engine = new FileWritingScreenFaceCaptureEngine();
+        var model = new ScreenFaceMirrorViewModel(
+            MultiRoomContext(),
+            engine,
+            (_, _) => Task.CompletedTask);
+        var closeRequestCount = 0;
+        model.CloseRequested += (_, _) => closeRequestCount += 1;
+
+        await model.LoadPreviewAsync();
+        var previewPath = model.ScreenPreviewUri?.LocalPath;
+        await model.HandleEnterAsync();
+        var reviewedPath = model.ReviewVideoUri?.LocalPath;
+
+        Assert.NotNull(previewPath);
+        Assert.NotNull(reviewedPath);
+        Assert.True(File.Exists(previewPath));
+        Assert.True(File.Exists(reviewedPath));
+
+        model.HandleWindowClosed();
+
+        Assert.True(model.IsCloseRequested);
+        Assert.Null(model.ScreenPreviewUri);
+        Assert.Null(model.ReviewVideoUri);
+        Assert.False(File.Exists(previewPath));
+        Assert.False(File.Exists(reviewedPath));
+        Assert.Equal(0, closeRequestCount);
+    }
+
     private static ScreenFaceMirrorContext MultiRoomContext() =>
         new(
             Rooms:
@@ -276,6 +307,44 @@ public sealed class ScreenFaceMirrorViewModelTests
                 "screen-face.mp4");
             recording.SetResult(new ScreenFaceCaptureResult(uniquePath, 16.0 / 9.0));
         }
+    }
+
+    private sealed class FileWritingScreenFaceCaptureEngine : IScreenFaceCaptureEngine
+    {
+        public async Task<ScreenFaceCaptureResult> RecordAsync(
+            TimeSpan duration,
+            int monitorIndex,
+            CancellationToken cancellationToken)
+        {
+            _ = duration;
+            _ = monitorIndex;
+            var directory = Path.Combine(
+                Path.GetTempPath(),
+                "PingScreenFaceWindowClosedTests",
+                Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(directory);
+            var path = Path.Combine(directory, "screen-face.mp4");
+            await File.WriteAllBytesAsync(path, [0x00, 0x01], cancellationToken);
+            return new ScreenFaceCaptureResult(path, 16.0 / 9.0);
+        }
+
+        public async Task<ScreenFacePreviewResult> CapturePreviewAsync(
+            int monitorIndex,
+            CancellationToken cancellationToken)
+        {
+            _ = monitorIndex;
+            var directory = Path.Combine(
+                Path.GetTempPath(),
+                "PingScreenFaceWindowClosedPreviewTests",
+                Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(directory);
+            var path = Path.Combine(directory, "preview.bmp");
+            await File.WriteAllBytesAsync(path, [0x00, 0x01], cancellationToken);
+            return new ScreenFacePreviewResult(path, 16.0 / 9.0);
+        }
+
+        public Task<ScreenCaptureSelfTestResult> SelfTestAsync() =>
+            Task.FromResult(new ScreenCaptureSelfTestResult(true, PingCaptureErrorCode.Success, "ok"));
     }
 
     private sealed class FailingAfterFirstPreviewEngine : IScreenFaceCaptureEngine

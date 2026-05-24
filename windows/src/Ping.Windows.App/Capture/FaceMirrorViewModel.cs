@@ -443,6 +443,13 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
         RequestClose();
     }
 
+    public void HandleWindowClosed()
+    {
+        operationCancellation?.Cancel();
+        ClearReviewedClip(deleteFile: true);
+        IsCloseRequested = true;
+    }
+
     private void EnterReview(string path)
     {
         reviewedPath = path;
@@ -544,6 +551,7 @@ public sealed partial class FaceMirrorWindow : Window
         viewModel.PropertyChanged += HandleViewModelPropertyChanged;
         viewModel.FadeOutRequested += HandleFadeOutRequested;
         viewModel.CloseRequested += HandleCloseRequested;
+        Closed += HandleClosed;
         SetStateBrush();
         ConfigureWindow();
     }
@@ -759,6 +767,7 @@ public sealed partial class FaceMirrorWindow : Window
 
     private async void HandleClosed(object sender, WindowEventArgs args)
     {
+        viewModel.HandleWindowClosed();
         StopReviewPlayback();
         if (previewRecorder is not null)
         {

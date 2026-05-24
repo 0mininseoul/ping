@@ -479,6 +479,14 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
         RequestClose();
     }
 
+    public void HandleWindowClosed()
+    {
+        operationCancellation?.Cancel();
+        ClearReviewedClip(deleteFile: true);
+        DisposePreview();
+        IsCloseRequested = true;
+    }
+
     public void DisposePreview()
     {
         ScreenPreviewUri = null;
@@ -601,6 +609,7 @@ public sealed partial class ScreenFaceMirrorWindow : Window
         viewModel.PropertyChanged += HandleViewModelPropertyChanged;
         viewModel.FadeOutRequested += HandleFadeOutRequested;
         viewModel.CloseRequested += HandleCloseRequested;
+        Closed += HandleClosed;
         SetStateBrush();
         ConfigureWindow();
     }
@@ -894,6 +903,7 @@ public sealed partial class ScreenFaceMirrorWindow : Window
 
     private async void HandleClosed(object sender, WindowEventArgs args)
     {
+        viewModel.HandleWindowClosed();
         StopReviewPlayback();
         await StopPreviewAsync();
         viewModel.DisposePreview();
