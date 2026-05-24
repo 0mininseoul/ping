@@ -21,8 +21,10 @@ public sealed class ScreenFaceMirrorViewModelTests
             });
 
         Assert.Equal("All rooms", model.PartnerLabel);
+        Assert.True(model.IsAllTargetsSelected);
         Assert.True(model.SelectNextTarget());
         Assert.Equal("Main", model.PartnerLabel);
+        Assert.False(model.IsAllTargetsSelected);
 
         await model.HandleEnterAsync();
 

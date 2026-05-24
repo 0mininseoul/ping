@@ -85,15 +85,20 @@ public sealed class FaceMirrorViewModelTests
             (_, _) => Task.CompletedTask);
 
         Assert.Equal("All rooms", model.PartnerLabel);
+        Assert.True(model.IsAllTargetsSelected);
         Assert.True(model.SelectNextTarget());
         Assert.Equal("Main", model.PartnerLabel);
+        Assert.False(model.IsAllTargetsSelected);
         Assert.True(model.SelectNextTarget());
         Assert.Equal("Design", model.PartnerLabel);
         Assert.True(model.SelectNextTarget());
         Assert.Equal("All rooms", model.PartnerLabel);
+        Assert.True(model.IsAllTargetsSelected);
         Assert.True(model.SelectTargetAtIndex(0));
+        Assert.False(model.IsAllTargetsSelected);
         Assert.True(model.SelectAllTargets());
         Assert.Equal("All rooms", model.PartnerLabel);
+        Assert.True(model.IsAllTargetsSelected);
     }
 
     private static FaceMirrorContext FaceMirrorContextFor(bool saveSentCopy) =>

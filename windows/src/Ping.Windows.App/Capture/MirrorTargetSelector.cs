@@ -34,6 +34,8 @@ internal sealed class MirrorTargetSelector
         }
     }
 
+    public bool IsAllSelected => rooms.Count > 1 && isAllSelected;
+
     public IReadOnlyCollection<Room> SelectedRooms
     {
         get

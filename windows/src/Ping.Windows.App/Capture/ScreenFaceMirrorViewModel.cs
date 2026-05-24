@@ -128,6 +128,8 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
         }
     }
 
+    public bool IsAllTargetsSelected => targetSelector.IsAllSelected;
+
     public Uri? ScreenPreviewUri
     {
         get => screenPreviewUri;
@@ -332,6 +334,7 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
         }
 
         PartnerLabel = targetSelector.Label;
+        OnPropertyChanged(nameof(IsAllTargetsSelected));
         return true;
     }
 
@@ -454,7 +457,8 @@ public sealed partial class ScreenFaceMirrorWindow : Window
 
     private void HandleViewModelPropertyChanged(object? sender, PropertyChangedEventArgs args)
     {
-        if (args.PropertyName == nameof(ScreenFaceMirrorViewModel.State))
+        if (args.PropertyName == nameof(ScreenFaceMirrorViewModel.State)
+            || args.PropertyName == nameof(ScreenFaceMirrorViewModel.IsAllTargetsSelected))
         {
             SetStateBrush();
         }
@@ -603,6 +607,7 @@ public sealed partial class ScreenFaceMirrorWindow : Window
     {
         var key = viewModel.State switch
         {
+            MirrorState.Idle when viewModel.IsAllTargetsSelected => "PingRainbowBorderBrush",
             MirrorState.Idle => "PingBorderIdleBrush",
             MirrorState.Recording => "PingBorderRecordingBrush",
             MirrorState.Uploading => "PingRainbowBorderBrush",
@@ -610,7 +615,7 @@ public sealed partial class ScreenFaceMirrorWindow : Window
             _ => "PingBorderIdleBrush"
         };
 
-        var thickness = viewModel.State == MirrorState.Idle ? 1 : 2;
+        var thickness = viewModel.State == MirrorState.Idle && !viewModel.IsAllTargetsSelected ? 1 : 2;
         MirrorBorder.BorderBrush = Root.Resources[key] as Brush;
         MirrorBorder.BorderThickness = new Thickness(thickness);
     }

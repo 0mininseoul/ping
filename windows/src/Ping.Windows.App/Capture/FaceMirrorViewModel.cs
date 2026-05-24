@@ -150,6 +150,8 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
         }
     }
 
+    public bool IsAllTargetsSelected => targetSelector.IsAllSelected;
+
     public IFaceRecorder Recorder => recorder;
 
     public bool CanRecord => State is MirrorState.Idle or MirrorState.Failed;
@@ -301,6 +303,7 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
         }
 
         PartnerLabel = targetSelector.Label;
+        OnPropertyChanged(nameof(IsAllTargetsSelected));
         return true;
     }
 
@@ -409,7 +412,8 @@ public sealed partial class FaceMirrorWindow : Window
 
     private void HandleViewModelPropertyChanged(object? sender, PropertyChangedEventArgs args)
     {
-        if (args.PropertyName == nameof(FaceMirrorViewModel.State))
+        if (args.PropertyName == nameof(FaceMirrorViewModel.State)
+            || args.PropertyName == nameof(FaceMirrorViewModel.IsAllTargetsSelected))
         {
             SetStateBrush();
         }
@@ -512,6 +516,7 @@ public sealed partial class FaceMirrorWindow : Window
     {
         var key = viewModel.State switch
         {
+            MirrorState.Idle when viewModel.IsAllTargetsSelected => "PingRainbowBorderBrush",
             MirrorState.Idle => "PingBorderIdleBrush",
             MirrorState.Recording => "PingBorderRecordingBrush",
             MirrorState.Uploading => "PingRainbowBorderBrush",
@@ -519,7 +524,7 @@ public sealed partial class FaceMirrorWindow : Window
             _ => "PingBorderIdleBrush"
         };
 
-        var thickness = viewModel.State == MirrorState.Idle ? 1 : 2;
+        var thickness = viewModel.State == MirrorState.Idle && !viewModel.IsAllTargetsSelected ? 1 : 2;
         MirrorBorder.BorderBrush = Root.Resources[key] as Brush;
         MirrorBorder.BorderThickness = new Thickness(thickness);
     }
