@@ -1,0 +1,65 @@
+name: Windows Client
+
+on:
+  pull_request:
+    paths:
+      - "windows/**"
+      - ".github/workflows/windows-client.yml"
+  push:
+    branches:
+      - main
+      - "feat/windows-client"
+    paths:
+      - "windows/**"
+      - ".github/workflows/windows-client.yml"
+
+jobs:
+  build:
+    name: Build and test Windows client
+    runs-on: windows-latest
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Set up MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Print tool versions
+        shell: pwsh
+        run: |
+          dotnet --info
+          msbuild -version
+
+      - name: Restore managed tests
+        shell: pwsh
+        run: |
+          dotnet restore windows/tests/Ping.Windows.Core.Tests/Ping.Windows.Core.Tests.csproj
+          dotnet restore windows/tests/Ping.Windows.App.Tests/Ping.Windows.App.Tests.csproj
+
+      - name: Test managed projects
+        shell: pwsh
+        run: |
+          dotnet test windows/tests/Ping.Windows.Core.Tests/Ping.Windows.Core.Tests.csproj -c Release --no-restore
+          dotnet test windows/tests/Ping.Windows.App.Tests/Ping.Windows.App.Tests.csproj -c Release --no-restore
+
+      - name: Build packaged app
+        shell: pwsh
+        run: >
+          msbuild windows/PingWindows.sln
+          /m
+          /restore
+          /p:Configuration=Release
+          /p:Platform=x64
+          /p:GenerateAppxPackageOnBuild=true
+          /p:UapAppxPackageBuildMode=SideloadOnly
+          /p:AppxBundle=Never
+          /p:AppxPackageSigningEnabled=false

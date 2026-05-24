@@ -1,10 +1,10 @@
-# Ping — 실시간 3초 영상 메시지 macOS 앱 기획서 (v2.3)
+# Ping — 실시간 3초 영상 메시지 macOS/Windows 앱 기획서 (v2.4)
 
 ## 프로젝트 개요
 
-**Ping**은 macOS 13 Ventura 이상에서 동작하는 3초 영상 메시지 메뉴바 앱이다. Option+P로 원형 카메라 거울을 띄우고, Enter로 정확히 3초 녹화한 뒤 Supabase를 통해 파트너에게 전송한다. 수신자는 로컬 알림을 클릭하면 발신자가 보낸 위치에 3초 원형 재생창이 뜬다.
+**Ping**은 macOS 13 Ventura 이상에서 동작하는 3초 영상 메시지 메뉴바 앱이며, Windows 11 24H2 이상용 네이티브 클라이언트를 같은 Supabase 룸/메시지 계약으로 제공한다. macOS는 Option+P/Option+L, Windows는 Alt+P/Alt+L로 거울을 띄우고, Enter로 정확히 3초 녹화한 뒤 Supabase를 통해 파트너에게 전송한다. 수신자는 로컬 알림을 클릭하면 발신자가 보낸 위치 또는 해당 플랫폼의 playback surface에서 3초 재생창을 본다.
 
-> 현재 구현(v0.3.28)은 v0.2.1 amendment를 반영해 녹화 길이를 3초로 사용한다. Option+P는 얼굴만, Option+L은 화면+얼굴 캡쳐, Option+O는 내 룸/히스토리 창 진입점이다.
+> 현재 구현(v0.3.28)은 v0.2.1 amendment를 반영해 녹화 길이를 3초로 사용한다. Option+P는 얼굴만, Option+L은 화면+얼굴 캡쳐, Option+O는 내 룸/히스토리 창 진입점이다. Windows 클라이언트는 Alt+P, Alt+L, Alt+O와 Alt+Shift+L quick screen+face send를 대응 단축키로 사용한다.
 > v0.3.28은 Sparkle scheduled update 알림을 버전별 1회로 제한하고, 더 최신 버전이 나오면 기존 업데이트 알림을 최신 버전 알림 하나로 교체한다. v0.3.27은 룸 알림 정리, 최신 메시지 스크롤, Enter 전송/Shift+Enter 줄바꿈, 채팅 사진 첨부를 포함한다. v0.3.26은 화면+얼굴 메시지 확대 재생 크기를 키우고, 확대 시 해당 영상 하단이 보이도록 자동 스크롤한다. v0.3.25는 내 룸 화면에서 화면+얼굴 메시지를 확대할 때 영상이 사라지지 않도록 확장 overlay를 룸 매니저 루트에서 렌더링한다. v0.3.24는 화면+얼굴 프리뷰와 실제 저장 영상의 얼굴 PIP 비율을 같은 레이아웃 계약으로 통일하고, 히스토리 확대 재생 시 사이드바 폭을 유지한 채 영상이 사이드바 위로 확장되어 전체 화면이 잘리지 않게 한다. 발신자 제어형 로컬 저장 권한 설정도 포함한다. v0.3.23은 온보딩 권한 화면에서 macOS 권한 재확인이 지연돼도 이후 3~7단계를 계속 볼 수 있게 하고, 릴리즈 앱의 ad-hoc designated requirement를 bundle id 기준으로 고정해 업데이트 후 TCC 권한 판정이 빌드 해시 변화에 흔들리지 않도록 한다. v0.3.22의 온보딩 header/progress 고정, 미니멀 권한 체크리스트, 알림 프롬프트 시작 시점 소모 방지도 포함한다. 화면 녹화 권한의 passive check는 시스템 프롬프트를 띄우지 않는 CoreGraphics preflight만 사용하며, macOS가 요구하는 앱 재시작 안내를 표시한다. 기존 v0.3.21의 히스토리 타임스탬프 swipe reveal, 인라인 영상 재생 안정화, 그룹 룸 sender label, 다크모드 날짜 header 정리, 컴팩트 사이드바와 로컬 아카이브 fallback도 포함한다.
 
 ### 초기 검증 환경
@@ -17,21 +17,25 @@
 - 두 사람 간 즉석 영상 메시지 UX를 검증한다.
 - DMG 기반 배포와 Sparkle 자동 업데이트 흐름을 갖춘다.
 - 룸 생성, 검색, 초대, 초대 링크를 통해 향후 사용자 확장을 지원한다.
+- Windows 사용자가 Mac 사용자와 같은 룸에서 `face_only`와 `screen_face` 메시지를 주고받도록 한다.
 
 ### 단일 진실 출처
 
 - Backend schema/RLS/RPC/Storage 정책: `supabase/migrations/*.sql`
 - Supabase runtime wrapper: `Ping/Backend/SupabaseClient.swift`
+- Windows runtime wrapper: `windows/src/Ping.Windows.Core/Backend/SupabaseClient.cs`
 - Supabase bundle config 예시: `Resources/Supabase.example.plist`
 - Xcode project source: `project.yml`
+- Windows solution source: `windows/PingWindows.sln`
 - App version: `project.yml`의 `MARKETING_VERSION`
+- Windows package version: `windows/src/Ping.Windows.App/Package.appxmanifest`의 `Identity.Version`은 `MARKETING_VERSION.0` 형식으로 맞춘다.
 
 ## 시스템 요구사항
 
 | 항목 | 요구사항 |
 |---|---|
-| 운영체제 | macOS 13 Ventura 이상 |
-| 아키텍처 | Apple Silicon Mac 권장, Intel Mac은 v0.1.4에서 실기기 검증 전 |
+| 운영체제 | macOS 13 Ventura 이상, Windows packaged client는 Windows 11 24H2 이상 |
+| 아키텍처 | Apple Silicon Mac 권장, Windows x64/ARM64 |
 | 카메라 | 내장 FaceTime 카메라 또는 외장 USB 카메라 |
 | 마이크 | 내장 또는 외장 |
 | 네트워크 | Supabase Auth, Postgres RPC, Storage 접근 가능 |
@@ -47,6 +51,13 @@ macOS 26 이상에서는 `.pingGlassEffect()` wrapper가 SwiftUI 네이티브 `.
 - 로그인 시 자동 시작: `SMAppService.mainApp` 기반 Settings 토글.
 - 자동 업데이트: Sparkle 2, `SUFeedURL = https://ping0min.vercel.app/appcast.xml`, scheduled update는 gentle reminder 알림을 함께 표시.
 
+### Windows 시스템 통합
+
+- 글로벌 단축키: 기본 `Alt+P`, `Alt+L`, `Alt+Shift+L`, `Alt+O`, Win32 `RegisterHotKey` 사용.
+- 트레이 상주 앱: Win32 `Shell_NotifyIcon` 기반 notification area icon.
+- 알림: Windows App SDK app notifications. Elevated/admin 실행에서는 알림이 지원되지 않으므로 일반 권한 재실행을 안내한다.
+- 패키징: Windows App SDK packaged full-trust MSIX. Windows는 Sparkle을 사용하지 않고 MSIX/App Installer 또는 Store 업데이트 채널을 사용한다.
+
 ### 권한
 
 | 권한 | 필수도 | 거부 시 동작 |
@@ -55,6 +66,8 @@ macOS 26 이상에서는 `.pingGlassEffect()` wrapper가 SwiftUI 네이티브 `.
 | 마이크 | 필수 | 음성 없는 영상 fallback 검토 |
 | 알림 | 필수 | 수신 polling은 가능하나 배너 미표시 |
 | 자동 시작 | 옵션 | 수동 실행 |
+
+Windows packaged client는 Windows 11 24H2 미만에서는 설치 대상이 아니다. Onboarding은 OS 버전, elevated 실행 여부, Supabase config, camera, microphone, screen capture, notifications, hotkey 충돌, startup availability를 별도 row로 확인한다. 화면 캡처는 Windows Graphics Capture desktop interop을 기본 경로로 사용하고, DRM/protected content, secure desktop, 일부 GPU overlay는 검은 화면 또는 실패로 표시될 수 있다.
 
 ### 룸과 파트너
 
@@ -154,6 +167,19 @@ npx supabase db push
 
 Supabase Dashboard에서 Anonymous sign-ins가 켜져 있어야 한다.
 
+Windows 클라이언트는 macOS plist를 사용하지 않고 다음 JSON 파일을 읽는다.
+
+```text
+%LOCALAPPDATA%\Ping\Supabase.json
+```
+
+```json
+{
+  "url": "https://YOUR_PROJECT_REF.supabase.co",
+  "anonKey": "YOUR_SUPABASE_ANON_KEY"
+}
+```
+
 ### 인증
 
 - Supabase Anonymous Auth만 사용한다.
@@ -245,6 +271,16 @@ brew install xcodegen create-dmg
 npx supabase --version
 ```
 
+Windows 필수 도구:
+
+```powershell
+dotnet --version
+dotnet --list-sdks
+msbuild -version
+```
+
+Windows 빌드는 .NET 10, Visual Studio .NET desktop, Desktop development with C++, Windows App SDK tooling, Windows SDK `10.0.26100.0` 이상을 요구한다.
+
 빌드:
 
 ```bash
@@ -262,6 +298,13 @@ Release/DMG:
 
 ```bash
 ./scripts/build-release.sh
+```
+
+Windows Release/MSIX:
+
+```powershell
+.\windows\scripts\build-release.ps1
+.\windows\scripts\smoke-release.ps1
 ```
 
 ## 주요 파일 구조
@@ -293,6 +336,11 @@ ping/
 ├── scripts/
 ├── supabase/
 │   └── migrations/
+├── windows/
+│   ├── PingWindows.sln
+│   ├── scripts/
+│   ├── src/
+│   └── tests/
 └── web/
 ```
 
@@ -327,6 +375,9 @@ ping/
 | 알림 클릭 → 재생 | Storage 다운로드 후 3초 재생 |
 | 전체 발송 | 영상 하나를 공유하고 receiver별 메시지 생성 |
 | 자동 업데이트 | appcast와 EdDSA 서명 검증 |
+| Windows Alt+Shift+L | 기본 룸에 picker 없이 3초 screen+face 전송 |
+| Windows → Mac | Mac 알림/재생/seen 처리 |
+| Mac → Windows | Windows 알림/재생/seen 처리 |
 
 ## 보안 및 프라이버시
 

@@ -6,7 +6,7 @@ This directory contains the Windows client workspace scaffold. It is intentional
 
 - Windows 11 24H2 or later.
 - .NET SDK 10.x.
-- Visual Studio 2026 or newer with:
+- Visual Studio with:
   - .NET desktop development.
   - Desktop development with C++.
   - MSVC v143 build tools, because `Ping.Windows.NativeCapture.vcxproj` currently targets `PlatformToolset` `v143`.
@@ -49,6 +49,51 @@ cd windows
 dotnet test .\tests\Ping.Windows.Core.Tests\Ping.Windows.Core.Tests.csproj -c Debug
 dotnet test .\tests\Ping.Windows.App.Tests\Ping.Windows.App.Tests.csproj -c Debug
 ```
+
+## Runtime Configuration
+
+The Windows client reads Supabase config from:
+
+```text
+%LOCALAPPDATA%\Ping\Supabase.json
+```
+
+Example:
+
+```json
+{
+  "url": "https://YOUR_PROJECT_REF.supabase.co",
+  "anonKey": "YOUR_SUPABASE_ANON_KEY"
+}
+```
+
+This is intentionally separate from the macOS `Resources/Supabase.plist`.
+
+## Release Package
+
+Build release MSIX packages on Windows:
+
+```powershell
+.\scripts\build-release.ps1
+```
+
+Expected outputs:
+
+```text
+windows\dist\Ping-Windows-v0.3.28-x64.msix
+windows\dist\Ping-Windows-v0.3.28-arm64.msix
+```
+
+For external distribution, sign the MSIX with a trusted certificate by passing `-PackageCertificateThumbprint` or setting `PING_WINDOWS_CERT_THUMBPRINT`. Unsigned packages are only for CI/build validation and will not install cleanly on user machines without developer/test-signing workarounds.
+
+Smoke-check release artifacts:
+
+```powershell
+.\scripts\smoke-release.ps1 -AllowUnsigned
+.\scripts\smoke-release.ps1 -Install
+```
+
+Manual hardware smoke is still required for camera, microphone, screen capture, app notifications, global hotkeys, and Mac/Windows cross-send.
 
 The WinUI app is under `src/Ping.Windows.App`, shared product logic belongs in `src/Ping.Windows.Core`, native Windows capture work belongs in `src/Ping.Windows.NativeCapture`, and tests belong under `tests`.
 
