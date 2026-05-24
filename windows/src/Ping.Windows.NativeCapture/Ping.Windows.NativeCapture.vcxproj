@@ -58,13 +58,21 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalIncludeDirectories>include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>d3d11.lib;dxgi.lib;windowsapp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3d11.lib;dxgi.lib;mf.lib;mfplat.lib;mfreadwrite.lib;mfuuid.lib;windowsapp.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\NativeCapturePlaceholder.cpp" />
+    <ClInclude Include="include\PingCaptureEngine.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\CameraFrameSource.cpp" />
+    <ClCompile Include="src\MonitorCapture.cpp" />
+    <ClCompile Include="src\Mp4SinkWriter.cpp" />
+    <ClCompile Include="src\PingCaptureEngine.cpp" />
+    <ClCompile Include="src\ScreenFaceCompositor.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
