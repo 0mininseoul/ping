@@ -32,9 +32,11 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
     private readonly IScreenFaceCaptureEngine captureEngine;
     private readonly Func<SendVideoInput, CancellationToken, Task> sendAsync;
     private readonly LocalArchive? archive;
+    private readonly MirrorTargetSelector targetSelector;
     private CancellationTokenSource? operationCancellation;
     private MirrorState state = MirrorState.Idle;
     private string statusMessage = "Press Enter to record.";
+    private string partnerLabel;
     private Uri? screenPreviewUri;
     private string? screenPreviewPath;
     private MirrorPosition mirrorPosition = new(0.5, 0.5);
@@ -60,7 +62,8 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
         this.captureEngine = captureEngine;
         this.sendAsync = sendAsync;
         this.archive = archive;
-        PartnerLabel = string.IsNullOrWhiteSpace(context.PartnerLabel) ? "No partner" : context.PartnerLabel;
+        targetSelector = new MirrorTargetSelector(context.Rooms, context.PartnerLabel);
+        partnerLabel = targetSelector.Label;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -110,7 +113,20 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
         }
     }
 
-    public string PartnerLabel { get; }
+    public string PartnerLabel
+    {
+        get => partnerLabel;
+        private set
+        {
+            if (string.Equals(partnerLabel, value, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            partnerLabel = value;
+            OnPropertyChanged();
+        }
+    }
 
     public Uri? ScreenPreviewUri
     {
@@ -158,6 +174,12 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
             OnPropertyChanged();
         }
     }
+
+    public bool SelectNextTarget() => CanRecord && UpdateTarget(targetSelector.SelectNext());
+
+    public bool SelectAllTargets() => CanRecord && UpdateTarget(targetSelector.SelectAll());
+
+    public bool SelectTargetAtIndex(int index) => CanRecord && UpdateTarget(targetSelector.SelectIndex(index));
 
     public void UpdateMirrorPosition(double centerX, double centerY, double displayWidth, double displayHeight)
     {
@@ -233,13 +255,13 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
                 _ = await archive.SaveSentCopyAsync(
                     recordedPath,
                     LocalArchiveKind.Sent,
-                    context.PartnerLabel,
+                    PartnerLabel,
                     cancellationToken: cancellationToken);
             }
 
             await sendAsync(
                 new SendVideoInput(
-                    context.Rooms,
+                    targetSelector.SelectedRooms,
                     recordedPath,
                     mirrorPosition,
                     context.SenderUid,
@@ -302,6 +324,17 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
         RequestClose();
     }
 
+    private bool UpdateTarget(bool didChange)
+    {
+        if (!didChange)
+        {
+            return false;
+        }
+
+        PartnerLabel = targetSelector.Label;
+        return true;
+    }
+
     private static double ClampRatio(double value)
     {
         if (double.IsNaN(value) || double.IsInfinity(value))
@@ -358,6 +391,12 @@ public sealed partial class ScreenFaceMirrorWindow : Window
 
     private async void HandleKeyDown(object sender, KeyRoutedEventArgs args)
     {
+        if (HandleTargetKey(args.Key))
+        {
+            args.Handled = true;
+            return;
+        }
+
         if (args.Key == Windows.System.VirtualKey.Enter)
         {
             args.Handled = true;
@@ -376,6 +415,34 @@ public sealed partial class ScreenFaceMirrorWindow : Window
             args.Handled = true;
             viewModel.HandleEscape();
         }
+    }
+
+    private bool HandleTargetKey(Windows.System.VirtualKey key)
+    {
+        switch (key)
+        {
+            case Windows.System.VirtualKey.Tab:
+                return viewModel.SelectNextTarget();
+            case Windows.System.VirtualKey.A:
+            case Windows.System.VirtualKey.Number0:
+            case Windows.System.VirtualKey.NumberPad0:
+                return viewModel.SelectAllTargets();
+        }
+
+        var keyValue = (int)key;
+        if (keyValue >= (int)Windows.System.VirtualKey.Number1
+            && keyValue <= (int)Windows.System.VirtualKey.Number9)
+        {
+            return viewModel.SelectTargetAtIndex(keyValue - (int)Windows.System.VirtualKey.Number1);
+        }
+
+        if (keyValue >= (int)Windows.System.VirtualKey.NumberPad1
+            && keyValue <= (int)Windows.System.VirtualKey.NumberPad9)
+        {
+            return viewModel.SelectTargetAtIndex(keyValue - (int)Windows.System.VirtualKey.NumberPad1);
+        }
+
+        return false;
     }
 
     private void HandleLoaded(object sender, RoutedEventArgs args)

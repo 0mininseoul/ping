@@ -53,6 +53,49 @@ public sealed class FaceMirrorViewModelTests
         Assert.False(model.IsCloseRequested);
     }
 
+    [Fact]
+    public async Task TargetShortcuts_SelectSingleRoomOrAllRoomsBeforeSending()
+    {
+        SendVideoInput? sentInput = null;
+        var model = new FaceMirrorViewModel(
+            MultiRoomFaceMirrorContext(),
+            new FakeFaceRecorder(),
+            (input, _) =>
+            {
+                sentInput = input;
+                return Task.CompletedTask;
+            });
+
+        Assert.Equal("All rooms", model.PartnerLabel);
+        Assert.True(model.SelectTargetAtIndex(1));
+        Assert.Equal("Design", model.PartnerLabel);
+
+        await model.HandleEnterAsync();
+
+        Assert.NotNull(sentInput);
+        Assert.Equal(new[] { "room-2" }, sentInput!.Rooms.Select(room => room.Id ?? string.Empty).ToArray());
+    }
+
+    [Fact]
+    public void TargetShortcuts_CycleBetweenRoomsAndAllRooms()
+    {
+        var model = new FaceMirrorViewModel(
+            MultiRoomFaceMirrorContext(),
+            new FakeFaceRecorder(),
+            (_, _) => Task.CompletedTask);
+
+        Assert.Equal("All rooms", model.PartnerLabel);
+        Assert.True(model.SelectNextTarget());
+        Assert.Equal("Main", model.PartnerLabel);
+        Assert.True(model.SelectNextTarget());
+        Assert.Equal("Design", model.PartnerLabel);
+        Assert.True(model.SelectNextTarget());
+        Assert.Equal("All rooms", model.PartnerLabel);
+        Assert.True(model.SelectTargetAtIndex(0));
+        Assert.True(model.SelectAllTargets());
+        Assert.Equal("All rooms", model.PartnerLabel);
+    }
+
     private static FaceMirrorContext FaceMirrorContextFor(bool saveSentCopy) =>
         new(
             Rooms:
@@ -75,6 +118,41 @@ public sealed class FaceMirrorViewModelTests
             PartnerLabel: "Receiver",
             AllowsLocalSave: true,
             SaveSentCopy: saveSentCopy);
+
+    private static FaceMirrorContext MultiRoomFaceMirrorContext() =>
+        new(
+            Rooms:
+            [
+                new Room(
+                    Id: "room-1",
+                    Name: "Main",
+                    SearchableName: "main",
+                    OwnerUid: "sender",
+                    MemberUids: ["sender", "receiver-1"],
+                    MemberNicknames: new Dictionary<string, string>
+                    {
+                        ["sender"] = "Sender",
+                        ["receiver-1"] = "Receiver 1"
+                    },
+                    Status: RoomStatus.Full),
+                new Room(
+                    Id: "room-2",
+                    Name: "Design",
+                    SearchableName: "design",
+                    OwnerUid: "receiver-2",
+                    MemberUids: ["sender", "receiver-2"],
+                    MemberNicknames: new Dictionary<string, string>
+                    {
+                        ["sender"] = "Sender",
+                        ["receiver-2"] = "Receiver 2"
+                    },
+                    Status: RoomStatus.Full)
+            ],
+            SenderUid: "sender",
+            SenderNickname: "Sender",
+            PartnerLabel: "All rooms",
+            AllowsLocalSave: true,
+            SaveSentCopy: false);
 
     private sealed class FakeFaceRecorder : IFaceRecorder
     {
