@@ -98,6 +98,28 @@ public sealed class SupabaseClient : ISupabaseRpcClient, IDisposable
         _ = await SendAsync(request, cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task DownloadObjectAsync(
+        string bucket,
+        string path,
+        string localPath,
+        CancellationToken cancellationToken = default)
+    {
+        var config = await LoadConfigurationAsync(cancellationToken).ConfigureAwait(false);
+        var token = await AccessTokenAsync(cancellationToken).ConfigureAwait(false);
+        using var request = new HttpRequestMessage(HttpMethod.Get, ObjectUrl(config.StorageUrl, bucket, path));
+        request.Headers.Add("apikey", config.AnonKey);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var data = await SendAsync(request, cancellationToken).ConfigureAwait(false);
+        var directory = Path.GetDirectoryName(localPath);
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        await File.WriteAllBytesAsync(localPath, data, cancellationToken).ConfigureAwait(false);
+    }
+
     private async Task<byte[]> RpcDataAsync(string function, object? body, CancellationToken cancellationToken)
     {
         var config = await LoadConfigurationAsync(cancellationToken).ConfigureAwait(false);

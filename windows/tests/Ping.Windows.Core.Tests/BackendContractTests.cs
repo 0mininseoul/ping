@@ -168,6 +168,38 @@ public sealed class BackendContractTests
     }
 
     [Fact]
+    public async Task DownloadObjectGetsPrivateStorageObject()
+    {
+        using var files = new SupabaseTestFiles();
+        await files.SaveSessionAsync(new SupabaseSession(
+            AccessToken: "access-token",
+            RefreshToken: "refresh-token",
+            ExpiresAt: DateTimeOffset.UtcNow.AddHours(1),
+            UserId: "user-id"));
+        var handler = new RecordingHttpMessageHandler(request =>
+        {
+            Assert.Equal(HttpMethod.Get, request.Method);
+            Assert.Equal(
+                "https://example.supabase.co/storage/v1/object/ping-videos/sender%20uid/video%20id.mp4",
+                request.RequestUri?.ToString());
+            Assert.Equal("anon-key", request.Headers.GetValues("apikey").Single());
+            Assert.Equal("Bearer", request.Headers.Authorization?.Scheme);
+            Assert.Equal("access-token", request.Headers.Authorization?.Parameter);
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new ByteArrayContent([0x00, 0x01, 0x02])
+            };
+        });
+        using var client = files.CreateClient(handler);
+        var localPath = Path.Combine(files.DirectoryPath, "download.mp4");
+
+        await client.DownloadObjectAsync("ping-videos", "sender uid/video id.mp4", localPath);
+
+        Assert.Equal([0x00, 0x01, 0x02], await File.ReadAllBytesAsync(localPath));
+        Assert.Single(handler.Requests);
+    }
+
+    [Fact]
     public async Task ExpiredStoredSessionRefreshFailureThrowsDomainExceptionWithoutSignup()
     {
         using var files = new SupabaseTestFiles();
@@ -236,6 +268,33 @@ public sealed class BackendContractTests
     }
 
     [Fact]
+    public async Task MessageServiceUsesMacOSIncomingPlaybackRpcBodies()
+    {
+        var rpc = new RecordingIncomingRpcClient();
+        var service = new MessageService(rpc, new StubStorageService("sender-uid/shared-video-id.mp4"));
+
+        var incoming = await service.IncomingAsync();
+        var message = await service.GetAsync("message-id");
+        await service.MarkSeenAsync("message-id");
+
+        Assert.Single(incoming);
+        Assert.Equal("message-id", message?.Id);
+        Assert.Equal("ping_incoming_messages", rpc.Calls[0].Function);
+        Assert.Equal("ping_get_message", rpc.Calls[1].Function);
+        Assert.Equal(
+            """
+            {"message_uuid":"message-id"}
+            """,
+            JsonSerializer.Serialize(rpc.Calls[1].Body, JsonOptions.Supabase));
+        Assert.Equal("ping_mark_message_seen", rpc.Calls[2].Function);
+        Assert.Equal(
+            """
+            {"message_uuid":"message-id"}
+            """,
+            JsonSerializer.Serialize(rpc.Calls[2].Body, JsonOptions.Supabase));
+    }
+
+    [Fact]
     public async Task UserServiceUsesMacOSProfileRpcBodies()
     {
         var rpc = new RecordingProfileRpcClient();
@@ -297,6 +356,46 @@ public sealed class BackendContractTests
                     SearchableNickname: "youngmin",
                     Rooms: ["room-id"],
                     LastUsedRoomId: "room-id")
+            };
+            return Task.FromResult((IReadOnlyList<T>)result);
+        }
+
+        public Task<T> RpcValueAsync<T>(string function, object? body = null, CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task RpcVoidAsync(string function, object? body = null, CancellationToken cancellationToken = default)
+        {
+            Calls.Add((function, body ?? new { }));
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class RecordingIncomingRpcClient : ISupabaseRpcClient
+    {
+        public List<(string Function, object Body)> Calls { get; } = [];
+
+        public Task<IReadOnlyList<T>> RpcArrayAsync<T>(string function, object? body = null, CancellationToken cancellationToken = default)
+        {
+            Calls.Add((function, body ?? new { }));
+            object result = new[]
+            {
+                new VideoMessage
+                {
+                    Id = "message-id",
+                    RoomId = "room-id",
+                    SenderUid = "sender-uid",
+                    ReceiverUid = "receiver-uid",
+                    SenderNickname = "Youngmin",
+                    VideoId = "video-id",
+                    VideoUrl = "sender-uid/video-id.mp4",
+                    DurationMs = 3000,
+                    MirrorPosition = new MirrorPosition(0.5, 0.5),
+                    Status = MessageStatus.Uploaded,
+                    CreatedAt = DateTimeOffset.UtcNow,
+                    ExpiresAt = DateTimeOffset.UtcNow.AddDays(1)
+                }
             };
             return Task.FromResult((IReadOnlyList<T>)result);
         }

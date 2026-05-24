@@ -6,6 +6,7 @@ alter table public.messages
 drop function if exists public.ping_create_message(uuid, uuid, text, text, text, double precision, double precision);
 drop function if exists public.ping_create_message(uuid, uuid, text, text, text, double precision, double precision, text, real);
 drop function if exists public.ping_create_message(uuid, uuid, text, text, text, double precision, double precision, text, real, boolean);
+drop function if exists public.ping_create_message(uuid, uuid, text, text, text, double precision, double precision, text, double precision, boolean);
 
 create or replace function public.ping_create_message(
     room_uuid uuid,

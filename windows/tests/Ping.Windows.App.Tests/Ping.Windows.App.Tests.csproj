@@ -24,5 +24,7 @@
     <Compile Include="..\..\src\Ping.Windows.App\Capture\NativeCaptureEngine.cs" Link="Capture\NativeCaptureEngine.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Capture\QuickSendController.cs" Link="Capture\QuickSendController.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Capture\ScreenFaceMirrorViewModel.cs" Link="Capture\ScreenFaceMirrorViewModel.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Notifications\NotificationController.cs" Link="Notifications\NotificationController.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Playback\PlaybackViewModel.cs" Link="Playback\PlaybackViewModel.cs" />
   </ItemGroup>
 </Project>

@@ -5,6 +5,32 @@ namespace Ping.Windows.Core.Backend;
 
 public sealed class MessageService(ISupabaseRpcClient client, IStorageService storage)
 {
+    public async Task<IReadOnlyList<VideoMessage>> IncomingAsync(CancellationToken cancellationToken = default)
+    {
+        var messages = await client.RpcArrayAsync<VideoMessage>(
+            "ping_incoming_messages",
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        return messages
+            .OrderBy(MessageSortKey)
+            .ThenBy(message => message.Id ?? string.Empty, StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    public async Task<VideoMessage?> GetAsync(string messageId, CancellationToken cancellationToken = default)
+    {
+        var messages = await client.RpcArrayAsync<VideoMessage>(
+            "ping_get_message",
+            new MessageIdRpcBody(messageId),
+            cancellationToken).ConfigureAwait(false);
+        return messages.FirstOrDefault();
+    }
+
+    public Task MarkSeenAsync(string messageId, CancellationToken cancellationToken = default) =>
+        client.RpcVoidAsync(
+            "ping_mark_message_seen",
+            new MessageIdRpcBody(messageId),
+            cancellationToken);
+
     public async Task SendAsync(SendVideoInput input, CancellationToken cancellationToken = default)
     {
         var sendableRooms = input.Rooms
@@ -52,6 +78,9 @@ public sealed class MessageService(ISupabaseRpcClient client, IStorageService st
             }
         }
     }
+
+    private static DateTimeOffset MessageSortKey(VideoMessage message) =>
+        message.CreatedAt ?? DateTimeOffset.MaxValue;
 }
 
 public sealed record SendVideoInput(
@@ -76,3 +105,6 @@ public sealed record CreateMessageRpcBody(
     [property: JsonPropertyName("capture_mode_text")] string CaptureModeText,
     [property: JsonPropertyName("aspect_ratio_value")] double AspectRatioValue,
     [property: JsonPropertyName("allows_local_save_value")] bool AllowsLocalSaveValue);
+
+public sealed record MessageIdRpcBody(
+    [property: JsonPropertyName("message_uuid")] string MessageUuid);

@@ -2,6 +2,8 @@ using Microsoft.UI.Xaml;
 using Ping.Windows.App.Capture;
 using Ping.Windows.App.Hotkeys;
 using Ping.Windows.App.Onboarding;
+using Ping.Windows.App.Notifications;
+using Ping.Windows.App.Playback;
 using Ping.Windows.App.Tray;
 using Ping.Windows.Core.Backend;
 using Ping.Windows.Core.LocalState;
@@ -16,8 +18,11 @@ public sealed class AppCoordinator : IDisposable
     private readonly GlobalHotkeyManager hotkeys;
     private readonly TrayIconController tray;
     private readonly SupabaseClient supabaseClient;
+    private readonly StorageService storageService;
     private readonly MessageService messageService;
     private readonly UserService userService;
+    private readonly IncomingMessagePoller incomingPoller;
+    private readonly NotificationController notificationController;
     private readonly IScreenFaceCaptureEngine screenFaceCaptureEngine;
     private readonly QuickSendController quickSendController;
     private readonly PermissionProbe permissionProbe;
@@ -30,7 +35,9 @@ public sealed class AppCoordinator : IDisposable
     private ScreenFaceMirrorWindow? screenFaceMirrorWindow;
     private QuickSendHudWindow? quickSendHudWindow;
     private OnboardingWindow? onboardingWindow;
+    private readonly List<PlaybackWindow> playbackWindows = [];
     private CancellationTokenSource? quickSendCancellation;
+    private CancellationTokenSource? incomingPollingCancellation;
     private bool disposed;
 
     public AppCoordinator(MainWindow mainWindow)
@@ -54,8 +61,11 @@ public sealed class AppCoordinator : IDisposable
         this.preferencesStore = preferencesStore;
         this.hotkeys = hotkeys;
         this.supabaseClient = supabaseClient ?? new SupabaseClient();
-        messageService = new MessageService(this.supabaseClient, new StorageService(this.supabaseClient));
+        storageService = new StorageService(this.supabaseClient);
+        messageService = new MessageService(this.supabaseClient, storageService);
         userService = new UserService(this.supabaseClient);
+        incomingPoller = new IncomingMessagePoller(messageService);
+        notificationController = new NotificationController(OpenMessageFromNotificationAsync);
         screenFaceCaptureEngine = new NativeCaptureEngine();
         permissionProbe = new PermissionProbe();
         quickSendSettingsStore = new ScreenFaceQuickSendSettingsStore();
@@ -77,6 +87,7 @@ public sealed class AppCoordinator : IDisposable
         hotkeys.HotkeyPressed += HandleHotkeyPressed;
         var registrations = RegisterSavedHotkeys();
         tray.AddOrUpdateIcon();
+        notificationController.Start();
         ShowHistory("Ping is running. Capture commands are wired and waiting for the capture windows.");
         ShowRegistrationState(registrations);
         _ = BootstrapAndLoadRoomsAsync();
@@ -114,6 +125,8 @@ public sealed class AppCoordinator : IDisposable
 
         hotkeys.HotkeyPressed -= HandleHotkeyPressed;
         mainWindow.QuickSendToggleChanged -= HandleQuickSendToggleChanged;
+        StopIncomingPolling();
+        notificationController.Dispose();
         supabaseClient.Dispose();
         hotkeys.Dispose();
         quickSendCancellation?.Cancel();
@@ -465,6 +478,106 @@ public sealed class AppCoordinator : IDisposable
         quickSendSettingsStore.Save(quickSendSettings);
     }
 
+    private void StartIncomingPolling()
+    {
+        StopIncomingPolling();
+        var cancellation = new CancellationTokenSource();
+        incomingPollingCancellation = cancellation;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await incomingPoller.RunAsync(HandleIncomingMessageAsync, cancellation.Token);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            finally
+            {
+                cancellation.Dispose();
+            }
+        }, cancellation.Token);
+    }
+
+    private void StopIncomingPolling()
+    {
+        incomingPollingCancellation?.Cancel();
+        incomingPollingCancellation = null;
+    }
+
+    private Task HandleIncomingMessageAsync(VideoMessage message, CancellationToken cancellationToken)
+    {
+        _ = cancellationToken;
+        notificationController.TryShowIncoming(message);
+        return Task.CompletedTask;
+    }
+
+    private async Task OpenMessageFromNotificationAsync(string messageId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var message = await messageService.GetAsync(messageId, cancellationToken);
+            if (message is null)
+            {
+                return;
+            }
+
+            var localVideoPath = await storageService.DownloadVideoAsync(message.VideoUrl, cancellationToken);
+            await RunOnUiThreadAsync(() => ShowPlayback(message, localVideoPath));
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            await RunOnUiThreadAsync(() =>
+            {
+                ShowBlockedState(
+                    "Playback",
+                    "Ping could not open the selected notification.",
+                    ex.Message);
+            });
+        }
+    }
+
+    private void ShowPlayback(VideoMessage message, string localVideoPath)
+    {
+        var viewModel = new PlaybackViewModel(
+            message,
+            localVideoPath,
+            token => message.Id is null ? Task.CompletedTask : messageService.MarkSeenAsync(message.Id, token));
+        var window = new PlaybackWindow(viewModel);
+        playbackWindows.Add(window);
+        window.Closed += (_, _) => playbackWindows.Remove(window);
+        window.Activate();
+    }
+
+    private Task RunOnUiThreadAsync(Action action)
+    {
+        if (mainWindow.DispatcherQueue.HasThreadAccess)
+        {
+            action();
+            return Task.CompletedTask;
+        }
+
+        var completion = new TaskCompletionSource();
+        if (!mainWindow.DispatcherQueue.TryEnqueue(() =>
+            {
+                try
+                {
+                    action();
+                    completion.SetResult();
+                }
+                catch (Exception ex)
+                {
+                    completion.SetException(ex);
+                }
+            }))
+        {
+            completion.SetException(new InvalidOperationException("Could not schedule Ping UI work."));
+        }
+
+        return completion.Task;
+    }
+
     private Room[] SendableRoomsFor(string uid) =>
         rooms
             .Where(room => room.Id is not null && room.MemberUids.Contains(uid) && room.MemberUids.Count >= 2)
@@ -495,6 +608,7 @@ public sealed class AppCoordinator : IDisposable
                 sendableCount == 0
                     ? "Alt+P ready, but no sendable room is available."
                     : $"Alt+P face, Alt+L screen+face, and Alt+Shift+L quick send ready for {sendableCount} room(s).";
+            StartIncomingPolling();
         }
         catch (Exception ex)
         {
