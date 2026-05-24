@@ -267,20 +267,6 @@ public sealed class QuickSendController
             recordedPath = recording.FilePath;
             hud.SetUploading();
 
-            if (context.SaveSentCopy)
-            {
-                if (archive is null)
-                {
-                    throw new InvalidOperationException("Local archive is required when sent-copy saving is enabled.");
-                }
-
-                _ = await archive.SaveSentCopyAsync(
-                    recordedPath,
-                    LocalArchiveKind.Sent,
-                    room.Name,
-                    cancellationToken: cancellationToken).ConfigureAwait(false);
-            }
-
             uploadStarted = true;
             await sendAsync(
                 new SendVideoInput(
@@ -293,6 +279,7 @@ public sealed class QuickSendController
                     recording.AspectRatio,
                     context.AllowsLocalSave),
                 CancellationToken.None).ConfigureAwait(false);
+            await TrySaveSentCopyAsync(context, recordedPath, room.Name).ConfigureAwait(false);
             hud.RequestFadeOutClose();
             return QuickSendOutcome.StartedRecording;
         }
@@ -313,6 +300,29 @@ public sealed class QuickSendController
             {
                 TryDeleteTemporaryRecording(recordedPath);
             }
+        }
+    }
+
+    private async Task TrySaveSentCopyAsync(
+        QuickSendContext context,
+        string recordedPath,
+        string roomName)
+    {
+        if (!context.SaveSentCopy || archive is null)
+        {
+            return;
+        }
+
+        try
+        {
+            _ = await archive.SaveSentCopyAsync(
+                recordedPath,
+                LocalArchiveKind.Sent,
+                roomName,
+                cancellationToken: CancellationToken.None).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
         }
     }
 

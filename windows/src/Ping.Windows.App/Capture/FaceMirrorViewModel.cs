@@ -349,20 +349,6 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
             State = MirrorState.Uploading;
             StatusMessage = "Sending...";
 
-            if (context.SaveSentCopy)
-            {
-                if (archive is null)
-                {
-                    throw new InvalidOperationException("Local archive is required when sent-copy saving is enabled.");
-                }
-
-                _ = await archive.SaveSentCopyAsync(
-                    path,
-                    LocalArchiveKind.Sent,
-                    PartnerLabel,
-                    cancellationToken: cancellationToken);
-            }
-
             await sendAsync(
                 new SendVideoInput(
                     targetSelector.SelectedRooms,
@@ -375,6 +361,7 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
                     context.AllowsLocalSave),
                 cancellationToken);
             sent = true;
+            await TrySaveSentCopyAsync(path, PartnerLabel);
             ClearReviewedClip(deleteFile: false);
             RequestFadeOutClose();
         }
@@ -395,6 +382,26 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
             {
                 TryDeleteTemporaryRecording(path);
             }
+        }
+    }
+
+    private async Task TrySaveSentCopyAsync(string path, string label)
+    {
+        if (!context.SaveSentCopy || archive is null)
+        {
+            return;
+        }
+
+        try
+        {
+            _ = await archive.SaveSentCopyAsync(
+                path,
+                LocalArchiveKind.Sent,
+                label,
+                cancellationToken: CancellationToken.None);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
         }
     }
 

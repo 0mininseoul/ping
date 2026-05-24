@@ -1,5 +1,6 @@
 using Ping.Windows.App.Capture;
 using Ping.Windows.Core.Backend;
+using Ping.Windows.Core.LocalState;
 using Ping.Windows.Core.Models;
 using Xunit;
 
@@ -169,11 +170,33 @@ public sealed class QuickSendStateTests
         Assert.False(File.Exists(tempPath));
     }
 
+    [Fact]
+    public async Task FailedQuickSend_DoesNotSaveSentCopyBeforeUploadSucceeds()
+    {
+        var archive = new LocalArchive(Path.Combine(
+            Path.GetTempPath(),
+            "PingQuickSendArchiveTests",
+            Guid.NewGuid().ToString("N")));
+        var tempPath = Path.Combine(Path.GetTempPath(), "PingWindowsTests", $"{Guid.NewGuid():N}.mp4");
+        Directory.CreateDirectory(Path.GetDirectoryName(tempPath)!);
+        await File.WriteAllBytesAsync(tempPath, [0x00, 0x01]);
+        var controller = CreateController(
+            archive: archive,
+            engine: new FakeScreenFaceCaptureEngine(new ScreenFaceCaptureResult(tempPath, 16.0 / 9.0)),
+            sendAsync: (_, _) => throw new HttpRequestException("offline"));
+
+        var outcome = await controller.ExecuteAsync(ContextWith(saveSentCopy: true));
+
+        Assert.Equal(QuickSendOutcome.Failed, outcome);
+        AssertNoSentArchiveFiles(archive);
+    }
+
     private static TestQuickSendController CreateController(
         FakeQuickSendPresenter? presenter = null,
         ScreenFaceQuickSendPreferences? preferences = null,
         Func<SendVideoInput, CancellationToken, Task>? sendAsync = null,
-        FakeScreenFaceCaptureEngine? engine = null)
+        FakeScreenFaceCaptureEngine? engine = null,
+        LocalArchive? archive = null)
     {
         engine ??= new FakeScreenFaceCaptureEngine();
         var controller = new QuickSendController(
@@ -181,7 +204,8 @@ public sealed class QuickSendStateTests
             sendAsync ?? ((_, _) => Task.CompletedTask),
             presenter ?? new FakeQuickSendPresenter(),
             () => preferences ?? new ScreenFaceQuickSendPreferences(IsEnabled: true),
-            (_, _) => Task.CompletedTask);
+            (_, _) => Task.CompletedTask,
+            archive);
         return new TestQuickSendController(controller, engine);
     }
 
@@ -189,17 +213,24 @@ public sealed class QuickSendStateTests
         IReadOnlyCollection<Room>? rooms = null,
         QuickSendPreconditions? preconditions = null,
         string? defaultRoomId = null,
-        MirrorPosition? mirrorPosition = null) =>
+        MirrorPosition? mirrorPosition = null,
+        bool saveSentCopy = false) =>
         new(
             Rooms: rooms ?? [SendableRoom()],
             SenderUid: "sender",
             SenderNickname: "Sender",
             PartnerLabel: "Receiver",
             AllowsLocalSave: false,
-            SaveSentCopy: false,
+            SaveSentCopy: saveSentCopy,
             MirrorPosition: mirrorPosition ?? new MirrorPosition(0.5, 0.5),
             Preconditions: preconditions ?? QuickSendPreconditions.Ready(),
             DefaultRoomId: defaultRoomId);
+
+    private static void AssertNoSentArchiveFiles(LocalArchive archive)
+    {
+        var folder = archive.FolderFor(LocalArchiveKind.Sent);
+        Assert.False(Directory.Exists(folder) && Directory.EnumerateFiles(folder, "*.mp4").Any());
+    }
 
     private static Room SendableRoom(
         string id = "room-1",

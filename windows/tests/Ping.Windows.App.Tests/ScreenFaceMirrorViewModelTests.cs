@@ -1,5 +1,6 @@
 using Ping.Windows.App.Capture;
 using Ping.Windows.Core.Backend;
+using Ping.Windows.Core.LocalState;
 using Ping.Windows.Core.Models;
 using Xunit;
 
@@ -141,6 +142,26 @@ public sealed class ScreenFaceMirrorViewModelTests
     }
 
     [Fact]
+    public async Task FailedUpload_DoesNotSaveSentCopyBeforeUploadSucceeds()
+    {
+        var archive = new LocalArchive(Path.Combine(
+            Path.GetTempPath(),
+            "PingScreenFaceArchiveTests",
+            Guid.NewGuid().ToString("N")));
+        var model = new ScreenFaceMirrorViewModel(
+            MultiRoomContext(saveSentCopy: true),
+            new FileWritingScreenFaceCaptureEngine(),
+            (_, _) => throw new InvalidOperationException("Upload failed."),
+            archive);
+
+        await model.HandleEnterAsync();
+        await model.HandleEnterAsync();
+
+        Assert.Equal(MirrorState.Failed, model.State);
+        AssertNoSentArchiveFiles(archive);
+    }
+
+    [Fact]
     public void TargetMenuOptions_MatchScreenFaceRooms()
     {
         var model = new ScreenFaceMirrorViewModel(
@@ -236,7 +257,7 @@ public sealed class ScreenFaceMirrorViewModelTests
         Assert.Equal(0, closeRequestCount);
     }
 
-    private static ScreenFaceMirrorContext MultiRoomContext() =>
+    private static ScreenFaceMirrorContext MultiRoomContext(bool saveSentCopy = false) =>
         new(
             Rooms:
             [
@@ -269,7 +290,13 @@ public sealed class ScreenFaceMirrorViewModelTests
             SenderNickname: "Sender",
             PartnerLabel: "All rooms",
             AllowsLocalSave: true,
-            SaveSentCopy: false);
+            SaveSentCopy: saveSentCopy);
+
+    private static void AssertNoSentArchiveFiles(LocalArchive archive)
+    {
+        var folder = archive.FolderFor(LocalArchiveKind.Sent);
+        Assert.False(Directory.Exists(folder) && Directory.EnumerateFiles(folder, "*.mp4").Any());
+    }
 
     private sealed class FakeScreenFaceCaptureEngine : IScreenFaceCaptureEngine
     {

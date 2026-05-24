@@ -1,5 +1,6 @@
 using Ping.Windows.App.Capture;
 using Ping.Windows.Core.Backend;
+using Ping.Windows.Core.LocalState;
 using Ping.Windows.Core.Models;
 using Xunit;
 
@@ -126,6 +127,26 @@ public sealed class FaceMirrorViewModelTests
         Assert.Equal(MirrorState.Failed, model.State);
         Assert.Contains("Upload failed", model.StatusMessage, StringComparison.OrdinalIgnoreCase);
         Assert.False(model.IsCloseRequested);
+    }
+
+    [Fact]
+    public async Task FailedUpload_DoesNotSaveSentCopyBeforeUploadSucceeds()
+    {
+        var archive = new LocalArchive(Path.Combine(
+            Path.GetTempPath(),
+            "PingFaceArchiveTests",
+            Guid.NewGuid().ToString("N")));
+        var model = new FaceMirrorViewModel(
+            FaceMirrorContextFor(saveSentCopy: true),
+            new FileWritingFaceRecorder(),
+            (_, _) => throw new InvalidOperationException("Upload failed."),
+            archive);
+
+        await model.HandleEnterAsync();
+        await model.HandleEnterAsync();
+
+        Assert.Equal(MirrorState.Failed, model.State);
+        AssertNoSentArchiveFiles(archive);
     }
 
     [Fact]
@@ -332,6 +353,12 @@ public sealed class FaceMirrorViewModelTests
             PartnerLabel: "All rooms",
             AllowsLocalSave: true,
             SaveSentCopy: false);
+
+    private static void AssertNoSentArchiveFiles(LocalArchive archive)
+    {
+        var folder = archive.FolderFor(LocalArchiveKind.Sent);
+        Assert.False(Directory.Exists(folder) && Directory.EnumerateFiles(folder, "*.mp4").Any());
+    }
 
     private sealed class FakeFaceRecorder : IFaceRecorder
     {
