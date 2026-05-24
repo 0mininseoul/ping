@@ -26,5 +26,6 @@
     <Compile Include="..\..\src\Ping.Windows.App\Capture\ScreenFaceMirrorViewModel.cs" Link="Capture\ScreenFaceMirrorViewModel.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Notifications\NotificationController.cs" Link="Notifications\NotificationController.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Playback\PlaybackViewModel.cs" Link="Playback\PlaybackViewModel.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Setup\SettingsWindowViewModel.cs" Link="Setup\SettingsWindowViewModel.cs" />
   </ItemGroup>
 </Project>

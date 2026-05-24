@@ -1,0 +1,109 @@
+<Window
+    x:Class="Ping.Windows.App.Setup.SettingsWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Ping Settings">
+    <Grid
+        x:Name="Root"
+        Width="660"
+        Height="480"
+        Padding="18"
+        Background="#121314">
+        <Grid.Resources>
+            <SolidColorBrush x:Key="PingSurfaceBrush" Color="#24272A" />
+            <SolidColorBrush x:Key="PingTextBrush" Color="#F5F7FA" />
+            <SolidColorBrush x:Key="PingMutedBrush" Color="#9DA3AA" />
+            <SolidColorBrush x:Key="PingIdleBrush" Color="#4DFFFFFF" />
+        </Grid.Resources>
+
+        <TabView IsAddTabButtonVisible="False">
+            <TabViewItem Header="General">
+                <StackPanel Padding="16" Spacing="12">
+                    <TextBlock
+                        FontSize="18"
+                        FontWeight="SemiBold"
+                        Foreground="{StaticResource PingTextBrush}"
+                        Text="General" />
+                    <TextBox
+                        Header="Nickname"
+                        IsReadOnly="True"
+                        Text="{Binding Nickname}" />
+                    <ToggleSwitch
+                        Header="화면+얼굴 빠른 전송"
+                        IsOn="{Binding IsQuickSendEnabled, Mode=TwoWay}"
+                        OffContent="Alt+Shift+L opens mirror"
+                        OnContent="Alt+Shift+L records immediately" />
+                    <ToggleSwitch
+                        Header="Start Ping with Windows"
+                        IsEnabled="False"
+                        OffContent="{Binding StartupStatus}"
+                        OnContent="{Binding StartupStatus}" />
+                </StackPanel>
+            </TabViewItem>
+
+            <TabViewItem Header="Hotkeys">
+                <StackPanel Padding="16" Spacing="12">
+                    <TextBlock
+                        FontSize="18"
+                        FontWeight="SemiBold"
+                        Foreground="{StaticResource PingTextBrush}"
+                        Text="Hotkeys" />
+                    <TextBlock Foreground="{StaticResource PingMutedBrush}" Text="{Binding FaceHotkey}" />
+                    <TextBlock Foreground="{StaticResource PingMutedBrush}" Text="{Binding ScreenFaceHotkey}" />
+                    <TextBlock Foreground="{StaticResource PingMutedBrush}" Text="{Binding QuickSendHotkey}" />
+                    <TextBlock Foreground="{StaticResource PingMutedBrush}" Text="{Binding HistoryHotkey}" />
+                </StackPanel>
+            </TabViewItem>
+
+            <TabViewItem Header="Rooms">
+                <StackPanel Padding="16" Spacing="12">
+                    <TextBlock
+                        FontSize="18"
+                        FontWeight="SemiBold"
+                        Foreground="{StaticResource PingTextBrush}"
+                        Text="Rooms" />
+                    <TextBlock
+                        Foreground="{StaticResource PingMutedBrush}"
+                        Text="Use the Rooms window to create rooms, invite users, and accept invite links."
+                        TextWrapping="WrapWholeWords" />
+                    <Button
+                        HorizontalAlignment="Left"
+                        Click="OpenRoomsButton_Click"
+                        Content="Open Rooms" />
+                </StackPanel>
+            </TabViewItem>
+
+            <TabViewItem Header="Storage">
+                <StackPanel Padding="16" Spacing="12">
+                    <TextBlock
+                        FontSize="18"
+                        FontWeight="SemiBold"
+                        Foreground="{StaticResource PingTextBrush}"
+                        Text="Storage" />
+                    <ToggleSwitch
+                        Header="Save sent copies"
+                        IsOn="{Binding SaveSentCopy, Mode=TwoWay}"
+                        OffContent="Off"
+                        OnContent="On" />
+                    <ToggleSwitch
+                        Header="Allow recipients to save my videos"
+                        IsOn="{Binding AllowsLocalSave, Mode=TwoWay}"
+                        OffContent="Off"
+                        OnContent="On" />
+                </StackPanel>
+            </TabViewItem>
+
+            <TabViewItem Header="Info">
+                <StackPanel Padding="16" Spacing="12">
+                    <TextBlock
+                        FontSize="18"
+                        FontWeight="SemiBold"
+                        Foreground="{StaticResource PingTextBrush}"
+                        Text="Ping for Windows" />
+                    <TextBlock Foreground="{StaticResource PingMutedBrush}" Text="Windows 11 24H2+" />
+                    <TextBlock Foreground="{StaticResource PingMutedBrush}" Text="Updates are handled by the Windows package channel." />
+                </StackPanel>
+            </TabViewItem>
+        </TabView>
+    </Grid>
+</Window>

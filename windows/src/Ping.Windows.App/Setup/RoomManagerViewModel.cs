@@ -1,0 +1,350 @@
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
+using Ping.Windows.Core.Backend;
+using Ping.Windows.Core.Models;
+
+#if WINDOWS
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+#endif
+
+namespace Ping.Windows.App.Setup;
+
+public sealed class RoomManagerViewModel : INotifyPropertyChanged
+{
+    private readonly RoomService roomService;
+    private readonly InvitationService invitationService;
+    private readonly string nickname;
+    private string statusMessage = "Rooms";
+    private Room? selectedRoom;
+    private Room? selectedSearchResult;
+    private Invitation? selectedInvitation;
+
+    public RoomManagerViewModel(
+        RoomService roomService,
+        InvitationService invitationService,
+        string nickname)
+    {
+        this.roomService = roomService;
+        this.invitationService = invitationService;
+        this.nickname = nickname;
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    public ObservableCollection<Room> Rooms { get; } = [];
+
+    public ObservableCollection<Room> SearchResults { get; } = [];
+
+    public ObservableCollection<Invitation> Invitations { get; } = [];
+
+    public string StatusMessage
+    {
+        get => statusMessage;
+        private set
+        {
+            if (string.Equals(statusMessage, value, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            statusMessage = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public Room? SelectedRoom
+    {
+        get => selectedRoom;
+        set
+        {
+            if (Equals(selectedRoom, value))
+            {
+                return;
+            }
+
+            selectedRoom = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(SelectedRoomName));
+            OnPropertyChanged(nameof(SelectedRoomMembers));
+        }
+    }
+
+    public Room? SelectedSearchResult
+    {
+        get => selectedSearchResult;
+        set
+        {
+            selectedSearchResult = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public Invitation? SelectedInvitation
+    {
+        get => selectedInvitation;
+        set
+        {
+            selectedInvitation = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public string SelectedRoomName => SelectedRoom?.Name ?? "No room selected";
+
+    public string SelectedRoomMembers =>
+        SelectedRoom is null
+            ? "Create, join, or select a room."
+            : string.Join(", ", SelectedRoom.MemberNicknames.Values.OrderBy(value => value, StringComparer.OrdinalIgnoreCase));
+
+    public async Task LoadAsync(CancellationToken cancellationToken = default)
+    {
+        await ReloadRoomsAsync(cancellationToken);
+        await ReloadInvitationsAsync(cancellationToken);
+    }
+
+    public async Task CreateRoomAsync(string roomName, CancellationToken cancellationToken = default)
+    {
+        var room = await roomService.CreateRoomAsync(roomName, nickname, cancellationToken);
+        await ReloadRoomsAsync(cancellationToken);
+        SelectedRoom = Rooms.FirstOrDefault(candidate => candidate.Id == room.Id) ?? room;
+        StatusMessage = $"Created {room.Name}.";
+    }
+
+    public async Task SearchRoomsAsync(string prefix, CancellationToken cancellationToken = default)
+    {
+        SearchResults.Clear();
+        foreach (var room in await roomService.SearchOpenRoomsAsync(prefix, cancellationToken))
+        {
+            SearchResults.Add(room);
+        }
+
+        StatusMessage = SearchResults.Count == 0 ? "No matching open rooms." : "Select a room to join.";
+    }
+
+    public async Task JoinSelectedSearchResultAsync(CancellationToken cancellationToken = default)
+    {
+        if (SelectedSearchResult?.Id is not { } roomId)
+        {
+            return;
+        }
+
+        var roomName = SelectedSearchResult.Name;
+        await roomService.JoinRoomAsync(roomId, nickname, cancellationToken);
+        await ReloadRoomsAsync(cancellationToken);
+        SelectedRoom = Rooms.FirstOrDefault(room => room.Id == roomId) ?? SelectedRoom;
+        StatusMessage = $"Joined {roomName}.";
+    }
+
+    public async Task RenameSelectedRoomAsync(string newName, CancellationToken cancellationToken = default)
+    {
+        if (SelectedRoom?.Id is not { } roomId)
+        {
+            return;
+        }
+
+        await roomService.RenameRoomAsync(roomId, newName, cancellationToken);
+        await ReloadRoomsAsync(cancellationToken);
+        StatusMessage = "Room renamed.";
+    }
+
+    public async Task LeaveSelectedRoomAsync(CancellationToken cancellationToken = default)
+    {
+        if (SelectedRoom?.Id is not { } roomId)
+        {
+            return;
+        }
+
+        await roomService.LeaveRoomAsync(roomId, cancellationToken);
+        await ReloadRoomsAsync(cancellationToken);
+        StatusMessage = "Left room.";
+    }
+
+    public async Task InviteUserAsync(string userId, string fallbackRoomName, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return;
+        }
+
+        if (SelectedRoom?.Id is { } roomId)
+        {
+            await invitationService.SendAsync(userId.Trim(), roomId, nickname, SelectedRoom.Name, cancellationToken);
+            StatusMessage = "Invitation sent.";
+            return;
+        }
+
+        var room = await invitationService.InviteUserAsync(userId.Trim(), nickname, fallbackRoomName, cancellationToken);
+        await ReloadRoomsAsync(cancellationToken);
+        SelectedRoom = Rooms.FirstOrDefault(candidate => candidate.Id == room.Id) ?? room;
+        StatusMessage = "Invitation sent in a new room.";
+    }
+
+    public async Task AcceptSelectedInvitationAsync(CancellationToken cancellationToken = default)
+    {
+        if (SelectedInvitation?.Id is not { } invitationId)
+        {
+            return;
+        }
+
+        await invitationService.AcceptAsync(invitationId, nickname, cancellationToken);
+        await LoadAsync(cancellationToken);
+        StatusMessage = "Invitation accepted.";
+    }
+
+    public async Task RejectSelectedInvitationAsync(CancellationToken cancellationToken = default)
+    {
+        if (SelectedInvitation?.Id is not { } invitationId)
+        {
+            return;
+        }
+
+        await invitationService.RejectAsync(invitationId, cancellationToken);
+        await ReloadInvitationsAsync(cancellationToken);
+        StatusMessage = "Invitation rejected.";
+    }
+
+    public async Task<string?> CreateInviteLinkAsync(CancellationToken cancellationToken = default)
+    {
+        if (SelectedRoom?.Id is not { } roomId)
+        {
+            return null;
+        }
+
+        var link = await invitationService.CreateInviteLinkAsync(roomId, cancellationToken);
+        StatusMessage = "Invite link token copied into the field.";
+        return link.Token;
+    }
+
+    public async Task AcceptInviteLinkAsync(string token, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return;
+        }
+
+        var room = await invitationService.AcceptInviteLinkAsync(token.Trim(), nickname, cancellationToken);
+        await ReloadRoomsAsync(cancellationToken);
+        SelectedRoom = Rooms.FirstOrDefault(candidate => candidate.Id == room.Id) ?? room;
+        StatusMessage = $"Joined {room.Name}.";
+    }
+
+    public void ReportError(Exception exception)
+    {
+        StatusMessage = exception.Message;
+    }
+
+    private async Task ReloadRoomsAsync(CancellationToken cancellationToken)
+    {
+        var previousSelectedId = SelectedRoom?.Id;
+        Rooms.Clear();
+        foreach (var room in (await roomService.MyRoomsAsync(cancellationToken)).OrderBy(room => room.Name, StringComparer.OrdinalIgnoreCase))
+        {
+            Rooms.Add(room);
+        }
+
+        SelectedRoom = previousSelectedId is null
+            ? Rooms.FirstOrDefault()
+            : Rooms.FirstOrDefault(room => room.Id == previousSelectedId) ?? Rooms.FirstOrDefault();
+    }
+
+    private async Task ReloadInvitationsAsync(CancellationToken cancellationToken)
+    {
+        Invitations.Clear();
+        foreach (var invitation in await invitationService.IncomingAsync(cancellationToken))
+        {
+            Invitations.Add(invitation);
+        }
+    }
+
+    private void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+}
+
+#if WINDOWS
+public sealed partial class RoomManagerWindow : Window
+{
+    private readonly RoomManagerViewModel viewModel;
+
+    public RoomManagerWindow(RoomManagerViewModel viewModel)
+    {
+        this.viewModel = viewModel;
+        InitializeComponent();
+        Root.DataContext = viewModel;
+        Root.Loaded += HandleLoaded;
+    }
+
+    private async void HandleLoaded(object sender, RoutedEventArgs args)
+    {
+        await RunAsync(() => viewModel.LoadAsync());
+    }
+
+    private void HandleRoomSelectionChanged(object sender, SelectionChangedEventArgs args)
+    {
+        viewModel.SelectedRoom = RoomsList.SelectedItem as Room;
+    }
+
+    private void HandleSearchSelectionChanged(object sender, SelectionChangedEventArgs args)
+    {
+        viewModel.SelectedSearchResult = SearchResultsList.SelectedItem as Room;
+    }
+
+    private void HandleInvitationSelectionChanged(object sender, SelectionChangedEventArgs args)
+    {
+        viewModel.SelectedInvitation = InvitationsList.SelectedItem as Invitation;
+    }
+
+    private async void CreateRoomButton_Click(object sender, RoutedEventArgs args) =>
+        await RunAsync(() => viewModel.CreateRoomAsync(NewRoomNameBox.Text));
+
+    private async void RenameRoomButton_Click(object sender, RoutedEventArgs args) =>
+        await RunAsync(() => viewModel.RenameSelectedRoomAsync(RenameRoomBox.Text));
+
+    private async void LeaveRoomButton_Click(object sender, RoutedEventArgs args) =>
+        await RunAsync(() => viewModel.LeaveSelectedRoomAsync());
+
+    private async void SearchButton_Click(object sender, RoutedEventArgs args) =>
+        await RunAsync(() => viewModel.SearchRoomsAsync(SearchBox.Text));
+
+    private async void JoinRoomButton_Click(object sender, RoutedEventArgs args) =>
+        await RunAsync(() => viewModel.JoinSelectedSearchResultAsync());
+
+    private async void InviteUserButton_Click(object sender, RoutedEventArgs args) =>
+        await RunAsync(() => viewModel.InviteUserAsync(InviteUserIdBox.Text, NewRoomNameBox.Text));
+
+    private async void AcceptInvitationButton_Click(object sender, RoutedEventArgs args) =>
+        await RunAsync(() => viewModel.AcceptSelectedInvitationAsync());
+
+    private async void RejectInvitationButton_Click(object sender, RoutedEventArgs args) =>
+        await RunAsync(() => viewModel.RejectSelectedInvitationAsync());
+
+    private async void CreateInviteLinkButton_Click(object sender, RoutedEventArgs args)
+    {
+        await RunAsync(async () =>
+        {
+            var token = await viewModel.CreateInviteLinkAsync();
+            if (token is not null)
+            {
+                InviteLinkTokenBox.Text = token;
+            }
+        });
+    }
+
+    private async void AcceptInviteLinkButton_Click(object sender, RoutedEventArgs args) =>
+        await RunAsync(() => viewModel.AcceptInviteLinkAsync(InviteLinkTokenBox.Text));
+
+    private async Task RunAsync(Func<Task> work)
+    {
+        try
+        {
+            await work();
+        }
+        catch (Exception ex)
+        {
+            viewModel.ReportError(ex);
+        }
+    }
+}
+
+#endif

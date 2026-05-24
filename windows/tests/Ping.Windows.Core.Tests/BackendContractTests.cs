@@ -276,9 +276,11 @@ public sealed class BackendContractTests
         var incoming = await service.IncomingAsync();
         var message = await service.GetAsync("message-id");
         await service.MarkSeenAsync("message-id");
+        var roomMessages = await service.RoomMessagesAsync("room-id", limit: 25);
 
         Assert.Single(incoming);
         Assert.Equal("message-id", message?.Id);
+        Assert.Single(roomMessages);
         Assert.Equal("ping_incoming_messages", rpc.Calls[0].Function);
         Assert.Equal("ping_get_message", rpc.Calls[1].Function);
         Assert.Equal(
@@ -292,6 +294,12 @@ public sealed class BackendContractTests
             {"message_uuid":"message-id"}
             """,
             JsonSerializer.Serialize(rpc.Calls[2].Body, JsonOptions.Supabase));
+        Assert.Equal("ping_room_messages", rpc.Calls[3].Function);
+        Assert.Equal(
+            """
+            {"room_uuid":"room-id","before_ts":null,"page_limit":25}
+            """,
+            JsonSerializer.Serialize(rpc.Calls[3].Body, JsonOptions.Supabase));
     }
 
     [Fact]

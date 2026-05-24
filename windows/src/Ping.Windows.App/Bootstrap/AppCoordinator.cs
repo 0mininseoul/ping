@@ -1,9 +1,11 @@
 using Microsoft.UI.Xaml;
 using Ping.Windows.App.Capture;
+using Ping.Windows.App.History;
 using Ping.Windows.App.Hotkeys;
 using Ping.Windows.App.Onboarding;
 using Ping.Windows.App.Notifications;
 using Ping.Windows.App.Playback;
+using Ping.Windows.App.Setup;
 using Ping.Windows.App.Tray;
 using Ping.Windows.Core.Backend;
 using Ping.Windows.Core.LocalState;
@@ -21,6 +23,10 @@ public sealed class AppCoordinator : IDisposable
     private readonly StorageService storageService;
     private readonly MessageService messageService;
     private readonly UserService userService;
+    private readonly RoomService roomService;
+    private readonly InvitationService invitationService;
+    private readonly ChatMessageService chatService;
+    private readonly ReactionService reactionService;
     private readonly IncomingMessagePoller incomingPoller;
     private readonly NotificationController notificationController;
     private readonly IScreenFaceCaptureEngine screenFaceCaptureEngine;
@@ -35,6 +41,9 @@ public sealed class AppCoordinator : IDisposable
     private ScreenFaceMirrorWindow? screenFaceMirrorWindow;
     private QuickSendHudWindow? quickSendHudWindow;
     private OnboardingWindow? onboardingWindow;
+    private RoomManagerWindow? roomManagerWindow;
+    private HistoryWindow? historyWindow;
+    private SettingsWindow? settingsWindow;
     private readonly List<PlaybackWindow> playbackWindows = [];
     private CancellationTokenSource? quickSendCancellation;
     private CancellationTokenSource? incomingPollingCancellation;
@@ -64,6 +73,10 @@ public sealed class AppCoordinator : IDisposable
         storageService = new StorageService(this.supabaseClient);
         messageService = new MessageService(this.supabaseClient, storageService);
         userService = new UserService(this.supabaseClient);
+        roomService = new RoomService(this.supabaseClient);
+        invitationService = new InvitationService(this.supabaseClient);
+        chatService = new ChatMessageService(this.supabaseClient);
+        reactionService = new ReactionService(this.supabaseClient);
         incomingPoller = new IncomingMessagePoller(messageService);
         notificationController = new NotificationController(OpenMessageFromNotificationAsync);
         screenFaceCaptureEngine = new NativeCaptureEngine();
@@ -109,7 +122,7 @@ public sealed class AppCoordinator : IDisposable
                 _ = RunQuickScreenFacePingAsync();
                 break;
             case HotkeyCommand.History:
-                ShowHistory("Alt+O reached Ping. Room history shell is visible.");
+                OpenHistoryWindow();
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(command), command, "Unknown Ping hotkey command.");
@@ -152,7 +165,7 @@ public sealed class AppCoordinator : IDisposable
         switch (command)
         {
             case TrayCommand.OpenPing:
-                ShowHistory("Tray opened Ping.");
+                OpenHistoryWindow();
                 break;
             case TrayCommand.NewFacePing:
                 Execute(HotkeyCommand.FacePing);
@@ -226,16 +239,87 @@ public sealed class AppCoordinator : IDisposable
             quickSendSettings.Preferences.IsEnabled,
             defaultRoom?.Name ?? "No sendable default room");
         mainWindow.ShowShell();
+        OpenSettingsWindow();
+    }
+
+    private void OpenRoomManagerWindow()
+    {
+        if (roomManagerWindow is not null)
+        {
+            roomManagerWindow.Activate();
+            return;
+        }
+
+        roomManagerWindow = new RoomManagerWindow(new RoomManagerViewModel(
+            roomService,
+            invitationService,
+            Environment.UserName));
+        roomManagerWindow.Closed += (_, _) =>
+        {
+            roomManagerWindow = null;
+            _ = BootstrapAndLoadRoomsAsync();
+        };
+        roomManagerWindow.Activate();
+    }
+
+    private void OpenHistoryWindow()
+    {
+        if (historyWindow is not null)
+        {
+            historyWindow.Activate();
+            return;
+        }
+
+        historyWindow = new HistoryWindow(
+            new HistoryViewModel(roomService, messageService, chatService, reactionService),
+            storageService,
+            messageService);
+        historyWindow.Closed += (_, _) => historyWindow = null;
+        historyWindow.Activate();
+    }
+
+    private void OpenSettingsWindow()
+    {
+        if (settingsWindow is not null)
+        {
+            settingsWindow.RefreshSettings(quickSendSettings);
+            settingsWindow.Activate();
+            return;
+        }
+
+        settingsWindow = new SettingsWindow(new SettingsWindowViewModel(
+            Environment.UserName,
+            preferencesStore.Load(),
+            quickSendSettings,
+            ApplyQuickSendSettings,
+            OpenRoomManagerWindow));
+        settingsWindow.Closed += (_, _) => settingsWindow = null;
+        settingsWindow.Activate();
     }
 
     private void HandleQuickSendToggleChanged(object? sender, bool isEnabled)
     {
-        quickSendSettings = quickSendSettings with
+        ApplyQuickSendSettings(quickSendSettings with
         {
             Preferences = quickSendSettings.Preferences with { IsEnabled = isEnabled }
-        };
-        quickSendSettingsStore.Save(quickSendSettings);
+        });
         ShowSettings();
+    }
+
+    private void ApplyQuickSendSettings(ScreenFaceQuickSendSettings settings)
+    {
+        quickSendSettings = settings;
+        quickSendSettingsStore.Save(quickSendSettings);
+        var uid = currentUid;
+        if (uid is null)
+        {
+            return;
+        }
+
+        var defaultRoom = ResolvePreferredDefaultRoom(SendableRoomsFor(uid));
+        mainWindow.ConfigureQuickSendSettings(
+            quickSendSettings.Preferences.IsEnabled,
+            defaultRoom?.Name ?? "No sendable default room");
     }
 
     private void ShowRegistrationState(IReadOnlyList<HotkeyRegistrationResult> registrations)
@@ -273,6 +357,7 @@ public sealed class AppCoordinator : IDisposable
                 "Face Ping",
                 "Alt+P reached Ping. Create or join a room before sending a face ping.",
                 "No sendable room available.");
+            OpenRoomManagerWindow();
             return;
         }
 
@@ -287,8 +372,8 @@ public sealed class AppCoordinator : IDisposable
             SenderUid: uid,
             SenderNickname: Environment.UserName,
             PartnerLabel: sendableRooms.Length == 1 ? sendableRooms[0].Name : "All rooms",
-            AllowsLocalSave: false,
-            SaveSentCopy: false);
+            AllowsLocalSave: quickSendSettings.Preferences.AllowsLocalSave,
+            SaveSentCopy: quickSendSettings.Preferences.SaveSentCopy);
         var viewModel = new FaceMirrorViewModel(
             context,
             new FaceRecorder(),
@@ -319,6 +404,7 @@ public sealed class AppCoordinator : IDisposable
                 "Screen+Face Ping",
                 "Alt+L reached Ping. Create or join a room before sending a screen+face ping.",
                 "No sendable room available.");
+            OpenRoomManagerWindow();
             return;
         }
 
@@ -327,8 +413,8 @@ public sealed class AppCoordinator : IDisposable
             SenderUid: uid,
             SenderNickname: Environment.UserName,
             PartnerLabel: PartnerLabelFor(sendableRooms),
-            AllowsLocalSave: false,
-            SaveSentCopy: false));
+            AllowsLocalSave: quickSendSettings.Preferences.AllowsLocalSave,
+            SaveSentCopy: quickSendSettings.Preferences.SaveSentCopy));
     }
 
     private void ShowScreenFaceMirror(ScreenFaceMirrorContext context)
@@ -378,8 +464,8 @@ public sealed class AppCoordinator : IDisposable
                 SenderUid: uid,
                 SenderNickname: Environment.UserName,
                 PartnerLabel: defaultRoom?.Name ?? "Default room",
-                AllowsLocalSave: false,
-                SaveSentCopy: false,
+                AllowsLocalSave: quickSendSettings.Preferences.AllowsLocalSave,
+                SaveSentCopy: quickSendSettings.Preferences.SaveSentCopy,
                 MirrorPosition: new MirrorPosition(0.5, 0.5),
                 Preconditions: preconditions,
                 DefaultRoomId: defaultRoom?.Id);
@@ -594,7 +680,7 @@ public sealed class AppCoordinator : IDisposable
             var uid = currentUid;
             var profile = await userService.GetAsync(uid);
             remoteDefaultRoomId = profile?.LastUsedRoomId;
-            rooms = await supabaseClient.RpcArrayAsync<Room>("ping_my_rooms");
+            rooms = await roomService.MyRoomsAsync();
             if (ResolvePreferredDefaultRoom(SendableRoomsFor(uid)) is { Id: { } defaultRoomId })
             {
                 SaveQuickSendDefaultRoom(defaultRoomId);
@@ -641,6 +727,7 @@ public sealed class AppCoordinator : IDisposable
                 "Rooms and recent pings",
                 "Alt+Shift+L reached Ping, but there is no sendable default room.",
                 message);
+            owner.OpenRoomManagerWindow();
         }
 
         public void ShowPermissionBlocked(QuickSendPermissionKind permission, string message)

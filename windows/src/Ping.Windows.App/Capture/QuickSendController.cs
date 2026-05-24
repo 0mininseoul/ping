@@ -33,9 +33,30 @@ public enum QuickSendPermissionKind
     ScreenCapture
 }
 
-public sealed record ScreenFaceQuickSendPreferences(bool IsEnabled)
+public sealed record ScreenFaceQuickSendPreferences
 {
     public static ScreenFaceQuickSendPreferences Default { get; } = new(IsEnabled: true);
+
+    public ScreenFaceQuickSendPreferences()
+        : this(IsEnabled: true)
+    {
+    }
+
+    public ScreenFaceQuickSendPreferences(
+        bool IsEnabled,
+        bool SaveSentCopy = false,
+        bool AllowsLocalSave = false)
+    {
+        this.IsEnabled = IsEnabled;
+        this.SaveSentCopy = SaveSentCopy;
+        this.AllowsLocalSave = AllowsLocalSave;
+    }
+
+    public bool IsEnabled { get; init; }
+
+    public bool SaveSentCopy { get; init; }
+
+    public bool AllowsLocalSave { get; init; }
 }
 
 public sealed record ScreenFaceQuickSendSettings

@@ -31,6 +31,16 @@ public sealed class MessageService(ISupabaseRpcClient client, IStorageService st
             new MessageIdRpcBody(messageId),
             cancellationToken);
 
+    public Task<IReadOnlyList<VideoMessage>> RoomMessagesAsync(
+        string roomId,
+        DateTimeOffset? beforeTimestamp = null,
+        int limit = 50,
+        CancellationToken cancellationToken = default) =>
+        client.RpcArrayAsync<VideoMessage>(
+            "ping_room_messages",
+            new RoomMessagesRpcBody(roomId, beforeTimestamp, limit),
+            cancellationToken);
+
     public async Task SendAsync(SendVideoInput input, CancellationToken cancellationToken = default)
     {
         var sendableRooms = input.Rooms
@@ -46,7 +56,7 @@ public sealed class MessageService(ISupabaseRpcClient client, IStorageService st
             .SelectMany(room => room.MemberUids)
             .Where(uid => uid != input.SenderUid)
             .Distinct(StringComparer.Ordinal)
-            .Order(StringComparer.Ordinal)
+            .OrderBy(uid => uid, StringComparer.Ordinal)
             .ToArray();
         var expiresAt = DateTimeOffset.UtcNow.AddDays(30);
         var videoStoragePath = await storage.UploadVideoAsync(
@@ -108,3 +118,8 @@ public sealed record CreateMessageRpcBody(
 
 public sealed record MessageIdRpcBody(
     [property: JsonPropertyName("message_uuid")] string MessageUuid);
+
+public sealed record RoomMessagesRpcBody(
+    [property: JsonPropertyName("room_uuid")] string RoomUuid,
+    [property: JsonPropertyName("before_ts")] DateTimeOffset? BeforeTimestamp,
+    [property: JsonPropertyName("page_limit")] int PageLimit);
