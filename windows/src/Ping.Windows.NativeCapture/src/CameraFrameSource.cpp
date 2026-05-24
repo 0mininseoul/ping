@@ -374,7 +374,17 @@ namespace Ping::Windows::NativeCapture
 
         mediaSource->Shutdown();
         MFShutdown();
-        return static_cast<int>(result.size()) >= frameCount ? PingCaptureSuccess : PingCaptureNoCamera;
+        if (result.empty())
+        {
+            return PingCaptureNoCamera;
+        }
+
+        while (static_cast<int>(result.size()) < frameCount)
+        {
+            result.push_back(result.back());
+        }
+
+        return PingCaptureSuccess;
     }
 
     int CaptureMicrophonePcm(int durationMs, AudioCaptureResult& result)
