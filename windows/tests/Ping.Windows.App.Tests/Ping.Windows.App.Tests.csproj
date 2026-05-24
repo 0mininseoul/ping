@@ -18,5 +18,7 @@
     <Compile Include="..\..\src\Ping.Windows.App\Onboarding\PermissionProbe.cs" Link="Onboarding\PermissionProbe.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Onboarding\SettingsLauncher.cs" Link="Onboarding\SettingsLauncher.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Onboarding\WindowsVersionProbe.cs" Link="Onboarding\WindowsVersionProbe.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Hotkeys\GlobalHotkeyManager.cs" Link="Hotkeys\GlobalHotkeyManager.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Hotkeys\HotkeyBinding.cs" Link="Hotkeys\HotkeyBinding.cs" />
   </ItemGroup>
 </Project>
