@@ -111,7 +111,7 @@ Manual checks after install:
 - Alt+L records and sends `screen_face`.
 - Alt+Shift+L records immediately to the default room after the 300ms HUD.
 - Notification click downloads from `ping-videos` and opens playback.
-- History can send/display room text chat, `ping-media` image attachments, and quick emoji reactions.
+- History shows video and chat in one room timeline, supports text/image chat, reply previews, sender chat delete, received video hide, sender video delete, and quick emoji reactions.
 - Unread room chat from another user shows one Windows notification per room, and clicking it opens History.
 - Settings toggles for quick send, Windows startup, sent-copy saving, received-video saving, and recipient local-save permission persist.
 - Create invite link writes the Mac-compatible `/invite/<token>` URL into the field and to the Windows clipboard.
@@ -125,8 +125,10 @@ Manual checks after install:
 | Mac | Windows | `face_only` | Windows notification, circular playback, seen update |
 | Mac | Windows | `screen_face` | Windows playback preserves `aspect_ratio` |
 | Windows | Windows | Alt+Shift+L quick | Immediate 3-second screen+face send |
-| Windows | Mac | chat image + reaction | Mac shows the image attachment and updated reaction aggregate |
-| Mac | Windows | chat image + reaction | Windows shows the image attachment and updated reaction aggregate |
+| Windows | Mac | chat image + reaction + reply | Mac shows the image attachment, reply preview, and updated reaction aggregate |
+| Mac | Windows | chat image + reaction + reply | Windows shows the image attachment, reply preview, and updated reaction aggregate |
+| Mac | Windows | sender chat delete | Windows removes the deleted chat from the room timeline |
+| Windows | Mac | received video hide | Mac remains unaffected; Windows removes the hidden received video locally |
 | Mac | Mac | existing | No regression |
 
 Record the exact OS build, app version, sender UID, receiver UID, room ID, message ID, and Storage path for failed cases.
