@@ -48,13 +48,14 @@ If a hotkey is already used by another app, onboarding/settings show it as confl
 ## Onboarding Checks
 
 1. OS support: show unsupported warning outside Windows 11 24H2+ and disable screen+face quick send when required APIs or Supabase config are unavailable.
-2. Admin/elevated state: app notifications are not supported for elevated apps, so users should restart Ping normally.
-3. Camera: check packaged webcam capability and initialize MediaCapture.
-4. Microphone: initialize audio capture; v1 does not provide silent-video fallback.
-5. Screen capture: check `GraphicsCaptureSession.IsSupported()` and run the native one-frame monitor self-test.
-6. Notifications: register Windows App SDK notifications and show a local test notification.
-7. Hotkeys: register Alt+P, Alt+L, Alt+Shift+L, and Alt+O with Win32 `RegisterHotKey`.
-8. Startup: use packaged MSIX startup registration. Dev/unpackaged runs show this as unavailable. Packaged builds declare `PingWindowsStartup` and expose a Settings toggle that respects Windows Startup Apps/Task Manager state.
+2. Supabase config: verify `%LOCALAPPDATA%\Ping\Supabase.json` exists and contains a valid Supabase URL plus anon key before enabling quick send.
+3. Admin/elevated state: app notifications are not supported for elevated apps, so users should restart Ping normally.
+4. Camera: check packaged webcam capability and initialize MediaCapture.
+5. Microphone: initialize audio capture; v1 does not provide silent-video fallback.
+6. Screen capture: check `GraphicsCaptureSession.IsSupported()` and run the native one-frame monitor self-test.
+7. Notifications: register Windows App SDK notifications and show a local test notification.
+8. Hotkeys: register Alt+P, Alt+L, Alt+Shift+L, and Alt+O with Win32 `RegisterHotKey`.
+9. Startup: use packaged MSIX startup registration. Dev/unpackaged runs show this as unavailable. Packaged builds declare `PingWindowsStartup` and expose a Settings toggle that respects Windows Startup Apps/Task Manager state.
 
 Expected user-facing constraints:
 

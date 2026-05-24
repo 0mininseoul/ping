@@ -239,7 +239,7 @@ public sealed class OnboardingViewModel : INotifyPropertyChanged
             OnboardingRowKind.SupabaseConfig,
             "Supabase config",
             OnboardingRowStatus.Blocked,
-            "Missing Supabase.json in the Ping local config folder.",
+            "Missing or invalid Supabase.json in the Ping local config folder.",
             CanRetry: true,
             PrimaryAction: new OnboardingAction(OnboardingActionKind.OpenFolder, "Open config folder"));
     }

@@ -110,6 +110,7 @@ public sealed class OnboardingStateTests
 
         var row = Assert.Single(model.Rows, row => row.Kind == OnboardingRowKind.SupabaseConfig);
         Assert.Equal(OnboardingRowStatus.Blocked, row.Status);
+        Assert.Equal("Missing or invalid Supabase.json in the Ping local config folder.", row.Message);
         Assert.True(row.HasPrimaryAction);
         Assert.Equal("Open config folder", row.PrimaryActionLabel);
         Assert.Equal(OnboardingActionKind.OpenFolder, row.PrimaryAction?.Kind);
@@ -141,7 +142,7 @@ public sealed class OnboardingStateTests
     }
 
     [Fact]
-    public void PermissionProbe_detects_supabase_config_file()
+    public void PermissionProbe_detects_valid_supabase_config_file()
     {
         var directory = Path.Combine(Path.GetTempPath(), "PingWindowsOnboardingTests", Guid.NewGuid().ToString("N"));
         var configPath = Path.Combine(directory, "Supabase.json");
@@ -151,9 +152,35 @@ public sealed class OnboardingStateTests
             var probe = new PermissionProbe(configPath);
             Assert.False(probe.IsSupabaseConfigured());
 
-            File.WriteAllText(configPath, "{}");
+            File.WriteAllText(configPath, """
+                {
+                  "url": "https://example.supabase.co",
+                  "anonKey": "anon-key"
+                }
+                """);
 
             Assert.True(probe.IsSupabaseConfigured());
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Theory]
+    [InlineData("{}")]
+    [InlineData("{not-json")]
+    public void PermissionProbe_rejects_invalid_supabase_config_file(string configJson)
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "PingWindowsOnboardingTests", Guid.NewGuid().ToString("N"));
+        var configPath = Path.Combine(directory, "Supabase.json");
+        Directory.CreateDirectory(directory);
+        try
+        {
+            File.WriteAllText(configPath, configJson);
+            var probe = new PermissionProbe(configPath);
+
+            Assert.False(probe.IsSupabaseConfigured());
         }
         finally
         {

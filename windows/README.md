@@ -58,6 +58,8 @@ The Windows client reads Supabase config from:
 %LOCALAPPDATA%\Ping\Supabase.json
 ```
 
+Onboarding treats this row as ready only when the file exists and contains a valid Supabase URL plus anon key.
+
 Example:
 
 ```json

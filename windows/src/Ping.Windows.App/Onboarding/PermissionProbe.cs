@@ -1,6 +1,8 @@
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using Ping.Windows.App.Hotkeys;
 using Ping.Windows.App.Setup;
+using Ping.Windows.Core.Backend;
 
 namespace Ping.Windows.App.Onboarding;
 
@@ -60,8 +62,24 @@ public sealed class PermissionProbe
             CheckDefaultHotkeys(),
             await CheckStartupAsync(cancellationToken).ConfigureAwait(false));
 
-    public bool IsSupabaseConfigured() =>
-        File.Exists(supabaseConfigPath);
+    public bool IsSupabaseConfigured()
+    {
+        if (!File.Exists(supabaseConfigPath))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var stream = File.OpenRead(supabaseConfigPath);
+            _ = JsonSerializer.Deserialize<SupabaseConfiguration>(stream, JsonOptions.Supabase)?.Normalize();
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException or ArgumentException)
+        {
+            return false;
+        }
+    }
 
     public async Task<OnboardingProbeState> CheckCameraAsync(CancellationToken cancellationToken = default)
     {
