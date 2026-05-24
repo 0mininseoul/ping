@@ -100,6 +100,15 @@ The WinUI app is under `src/Ping.Windows.App`, shared product logic belongs in `
 
 ## Local Verification Status
 
-Most Windows code in this branch was authored from macOS, where `dotnet`, PowerShell, Visual Studio, Windows App SDK templates, and MSBuild C++ targets were not available. Static checks that can run on macOS have been used, but the managed tests, packaged WinUI build, native capture DLL, camera, microphone, notifications, tray, global hotkeys, MSIX install, and Mac/Windows cross-send matrix still require a Windows 11 24H2+ machine.
+Managed portable tests can run on macOS with .NET 10 and should be kept green there:
+
+```bash
+dotnet test windows/tests/Ping.Windows.Core.Tests/Ping.Windows.Core.Tests.csproj -c Debug
+dotnet test windows/tests/Ping.Windows.App.Tests/Ping.Windows.App.Tests.csproj -c Debug
+```
+
+The packaged WinUI build still requires Windows because `Ping.Windows.NativeCapture.vcxproj` imports Visual Studio C++ targets. On macOS, `dotnet build windows/src/Ping.Windows.App/Ping.Windows.App.csproj -p:EnableWindowsTargeting=true` is expected to stop at `Microsoft.Cpp.Default.props` / `VCTargetsPath`.
+
+The packaged WinUI build, native capture DLL, camera, microphone, notifications, tray, global hotkeys, MSIX install, and Mac/Windows cross-send matrix still require a Windows 11 24H2+ machine.
 
 Before distributing a build, run the verification, build, release, and smoke commands above on Windows and record any OS-specific failures in the cross-platform QA matrix.
