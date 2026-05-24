@@ -42,6 +42,20 @@ function Get-PackageArchitectureManifestValue([string]$TargetPlatform) {
     return "x64"
 }
 
+function Assert-PackageContainsNativeCaptureDll($Archive, [string]$PackagePath) {
+    $nativeDllEntry = $Archive.Entries |
+        Where-Object { $_.Name -eq "Ping.Windows.NativeCapture.dll" } |
+        Select-Object -First 1
+
+    if (-not $nativeDllEntry) {
+        throw "Package $PackagePath does not contain Ping.Windows.NativeCapture.dll."
+    }
+
+    if ($nativeDllEntry.Length -le 0) {
+        throw "Package $PackagePath contains an empty Ping.Windows.NativeCapture.dll."
+    }
+}
+
 function Assert-PingPackageIdentity([string]$PackagePath, [string]$ExpectedVersion, [string]$ExpectedArchitecture) {
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     $archive = [System.IO.Compression.ZipFile]::OpenRead($PackagePath)
@@ -77,6 +91,8 @@ function Assert-PingPackageIdentity([string]$PackagePath, [string]$ExpectedVersi
         if ($identity.ProcessorArchitecture -ne $ExpectedArchitecture) {
             throw "Package architecture $($identity.ProcessorArchitecture) does not match $ExpectedArchitecture."
         }
+
+        Assert-PackageContainsNativeCaptureDll $archive $PackagePath
     }
     finally {
         $archive.Dispose()

@@ -104,6 +104,8 @@ Windows does not use Sparkle. v1 chooses MSIX distribution as the update boundar
 .\tools\smoke\ScreenFaceCaptureSmoke.ps1
 ```
 
+Release smoke checks the MSIX identity, architecture, signature status, and bundled `Ping.Windows.NativeCapture.dll`. Native capture smoke records a 3-second screen+face MP4 and verifies duration, 30fps video, audio presence, and basic resolution before manual playback checks.
+
 Manual checks after install:
 
 - First-run onboarding shows OS, config, camera, microphone, screen capture, notification, hotkey, and startup rows.

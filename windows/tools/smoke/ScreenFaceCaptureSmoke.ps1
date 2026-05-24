@@ -10,6 +10,25 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+function Convert-RationalToDouble([string]$Value) {
+    if ([string]::IsNullOrWhiteSpace($Value) -or $Value -eq "0/0") {
+        return 0.0
+    }
+
+    $parts = $Value.Split("/")
+    if ($parts.Count -eq 2) {
+        $numerator = [double]$parts[0]
+        $denominator = [double]$parts[1]
+        if ($denominator -eq 0) {
+            return 0.0
+        }
+
+        return $numerator / $denominator
+    }
+
+    return [double]$Value
+}
+
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 
 if ([string]::IsNullOrWhiteSpace($NativeDllPath)) {
@@ -101,7 +120,7 @@ try {
     Write-Host "MP4 bytes: $($file.Length)"
 
     $ffprobe = Get-Command ffprobe -ErrorAction Stop
-    $probeJson = & $ffprobe.Source -v error -show_entries format=duration -show_entries stream=codec_type,width,height -of json "$OutputPath"
+    $probeJson = & $ffprobe.Source -v error -show_entries format=duration -show_entries stream=codec_type,width,height,avg_frame_rate,r_frame_rate -of json "$OutputPath"
     $probe = $probeJson | ConvertFrom-Json
     $duration = [double]$probe.format.duration
     if ($duration -lt 2.9 -or $duration -gt 3.2) {
@@ -119,8 +138,24 @@ try {
         throw "Expected video width >= 1280px unless using -AllowSmallMonitor, got ${width}x${height}."
     }
 
+    $frameRate = Convert-RationalToDouble ([string]$videoStream.avg_frame_rate)
+    if ($frameRate -le 0) {
+        $frameRate = Convert-RationalToDouble ([string]$videoStream.r_frame_rate)
+    }
+
+    if ($frameRate -lt 29 -or $frameRate -gt 31) {
+        throw "Expected 30fps video stream, got $frameRate fps."
+    }
+
+    $audioStream = @($probe.streams | Where-Object { $_.codec_type -eq "audio" } | Select-Object -First 1)[0]
+    if (-not $audioStream) {
+        throw "ffprobe did not find an audio stream."
+    }
+
     Write-Host "Verified duration: $duration"
     Write-Host "Verified resolution: ${width}x${height}"
+    Write-Host "Verified frame rate: $frameRate"
+    Write-Host "Verified audio stream: present"
     Write-Warning "Manual check still required: bottom-right face PIP visibility, Windows Media Player playback, and macOS QuickTime playback."
 }
 finally {

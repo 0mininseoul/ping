@@ -95,6 +95,20 @@ function Add-SigningProperties([System.Collections.Generic.List[string]]$Argumen
     $Arguments.Add("/p:AppxPackageSigningEnabled=false")
 }
 
+function Assert-PackageContainsNativeCaptureDll($Archive, [string]$PackagePath) {
+    $nativeDllEntry = $Archive.Entries |
+        Where-Object { $_.Name -eq "Ping.Windows.NativeCapture.dll" } |
+        Select-Object -First 1
+
+    if (-not $nativeDllEntry) {
+        throw "Package $PackagePath does not contain Ping.Windows.NativeCapture.dll."
+    }
+
+    if ($nativeDllEntry.Length -le 0) {
+        throw "Package $PackagePath contains an empty Ping.Windows.NativeCapture.dll."
+    }
+}
+
 $version = Get-PingMarketingVersion
 Assert-PackageManifestVersion $version
 $msbuild = Resolve-MSBuild
@@ -184,6 +198,8 @@ foreach ($targetPlatform in $Platform) {
         if ($identity.ProcessorArchitecture -ne $architectureManifestValue) {
             throw "Package architecture $($identity.ProcessorArchitecture) does not match $architectureManifestValue."
         }
+
+        Assert-PackageContainsNativeCaptureDll $archive $package.FullName
     }
     finally {
         $archive.Dispose()
