@@ -397,6 +397,9 @@ private struct StorageSettingsView: View {
     @AppStorage(LocalArchive.saveReceivedEnabledKey)
     private var saveReceivedEnabled = true
 
+    @AppStorage(LocalArchive.allowRecipientsToSaveMyVideosKey)
+    private var allowRecipientsToSaveMyVideos = false
+
     @AppStorage(LocalArchive.autoDeleteAfter30DaysKey)
     private var autoDeleteAfter30Days = false
 
@@ -405,13 +408,14 @@ private struct StorageSettingsView: View {
             Form {
                 Section {
                     Toggle("보낸 영상 저장", isOn: $saveSentEnabled)
-                    Toggle("받은 영상 저장", isOn: $saveReceivedEnabled)
+                    Toggle("받은 영상 자동 저장", isOn: $saveReceivedEnabled)
+                    Toggle("상대가 내 영상 저장 가능", isOn: $allowRecipientsToSaveMyVideos)
                     Toggle("30일 뒤 자동 삭제", isOn: $autoDeleteAfter30Days)
                         .onChange(of: autoDeleteAfter30Days) { enabled in
                             LocalArchive.autoDeleteAfter30Days = enabled
                         }
                 } footer: {
-                    Text("끄면 해당 방향의 영상은 전송과 재생에 필요한 임시 파일만 사용합니다. 자동 삭제는 sent, received 폴더의 30일 지난 MP4 파일을 정리합니다.")
+                    Text("받은 영상은 상대가 허용한 영상만 자동 저장됩니다. 끄면 해당 방향의 영상은 전송과 재생에 필요한 임시 파일만 사용합니다. 자동 삭제는 sent, received 폴더의 30일 지난 MP4 파일을 정리합니다.")
                         .font(PingFont.caption)
                 }
 
@@ -444,6 +448,7 @@ private struct StorageSettingsView: View {
             LocalArchive.migrateLegacyPreferencesIfNeeded()
             saveSentEnabled = LocalArchive.saveSentEnabled
             saveReceivedEnabled = LocalArchive.saveReceivedEnabled
+            allowRecipientsToSaveMyVideos = LocalArchive.allowRecipientsToSaveMyVideos
             autoDeleteAfter30Days = LocalArchive.autoDeleteAfter30Days
         }
         .onChange(of: saveSentEnabled) { newValue in
@@ -451,6 +456,9 @@ private struct StorageSettingsView: View {
         }
         .onChange(of: saveReceivedEnabled) { newValue in
             LocalArchive.saveReceivedEnabled = newValue
+        }
+        .onChange(of: allowRecipientsToSaveMyVideos) { newValue in
+            LocalArchive.allowRecipientsToSaveMyVideos = newValue
         }
     }
 

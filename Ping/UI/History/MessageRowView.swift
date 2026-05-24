@@ -15,6 +15,7 @@ struct MessageRowView: View {
     let onSave: () -> Void
     let onDelete: () -> Void
     let onToggleReaction: (String) -> Void
+    let canSave: Bool
 
     var body: some View {
         HStack {
@@ -64,8 +65,10 @@ struct MessageRowView: View {
                 Button(action: onReact) {
                     Label("이모지 반응", systemImage: "face.smiling")
                 }
-                Button(action: onSave) {
-                    Label("저장", systemImage: "arrow.down.circle")
+                if canSave {
+                    Button(action: onSave) {
+                        Label("저장", systemImage: "arrow.down.circle")
+                    }
                 }
                 Divider()
                 Button(role: .destructive, action: onDelete) {

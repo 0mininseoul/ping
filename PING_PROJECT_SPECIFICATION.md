@@ -119,7 +119,7 @@ macOS 26 이상에서는 `.pingGlassEffect()` wrapper가 SwiftUI 네이티브 `.
 | 일반 | 로그인 시 자동 시작, 닉네임 |
 | 단축키 | 글로벌 단축키 재바인딩 |
 | 룸 | 룸 목록, 이름 변경, 나가기, 룸 찾기 |
-| 저장 | 로컬 저장 경로, Finder 열기, 자동 저장 토글 |
+| 저장 | 로컬 저장 경로, Finder 열기, 보낸 영상 저장, 받은 영상 자동 저장, 상대 저장 허용 토글 |
 | 정보 | 버전, 업데이트, 링크 |
 
 ## 촬영 시스템
@@ -128,7 +128,7 @@ macOS 26 이상에서는 `.pingGlassEffect()` wrapper가 SwiftUI 네이티브 `.
 - 30fps, H.264, AAC, MP4
 - `AVCaptureMovieFileOutput.maxRecordedDuration`으로 3초 제한
 - 녹화 파일은 임시 경로로 만든 뒤 설정에 따라 `~/Documents/Ping/sent/`로 이동한다.
-- 수신 파일은 `~/Documents/Ping/received/`에 저장한다.
+- 수신 파일은 수신자의 자동 저장 설정이 켜져 있고 발신자가 로컬 저장을 허용한 메시지일 때만 `~/Documents/Ping/received/`에 저장한다.
 
 ## Supabase 백엔드
 
@@ -225,6 +225,13 @@ sent/2026-05-17_14-30-25_to_partner.mp4
 sent/2026-05-17_14-30-25_to_all.mp4
 received/2026-05-17_14-32-18_from_박영민.mp4
 ```
+
+저장 정책:
+
+- `보낸 영상 저장`은 본인 기기에 남길 송신 사본만 제어한다.
+- `상대가 내 영상 저장 가능`은 이후 전송되는 메시지의 `allows_local_save` 값으로 저장된다. 기본값은 꺼짐이다.
+- `받은 영상 자동 저장`은 상대가 `allows_local_save`를 허용한 영상에만 적용된다.
+- 룸 히스토리 재생은 서버 영상과 임시 캐시를 사용할 수 있지만, 명시적 로컬 저장 액션은 발신자가 허용한 받은 영상에만 표시된다.
 
 ## 개발 환경
 
@@ -327,7 +334,7 @@ ping/
 - Storage bucket은 private이다.
 - RLS와 security definer RPC로 sender, receiver, room member 경계를 제한한다.
 - 서버 영상과 메시지는 만료 후 best-effort cleanup 대상이다.
-- 로컬 영상은 사용자 디바이스에만 저장된다.
+- 로컬 영상은 사용자 디바이스에만 저장된다. 받은 영상의 영구 저장은 발신자가 허용한 메시지에만 앱 UX에서 제공한다.
 - 검색은 닉네임과 룸 이름 prefix만 사용한다.
 
 ## 향후 로드맵

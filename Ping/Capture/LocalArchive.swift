@@ -9,6 +9,7 @@ enum LocalArchive {
     static let localSaveEnabledKey = "ping.storage.localSaveEnabled"
     static let saveSentEnabledKey = "ping.storage.saveSentEnabled"
     static let saveReceivedEnabledKey = "ping.storage.saveReceivedEnabled"
+    static let allowRecipientsToSaveMyVideosKey = "ping.storage.allowRecipientsToSaveMyVideos"
     static let autoDeleteAfter30DaysKey = "ping.storage.autoDeleteAfter30Days"
 
     private static let retentionInterval: TimeInterval = 30 * 24 * 60 * 60
@@ -47,6 +48,16 @@ enum LocalArchive {
         }
     }
 
+    static var allowRecipientsToSaveMyVideos: Bool {
+        get {
+            migrateLegacyPreferencesIfNeeded()
+            return UserDefaults.standard.bool(forKey: allowRecipientsToSaveMyVideosKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: allowRecipientsToSaveMyVideosKey)
+        }
+    }
+
     static var autoDeleteAfter30Days: Bool {
         get {
             UserDefaults.standard.bool(forKey: autoDeleteAfter30DaysKey)
@@ -73,6 +84,10 @@ enum LocalArchive {
 
         if defaults.object(forKey: localSaveEnabledKey) == nil {
             defaults.set(legacyValue, forKey: localSaveEnabledKey)
+        }
+
+        if defaults.object(forKey: allowRecipientsToSaveMyVideosKey) == nil {
+            defaults.set(false, forKey: allowRecipientsToSaveMyVideosKey)
         }
     }
 

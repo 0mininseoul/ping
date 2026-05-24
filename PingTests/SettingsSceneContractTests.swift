@@ -53,12 +53,15 @@ final class SettingsSceneContractTests: XCTestCase {
 
         XCTAssertTrue(settingsSource.contains("LocalArchive.saveSentEnabledKey"))
         XCTAssertTrue(settingsSource.contains("LocalArchive.saveReceivedEnabledKey"))
+        XCTAssertTrue(settingsSource.contains("LocalArchive.allowRecipientsToSaveMyVideosKey"))
         XCTAssertTrue(settingsSource.contains("LocalArchive.autoDeleteAfter30DaysKey"))
         XCTAssertTrue(settingsSource.contains("보낸 영상 저장"))
-        XCTAssertTrue(settingsSource.contains("받은 영상 저장"))
+        XCTAssertTrue(settingsSource.contains("받은 영상 자동 저장"))
+        XCTAssertTrue(settingsSource.contains("상대가 내 영상 저장 가능"))
         XCTAssertTrue(settingsSource.contains("30일 뒤 자동 삭제"))
         XCTAssertTrue(archiveSource.contains("saveSentEnabledKey"))
         XCTAssertTrue(archiveSource.contains("saveReceivedEnabledKey"))
+        XCTAssertTrue(archiveSource.contains("allowRecipientsToSaveMyVideosKey"))
         XCTAssertTrue(archiveSource.contains("autoDeleteAfter30DaysKey"))
         XCTAssertTrue(archiveSource.contains("deleteExpiredFilesIfNeeded"))
     }

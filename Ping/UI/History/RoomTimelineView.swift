@@ -263,7 +263,8 @@ struct RoomTimelineView: View {
                 onToggleReaction: { emoji in
                     guard let vid = v.id else { return }
                     Task { await viewModel.toggleReaction(target: .video, targetId: vid, emoji: emoji) }
-                }
+                },
+                canSave: v.canBeSavedLocally(by: myUid)
             )
         case .chat(let c):
             let key = "chat:" + (c.id ?? "")

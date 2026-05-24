@@ -8,8 +8,10 @@ final class HistoryCacheService {
     private let maxBytes: Int64 = 500 * 1024 * 1024
 
     init() {
-        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-        baseDir = docs.appendingPathComponent("Ping/cache")
+        let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
+        baseDir = caches
+            .appendingPathComponent("Ping", isDirectory: true)
+            .appendingPathComponent("history-cache", isDirectory: true)
         try? FileManager.default.createDirectory(at: baseDir, withIntermediateDirectories: true)
     }
 

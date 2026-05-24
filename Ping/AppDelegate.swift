@@ -433,7 +433,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 senderUid: senderUid,
                 senderNickname: currentUser.nickname,
                 captureMode: captureMode,
-                aspectRatio: aspectRatio
+                aspectRatio: aspectRatio,
+                allowsLocalSave: LocalArchive.allowRecipientsToSaveMyVideos
             ))
             ClientEventService.shared.log("ping_sent", properties: [
                 "mode": captureMode.rawValue,
@@ -475,6 +476,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             do {
                 guard let message = try await messageService.get(messageId: messageId) else { return }
                 let localURL = try await cachedVideoURL(for: message)
+                let shouldKeepReceivedVideo = LocalArchive.saveReceivedEnabled && message.allowsLocalSave
 
                 let screen = NSScreen.main ?? NSScreen.screens.first!
                 let size = PlaybackWindow.size(for: message.captureMode, aspectRatio: message.aspectRatio, on: screen)
@@ -500,7 +502,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     },
                     onDone: { [weak self] in
                         Task { @MainActor in
-                            if !LocalArchive.saveReceivedEnabled {
+                            if !shouldKeepReceivedVideo {
                                 try? FileManager.default.removeItem(at: localURL)
                                 self?.playbackCache[messageId] = nil
                             }
@@ -571,7 +573,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return localURL
         }
 
-        if LocalArchive.saveReceivedEnabled {
+        if LocalArchive.saveReceivedEnabled && message.allowsLocalSave {
             LocalArchive.ensureFolders()
         }
         try await storageService.downloadVideo(from: message.videoUrl, to: localURL)
@@ -579,7 +581,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func playbackLocalURL(for message: VideoMessage) -> URL {
-        if LocalArchive.saveReceivedEnabled {
+        if LocalArchive.saveReceivedEnabled && message.allowsLocalSave {
             return LocalArchive.receivedURL(from: message.senderNickname, date: message.createdAt ?? Date())
         }
 

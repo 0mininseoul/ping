@@ -27,6 +27,7 @@ final class MessageService {
         let senderNickname: String
         let captureMode: CaptureMode
         let aspectRatio: Double
+        let allowsLocalSave: Bool
     }
 
     func send(_ input: SendInput) async throws {
@@ -66,7 +67,8 @@ final class MessageService {
                     "x_ratio": input.mirrorPosition.xRatio,
                     "y_ratio": input.mirrorPosition.yRatio,
                     "capture_mode_text": input.captureMode.rawValue,
-                    "aspect_ratio_value": input.aspectRatio
+                    "aspect_ratio_value": input.aspectRatio,
+                    "allows_local_save_value": input.allowsLocalSave
                 ])
             }
         }

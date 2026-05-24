@@ -106,6 +106,7 @@ struct VideoMessage: Codable, Identifiable, Hashable {
     var expiresAt: Date
     var captureMode: CaptureMode
     var aspectRatio: Double?
+    var allowsLocalSave: Bool
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -122,6 +123,7 @@ struct VideoMessage: Codable, Identifiable, Hashable {
         case expiresAt = "expires_at"
         case captureMode = "capture_mode"
         case aspectRatio = "aspect_ratio"
+        case allowsLocalSave = "allows_local_save"
     }
 
     init(from decoder: Decoder) throws {
@@ -140,6 +142,7 @@ struct VideoMessage: Codable, Identifiable, Hashable {
         self.expiresAt = try c.decode(Date.self, forKey: .expiresAt)
         self.captureMode = try c.decodeIfPresent(CaptureMode.self, forKey: .captureMode) ?? .faceOnly
         self.aspectRatio = try c.decodeIfPresent(Double.self, forKey: .aspectRatio)
+        self.allowsLocalSave = try c.decodeIfPresent(Bool.self, forKey: .allowsLocalSave) ?? false
     }
 
     init(
@@ -156,7 +159,8 @@ struct VideoMessage: Codable, Identifiable, Hashable {
         createdAt: Date? = nil,
         expiresAt: Date,
         captureMode: CaptureMode = .faceOnly,
-        aspectRatio: Double? = nil
+        aspectRatio: Double? = nil,
+        allowsLocalSave: Bool = false
     ) {
         self.id = id
         self.roomId = roomId
@@ -172,6 +176,14 @@ struct VideoMessage: Codable, Identifiable, Hashable {
         self.expiresAt = expiresAt
         self.captureMode = captureMode
         self.aspectRatio = aspectRatio
+        self.allowsLocalSave = allowsLocalSave
+    }
+
+    func canBeSavedLocally(by uid: String?) -> Bool {
+        if let uid, senderUid == uid {
+            return true
+        }
+        return allowsLocalSave
     }
 }
 

@@ -87,6 +87,7 @@ struct InlinePlayerView: View {
 
     private func archivedVideoURL() -> URL? {
         guard let createdAt = message.createdAt else { return nil }
+        guard isMine || message.allowsLocalSave else { return nil }
         let direction: LocalArchive.Direction = isMine ? .sent : .received
         return LocalArchive.existingVideoURL(
             direction: direction,

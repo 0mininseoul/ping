@@ -277,6 +277,10 @@ final class HistoryViewModel: ObservableObject {
 
     func save(message: VideoMessage, cacheService: HistoryCacheService, currentUid: String?) async {
         guard let id = message.id else { return }
+        guard message.canBeSavedLocally(by: currentUid) else {
+            lastErrorMessage = "보낸 사람이 로컬 저장을 허용하지 않았습니다."
+            return
+        }
         guard let cached = cacheService.cachedFile(roomId: message.roomId, messageId: id) else { return }
         let isMine = message.senderUid == currentUid
         LocalArchive.ensureFolders()
