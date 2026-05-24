@@ -126,10 +126,10 @@ public sealed class AppCoordinator : IDisposable
         switch (command)
         {
             case HotkeyCommand.FacePing:
-                ShowFaceMirror();
+                _ = ShowFaceMirrorAsync();
                 break;
             case HotkeyCommand.ScreenFacePing:
-                ShowScreenFaceMirror();
+                _ = ShowScreenFaceMirrorAsync();
                 break;
             case HotkeyCommand.QuickScreenFacePing:
                 _ = RunQuickScreenFacePingAsync();
@@ -458,7 +458,7 @@ public sealed class AppCoordinator : IDisposable
     private static string QuickSendSettingsDetail(IReadOnlyDictionary<HotkeyCommand, HotkeyBinding> bindings) =>
         $"Configure screen+face quick send for {HotkeyStatusText.BindingLabel(bindings, HotkeyCommand.QuickScreenFacePing)}.";
 
-    private void ShowFaceMirror()
+    private async Task ShowFaceMirrorAsync()
     {
         var uid = currentUid;
         if (uid is null)
@@ -478,6 +478,17 @@ public sealed class AppCoordinator : IDisposable
                 $"{HotkeyLabel(HotkeyCommand.FacePing)} reached Ping. Create or join a room before sending a face ping.",
                 "No sendable room available.");
             OpenRoomManagerWindow();
+            return;
+        }
+
+        if (faceMirrorWindow is not null)
+        {
+            faceMirrorWindow.Activate();
+            return;
+        }
+
+        if (!await EnsureCaptureReadyAsync(CaptureMode.FaceOnly, "Face Ping", HotkeyCommand.FacePing))
+        {
             return;
         }
 
@@ -507,7 +518,7 @@ public sealed class AppCoordinator : IDisposable
         faceMirrorWindow.Activate();
     }
 
-    private void ShowScreenFaceMirror()
+    private async Task ShowScreenFaceMirrorAsync()
     {
         var uid = currentUid;
         if (uid is null)
@@ -530,6 +541,17 @@ public sealed class AppCoordinator : IDisposable
             return;
         }
 
+        if (screenFaceMirrorWindow is not null)
+        {
+            screenFaceMirrorWindow.Activate();
+            return;
+        }
+
+        if (!await EnsureCaptureReadyAsync(CaptureMode.ScreenFace, "Screen+Face Ping", HotkeyCommand.ScreenFacePing))
+        {
+            return;
+        }
+
         ShowScreenFaceMirror(new ScreenFaceMirrorContext(
             Rooms: sendableRooms,
             SenderUid: uid,
@@ -539,6 +561,58 @@ public sealed class AppCoordinator : IDisposable
             SaveSentCopy: quickSendSettings.Preferences.SaveSentCopy,
             InitialPosition: mirrorPlacementStore.Load(CaptureMode.ScreenFace),
             SaveMirrorPosition: position => mirrorPlacementStore.Save(CaptureMode.ScreenFace, position)));
+    }
+
+    private async Task<bool> EnsureCaptureReadyAsync(
+        CaptureMode mode,
+        string title,
+        HotkeyCommand command)
+    {
+        var failure = await CapturePreflightFailureAsync(mode);
+        if (failure is null)
+        {
+            return true;
+        }
+
+        OpenOnboardingWindow();
+        ShowBlockedState(
+            $"{title} permissions",
+            $"{HotkeyLabel(command)} reached Ping, but {failure.Detail}",
+            failure.Reason);
+        return false;
+    }
+
+    private async Task<CapturePreflightFailure?> CapturePreflightFailureAsync(CaptureMode mode)
+    {
+        var windowsStatus = WindowsVersionProbe.CurrentStatus();
+        if (windowsStatus != WindowsSupportStatus.Supported)
+        {
+            return CapturePreflight.FirstFailure(
+                mode,
+                windowsStatus,
+                OnboardingProbeState.Unchecked("Camera was not checked because Windows is unsupported."),
+                OnboardingProbeState.Unchecked("Microphone was not checked because Windows is unsupported."),
+                OnboardingProbeState.Unchecked("Screen capture was not checked because Windows is unsupported."));
+        }
+
+        var ready = OnboardingProbeState.Available();
+        var camera = await permissionProbe.CheckCameraAsync();
+        if (CapturePreflight.FirstFailure(mode, windowsStatus, camera, ready, ready) is { } cameraFailure)
+        {
+            return cameraFailure;
+        }
+
+        var microphone = await permissionProbe.CheckMicrophoneAsync();
+        if (CapturePreflight.FirstFailure(mode, windowsStatus, camera, microphone, ready) is { } microphoneFailure)
+        {
+            return microphoneFailure;
+        }
+
+        var screenCapture = mode == CaptureMode.ScreenFace
+            ? await permissionProbe.CheckScreenCaptureAsync()
+            : ready;
+
+        return CapturePreflight.FirstFailure(mode, windowsStatus, camera, microphone, screenCapture);
     }
 
     private void ShowScreenFaceMirror(ScreenFaceMirrorContext context)

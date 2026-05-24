@@ -22,6 +22,7 @@
     <Compile Include="..\..\src\Ping.Windows.App\Hotkeys\GlobalHotkeyManager.cs" Link="Hotkeys\GlobalHotkeyManager.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Hotkeys\HotkeyBinding.cs" Link="Hotkeys\HotkeyBinding.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Hotkeys\HotkeyStatusText.cs" Link="Hotkeys\HotkeyStatusText.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Capture\CapturePreflight.cs" Link="Capture\CapturePreflight.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Capture\FaceMirrorViewModel.cs" Link="Capture\FaceMirrorViewModel.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Capture\MirrorPlacementStore.cs" Link="Capture\MirrorPlacementStore.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Capture\MirrorTargetSelector.cs" Link="Capture\MirrorTargetSelector.cs" />
