@@ -2,6 +2,11 @@ using Ping.Windows.Core.Models;
 
 namespace Ping.Windows.App.Capture;
 
+public sealed record MirrorTargetOption(
+    int Index,
+    string Label,
+    bool IsAll);
+
 internal sealed class MirrorTargetSelector
 {
     private readonly IReadOnlyList<Room> rooms;
@@ -35,6 +40,30 @@ internal sealed class MirrorTargetSelector
     }
 
     public bool IsAllSelected => rooms.Count > 1 && isAllSelected;
+
+    public bool HasMultipleTargets => rooms.Count > 1;
+
+    public IReadOnlyList<MirrorTargetOption> Options
+    {
+        get
+        {
+            if (!HasMultipleTargets)
+            {
+                return [];
+            }
+
+            var options = new List<MirrorTargetOption>(rooms.Count + 1)
+            {
+                new(-1, "All rooms", IsAll: true)
+            };
+            for (var index = 0; index < rooms.Count; index += 1)
+            {
+                options.Add(new MirrorTargetOption(index, rooms[index].Name, IsAll: false));
+            }
+
+            return options;
+        }
+    }
 
     public IReadOnlyCollection<Room> SelectedRooms
     {
@@ -100,4 +129,7 @@ internal sealed class MirrorTargetSelector
         selectedIndex = index;
         return true;
     }
+
+    public bool SelectOption(MirrorTargetOption option) =>
+        option.IsAll ? SelectAll() : SelectIndex(option.Index);
 }

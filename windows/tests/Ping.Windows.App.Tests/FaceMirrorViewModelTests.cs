@@ -101,6 +101,41 @@ public sealed class FaceMirrorViewModelTests
         Assert.True(model.IsAllTargetsSelected);
     }
 
+    [Fact]
+    public void TargetMenuOptions_SelectAllOrSingleRoom()
+    {
+        var model = new FaceMirrorViewModel(
+            MultiRoomFaceMirrorContext(),
+            new FakeFaceRecorder(),
+            (_, _) => Task.CompletedTask);
+
+        Assert.True(model.HasTargetMenu);
+        Assert.Collection(
+            model.TargetOptions,
+            option =>
+            {
+                Assert.True(option.IsAll);
+                Assert.Equal("All rooms", option.Label);
+            },
+            option =>
+            {
+                Assert.False(option.IsAll);
+                Assert.Equal("Main", option.Label);
+            },
+            option =>
+            {
+                Assert.False(option.IsAll);
+                Assert.Equal("Design", option.Label);
+            });
+
+        Assert.True(model.SelectTargetOption(model.TargetOptions[2]));
+        Assert.Equal("Design", model.PartnerLabel);
+        Assert.False(model.IsAllTargetsSelected);
+        Assert.True(model.SelectTargetOption(model.TargetOptions[0]));
+        Assert.Equal("All rooms", model.PartnerLabel);
+        Assert.True(model.IsAllTargetsSelected);
+    }
+
     private static FaceMirrorContext FaceMirrorContextFor(bool saveSentCopy) =>
         new(
             Rooms:

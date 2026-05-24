@@ -33,6 +33,25 @@ public sealed class ScreenFaceMirrorViewModelTests
         Assert.Equal(new[] { "room-1" }, sentInput.Rooms.Select(room => room.Id ?? string.Empty).ToArray());
     }
 
+    [Fact]
+    public void TargetMenuOptions_MatchScreenFaceRooms()
+    {
+        var model = new ScreenFaceMirrorViewModel(
+            MultiRoomContext(),
+            new FakeScreenFaceCaptureEngine(),
+            (_, _) => Task.CompletedTask);
+
+        Assert.True(model.HasTargetMenu);
+        Assert.Collection(
+            model.TargetOptions,
+            option => Assert.True(option.IsAll),
+            option => Assert.Equal("Main", option.Label),
+            option => Assert.Equal("Design", option.Label));
+
+        Assert.True(model.SelectTargetOption(model.TargetOptions[2]));
+        Assert.Equal("Design", model.PartnerLabel);
+    }
+
     private static ScreenFaceMirrorContext MultiRoomContext() =>
         new(
             Rooms:

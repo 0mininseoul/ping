@@ -63,13 +63,16 @@
         </Border>
 
         <Border
+            x:Name="PartnerChip"
             Grid.Row="1"
             HorizontalAlignment="Center"
             Padding="12,5"
             Background="{StaticResource PingSurfaceBrush}"
             BorderBrush="{StaticResource PingBorderIdleBrush}"
             BorderThickness="1"
-            CornerRadius="{StaticResource PingCornerRadius}">
+            CornerRadius="{StaticResource PingCornerRadius}"
+            IsTapEnabled="True"
+            Tapped="PartnerChip_Tapped">
             <TextBlock
                 FontSize="12"
                 Foreground="{StaticResource PingTextBrush}"

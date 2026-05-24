@@ -8,6 +8,7 @@ using Ping.Windows.Core.Models;
 using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
@@ -130,6 +131,10 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
 
     public bool IsAllTargetsSelected => targetSelector.IsAllSelected;
 
+    public bool HasTargetMenu => targetSelector.HasMultipleTargets;
+
+    public IReadOnlyList<MirrorTargetOption> TargetOptions => targetSelector.Options;
+
     public Uri? ScreenPreviewUri
     {
         get => screenPreviewUri;
@@ -182,6 +187,8 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
     public bool SelectAllTargets() => CanRecord && UpdateTarget(targetSelector.SelectAll());
 
     public bool SelectTargetAtIndex(int index) => CanRecord && UpdateTarget(targetSelector.SelectIndex(index));
+
+    public bool SelectTargetOption(MirrorTargetOption option) => CanRecord && UpdateTarget(targetSelector.SelectOption(option));
 
     public void UpdateMirrorPosition(double centerX, double centerY, double displayWidth, double displayHeight)
     {
@@ -446,6 +453,28 @@ public sealed partial class ScreenFaceMirrorWindow : Window
         }
 
         return false;
+    }
+
+    private void PartnerChip_Tapped(object sender, TappedRoutedEventArgs args)
+    {
+        if (!viewModel.CanRecord || !viewModel.HasTargetMenu)
+        {
+            return;
+        }
+
+        var flyout = new MenuFlyout();
+        foreach (var option in viewModel.TargetOptions)
+        {
+            var item = new MenuFlyoutItem
+            {
+                Text = option.Label
+            };
+            item.Click += (_, _) => viewModel.SelectTargetOption(option);
+            flyout.Items.Add(item);
+        }
+
+        flyout.ShowAt(PartnerChip);
+        args.Handled = true;
     }
 
     private void HandleLoaded(object sender, RoutedEventArgs args)
