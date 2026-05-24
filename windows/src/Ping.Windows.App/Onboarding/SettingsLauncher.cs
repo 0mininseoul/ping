@@ -6,6 +6,7 @@ public static class SettingsLauncher
     public const string MicrophonePrivacyUri = "ms-settings:privacy-microphone";
     public const string NotificationsPrivacyUri = "ms-settings:privacy-notifications";
     public const string GraphicsCapturePrivacyUri = "ms-settings:privacy-graphicscaptureprogrammatic";
+    public const string StartupAppsUri = "ms-settings:startupapps";
 
     public static Task<bool> LaunchWebcamPrivacyAsync() =>
         LaunchAsync(WebcamPrivacyUri);

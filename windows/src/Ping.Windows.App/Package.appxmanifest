@@ -51,6 +51,15 @@
             </com:ExeServer>
           </com:ComServer>
         </com:Extension>
+        <desktop:Extension
+          Category="windows.startupTask"
+          Executable="Ping.Windows.App.exe"
+          EntryPoint="Windows.FullTrustApplication">
+          <desktop:StartupTask
+            TaskId="PingWindowsStartup"
+            Enabled="true"
+            DisplayName="Ping" />
+        </desktop:Extension>
       </Extensions>
     </Application>
   </Applications>

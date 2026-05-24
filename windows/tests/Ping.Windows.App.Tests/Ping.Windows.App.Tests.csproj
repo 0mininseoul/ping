@@ -27,5 +27,6 @@
     <Compile Include="..\..\src\Ping.Windows.App\Notifications\NotificationController.cs" Link="Notifications\NotificationController.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Playback\PlaybackViewModel.cs" Link="Playback\PlaybackViewModel.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Setup\SettingsWindowViewModel.cs" Link="Setup\SettingsWindowViewModel.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Setup\StartupTaskController.cs" Link="Setup\StartupTaskController.cs" />
   </ItemGroup>
 </Project>

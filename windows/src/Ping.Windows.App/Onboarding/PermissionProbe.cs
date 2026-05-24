@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using Ping.Windows.App.Setup;
 
 namespace Ping.Windows.App.Onboarding;
 
@@ -19,15 +20,18 @@ public sealed class PermissionProbe
     private readonly string supabaseConfigPath;
     private readonly INativeScreenCaptureSelfTest screenCaptureSelfTest;
     private readonly IHotkeyRegistrationProbe? hotkeyRegistrationProbe;
+    private readonly IStartupTaskController startupTaskController;
 
     public PermissionProbe(
         string? supabaseConfigPath = null,
         INativeScreenCaptureSelfTest? screenCaptureSelfTest = null,
-        IHotkeyRegistrationProbe? hotkeyRegistrationProbe = null)
+        IHotkeyRegistrationProbe? hotkeyRegistrationProbe = null,
+        IStartupTaskController? startupTaskController = null)
     {
         this.supabaseConfigPath = supabaseConfigPath ?? DefaultSupabaseConfigPath();
         this.screenCaptureSelfTest = screenCaptureSelfTest ?? new NativeScreenCaptureSelfTest();
         this.hotkeyRegistrationProbe = hotkeyRegistrationProbe;
+        this.startupTaskController = startupTaskController ?? new StartupTaskController();
     }
 
     public async Task<OnboardingEnvironmentState> ProbeAsync(CancellationToken cancellationToken = default) =>
@@ -39,7 +43,7 @@ public sealed class PermissionProbe
             await CheckScreenCaptureAsync(cancellationToken).ConfigureAwait(false),
             await CheckNotificationsAsync(cancellationToken).ConfigureAwait(false),
             CheckDefaultHotkeys(),
-            CheckStartup());
+            await CheckStartupAsync(cancellationToken).ConfigureAwait(false));
 
     public bool IsSupabaseConfigured() =>
         File.Exists(supabaseConfigPath);
@@ -217,13 +221,20 @@ public sealed class PermissionProbe
         }
     }
 
-    public OnboardingProbeState CheckStartup()
+    public async Task<OnboardingProbeState> CheckStartupAsync(CancellationToken cancellationToken = default)
     {
-#if NET8_0_WINDOWS || NET9_0_WINDOWS || NET10_0_WINDOWS
-        return OnboardingProbeState.Unchecked("Startup registration will be checked after MSIX startup task wiring is added.");
-#else
-        return OnboardingProbeState.Unchecked("Startup toggle is available only in packaged Windows builds.");
-#endif
+        var status = await startupTaskController.GetStatusAsync(cancellationToken).ConfigureAwait(false);
+        return status.State switch
+        {
+            PingStartupTaskState.Enabled => OnboardingProbeState.Available(status.Message),
+            PingStartupTaskState.EnabledByPolicy => OnboardingProbeState.Available(status.Message),
+            PingStartupTaskState.Disabled => OnboardingProbeState.Available("Startup can be enabled in Settings."),
+            PingStartupTaskState.DisabledByUser => OnboardingProbeState.Blocked(
+                status.Message,
+                SettingsLauncher.StartupAppsUri),
+            PingStartupTaskState.DisabledByPolicy => OnboardingProbeState.Blocked(status.Message),
+            _ => OnboardingProbeState.Unchecked(status.Message)
+        };
     }
 
     public static string DefaultSupabaseDirectoryPath() =>

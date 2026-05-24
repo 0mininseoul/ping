@@ -13,14 +13,19 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
 {
     private readonly Action<ScreenFaceQuickSendSettings> saveSettings;
     private readonly Action openRooms;
+    private readonly IStartupTaskController startupTaskController;
     private ScreenFaceQuickSendSettings settings;
+    private bool isStartupEnabled;
+    private bool canToggleStartup;
+    private string startupStatus = "Checking startup registration...";
 
     public SettingsWindowViewModel(
         string nickname,
         IReadOnlyDictionary<HotkeyCommand, HotkeyBinding> hotkeys,
         ScreenFaceQuickSendSettings settings,
         Action<ScreenFaceQuickSendSettings> saveSettings,
-        Action openRooms)
+        Action openRooms,
+        IStartupTaskController? startupTaskController = null)
     {
         Nickname = nickname;
         FaceHotkey = LabelFor("Face Ping", hotkeys, HotkeyCommand.FacePing);
@@ -30,6 +35,7 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
         this.settings = settings;
         this.saveSettings = saveSettings;
         this.openRooms = openRooms;
+        this.startupTaskController = startupTaskController ?? new StartupTaskController();
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -44,7 +50,49 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
 
     public string HistoryHotkey { get; }
 
-    public string StartupStatus => "Packaged MSIX startup registration is configured in the release package step.";
+    public string StartupStatus
+    {
+        get => startupStatus;
+        private set
+        {
+            if (startupStatus == value)
+            {
+                return;
+            }
+
+            startupStatus = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public bool CanToggleStartup
+    {
+        get => canToggleStartup;
+        private set
+        {
+            if (canToggleStartup == value)
+            {
+                return;
+            }
+
+            canToggleStartup = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public bool IsStartupEnabled
+    {
+        get => isStartupEnabled;
+        set
+        {
+            if (isStartupEnabled == value)
+            {
+                return;
+            }
+
+            _ = SetStartupEnabledAsync(value);
+        }
+    }
 
     public bool IsQuickSendEnabled
     {
@@ -65,6 +113,12 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
     }
 
     public void OpenRooms() => openRooms();
+
+    public async Task RefreshStartupAsync(CancellationToken cancellationToken = default)
+    {
+        var status = await startupTaskController.GetStatusAsync(cancellationToken);
+        ApplyStartupStatus(status);
+    }
 
     public void ApplySettings(ScreenFaceQuickSendSettings updatedSettings)
     {
@@ -88,6 +142,22 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(AllowsLocalSave));
     }
 
+    private async Task SetStartupEnabledAsync(bool isEnabled)
+    {
+        var status = await startupTaskController.SetEnabledAsync(isEnabled);
+        ApplyStartupStatus(status);
+    }
+
+    private void ApplyStartupStatus(PingStartupTaskStatus status)
+    {
+        isStartupEnabled = status.IsEnabled;
+        canToggleStartup = status.CanToggle;
+        startupStatus = status.Message;
+        OnPropertyChanged(nameof(IsStartupEnabled));
+        OnPropertyChanged(nameof(CanToggleStartup));
+        OnPropertyChanged(nameof(StartupStatus));
+    }
+
     private static string LabelFor(string label, IReadOnlyDictionary<HotkeyCommand, HotkeyBinding> hotkeys, HotkeyCommand command) =>
         hotkeys.TryGetValue(command, out var binding) ? $"{label}: {binding}" : $"{label}: Unassigned";
 
@@ -105,6 +175,7 @@ public sealed partial class SettingsWindow : Window
         this.viewModel = viewModel;
         InitializeComponent();
         Root.DataContext = viewModel;
+        _ = viewModel.RefreshStartupAsync();
     }
 
     public void RefreshSettings(ScreenFaceQuickSendSettings settings)

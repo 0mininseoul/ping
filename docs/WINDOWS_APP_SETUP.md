@@ -54,7 +54,7 @@ If a hotkey is already used by another app, onboarding/settings should show it a
 5. Screen capture: check `GraphicsCaptureSession.IsSupported()` and run the native one-frame monitor self-test.
 6. Notifications: register Windows App SDK notifications and show a local test notification.
 7. Hotkeys: register Alt+P, Alt+L, Alt+Shift+L, and Alt+O with Win32 `RegisterHotKey`.
-8. Startup: use packaged MSIX startup registration. Dev/unpackaged runs show this as unavailable.
+8. Startup: use packaged MSIX startup registration. Dev/unpackaged runs show this as unavailable. Packaged builds declare `PingWindowsStartup` and expose a Settings toggle that respects Windows Startup Apps/Task Manager state.
 
 Expected user-facing constraints:
 
@@ -111,7 +111,7 @@ Manual checks after install:
 - Alt+L records and sends `screen_face`.
 - Alt+Shift+L records immediately to the default room after the 300ms HUD.
 - Notification click downloads from `ping-videos` and opens playback.
-- Settings toggles for quick send, sent-copy saving, and recipient local-save permission persist.
+- Settings toggles for quick send, Windows startup, sent-copy saving, and recipient local-save permission persist.
 
 ## Cross-Platform QA Matrix
 

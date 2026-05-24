@@ -35,7 +35,8 @@
                         OnContent="Alt+Shift+L records immediately" />
                     <ToggleSwitch
                         Header="Start Ping with Windows"
-                        IsEnabled="False"
+                        IsEnabled="{Binding CanToggleStartup}"
+                        IsOn="{Binding IsStartupEnabled, Mode=TwoWay}"
                         OffContent="{Binding StartupStatus}"
                         OnContent="{Binding StartupStatus}" />
                 </StackPanel>

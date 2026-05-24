@@ -1,4 +1,5 @@
 using Ping.Windows.App.Onboarding;
+using Ping.Windows.App.Setup;
 using Xunit;
 
 namespace Ping.Windows.App.Tests;
@@ -142,6 +143,21 @@ public sealed class OnboardingStateTests
         Assert.Equal(new[] { (int)'P' }, hotkeys.UnregisteredIds);
     }
 
+    [Fact]
+    public async Task PermissionProbe_maps_user_disabled_startup_to_windows_settings()
+    {
+        var probe = new PermissionProbe(
+            Path.Combine(Path.GetTempPath(), "missing-supabase.json"),
+            startupTaskController: new FixedStartupTaskController(new PingStartupTaskStatus(
+                PingStartupTaskState.DisabledByUser,
+                "Startup was disabled in Windows Settings.")));
+
+        var state = await probe.CheckStartupAsync();
+
+        Assert.Equal(OnboardingProbeStatus.Blocked, state.Status);
+        Assert.Equal(SettingsLauncher.StartupAppsUri, state.SettingsUri);
+    }
+
     private static void AssertSettingsAction(
         OnboardingViewModel model,
         OnboardingRowKind kind,
@@ -172,6 +188,22 @@ public sealed class OnboardingStateTests
         public void Unregister(int id)
         {
             UnregisteredIds.Add(id);
+        }
+    }
+
+    private sealed class FixedStartupTaskController(PingStartupTaskStatus status) : IStartupTaskController
+    {
+        public Task<PingStartupTaskStatus> GetStatusAsync(CancellationToken cancellationToken = default)
+        {
+            _ = cancellationToken;
+            return Task.FromResult(status);
+        }
+
+        public Task<PingStartupTaskStatus> SetEnabledAsync(bool isEnabled, CancellationToken cancellationToken = default)
+        {
+            _ = isEnabled;
+            _ = cancellationToken;
+            return Task.FromResult(status);
         }
     }
 }

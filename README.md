@@ -47,7 +47,7 @@ Windows 앱은 `windows/` 아래 별도 네이티브 클라이언트다.
 1. Windows 11 24H2 이상에서 `Ping-Windows-v0.3.28-x64.msix` 또는 `Ping-Windows-v0.3.28-arm64.msix`를 설치한다.
 2. 외부 배포는 서명된 MSIX가 필요하다. 서명이 준비되지 않은 내부 빌드는 Windows 설치/SmartScreen 경고가 정상이다.
 3. `%LOCALAPPDATA%\Ping\Supabase.json`에 Supabase URL과 anon key를 저장한다.
-4. 온보딩에서 카메라, 마이크, 화면 캡처, 알림, 단축키 상태를 확인한다.
+4. 온보딩에서 카메라, 마이크, 화면 캡처, 알림, 단축키, 시작프로그램 상태를 확인한다.
 
 자세한 Windows 빌드/설치/QA 절차는 `docs/WINDOWS_APP_SETUP.md`와 `windows/README.md`를 따른다.
 
