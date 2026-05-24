@@ -180,7 +180,7 @@ public sealed class HotkeyPreferencesStore
 
         foreach (var pair in preferences.Hotkeys)
         {
-            if (!IsValidBinding(pair.Value))
+            if (!IsKnownCommand(pair.Key) || !IsValidBinding(pair.Value))
             {
                 continue;
             }
@@ -201,6 +201,13 @@ public sealed class HotkeyPreferencesStore
         var json = JsonSerializer.Serialize(preferences, SerializerOptions);
         File.WriteAllText(PreferencesPath, json);
     }
+
+    private static bool IsKnownCommand(HotkeyCommand command) =>
+        command is
+            HotkeyCommand.FacePing
+            or HotkeyCommand.ScreenFacePing
+            or HotkeyCommand.QuickScreenFacePing
+            or HotkeyCommand.History;
 
     private static bool IsValidBinding(HotkeyBinding? binding)
     {

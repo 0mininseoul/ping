@@ -159,6 +159,36 @@ public sealed class HotkeyBindingTests
     }
 
     [Fact]
+    public void Unknown_hotkey_commands_are_ignored_without_dropping_valid_preferences()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "PingHotkeyTests", Guid.NewGuid().ToString("N"));
+        var store = new HotkeyPreferencesStore(root);
+        var changed = HotkeyBinding.Defaults()
+            .ToDictionary(pair => pair.Key, pair => pair.Value);
+        changed[HotkeyCommand.FacePing] = HotkeyBinding.FromParts(HotkeyModifiers.Control | HotkeyModifiers.Alt, "F");
+        changed[(HotkeyCommand)999] = HotkeyBinding.Alt("Z");
+
+        try
+        {
+            store.Save(changed);
+
+            var loaded = store.Load();
+
+            Assert.Equal(
+                HotkeyBinding.FromParts(HotkeyModifiers.Control | HotkeyModifiers.Alt, "F"),
+                loaded[HotkeyCommand.FacePing]);
+            Assert.False(loaded.ContainsKey((HotkeyCommand)999));
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public void Status_text_uses_customized_hotkey_bindings()
     {
         var bindings = HotkeyBinding.Defaults()
