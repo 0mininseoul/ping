@@ -10,6 +10,15 @@ using Microsoft.UI.Xaml;
 
 namespace Ping.Windows.App.Setup;
 
+public enum SettingsSection
+{
+    General = 0,
+    Hotkeys = 1,
+    Rooms = 2,
+    Storage = 3,
+    Info = 4
+}
+
 public sealed class SettingsWindowViewModel : INotifyPropertyChanged
 {
     private readonly Action<ScreenFaceQuickSendSettings> saveSettings;
@@ -25,6 +34,7 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
     private string screenFaceHotkey;
     private string quickSendHotkey;
     private string historyHotkey;
+    private int selectedTabIndex;
 
     public SettingsWindowViewModel(
         string nickname,
@@ -33,9 +43,11 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
         Action<ScreenFaceQuickSendSettings> saveSettings,
         Action openRooms,
         IStartupTaskController? startupTaskController = null,
-        Func<HotkeyCommand, HotkeyBinding, HotkeyRegistrationResult>? updateHotkey = null)
+        Func<HotkeyCommand, HotkeyBinding, HotkeyRegistrationResult>? updateHotkey = null,
+        SettingsSection initialSection = SettingsSection.General)
     {
         Nickname = nickname;
+        selectedTabIndex = (int)initialSection;
         this.hotkeys = hotkeys.ToDictionary(pair => pair.Key, pair => pair.Value);
         this.settings = settings;
         this.saveSettings = saveSettings;
@@ -53,6 +65,21 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public string Nickname { get; }
+
+    public int SelectedTabIndex
+    {
+        get => selectedTabIndex;
+        set
+        {
+            if (selectedTabIndex == value)
+            {
+                return;
+            }
+
+            selectedTabIndex = value;
+            OnPropertyChanged();
+        }
+    }
 
     public string FaceHotkey
     {
@@ -180,6 +207,11 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
 
     public void OpenRooms() => openRooms();
 
+    public void SelectSection(SettingsSection section)
+    {
+        SelectedTabIndex = (int)section;
+    }
+
     public void ApplyHotkey(HotkeySettingRow row)
     {
         HotkeyBinding binding;
@@ -281,6 +313,11 @@ public sealed partial class SettingsWindow : Window
     public void RefreshSettings(ScreenFaceQuickSendSettings settings)
     {
         viewModel.ApplySettings(settings);
+    }
+
+    public void ShowSection(SettingsSection section)
+    {
+        viewModel.SelectSection(section);
     }
 
     private void OpenRoomsButton_Click(object sender, RoutedEventArgs args)

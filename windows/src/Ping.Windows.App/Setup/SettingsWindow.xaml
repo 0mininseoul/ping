@@ -16,7 +16,9 @@
             <SolidColorBrush x:Key="PingIdleBrush" Color="#4DFFFFFF" />
         </Grid.Resources>
 
-        <TabView IsAddTabButtonVisible="False">
+        <TabView
+            IsAddTabButtonVisible="False"
+            SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}">
             <TabViewItem Header="General">
                 <StackPanel Padding="16" Spacing="12">
                     <TextBlock

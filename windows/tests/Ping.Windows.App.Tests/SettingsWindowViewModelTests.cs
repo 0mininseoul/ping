@@ -43,6 +43,24 @@ public sealed class SettingsWindowViewModelTests
     }
 
     [Fact]
+    public void SettingsSectionSelectionCanOpenHotkeysDirectly()
+    {
+        var viewModel = new SettingsWindowViewModel(
+            "Youngmin",
+            HotkeyBinding.Defaults(),
+            ScreenFaceQuickSendSettings.Default,
+            _ => { },
+            () => { },
+            initialSection: SettingsSection.Hotkeys);
+
+        Assert.Equal((int)SettingsSection.Hotkeys, viewModel.SelectedTabIndex);
+
+        viewModel.SelectSection(SettingsSection.Storage);
+
+        Assert.Equal((int)SettingsSection.Storage, viewModel.SelectedTabIndex);
+    }
+
+    [Fact]
     public void ApplyingHotkeyPersistsThroughCallbackAndRefreshesLabels()
     {
         var savedCommand = HotkeyCommand.History;

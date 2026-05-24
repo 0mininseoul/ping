@@ -7,6 +7,7 @@ public sealed partial class OnboardingWindow : Window
 {
     private readonly PermissionProbe permissionProbe;
     private readonly OnboardingViewModel viewModel;
+    private readonly Action? openHotkeySettings;
     private bool didLoad;
 
     public OnboardingWindow()
@@ -14,9 +15,10 @@ public sealed partial class OnboardingWindow : Window
     {
     }
 
-    internal OnboardingWindow(PermissionProbe permissionProbe)
+    internal OnboardingWindow(PermissionProbe permissionProbe, Action? openHotkeySettings = null)
     {
         this.permissionProbe = permissionProbe;
+        this.openHotkeySettings = openHotkeySettings;
         viewModel = new OnboardingViewModel();
         InitializeComponent();
         Root.DataContext = viewModel;
@@ -67,8 +69,16 @@ public sealed partial class OnboardingWindow : Window
 
                 await RefreshAsync();
                 break;
-            case OnboardingActionKind.Retry:
             case OnboardingActionKind.Configure:
+                if (openHotkeySettings is not null)
+                {
+                    openHotkeySettings();
+                    break;
+                }
+
+                await RefreshAsync();
+                break;
+            case OnboardingActionKind.Retry:
             case OnboardingActionKind.None:
             default:
                 await RefreshAsync();

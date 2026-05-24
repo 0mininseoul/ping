@@ -301,11 +301,12 @@ public sealed class AppCoordinator : IDisposable
         historyWindow.Activate();
     }
 
-    private void OpenSettingsWindow()
+    private void OpenSettingsWindow(SettingsSection section = SettingsSection.General)
     {
         if (settingsWindow is not null)
         {
             settingsWindow.RefreshSettings(quickSendSettings);
+            settingsWindow.ShowSection(section);
             settingsWindow.Activate();
             return;
         }
@@ -316,7 +317,8 @@ public sealed class AppCoordinator : IDisposable
             quickSendSettings,
             ApplyQuickSendSettings,
             OpenRoomManagerWindow,
-            updateHotkey: ApplyHotkeySetting));
+            updateHotkey: ApplyHotkeySetting,
+            initialSection: section));
         settingsWindow.Closed += (_, _) => settingsWindow = null;
         settingsWindow.Activate();
     }
@@ -786,7 +788,9 @@ public sealed class AppCoordinator : IDisposable
         {
             if (owner.onboardingWindow is null)
             {
-                owner.onboardingWindow = new OnboardingWindow();
+                owner.onboardingWindow = new OnboardingWindow(
+                    new PermissionProbe(),
+                    () => owner.OpenSettingsWindow(SettingsSection.Hotkeys));
                 owner.onboardingWindow.Closed += (_, _) => owner.onboardingWindow = null;
             }
 
