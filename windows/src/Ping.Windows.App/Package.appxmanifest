@@ -37,6 +37,7 @@
     </Application>
   </Applications>
   <Capabilities>
+    <Capability Name="internetClient" />
     <rescap:Capability Name="runFullTrust" />
     <uap6:Capability Name="graphicsCapture" />
     <DeviceCapability Name="webcam" />

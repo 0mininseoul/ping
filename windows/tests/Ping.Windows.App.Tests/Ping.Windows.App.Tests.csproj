@@ -13,4 +13,9 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Ping.Windows.Core\Ping.Windows.Core.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\..\src\Ping.Windows.App\Onboarding\OnboardingViewModel.cs" Link="Onboarding\OnboardingViewModel.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Onboarding\SettingsLauncher.cs" Link="Onboarding\SettingsLauncher.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Onboarding\WindowsVersionProbe.cs" Link="Onboarding\WindowsVersionProbe.cs" />
+  </ItemGroup>
 </Project>
