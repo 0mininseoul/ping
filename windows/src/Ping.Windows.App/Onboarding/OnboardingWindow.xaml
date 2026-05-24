@@ -1,17 +1,13 @@
 <Window
     x:Class="Ping.Windows.App.Onboarding.OnboardingWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:onboarding="using:Ping.Windows.App.Onboarding">
-    <Window.Resources>
-        <onboarding:OnboardingViewModel x:Key="OnboardingViewModel" />
-    </Window.Resources>
-
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Grid
+        x:Name="Root"
         Width="560"
         Padding="24"
         Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
-        DataContext="{StaticResource OnboardingViewModel}"
+        Loaded="Root_Loaded"
         RowSpacing="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -68,12 +64,15 @@
                             Grid.Column="2"
                             HorizontalAlignment="Stretch"
                             Content="Retry"
+                            Click="RetryButton_Click"
                             IsEnabled="{Binding CanRetry}" />
 
                         <Button
                             Grid.Column="3"
                             HorizontalAlignment="Stretch"
-                            Content="{Binding PrimaryAction.Label}" />
+                            Click="PrimaryActionButton_Click"
+                            Content="{Binding PrimaryActionLabel}"
+                            IsEnabled="{Binding HasPrimaryAction}" />
                     </Grid>
                 </DataTemplate>
             </ListView.ItemTemplate>

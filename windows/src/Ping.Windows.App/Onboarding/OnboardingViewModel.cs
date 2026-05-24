@@ -54,7 +54,12 @@ public sealed record OnboardingRowState(
     string Message,
     bool CanRetry,
     OnboardingAction? PrimaryAction = null,
-    OnboardingAction? SecondaryAction = null);
+    OnboardingAction? SecondaryAction = null)
+{
+    public bool HasPrimaryAction => PrimaryAction is not null;
+
+    public string PrimaryActionLabel => PrimaryAction?.Label ?? string.Empty;
+}
 
 public sealed record OnboardingProbeState(
     OnboardingProbeStatus Status,

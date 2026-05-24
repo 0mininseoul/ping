@@ -19,6 +19,17 @@ public static class SettingsLauncher
     public static Task<bool> LaunchGraphicsCapturePrivacyAsync() =>
         LaunchAsync(GraphicsCapturePrivacyUri);
 
+    public static async Task<bool> LaunchFolderAsync(string folderPath)
+    {
+#if NET8_0_WINDOWS || NET9_0_WINDOWS || NET10_0_WINDOWS
+        Directory.CreateDirectory(folderPath);
+        return await Windows.System.Launcher.LaunchFolderPathAsync(folderPath);
+#else
+        await Task.CompletedTask.ConfigureAwait(false);
+        return false;
+#endif
+    }
+
     public static async Task<bool> LaunchAsync(string settingsUri)
     {
 #if NET8_0_WINDOWS || NET9_0_WINDOWS || NET10_0_WINDOWS

@@ -88,9 +88,43 @@ public sealed class OnboardingStateTests
 
         var row = Assert.Single(model.Rows, row => row.Kind == OnboardingRowKind.SupabaseConfig);
         Assert.Equal(OnboardingRowStatus.Blocked, row.Status);
+        Assert.True(row.HasPrimaryAction);
+        Assert.Equal("Open config folder", row.PrimaryActionLabel);
         Assert.Equal(OnboardingActionKind.OpenFolder, row.PrimaryAction?.Kind);
         Assert.Equal("Open config folder", row.PrimaryAction?.Label);
         Assert.True(row.CanRetry);
+    }
+
+    [Fact]
+    public void PermissionProbe_detects_supabase_config_file()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "PingWindowsOnboardingTests", Guid.NewGuid().ToString("N"));
+        var configPath = Path.Combine(directory, "Supabase.json");
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var probe = new PermissionProbe(configPath);
+            Assert.False(probe.IsSupabaseConfigured());
+
+            File.WriteAllText(configPath, "{}");
+
+            Assert.True(probe.IsSupabaseConfigured());
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task PermissionProbe_runtime_checks_are_explicitly_unchecked_in_portable_tests()
+    {
+        var probe = new PermissionProbe(Path.Combine(Path.GetTempPath(), "missing-supabase.json"));
+
+        Assert.Equal(OnboardingProbeStatus.Unchecked, (await probe.CheckCameraAsync()).Status);
+        Assert.Equal(OnboardingProbeStatus.Unchecked, (await probe.CheckMicrophoneAsync()).Status);
+        Assert.Equal(OnboardingProbeStatus.Unchecked, (await probe.CheckScreenCaptureAsync()).Status);
+        Assert.Equal(OnboardingProbeStatus.Unchecked, (await probe.CheckNotificationsAsync()).Status);
     }
 
     private static void AssertSettingsAction(

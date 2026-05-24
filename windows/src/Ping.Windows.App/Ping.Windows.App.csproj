@@ -17,6 +17,10 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Ping.Windows.Core\Ping.Windows.Core.csproj" />
+    <ProjectReference
+      Include="..\Ping.Windows.NativeCapture\Ping.Windows.NativeCapture.vcxproj"
+      ReferenceOutputAssembly="false"
+      Properties="Configuration=$(Configuration);Platform=$(Platform);OutDir=$(OutDir)" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Assets\**\*.*">

@@ -17,7 +17,7 @@ public sealed class PermissionProbe
         INativeScreenCaptureSelfTest? screenCaptureSelfTest = null)
     {
         this.supabaseConfigPath = supabaseConfigPath ?? DefaultSupabaseConfigPath();
-        this.screenCaptureSelfTest = screenCaptureSelfTest ?? new PendingNativeScreenCaptureSelfTest();
+        this.screenCaptureSelfTest = screenCaptureSelfTest ?? new NativeScreenCaptureSelfTest();
     }
 
     public async Task<OnboardingEnvironmentState> ProbeAsync(CancellationToken cancellationToken = default) =>
@@ -48,7 +48,7 @@ public sealed class PermissionProbe
 
         try
         {
-            var capture = new Windows.Media.Capture.MediaCapture();
+            using var capture = new Windows.Media.Capture.MediaCapture();
             await capture.InitializeAsync(new Windows.Media.Capture.MediaCaptureInitializationSettings
             {
                 StreamingCaptureMode = Windows.Media.Capture.StreamingCaptureMode.Video
@@ -87,7 +87,7 @@ public sealed class PermissionProbe
 
         try
         {
-            var capture = new Windows.Media.Capture.MediaCapture();
+            using var capture = new Windows.Media.Capture.MediaCapture();
             await capture.InitializeAsync(new Windows.Media.Capture.MediaCaptureInitializationSettings
             {
                 StreamingCaptureMode = Windows.Media.Capture.StreamingCaptureMode.Audio
@@ -126,7 +126,7 @@ public sealed class PermissionProbe
             OnboardingProbeStatus.Available => selfTest,
             OnboardingProbeStatus.Blocked => selfTest,
             OnboardingProbeStatus.Unsupported => selfTest,
-            _ => OnboardingProbeState.Unchecked("Screen capture support exists, but the native one-frame self-test has not run yet.")
+            _ => OnboardingProbeState.Blocked("Screen capture support exists, but the native one-frame self-test did not complete.")
         };
 #else
         await Task.CompletedTask.ConfigureAwait(false);
@@ -134,28 +134,34 @@ public sealed class PermissionProbe
 #endif
     }
 
-    public async Task<OnboardingProbeState> CheckNotificationsAsync(CancellationToken cancellationToken = default)
+    public Task<OnboardingProbeState> CheckNotificationsAsync(CancellationToken cancellationToken = default)
     {
+        _ = cancellationToken;
 #if NET8_0_WINDOWS || NET9_0_WINDOWS || NET10_0_WINDOWS
         try
         {
             Microsoft.Windows.AppNotifications.AppNotificationManager.Default.Register();
             var setting = Microsoft.Windows.AppNotifications.AppNotificationManager.Default.Setting;
-            return setting == Microsoft.Windows.AppNotifications.AppNotificationSetting.Enabled
-                ? OnboardingProbeState.Available("Notifications are ready.")
-                : OnboardingProbeState.Blocked(
+            if (setting != Microsoft.Windows.AppNotifications.AppNotificationSetting.Enabled)
+            {
+                return Task.FromResult(OnboardingProbeState.Blocked(
                     $"Notifications are {setting}.",
-                    SettingsLauncher.NotificationsPrivacyUri);
+                    SettingsLauncher.NotificationsPrivacyUri));
+            }
+
+            var notification = new Microsoft.Windows.AppNotifications.AppNotification(
+                "<toast><visual><binding template=\"ToastGeneric\"><text>Ping notification test</text></binding></visual></toast>");
+            Microsoft.Windows.AppNotifications.AppNotificationManager.Default.Show(notification);
+            return Task.FromResult(OnboardingProbeState.Available("Notifications are ready."));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return OnboardingProbeState.Blocked(
+            return Task.FromResult(OnboardingProbeState.Blocked(
                 $"Notification registration failed: {ex.Message}",
-                SettingsLauncher.NotificationsPrivacyUri);
+                SettingsLauncher.NotificationsPrivacyUri));
         }
 #else
-        await Task.CompletedTask.ConfigureAwait(false);
-        return OnboardingProbeState.Unchecked("Notification check requires Windows App SDK runtime APIs.");
+        return Task.FromResult(OnboardingProbeState.Unchecked("Notification check requires Windows App SDK runtime APIs."));
 #endif
     }
 
@@ -197,11 +203,11 @@ public sealed class PermissionProbe
 #endif
     }
 
-    private static string DefaultSupabaseConfigPath() =>
-        Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Ping",
-            "Supabase.json");
+    public static string DefaultSupabaseDirectoryPath() =>
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Ping");
+
+    public static string DefaultSupabaseConfigPath() =>
+        Path.Combine(DefaultSupabaseDirectoryPath(), "Supabase.json");
 
     private static bool TryRegisterHotKey(HotkeyRegistration hotkey)
     {
@@ -236,9 +242,43 @@ public sealed class PermissionProbe
             new(1000 + key, ModAlt | ModShift, key, $"Alt+Shift+{key}");
     }
 
-    private sealed class PendingNativeScreenCaptureSelfTest : INativeScreenCaptureSelfTest
+    private sealed class NativeScreenCaptureSelfTest : INativeScreenCaptureSelfTest
     {
-        public Task<OnboardingProbeState> CapturePrimaryMonitorFrameAsync(CancellationToken cancellationToken = default) =>
-            Task.FromResult(OnboardingProbeState.Unchecked("Native one-frame screen capture self-test is pending capture engine integration."));
+        public Task<OnboardingProbeState> CapturePrimaryMonitorFrameAsync(CancellationToken cancellationToken = default)
+        {
+            if (!OperatingSystem.IsWindows())
+            {
+                return Task.FromResult(OnboardingProbeState.Unchecked("Native screen capture self-test requires Windows."));
+            }
+
+            if (!NativeLibrary.TryLoad("Ping.Windows.NativeCapture.dll", out var library))
+            {
+                return Task.FromResult(OnboardingProbeState.Blocked("Native screen capture self-test bridge is unavailable."));
+            }
+
+            try
+            {
+                if (!NativeLibrary.TryGetExport(library, "PingScreenCaptureSelfTest", out var function))
+                {
+                    return Task.FromResult(OnboardingProbeState.Blocked("Native screen capture self-test export is missing."));
+                }
+
+                var selfTest = Marshal.GetDelegateForFunctionPointer<PingScreenCaptureSelfTestDelegate>(function);
+                return Task.FromResult(selfTest() switch
+                {
+                    0 => OnboardingProbeState.Available("Screen capture self-test passed."),
+                    1 => OnboardingProbeState.Blocked("Programmatic screen capture is blocked.", SettingsLauncher.GraphicsCapturePrivacyUri),
+                    2 => OnboardingProbeState.Unsupported("Graphics Capture is not supported on this device."),
+                    var code => OnboardingProbeState.Blocked($"Native screen capture self-test failed with code {code}.")
+                });
+            }
+            finally
+            {
+                NativeLibrary.Free(library);
+            }
+        }
+
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+        private delegate int PingScreenCaptureSelfTestDelegate();
     }
 }
