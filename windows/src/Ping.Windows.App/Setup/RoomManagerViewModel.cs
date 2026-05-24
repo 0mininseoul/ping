@@ -34,7 +34,7 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
         this.invitationService = invitationService;
         this.nickname = nickname;
         this.clipboardWriter = clipboardWriter ?? new ClipboardWriter();
-        this.inviteLinkFormatter = inviteLinkFormatter ?? PingInviteLink.ShareTextFor;
+        this.inviteLinkFormatter = inviteLinkFormatter ?? (token => PingInviteLink.ShareTextFor(token));
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

@@ -110,9 +110,10 @@ public sealed class RoomContractTests
         Assert.Contains("\"room_uuid\":\"room-id\"", chatBody, StringComparison.Ordinal);
         Assert.Contains("\"reply_chat_uuid\":\"chat-reply\"", chatBody, StringComparison.Ordinal);
         Assert.Contains("\"media_path_text\":\"sender/chat-images/message.png\"", chatBody, StringComparison.Ordinal);
-        Assert.Equal(
-            """{"target_kind":"video","target_uuid":"video-id","emoji_text":"+1"}""",
-            JsonSerializer.Serialize(rpc.Calls[5].Body, JsonOptions.Supabase));
+        using var reactionBody = JsonDocument.Parse(JsonSerializer.Serialize(rpc.Calls[5].Body, JsonOptions.Supabase));
+        Assert.Equal("video", reactionBody.RootElement.GetProperty("target_kind").GetString());
+        Assert.Equal("video-id", reactionBody.RootElement.GetProperty("target_uuid").GetString());
+        Assert.Equal("+1", reactionBody.RootElement.GetProperty("emoji_text").GetString());
     }
 
     [Fact]

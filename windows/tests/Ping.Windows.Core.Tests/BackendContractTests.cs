@@ -168,7 +168,7 @@ public sealed class BackendContractTests
             Assert.Equal(HttpMethod.Post, request.Method);
             Assert.Equal(
                 "https://example.supabase.co/storage/v1/object/ping-videos/sender%20uid/video%20id.mp4",
-                request.RequestUri?.ToString());
+                request.RequestUri?.AbsoluteUri);
             Assert.Equal("anon-key", request.Headers.GetValues("apikey").Single());
             Assert.Equal("Bearer", request.Headers.Authorization?.Scheme);
             Assert.Equal("access-token", request.Headers.Authorization?.Parameter);
@@ -198,7 +198,7 @@ public sealed class BackendContractTests
             Assert.Equal(HttpMethod.Get, request.Method);
             Assert.Equal(
                 "https://example.supabase.co/storage/v1/object/ping-videos/sender%20uid/video%20id.mp4",
-                request.RequestUri?.ToString());
+                request.RequestUri?.AbsoluteUri);
             Assert.Equal("anon-key", request.Headers.GetValues("apikey").Single());
             Assert.Equal("Bearer", request.Headers.Authorization?.Scheme);
             Assert.Equal("access-token", request.Headers.Authorization?.Parameter);
@@ -324,7 +324,7 @@ public sealed class BackendContractTests
     }
 
     [Fact]
-    public void MessageServiceUsesMacOSCreateMessageRpcBody()
+    public async Task MessageServiceUsesMacOSCreateMessageRpcBody()
     {
         var rpc = new RecordingRpcClient();
         var storage = new StubStorageService("sender-uid/shared-video-id.mp4");
@@ -354,7 +354,7 @@ public sealed class BackendContractTests
             AllowsLocalSave: false,
             SharedVideoId: "shared-video-id");
 
-        service.SendAsync(input).GetAwaiter().GetResult();
+        await service.SendAsync(input);
 
         Assert.Equal("ping_create_message", rpc.Calls.Single().Function);
         Assert.Equal(

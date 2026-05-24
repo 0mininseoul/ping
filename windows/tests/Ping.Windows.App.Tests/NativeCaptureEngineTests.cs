@@ -1,4 +1,5 @@
 using Ping.Windows.App.Capture;
+using Xunit;
 
 namespace Ping.Windows.App.Tests;
 
