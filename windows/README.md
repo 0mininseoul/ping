@@ -1,6 +1,6 @@
 # Ping Windows Client
 
-This directory contains the Windows client workspace scaffold. It is intentionally isolated from the existing macOS app and does not change the macOS project, Sparkle setup, Swift version, deployment target, or Liquid Glass compatibility wrapper.
+This directory contains the native Windows client workspace. It is intentionally isolated from the existing macOS app and does not change the macOS project, Sparkle setup, Swift version, deployment target, or Liquid Glass compatibility wrapper.
 
 ## Prerequisites
 
@@ -97,6 +97,8 @@ Manual hardware smoke is still required for camera, microphone, screen capture, 
 
 The WinUI app is under `src/Ping.Windows.App`, shared product logic belongs in `src/Ping.Windows.Core`, native Windows capture work belongs in `src/Ping.Windows.NativeCapture`, and tests belong under `tests`.
 
-## Local Scaffold Status
+## Local Verification Status
 
-This scaffold was created on macOS where `dotnet`, PowerShell, Visual Studio, Windows App SDK templates, and MSBuild C++ targets were not available. The solution and project files were therefore created manually and were not build-verified locally. Run the verification, build, and test commands above on Windows before starting implementation tasks that depend on generated WinUI or C++ build artifacts.
+Most Windows code in this branch was authored from macOS, where `dotnet`, PowerShell, Visual Studio, Windows App SDK templates, and MSBuild C++ targets were not available. Static checks that can run on macOS have been used, but the managed tests, packaged WinUI build, native capture DLL, camera, microphone, notifications, tray, global hotkeys, MSIX install, and Mac/Windows cross-send matrix still require a Windows 11 24H2+ machine.
+
+Before distributing a build, run the verification, build, release, and smoke commands above on Windows and record any OS-specific failures in the cross-platform QA matrix.
