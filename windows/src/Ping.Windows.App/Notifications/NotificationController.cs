@@ -389,12 +389,7 @@ public sealed class NotificationController : IDisposable
     }
 
     private static NotificationActivationArguments ParseActivationArguments(AppNotificationActivatedEventArgs args)
-    {
-        var parsed = NotificationActivationArguments.From(args.Arguments);
-        return parsed.HasValues
-            ? parsed
-            : NotificationActivationArguments.Parse(args.Argument);
-    }
+        => NotificationActivationArguments.From(args);
 #endif
 
     private static string NotificationXml(VideoMessage message)
@@ -494,6 +489,16 @@ public sealed record NotificationActivationArguments(
         values.TryGetValue("room_id", out var roomId);
         return new(action, messageId, chatId, roomId);
     }
+
+#if WINDOWS
+    public static NotificationActivationArguments From(AppNotificationActivatedEventArgs args)
+    {
+        var parsed = From(args.Arguments);
+        return parsed.HasValues
+            ? parsed
+            : Parse(args.Argument);
+    }
+#endif
 
     public static NotificationActivationArguments Parse(string? arguments)
     {

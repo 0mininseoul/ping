@@ -217,6 +217,48 @@ public sealed class AppCoordinatorSourceTests
         Assert.DoesNotContain("iconVisible = false;\n            AddOrUpdateIcon();", source, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void WinUiAppUsesSingleInstanceActivationRedirection()
+    {
+        var root = RepoRoot();
+        var project = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Ping.Windows.App.csproj"));
+        var program = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Program.cs"));
+        var app = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "App.xaml.cs"));
+        var coordinator = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Bootstrap",
+            "AppCoordinator.cs"));
+
+        Assert.Contains("DISABLE_XAML_GENERATED_MAIN", project, StringComparison.Ordinal);
+        Assert.Contains("FindOrRegisterForKey(\"Ping.Windows.App\")", program, StringComparison.Ordinal);
+        Assert.Contains("RedirectActivationToAsync(args)", program, StringComparison.Ordinal);
+        Assert.Contains("finally\n            {\n                SetEvent(redirectEventHandle);", program, StringComparison.Ordinal);
+        Assert.Contains("pendingActivations.Add(args)", program, StringComparison.Ordinal);
+        Assert.Contains("Application.Start", program, StringComparison.Ordinal);
+        Assert.Contains("Program.Activated += HandleRedirectedActivation;", app, StringComparison.Ordinal);
+        Assert.Contains("foreach (var activation in Program.TakePendingActivations())", app, StringComparison.Ordinal);
+        Assert.Contains("coordinator?.HandleNotificationActivation(", app, StringComparison.Ordinal);
+        Assert.Contains("public void HandleNotificationActivation(NotificationActivationArguments? parsed)", coordinator, StringComparison.Ordinal);
+    }
+
     private static string RepoRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

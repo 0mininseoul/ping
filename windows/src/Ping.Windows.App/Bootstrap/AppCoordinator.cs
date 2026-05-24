@@ -168,7 +168,7 @@ public sealed class AppCoordinator : IDisposable
         HandleNotificationActivation(notificationController.TryGetInitialActivationArguments());
     }
 
-    private void HandleNotificationActivation(NotificationActivationArguments? parsed)
+    public void HandleNotificationActivation(NotificationActivationArguments? parsed)
     {
         if (parsed is null)
         {
