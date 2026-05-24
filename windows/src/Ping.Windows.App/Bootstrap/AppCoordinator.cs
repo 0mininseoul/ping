@@ -101,7 +101,7 @@ public sealed class AppCoordinator : IDisposable
         var registrations = RegisterSavedHotkeys();
         tray.AddOrUpdateIcon();
         notificationController.Start();
-        ShowHistory("Ping is running. Capture commands are wired and waiting for the capture windows.");
+        ShowHistory("Starting Ping and preparing your rooms.");
         ShowRegistrationState(registrations);
         MaybeOpenOnboardingAtStartup(registrations);
         _ = BootstrapAndLoadRoomsAsync();
@@ -769,6 +769,13 @@ public sealed class AppCoordinator : IDisposable
                 room.Id is not null
                 && room.MemberUids.Contains(uid)
                 && room.MemberUids.Count >= 2);
+            if (mainWindow.HistoryPanel.Visibility == Visibility.Visible)
+            {
+                mainWindow.StateDetail.Text = sendableCount == 0
+                    ? "Connected. Create or join a room to start sending."
+                    : $"Connected. {sendableCount} sendable room(s) available.";
+            }
+
             mainWindow.HotkeyState.Text = HotkeyStatusText.RoomSummary(preferencesStore.Load(), sendableCount);
             StartIncomingPolling();
         }

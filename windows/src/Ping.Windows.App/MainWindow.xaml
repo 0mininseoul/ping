@@ -110,11 +110,11 @@
                                 FontSize="13"
                                 FontWeight="SemiBold"
                                 Foreground="{StaticResource PingTextBrush}"
-                                Text="No rooms loaded" />
+                                Text="Ping is ready" />
                             <TextBlock
                                 FontSize="12"
                                 Foreground="{StaticResource PingMutedBrush}"
-                                Text="Supabase room history will appear here after the backend shell is wired."
+                                Text="Rooms and recent activity are ready."
                                 TextWrapping="WrapWholeWords" />
                         </StackPanel>
                     </Border>
@@ -162,7 +162,7 @@
                             x:FieldModifier="public"
                             FontSize="12"
                             Foreground="{StaticResource PingTextBrush}"
-                            Text="The requested surface is not implemented yet."
+                            Text="The command could not continue."
                             TextWrapping="WrapWholeWords" />
                     </StackPanel>
                 </Border>
@@ -221,11 +221,11 @@
                 <Ellipse
                     Width="8"
                     Height="8"
-                    Fill="{StaticResource PingRedBrush}" />
+                    Fill="{StaticResource PingIdleBrush}" />
                 <TextBlock
                     FontSize="12"
                     Foreground="{StaticResource PingMutedBrush}"
-                    Text="Capture blocked" />
+                    Text="Ready" />
             </StackPanel>
         </Grid>
     </Grid>
