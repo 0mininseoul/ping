@@ -163,6 +163,8 @@ public sealed class OnboardingViewModel : INotifyPropertyChanged
 
         IsScreenFaceQuickSendEnabled =
             state.WindowsStatus == WindowsSupportStatus.Supported
+            && state.Camera.Status == OnboardingProbeStatus.Available
+            && state.Microphone.Status == OnboardingProbeStatus.Available
             && state.ScreenCapture.Status == OnboardingProbeStatus.Available
             && state.Hotkeys.Status == OnboardingProbeStatus.Available;
     }

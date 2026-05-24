@@ -56,6 +56,22 @@ public sealed class OnboardingStateTests
     }
 
     [Fact]
+    public void Camera_or_microphone_block_disables_screen_face_quick_send()
+    {
+        var cameraBlocked = new OnboardingViewModel(OnboardingEnvironmentState.Ready() with
+        {
+            Camera = OnboardingProbeState.Blocked("Camera access is blocked.", SettingsLauncher.WebcamPrivacyUri)
+        });
+        var microphoneBlocked = new OnboardingViewModel(OnboardingEnvironmentState.Ready() with
+        {
+            Microphone = OnboardingProbeState.Blocked("Microphone access is blocked.", SettingsLauncher.MicrophonePrivacyUri)
+        });
+
+        Assert.False(cameraBlocked.IsScreenFaceQuickSendEnabled);
+        Assert.False(microphoneBlocked.IsScreenFaceQuickSendEnabled);
+    }
+
+    [Fact]
     public void Blocked_permissions_map_to_settings_and_retry_ctas()
     {
         var model = new OnboardingViewModel(OnboardingEnvironmentState.Ready() with
