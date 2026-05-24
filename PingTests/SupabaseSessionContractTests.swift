@@ -23,7 +23,8 @@ final class SupabaseSessionContractTests: XCTestCase {
     func testSupabaseSessionAvoidsAutomaticKeychainAccess() throws {
         let clientSource = try readSourceFile("Ping/Backend/SupabaseClient.swift")
 
-        XCTAssertTrue(clientSource.contains("loadFileSession() ?? loadLegacyDefaultsSession()"))
+        XCTAssertTrue(clientSource.contains("loadSessionCandidates()"))
+        XCTAssertTrue(clientSource.contains("selectNewestSession(from:"))
         XCTAssertTrue(clientSource.contains("savePortableCopy(session)"))
         XCTAssertFalse(clientSource.contains("import Security"))
         XCTAssertFalse(clientSource.contains("import LocalAuthentication"))
@@ -45,6 +46,36 @@ final class SupabaseSessionContractTests: XCTestCase {
         clearSession()
                     let anonymousSession = try await signInAnonymously()
         """))
+    }
+
+    func testSessionLoadChoosesNewestPersistedSession() throws {
+        let clientSource = try readSourceFile("Ping/Backend/SupabaseClient.swift")
+
+        XCTAssertTrue(clientSource.contains("private static func loadSessionCandidates() -> [SupabaseSession]"))
+        XCTAssertTrue(clientSource.contains("private static func selectNewestSession(from sessions: [SupabaseSession]) -> SupabaseSession?"))
+        XCTAssertTrue(clientSource.contains("sessions.max { lhs, rhs in"))
+        XCTAssertTrue(clientSource.contains("lhs.expiresAt < rhs.expiresAt"))
+        XCTAssertFalse(clientSource.contains("loadFileSession() ?? loadLegacyDefaultsSession()"))
+    }
+
+    func testRefreshUsesCrossProcessLockAndReloadsStoredSessionBeforeNetworkRequest() throws {
+        let clientSource = try readSourceFile("Ping/Backend/SupabaseClient.swift")
+
+        XCTAssertTrue(clientSource.contains("withRefreshLock"))
+        XCTAssertTrue(clientSource.contains("reloadStoredSessionForRefresh"))
+        XCTAssertTrue(clientSource.contains("let storedSession = SupabaseSessionStore.load()"))
+        XCTAssertTrue(clientSource.contains("storedSession.refreshToken != session.refreshToken"))
+        XCTAssertTrue(clientSource.contains("let refreshedSession = try await refreshSession(refreshToken: refreshCandidate.refreshToken)"))
+        XCTAssertTrue(clientSource.contains("save(session: refreshedSession)"))
+    }
+
+    func testAlreadyUsedRefreshTokenChecksForNewerPersistedSessionBeforeExpiringUser() throws {
+        let clientSource = try readSourceFile("Ping/Backend/SupabaseClient.swift")
+
+        XCTAssertTrue(clientSource.contains("isAlreadyUsedRefreshTokenError"))
+        XCTAssertTrue(clientSource.contains("reloadStoredSessionForRefresh(excludingRefreshToken: refreshCandidate.refreshToken)"))
+        XCTAssertTrue(clientSource.contains("return recoveredSession"))
+        XCTAssertTrue(clientSource.contains("throw PingError.supabaseSessionExpired(userId: session.userId)"))
     }
 
     func testSparkleAppUpdatesKeepAnonymousSessionLinkageStable() throws {

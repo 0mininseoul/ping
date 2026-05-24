@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 
 enum SupabaseJSON {
     static let decoder: JSONDecoder = {
@@ -252,14 +253,65 @@ final class SupabaseClient: ObservableObject {
         }
 
         if let session {
-            do {
-                return try await refreshSession(refreshToken: session.refreshToken)
-            } catch {
-                throw PingError.supabaseSessionExpired(userId: session.userId)
+            return try await SupabaseSessionStore.withRefreshLock {
+                let refreshCandidate = reloadStoredSessionForRefresh(fallback: session)
+                if !refreshCandidate.needsRefresh {
+                    return refreshCandidate
+                }
+
+                do {
+                    let refreshedSession = try await refreshSession(refreshToken: refreshCandidate.refreshToken)
+                    save(session: refreshedSession)
+                    return refreshedSession
+                } catch {
+                    if isAlreadyUsedRefreshTokenError(error),
+                       let recoveredSession = reloadStoredSessionForRefresh(excludingRefreshToken: refreshCandidate.refreshToken),
+                       !recoveredSession.needsRefresh {
+                        return recoveredSession
+                    }
+
+                    throw PingError.supabaseSessionExpired(userId: session.userId)
+                }
             }
         }
 
         return try await signInAnonymously()
+    }
+
+    private func reloadStoredSessionForRefresh(fallback session: SupabaseSession) -> SupabaseSession {
+        let storedSession = SupabaseSessionStore.load()
+        guard let storedSession,
+              storedSession.userId == session.userId,
+              storedSession.refreshToken != session.refreshToken else {
+            return session
+        }
+
+        self.session = storedSession
+        currentUid = storedSession.userId
+        return storedSession
+    }
+
+    private func reloadStoredSessionForRefresh(excludingRefreshToken refreshToken: String) -> SupabaseSession? {
+        let storedSession = SupabaseSessionStore.load()
+        guard let storedSession,
+              storedSession.userId == session?.userId,
+              storedSession.refreshToken != refreshToken else {
+            return nil
+        }
+
+        self.session = storedSession
+        currentUid = storedSession.userId
+        return storedSession
+    }
+
+    private func isAlreadyUsedRefreshTokenError(_ error: Error) -> Bool {
+        guard case let PingError.supabaseRequestFailed(statusCode, message) = error,
+              statusCode == 400 || statusCode == 401 else {
+            return false
+        }
+
+        return message.localizedCaseInsensitiveContains("refresh_token_already_used")
+            || message.localizedCaseInsensitiveContains("already used")
     }
 
     private func signInAnonymously() async throws -> SupabaseSession {
@@ -366,14 +418,15 @@ final class SupabaseClient: ObservableObject {
 private enum SupabaseSessionStore {
     private static let defaultsKey = "ping.supabase.session"
     private static let fileName = "SupabaseSession.json"
+    private static let refreshLockFileName = "SupabaseSession.lock"
 
     static func load() -> SupabaseSession? {
-        if let session = loadFileSession() ?? loadLegacyDefaultsSession() {
-            savePortableCopy(session)
-            return session
+        guard let session = selectNewestSession(from: loadSessionCandidates()) else {
+            return nil
         }
 
-        return nil
+        savePortableCopy(session)
+        return session
     }
 
     static func save(_ session: SupabaseSession) {
@@ -388,6 +441,36 @@ private enum SupabaseSessionStore {
             try? FileManager.default.removeItem(at: url)
         }
         UserDefaults.standard.removeObject(forKey: defaultsKey)
+    }
+
+    @MainActor
+    static func withRefreshLock<T>(_ body: () async throws -> T) async throws -> T {
+        guard let url = refreshLockFileURL() else {
+            return try await body()
+        }
+
+        let descriptor = open(url.path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR)
+        guard descriptor >= 0 else {
+            return try await body()
+        }
+        defer { _ = close(descriptor) }
+
+        guard flock(descriptor, LOCK_EX) == 0 else {
+            return try await body()
+        }
+        defer { _ = flock(descriptor, LOCK_UN) }
+
+        return try await body()
+    }
+
+    private static func loadSessionCandidates() -> [SupabaseSession] {
+        [loadFileSession(), loadLegacyDefaultsSession()].compactMap { $0 }
+    }
+
+    private static func selectNewestSession(from sessions: [SupabaseSession]) -> SupabaseSession? {
+        sessions.max { lhs, rhs in
+            lhs.expiresAt < rhs.expiresAt
+        }
     }
 
     private static func loadFileSession() -> SupabaseSession? {
@@ -412,6 +495,14 @@ private enum SupabaseSessionStore {
     }
 
     private static func sessionFileURL() -> URL? {
+        sessionDirectoryURL()?.appendingPathComponent(fileName)
+    }
+
+    private static func refreshLockFileURL() -> URL? {
+        sessionDirectoryURL()?.appendingPathComponent(refreshLockFileName)
+    }
+
+    private static func sessionDirectoryURL() -> URL? {
         do {
             let supportURL = try FileManager.default.url(
                 for: .applicationSupportDirectory,
@@ -421,7 +512,7 @@ private enum SupabaseSessionStore {
             )
             let directory = supportURL.appendingPathComponent("Ping", isDirectory: true)
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-            return directory.appendingPathComponent(fileName)
+            return directory
         } catch {
             return nil
         }
