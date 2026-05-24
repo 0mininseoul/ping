@@ -57,6 +57,47 @@ public sealed class HistoryViewModelTests
     }
 
     [Fact]
+    public async Task FocusChatAsync_SelectsNotificationRoomAndChatRow()
+    {
+        var rpc = new RecordingHistoryRpcClient();
+        var viewModel = ViewModel(rpc);
+
+        await viewModel.FocusChatAsync("room-2", "chat-2");
+
+        Assert.Equal("room-2", viewModel.SelectedRoom?.Id);
+        Assert.Equal("chat-2", viewModel.SelectedTimelineItem?.Chat?.Message.Id);
+        Assert.Null(viewModel.SelectedVideo);
+        Assert.Equal(["room-2"], rpc.MarkedReadRoomIds);
+        Assert.Contains("Focused chat", viewModel.StatusMessage, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task FocusChatAsync_LeavesRoomOpenWhenChatIsMissing()
+    {
+        var rpc = new RecordingHistoryRpcClient();
+        var viewModel = ViewModel(rpc);
+
+        await viewModel.FocusChatAsync("room-2", "missing-chat");
+
+        Assert.Equal("room-2", viewModel.SelectedRoom?.Id);
+        Assert.Null(viewModel.SelectedTimelineItem);
+        Assert.Contains("Chat not found", viewModel.StatusMessage, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task LoadSelectedRoomAsync_PreservesFocusedChatAcrossRefresh()
+    {
+        var rpc = new RecordingHistoryRpcClient();
+        var viewModel = ViewModel(rpc);
+        await viewModel.FocusChatAsync("room-2", "chat-2");
+
+        await viewModel.LoadSelectedRoomAsync();
+
+        Assert.Equal("chat-2", viewModel.SelectedTimelineItem?.Chat?.Message.Id);
+        Assert.Null(viewModel.SelectedVideo);
+    }
+
+    [Fact]
     public void ChatHistoryItem_TracksImagePathInPortableTests()
     {
         var localPath = Path.Combine(Path.GetTempPath(), "Ping", "history-test.png");

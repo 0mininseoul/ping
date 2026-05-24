@@ -21,6 +21,7 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
     private static readonly string[] QuickReactions = ["❤️", "👍", "👎", "😂", "‼️", "❓"];
     private Room? selectedRoom;
     private VideoHistoryItem? selectedVideo;
+    private TimelineHistoryItem? selectedTimelineItem;
     private HistoryReplyTarget? replyTarget;
     private string statusMessage = "History";
 
@@ -75,6 +76,22 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         {
             selectedVideo = value;
             OnPropertyChanged();
+        }
+    }
+
+    public TimelineHistoryItem? SelectedTimelineItem
+    {
+        get => selectedTimelineItem;
+        set
+        {
+            if (ReferenceEquals(selectedTimelineItem, value))
+            {
+                return;
+            }
+
+            selectedTimelineItem = value;
+            OnPropertyChanged();
+            SelectedVideo = value?.Video;
         }
     }
 
@@ -141,8 +158,31 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         await LoadSelectedRoomAsync(cancellationToken);
     }
 
+    public async Task FocusChatAsync(
+        string roomId,
+        string chatId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(roomId) || string.IsNullOrWhiteSpace(chatId))
+        {
+            return;
+        }
+
+        await LoadAsync(roomId, cancellationToken);
+        var row = Timeline.FirstOrDefault(candidate =>
+            string.Equals(candidate.Chat?.Message.Id, chatId, StringComparison.Ordinal));
+        SelectedTimelineItem = row;
+        StatusMessage = row?.Chat is { } chat
+            ? $"Focused chat from {chat.SenderNickname}."
+            : "Chat not found in latest room history.";
+    }
+
     public async Task LoadSelectedRoomAsync(CancellationToken cancellationToken = default)
     {
+        var previousSelectedSortKind = SelectedTimelineItem?.SortKind;
+        var previousSelectedSortId = SelectedTimelineItem?.SortId;
+        SelectedTimelineItem = null;
+        SelectedVideo = null;
         Videos.Clear();
         Chats.Clear();
         Timeline.Clear();
@@ -192,6 +232,7 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         }
 
         RebuildTimeline();
+        RestoreSelectedTimelineItem(previousSelectedSortKind, previousSelectedSortId);
         await LoadChatImagesAsync(cancellationToken);
         await MarkSelectedRoomReadAsync(roomId, cancellationToken);
         StatusMessage = $"{Videos.Count} videos, {Chats.Count} chats, {Reactions.Count} reactions.";
@@ -298,6 +339,10 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         Chats.Remove(item);
         RemoveTimeline(item);
         RemoveReactions(ReactionTargetKind.Chat, item.Message.Id);
+        if (string.Equals(SelectedTimelineItem?.Chat?.Message.Id, item.Message.Id, StringComparison.Ordinal))
+        {
+            SelectedTimelineItem = null;
+        }
         if (string.Equals(ReplyTarget?.ChatId, item.Message.Id, StringComparison.Ordinal))
         {
             ReplyTarget = null;
@@ -329,6 +374,10 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         if (ReferenceEquals(SelectedVideo, item))
         {
             SelectedVideo = null;
+        }
+        if (string.Equals(SelectedTimelineItem?.Video?.Message.Id, item.Message.Id, StringComparison.Ordinal))
+        {
+            SelectedTimelineItem = null;
         }
         if (string.Equals(ReplyTarget?.VideoId, item.Message.Id, StringComparison.Ordinal))
         {
@@ -494,6 +543,18 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         {
             Timeline.Add(row);
         }
+    }
+
+    private void RestoreSelectedTimelineItem(int? sortKind, string? sortId)
+    {
+        if (sortKind is null || string.IsNullOrWhiteSpace(sortId))
+        {
+            return;
+        }
+
+        SelectedTimelineItem = Timeline.FirstOrDefault(row =>
+            row.SortKind == sortKind.Value
+            && string.Equals(row.SortId, sortId, StringComparison.Ordinal));
     }
 
     private void RemoveTimeline(VideoHistoryItem item)

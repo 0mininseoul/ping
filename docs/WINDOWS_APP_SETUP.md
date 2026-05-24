@@ -114,7 +114,7 @@ Manual checks after install:
 - Alt+Shift+L records immediately to the default room after the 300ms HUD.
 - Notification click downloads from `ping-videos` and opens playback at the sender position. After the first play ends, Enter replays, Esc closes, and idle playback fades out after about 10 seconds.
 - History shows video and chat in one room timeline, auto-refreshes the selected room while open, and supports direct video Play/double-click playback, text/image chat, reply previews, sender chat delete, received video hide, sender video delete, and quick emoji reactions.
-- Unread room chat from another user shows one Windows notification per room, and clicking it opens History.
+- Unread room chat from another user shows one Windows notification per room, and clicking it opens History with the notified chat selected.
 - Settings can edit and save the Supabase profile nickname used for room actions and sent message labels.
 - Rooms can search users by profile nickname and invite the selected user, matching the Mac room setup flow.
 - Settings toggles for quick send, Windows startup, sent-copy saving, received-video saving, recipient local-save permission, and 30-day local archive deletion persist.
@@ -131,7 +131,7 @@ Manual checks after install:
 | Mac | Windows | `screen_face` | Windows playback preserves `aspect_ratio` |
 | Windows | Windows | Alt+Shift+L quick | Immediate 3-second screen+face send |
 | Windows | Mac | chat image + reaction + reply | Mac shows the image attachment, reply preview, and updated reaction aggregate |
-| Mac | Windows | chat image + reaction + reply | Windows shows the image attachment, reply preview, and updated reaction aggregate |
+| Mac | Windows | chat image + reaction + reply | Windows notification opens the room with the notified chat selected; Windows shows the image attachment, reply preview, and updated reaction aggregate |
 | Mac | Windows | sender chat delete | Windows removes the deleted chat from the room timeline |
 | Windows | Mac | received video hide | Mac remains unaffected; Windows removes the hidden received video locally |
 | Mac | Mac | existing | No regression |

@@ -18,18 +18,22 @@ public sealed partial class HistoryWindow : Window
     private readonly HistoryAutoRefreshCoordinator autoRefresh;
     private readonly List<PlaybackWindow> playbackWindows = [];
     private readonly string? initialRoomId;
+    private readonly string? initialChatId;
     private string? selectedChatImagePath;
+    private bool isApplyingSelection;
 
     public HistoryWindow(
         HistoryViewModel viewModel,
         Func<VideoMessage, CancellationToken, Task<string>> downloadVideoAsync,
         MessageService messageService,
-        string? initialRoomId = null)
+        string? initialRoomId = null,
+        string? initialChatId = null)
     {
         this.viewModel = viewModel;
         this.downloadVideoAsync = downloadVideoAsync;
         this.messageService = messageService;
         this.initialRoomId = initialRoomId;
+        this.initialChatId = initialChatId;
         InitializeComponent();
         Root.DataContext = viewModel;
         autoRefresh = new HistoryAutoRefreshCoordinator(
@@ -41,25 +45,54 @@ public sealed partial class HistoryWindow : Window
 
     private async void HandleLoaded(object sender, RoutedEventArgs args)
     {
-        if (await RunAsync(() => viewModel.LoadAsync(initialRoomId)))
+        var loaded = !string.IsNullOrWhiteSpace(initialRoomId) && !string.IsNullOrWhiteSpace(initialChatId)
+            ? await RunAsync(() => viewModel.FocusChatAsync(initialRoomId, initialChatId))
+            : await RunAsync(() => viewModel.LoadAsync(initialRoomId));
+        if (loaded)
         {
+            ApplySelectionFromViewModel();
             autoRefresh.Start();
         }
     }
 
     public async Task FocusRoomAsync(string roomId)
     {
-        await RunAsync(() => viewModel.SelectRoomAsync(roomId));
+        if (await RunAsync(() => viewModel.SelectRoomAsync(roomId)))
+        {
+            ApplySelectionFromViewModel();
+        }
+    }
+
+    public async Task FocusChatAsync(string roomId, string chatId)
+    {
+        if (await RunAsync(() => viewModel.FocusChatAsync(roomId, chatId)))
+        {
+            ApplySelectionFromViewModel();
+        }
     }
 
     private async void RoomsList_SelectionChanged(object sender, SelectionChangedEventArgs args)
     {
+        if (isApplyingSelection)
+        {
+            return;
+        }
+
         viewModel.SelectedRoom = RoomsList.SelectedItem as Room;
-        await RunAsync(() => viewModel.LoadSelectedRoomAsync());
+        if (await RunAsync(() => viewModel.LoadSelectedRoomAsync()))
+        {
+            ApplySelectionFromViewModel();
+        }
     }
 
     private void VideosList_SelectionChanged(object sender, SelectionChangedEventArgs args)
     {
+        if (isApplyingSelection)
+        {
+            return;
+        }
+
+        viewModel.SelectedTimelineItem = VideosList.SelectedItem as TimelineHistoryItem;
         viewModel.SelectedVideo = VideosList.SelectedItem switch
         {
             VideoHistoryItem item => item,
@@ -105,7 +138,7 @@ public sealed partial class HistoryWindow : Window
     }
 
     private async void RefreshButton_Click(object sender, RoutedEventArgs args) =>
-        await RunAsync(() => autoRefresh.RefreshOnceAsync());
+        await RefreshAndSyncSelectionAsync();
 
     private async void SendChatButton_Click(object sender, RoutedEventArgs args)
     {
@@ -195,6 +228,32 @@ public sealed partial class HistoryWindow : Window
     {
         selectedChatImagePath = null;
         SelectedImageText.Text = string.Empty;
+    }
+
+    private async Task RefreshAndSyncSelectionAsync()
+    {
+        if (await RunAsync(() => autoRefresh.RefreshOnceAsync()))
+        {
+            ApplySelectionFromViewModel();
+        }
+    }
+
+    private void ApplySelectionFromViewModel()
+    {
+        isApplyingSelection = true;
+        try
+        {
+            RoomsList.SelectedItem = viewModel.SelectedRoom;
+            VideosList.SelectedItem = viewModel.SelectedTimelineItem;
+            if (viewModel.SelectedTimelineItem is not null)
+            {
+                VideosList.ScrollIntoView(viewModel.SelectedTimelineItem);
+            }
+        }
+        finally
+        {
+            isApplyingSelection = false;
+        }
     }
 
     private async Task PlayVideoAsync(VideoMessage video)

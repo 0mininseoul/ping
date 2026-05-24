@@ -41,6 +41,21 @@ public sealed class AppCoordinatorSourceTests
         Assert.DoesNotContain("invitationService,\n            Environment.UserName", source, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void ChatNotificationActivationFocusesChatId()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Bootstrap",
+            "AppCoordinator.cs"));
+
+        Assert.DoesNotContain("_ = chatId;", source, StringComparison.Ordinal);
+        Assert.Contains("OpenHistoryWindow(roomId, chatId)", source, StringComparison.Ordinal);
+    }
+
     private static string RepoRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

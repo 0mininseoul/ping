@@ -313,11 +313,17 @@ public sealed class AppCoordinator : IDisposable
         roomManagerWindow.Activate();
     }
 
-    private void OpenHistoryWindow(string? preferredRoomId = null)
+    private void OpenHistoryWindow(string? preferredRoomId = null, string? preferredChatId = null)
     {
         if (historyWindow is not null)
         {
             historyWindow.Activate();
+            if (!string.IsNullOrWhiteSpace(preferredRoomId) && !string.IsNullOrWhiteSpace(preferredChatId))
+            {
+                _ = historyWindow.FocusChatAsync(preferredRoomId, preferredChatId);
+                return;
+            }
+
             if (!string.IsNullOrWhiteSpace(preferredRoomId))
             {
                 _ = historyWindow.FocusRoomAsync(preferredRoomId);
@@ -336,7 +342,8 @@ public sealed class AppCoordinator : IDisposable
                 () => currentUid),
             DownloadVideoForPlaybackAsync,
             messageService,
-            preferredRoomId);
+            preferredRoomId,
+            preferredChatId);
         historyWindow.Closed += (_, _) => historyWindow = null;
         historyWindow.Activate();
     }
@@ -901,8 +908,7 @@ public sealed class AppCoordinator : IDisposable
         string roomId,
         CancellationToken cancellationToken)
     {
-        _ = chatId;
-        await RunOnUiThreadAsync(() => OpenHistoryWindow(roomId));
+        await RunOnUiThreadAsync(() => OpenHistoryWindow(roomId, chatId));
         try
         {
             await chatService.MarkRoomReadAsync(roomId, cancellationToken);
