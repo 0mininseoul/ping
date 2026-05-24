@@ -140,6 +140,7 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
     public async Task SearchRoomsAsync(string prefix, CancellationToken cancellationToken = default)
     {
         SearchResults.Clear();
+        SelectedSearchResult = null;
         foreach (var room in await roomService.SearchOpenRoomsAsync(prefix, cancellationToken))
         {
             SearchResults.Add(room);
@@ -318,11 +319,16 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
 
     private async Task ReloadInvitationsAsync(CancellationToken cancellationToken)
     {
+        var previousSelectedId = SelectedInvitation?.Id;
         Invitations.Clear();
         foreach (var invitation in await invitationService.IncomingAsync(cancellationToken))
         {
             Invitations.Add(invitation);
         }
+
+        SelectedInvitation = previousSelectedId is null
+            ? Invitations.FirstOrDefault()
+            : Invitations.FirstOrDefault(invitation => invitation.Id == previousSelectedId) ?? Invitations.FirstOrDefault();
     }
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>

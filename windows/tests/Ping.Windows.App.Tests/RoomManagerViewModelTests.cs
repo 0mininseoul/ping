@@ -62,11 +62,56 @@ public sealed class RoomManagerViewModelTests
             && JsonSerializer.Serialize(call.Body, JsonOptions.Supabase).Contains("\"to_uid\":\"receiver\"", StringComparison.Ordinal));
     }
 
-    private static Room Room() =>
+    [Fact]
+    public async Task SearchRoomsClearsStaleSelectionWhenNoResults()
+    {
+        var rpc = new RecordingRoomRpcClient
+        {
+            SearchRoomResults = []
+        };
+        var viewModel = new RoomManagerViewModel(
+            new RoomService(rpc),
+            new InvitationService(rpc),
+            "Youngmin")
+        {
+            SelectedSearchResult = Room("stale-room", "Stale")
+        };
+
+        await viewModel.SearchRoomsAsync("missing");
+        await viewModel.JoinSelectedSearchResultAsync();
+
+        Assert.Null(viewModel.SelectedSearchResult);
+        Assert.Empty(viewModel.SearchResults);
+        Assert.DoesNotContain(rpc.Calls, call => call.Function == "ping_join_room");
+    }
+
+    [Fact]
+    public async Task RejectInvitationClearsStaleSelectedInvitation()
+    {
+        var rpc = new RecordingRoomRpcClient();
+        rpc.IncomingInvitations.Add(Invitation("invite-id"));
+        var viewModel = new RoomManagerViewModel(
+            new RoomService(rpc),
+            new InvitationService(rpc),
+            "Youngmin")
+        {
+            SelectedInvitation = Invitation("invite-id")
+        };
+
+        await viewModel.RejectSelectedInvitationAsync();
+
+        Assert.Null(viewModel.SelectedInvitation);
+        Assert.Empty(viewModel.Invitations);
+        Assert.Contains(rpc.Calls, call =>
+            call.Function == "ping_reject_invitation"
+            && JsonSerializer.Serialize(call.Body, JsonOptions.Supabase) == """{"invitation_uuid":"invite-id"}""");
+    }
+
+    private static Room Room(string id = "room-id", string name = "Main") =>
         new(
-            Id: "room-id",
-            Name: "Main",
-            SearchableName: "main",
+            Id: id,
+            Name: name,
+            SearchableName: name.ToLowerInvariant(),
             OwnerUid: "sender",
             MemberUids: ["sender", "receiver"],
             MemberNicknames: new Dictionary<string, string>
@@ -75,6 +120,17 @@ public sealed class RoomManagerViewModelTests
                 ["receiver"] = "Receiver"
             },
             Status: RoomStatus.Open);
+
+    private static Invitation Invitation(string id) =>
+        new(
+            Id: id,
+            FromUid: "sender",
+            ToUid: "receiver",
+            RoomId: "room-id",
+            FromNickname: "Sender",
+            RoomName: "Main",
+            CreatedAt: DateTimeOffset.UtcNow,
+            ExpiresAt: DateTimeOffset.UtcNow.AddDays(7));
 
     private sealed class RecordingClipboardWriter : IClipboardWriter
     {
@@ -92,6 +148,10 @@ public sealed class RoomManagerViewModelTests
     {
         public List<(string Function, object Body)> Calls { get; } = [];
 
+        public IReadOnlyList<Room> SearchRoomResults { get; init; } = [Room()];
+
+        public List<Invitation> IncomingInvitations { get; } = [];
+
         public Task<IReadOnlyList<T>> RpcArrayAsync<T>(
             string function,
             object? body = null,
@@ -105,6 +165,8 @@ public sealed class RoomManagerViewModelTests
                 {
                     new InviteLink("invite-token", "room-id", "Main", "Youngmin", DateTimeOffset.UtcNow.AddDays(7))
                 },
+                "ping_incoming_invitations" => IncomingInvitations.ToArray(),
+                "ping_search_open_rooms" => SearchRoomResults,
                 "ping_search_profiles" => new[]
                 {
                     new PingUser("sender", "Youngmin", "youngmin", [], null),
@@ -129,6 +191,11 @@ public sealed class RoomManagerViewModelTests
         {
             _ = cancellationToken;
             Calls.Add((function, body ?? new { }));
+            if (function == "ping_reject_invitation")
+            {
+                IncomingInvitations.Clear();
+            }
+
             return Task.CompletedTask;
         }
     }
