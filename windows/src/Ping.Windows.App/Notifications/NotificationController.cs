@@ -108,6 +108,14 @@ public sealed class NotifiedMessageRegistry
             return notifiedIds.Contains(messageId);
         }
     }
+
+    public void Forget(string messageId)
+    {
+        lock (notifiedIds)
+        {
+            notifiedIds.Remove(messageId);
+        }
+    }
 }
 
 public sealed class NotificationController : IDisposable
@@ -115,6 +123,9 @@ public sealed class NotificationController : IDisposable
     private readonly Func<string, CancellationToken, Task> openMessageAsync;
     private readonly NotifiedMessageRegistry registry;
     private bool disposed;
+#if WINDOWS
+    private bool isRegistered;
+#endif
 
     public NotificationController(
         Func<string, CancellationToken, Task> openMessageAsync,
@@ -127,8 +138,17 @@ public sealed class NotificationController : IDisposable
     public void Start()
     {
 #if WINDOWS
-        AppNotificationManager.Default.NotificationInvoked += HandleNotificationInvoked;
-        AppNotificationManager.Default.Register();
+        try
+        {
+            AppNotificationManager.Default.NotificationInvoked += HandleNotificationInvoked;
+            AppNotificationManager.Default.Register();
+            isRegistered = true;
+        }
+        catch (Exception)
+        {
+            AppNotificationManager.Default.NotificationInvoked -= HandleNotificationInvoked;
+            isRegistered = false;
+        }
 #endif
     }
 
@@ -158,14 +178,33 @@ public sealed class NotificationController : IDisposable
 
     public bool TryShowIncoming(VideoMessage message)
     {
+#if WINDOWS
+        if (!isRegistered)
+        {
+            return false;
+        }
+#endif
+
         if (!registry.TryMarkNotified(message))
         {
             return false;
         }
 
 #if WINDOWS
-        var notification = new AppNotification(NotificationXml(message));
-        AppNotificationManager.Default.Show(notification);
+        try
+        {
+            var notification = new AppNotification(NotificationXml(message));
+            AppNotificationManager.Default.Show(notification);
+        }
+        catch (Exception)
+        {
+            if (message.Id is { Length: > 0 } id)
+            {
+                registry.Forget(id);
+            }
+
+            return false;
+        }
 #endif
         return true;
     }
@@ -179,6 +218,7 @@ public sealed class NotificationController : IDisposable
 
 #if WINDOWS
         AppNotificationManager.Default.NotificationInvoked -= HandleNotificationInvoked;
+        isRegistered = false;
 #endif
         disposed = true;
     }

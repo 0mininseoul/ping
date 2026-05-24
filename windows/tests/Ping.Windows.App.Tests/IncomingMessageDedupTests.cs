@@ -47,6 +47,29 @@ public sealed class IncomingMessageDedupTests
     }
 
     [Fact]
+    public void NotifiedRegistry_CanForgetAfterNotificationFailure()
+    {
+        var registry = new NotifiedMessageRegistry();
+        var message = Message("message-1", DateTimeOffset.UtcNow);
+
+        Assert.True(registry.TryMarkNotified(message));
+        registry.Forget("message-1");
+
+        Assert.False(registry.Contains("message-1"));
+        Assert.True(registry.TryMarkNotified(message));
+    }
+
+    [Fact]
+    public void NotificationController_DeduplicatesShownMessagesInPortableTests()
+    {
+        using var controller = new NotificationController((_, _) => Task.CompletedTask);
+        var message = Message("message-1", DateTimeOffset.UtcNow);
+
+        Assert.True(controller.TryShowIncoming(message));
+        Assert.False(controller.TryShowIncoming(message));
+    }
+
+    [Fact]
     public void ActivationArguments_ParsesMessageId()
     {
         var parsed = NotificationActivationArguments.Parse("action=play&message_id=message%201");
