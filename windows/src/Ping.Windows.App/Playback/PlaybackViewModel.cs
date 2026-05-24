@@ -153,6 +153,7 @@ public sealed partial class PlaybackWindow : Window
         viewModel.CloseRequested += HandleCloseRequested;
         viewModel.PlaybackEnded += HandlePlaybackEnded;
         viewModel.ReplayRequested += HandleReplayRequested;
+        Closed += HandleClosed;
         ConfigureWindow();
     }
 

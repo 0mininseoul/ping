@@ -126,6 +126,22 @@ public sealed class AppCoordinatorSourceTests
         Assert.Contains("if (uploadStarted || viewModel.CanRetry)", source, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void PlaybackWindowSubscribesClosedCleanupHandler()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Playback",
+            "PlaybackViewModel.cs"));
+
+        Assert.Contains("Closed += HandleClosed;", source, StringComparison.Ordinal);
+        Assert.Contains("playerHost.Dispose();", source, StringComparison.Ordinal);
+        Assert.Contains("CancelPausedCloseTimeout();", source, StringComparison.Ordinal);
+    }
+
     private static string RepoRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
