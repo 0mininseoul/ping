@@ -43,6 +43,81 @@ public sealed class SettingsWindowViewModelTests
     }
 
     [Fact]
+    public void ApplyingHotkeyPersistsThroughCallbackAndRefreshesLabels()
+    {
+        var savedCommand = HotkeyCommand.History;
+        var savedBinding = HotkeyBinding.Alt("O");
+        var viewModel = new SettingsWindowViewModel(
+            "Youngmin",
+            HotkeyBinding.Defaults(),
+            ScreenFaceQuickSendSettings.Default,
+            _ => { },
+            () => { },
+            updateHotkey: (command, binding) =>
+            {
+                savedCommand = command;
+                savedBinding = binding;
+                return HotkeyRegistrationResult.Success(command, binding);
+            });
+        var row = Assert.Single(viewModel.HotkeyRows, row => row.Command == HotkeyCommand.FacePing);
+
+        row.IsControl = true;
+        row.IsAlt = true;
+        row.IsShift = false;
+        row.SelectedKey = "F";
+        viewModel.ApplyHotkey(row);
+
+        Assert.Equal(HotkeyCommand.FacePing, savedCommand);
+        Assert.Equal(HotkeyBinding.FromParts(HotkeyModifiers.Control | HotkeyModifiers.Alt, "F"), savedBinding);
+        Assert.Equal("Saved.", row.StatusMessage);
+        Assert.Equal("Face Ping: Ctrl+Alt+F", viewModel.FaceHotkey);
+    }
+
+    [Fact]
+    public void ApplyingConflictingHotkeyDoesNotReplaceLabel()
+    {
+        var viewModel = new SettingsWindowViewModel(
+            "Youngmin",
+            HotkeyBinding.Defaults(),
+            ScreenFaceQuickSendSettings.Default,
+            _ => { },
+            () => { },
+            updateHotkey: (command, binding) => HotkeyRegistrationResult.Conflict(
+                command,
+                binding,
+                "Hotkey is already registered by another app."));
+        var row = Assert.Single(viewModel.HotkeyRows, row => row.Command == HotkeyCommand.FacePing);
+
+        row.IsAlt = true;
+        row.SelectedKey = "F";
+        viewModel.ApplyHotkey(row);
+
+        Assert.Equal("Hotkey is already registered by another app.", row.StatusMessage);
+        Assert.Equal("Face Ping: Alt+P", viewModel.FaceHotkey);
+    }
+
+    [Fact]
+    public void ApplyingHotkeyRequiresModifier()
+    {
+        var viewModel = new SettingsWindowViewModel(
+            "Youngmin",
+            HotkeyBinding.Defaults(),
+            ScreenFaceQuickSendSettings.Default,
+            _ => { },
+            () => { });
+        var row = Assert.Single(viewModel.HotkeyRows, row => row.Command == HotkeyCommand.History);
+
+        row.IsAlt = false;
+        row.IsControl = false;
+        row.IsShift = false;
+        row.IsWindows = false;
+        viewModel.ApplyHotkey(row);
+
+        Assert.Equal("Choose at least one modifier.", row.StatusMessage);
+        Assert.Equal("History: Alt+O", viewModel.HistoryHotkey);
+    }
+
+    [Fact]
     public async Task StartupToggleUsesStartupTaskController()
     {
         var startup = new RecordingStartupTaskController(new PingStartupTaskStatus(

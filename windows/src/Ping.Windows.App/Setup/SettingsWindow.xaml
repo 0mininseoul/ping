@@ -5,7 +5,7 @@
     Title="Ping Settings">
     <Grid
         x:Name="Root"
-        Width="660"
+        Width="760"
         Height="480"
         Padding="18"
         Background="#121314">
@@ -49,6 +49,66 @@
                         FontWeight="SemiBold"
                         Foreground="{StaticResource PingTextBrush}"
                         Text="Hotkeys" />
+                    <ListView
+                        MaxHeight="310"
+                        ItemsSource="{Binding HotkeyRows}"
+                        SelectionMode="None">
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Grid
+                                    Padding="0,8"
+                                    ColumnSpacing="10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="150" />
+                                        <ColumnDefinition Width="50" />
+                                        <ColumnDefinition Width="44" />
+                                        <ColumnDefinition Width="58" />
+                                        <ColumnDefinition Width="50" />
+                                        <ColumnDefinition Width="86" />
+                                        <ColumnDefinition Width="66" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock
+                                        VerticalAlignment="Center"
+                                        Foreground="{StaticResource PingTextBrush}"
+                                        Text="{Binding Label}" />
+                                    <CheckBox
+                                        Grid.Column="1"
+                                        Content="Ctrl"
+                                        IsChecked="{Binding IsControl, Mode=TwoWay}" />
+                                    <CheckBox
+                                        Grid.Column="2"
+                                        Content="Alt"
+                                        IsChecked="{Binding IsAlt, Mode=TwoWay}" />
+                                    <CheckBox
+                                        Grid.Column="3"
+                                        Content="Shift"
+                                        IsChecked="{Binding IsShift, Mode=TwoWay}" />
+                                    <CheckBox
+                                        Grid.Column="4"
+                                        Content="Win"
+                                        IsChecked="{Binding IsWindows, Mode=TwoWay}" />
+                                    <ComboBox
+                                        Grid.Column="5"
+                                        HorizontalAlignment="Stretch"
+                                        ItemsSource="{Binding KeyChoices}"
+                                        SelectedItem="{Binding SelectedKey, Mode=TwoWay}" />
+                                    <Button
+                                        Grid.Column="6"
+                                        HorizontalAlignment="Stretch"
+                                        Click="ApplyHotkeyButton_Click"
+                                        Content="Apply" />
+                                    <TextBlock
+                                        Grid.Column="7"
+                                        VerticalAlignment="Center"
+                                        Foreground="{StaticResource PingMutedBrush}"
+                                        Text="{Binding StatusMessage}"
+                                        TextWrapping="WrapWholeWords" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
                     <TextBlock Foreground="{StaticResource PingMutedBrush}" Text="{Binding FaceHotkey}" />
                     <TextBlock Foreground="{StaticResource PingMutedBrush}" Text="{Binding ScreenFaceHotkey}" />
                     <TextBlock Foreground="{StaticResource PingMutedBrush}" Text="{Binding QuickSendHotkey}" />

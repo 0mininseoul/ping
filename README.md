@@ -62,6 +62,7 @@ Ping은 이메일 로그인 없이 Supabase Anonymous Auth 세션을 로컬에 �
 - Option+O: 내 룸/히스토리 창을 연다.
 - Windows 기본 대응: Alt+P, Alt+L, Alt+O.
 - Windows 빠른 전송: Alt+Shift+L로 기본 룸에 화면+얼굴 메시지를 즉시 3초 녹화/전송한다.
+- Windows 단축키 충돌 시 Settings > Hotkeys에서 Ctrl/Alt/Shift/Win 조합과 키를 바꿀 수 있다.
 - Enter: 녹화 시작. 리뷰 화면에서 다시 누르면 전송.
 - Backspace: 리뷰 화면에서 다시 찍기.
 - Esc: 취소 또는 닫기.

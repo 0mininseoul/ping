@@ -315,7 +315,8 @@ public sealed class AppCoordinator : IDisposable
             preferencesStore.Load(),
             quickSendSettings,
             ApplyQuickSendSettings,
-            OpenRoomManagerWindow));
+            OpenRoomManagerWindow,
+            updateHotkey: ApplyHotkeySetting));
         settingsWindow.Closed += (_, _) => settingsWindow = null;
         settingsWindow.Activate();
     }
@@ -354,12 +355,40 @@ public sealed class AppCoordinator : IDisposable
 
         if (failures.Length == 0)
         {
-            mainWindow.HotkeyState.Text = "Alt+P face, Alt+L screen+face, Alt+Shift+L quick send, Alt+O history";
+            mainWindow.HotkeyState.Text = HotkeySummary(preferencesStore.Load());
             return;
         }
 
         mainWindow.HotkeyState.Text = string.Join(Environment.NewLine, failures);
     }
+
+    private HotkeyRegistrationResult ApplyHotkeySetting(HotkeyCommand command, HotkeyBinding binding)
+    {
+        var result = hotkeys.Register(command, binding);
+        if (result.Status != HotkeyRegistrationStatus.Success)
+        {
+            mainWindow.HotkeyState.Text = $"{binding}: {result.Message}";
+            return result;
+        }
+
+        var bindings = preferencesStore.Load()
+            .ToDictionary(pair => pair.Key, pair => pair.Value);
+        bindings[command] = binding;
+        preferencesStore.Save(bindings);
+        mainWindow.HotkeyState.Text = HotkeySummary(bindings);
+        return result;
+    }
+
+    private static string HotkeySummary(IReadOnlyDictionary<HotkeyCommand, HotkeyBinding> bindings) =>
+        $"{BindingLabel(bindings, HotkeyCommand.FacePing)} face, "
+        + $"{BindingLabel(bindings, HotkeyCommand.ScreenFacePing)} screen+face, "
+        + $"{BindingLabel(bindings, HotkeyCommand.QuickScreenFacePing)} quick send, "
+        + $"{BindingLabel(bindings, HotkeyCommand.History)} history";
+
+    private static string BindingLabel(IReadOnlyDictionary<HotkeyCommand, HotkeyBinding> bindings, HotkeyCommand command) =>
+        bindings.TryGetValue(command, out var binding)
+            ? binding.ToString()
+            : HotkeyBinding.Defaults()[command].ToString();
 
     private void ShowFaceMirror()
     {

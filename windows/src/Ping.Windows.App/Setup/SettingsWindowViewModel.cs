@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Collections.ObjectModel;
 using System.Runtime.CompilerServices;
 using Ping.Windows.App.Capture;
 using Ping.Windows.App.Hotkeys;
@@ -14,10 +15,16 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
     private readonly Action<ScreenFaceQuickSendSettings> saveSettings;
     private readonly Action openRooms;
     private readonly IStartupTaskController startupTaskController;
+    private readonly Func<HotkeyCommand, HotkeyBinding, HotkeyRegistrationResult> updateHotkey;
+    private readonly Dictionary<HotkeyCommand, HotkeyBinding> hotkeys;
     private ScreenFaceQuickSendSettings settings;
     private bool isStartupEnabled;
     private bool canToggleStartup;
     private string startupStatus = "Checking startup registration...";
+    private string faceHotkey;
+    private string screenFaceHotkey;
+    private string quickSendHotkey;
+    private string historyHotkey;
 
     public SettingsWindowViewModel(
         string nickname,
@@ -25,30 +32,89 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
         ScreenFaceQuickSendSettings settings,
         Action<ScreenFaceQuickSendSettings> saveSettings,
         Action openRooms,
-        IStartupTaskController? startupTaskController = null)
+        IStartupTaskController? startupTaskController = null,
+        Func<HotkeyCommand, HotkeyBinding, HotkeyRegistrationResult>? updateHotkey = null)
     {
         Nickname = nickname;
-        FaceHotkey = LabelFor("Face Ping", hotkeys, HotkeyCommand.FacePing);
-        ScreenFaceHotkey = LabelFor("Screen+Face Ping", hotkeys, HotkeyCommand.ScreenFacePing);
-        QuickSendHotkey = LabelFor("Quick Screen+Face Ping", hotkeys, HotkeyCommand.QuickScreenFacePing);
-        HistoryHotkey = LabelFor("History", hotkeys, HotkeyCommand.History);
+        this.hotkeys = hotkeys.ToDictionary(pair => pair.Key, pair => pair.Value);
         this.settings = settings;
         this.saveSettings = saveSettings;
         this.openRooms = openRooms;
         this.startupTaskController = startupTaskController ?? new StartupTaskController();
+        this.updateHotkey = updateHotkey ?? ((command, binding) => HotkeyRegistrationResult.Success(command, binding));
+        faceHotkey = LabelFor("Face Ping", this.hotkeys, HotkeyCommand.FacePing);
+        screenFaceHotkey = LabelFor("Screen+Face Ping", this.hotkeys, HotkeyCommand.ScreenFacePing);
+        quickSendHotkey = LabelFor("Quick Screen+Face Ping", this.hotkeys, HotkeyCommand.QuickScreenFacePing);
+        historyHotkey = LabelFor("History", this.hotkeys, HotkeyCommand.History);
+        HotkeyRows = new ObservableCollection<HotkeySettingRow>(
+            HotkeySettingRow.FromBindings(this.hotkeys));
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public string Nickname { get; }
 
-    public string FaceHotkey { get; }
+    public string FaceHotkey
+    {
+        get => faceHotkey;
+        private set
+        {
+            if (faceHotkey == value)
+            {
+                return;
+            }
 
-    public string ScreenFaceHotkey { get; }
+            faceHotkey = value;
+            OnPropertyChanged();
+        }
+    }
 
-    public string QuickSendHotkey { get; }
+    public string ScreenFaceHotkey
+    {
+        get => screenFaceHotkey;
+        private set
+        {
+            if (screenFaceHotkey == value)
+            {
+                return;
+            }
 
-    public string HistoryHotkey { get; }
+            screenFaceHotkey = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public string QuickSendHotkey
+    {
+        get => quickSendHotkey;
+        private set
+        {
+            if (quickSendHotkey == value)
+            {
+                return;
+            }
+
+            quickSendHotkey = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public string HistoryHotkey
+    {
+        get => historyHotkey;
+        private set
+        {
+            if (historyHotkey == value)
+            {
+                return;
+            }
+
+            historyHotkey = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public ObservableCollection<HotkeySettingRow> HotkeyRows { get; }
 
     public string StartupStatus
     {
@@ -114,6 +180,32 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
 
     public void OpenRooms() => openRooms();
 
+    public void ApplyHotkey(HotkeySettingRow row)
+    {
+        HotkeyBinding binding;
+        try
+        {
+            binding = row.ToBinding();
+        }
+        catch (InvalidOperationException ex)
+        {
+            row.StatusMessage = ex.Message;
+            return;
+        }
+
+        var result = updateHotkey(row.Command, binding);
+        if (result.Status != HotkeyRegistrationStatus.Success)
+        {
+            row.StatusMessage = result.Message;
+            return;
+        }
+
+        hotkeys[row.Command] = binding;
+        row.ApplyBinding(binding);
+        row.StatusMessage = "Saved.";
+        RefreshHotkeyLabels();
+    }
+
     public async Task RefreshStartupAsync(CancellationToken cancellationToken = default)
     {
         var status = await startupTaskController.GetStatusAsync(cancellationToken);
@@ -161,6 +253,14 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
     private static string LabelFor(string label, IReadOnlyDictionary<HotkeyCommand, HotkeyBinding> hotkeys, HotkeyCommand command) =>
         hotkeys.TryGetValue(command, out var binding) ? $"{label}: {binding}" : $"{label}: Unassigned";
 
+    private void RefreshHotkeyLabels()
+    {
+        FaceHotkey = LabelFor("Face Ping", hotkeys, HotkeyCommand.FacePing);
+        ScreenFaceHotkey = LabelFor("Screen+Face Ping", hotkeys, HotkeyCommand.ScreenFacePing);
+        QuickSendHotkey = LabelFor("Quick Screen+Face Ping", hotkeys, HotkeyCommand.QuickScreenFacePing);
+        HistoryHotkey = LabelFor("History", hotkeys, HotkeyCommand.History);
+    }
+
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }
@@ -186,6 +286,14 @@ public sealed partial class SettingsWindow : Window
     private void OpenRoomsButton_Click(object sender, RoutedEventArgs args)
     {
         viewModel.OpenRooms();
+    }
+
+    private void ApplyHotkeyButton_Click(object sender, RoutedEventArgs args)
+    {
+        if (sender is FrameworkElement { DataContext: HotkeySettingRow row })
+        {
+            viewModel.ApplyHotkey(row);
+        }
     }
 }
 #endif

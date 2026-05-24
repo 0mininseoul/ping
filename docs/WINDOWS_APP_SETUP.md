@@ -43,7 +43,7 @@ Windows and Mac installations are separate anonymous identities. Connect them th
 | none | Alt+Shift+L | Quick screen+face send to default room |
 | Option+O | Alt+O | Room history |
 
-If a hotkey is already used by another app, onboarding/settings should show it as conflicted and the user must choose a different binding in a future rebinding UI.
+If a hotkey is already used by another app, onboarding/settings show it as conflicted and Settings > Hotkeys lets the user apply a different Ctrl/Alt/Shift/Win + key binding. Ping saves the new binding only after Windows accepts the global hotkey registration.
 
 ## Onboarding Checks
 
