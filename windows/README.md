@@ -31,14 +31,22 @@ Expected results:
 
 ## Build And Test
 
-From this directory on Windows:
+Use Visual Studio Developer PowerShell for the full mixed C# and C++ solution:
 
 ```powershell
-dotnet restore .\PingWindows.sln
-dotnet build .\PingWindows.sln -c Debug -p:Platform=x64
-dotnet test .\PingWindows.sln -c Debug -p:Platform=x64 --no-build
-dotnet build .\PingWindows.sln -c Debug -p:Platform=ARM64
-dotnet test .\PingWindows.sln -c Debug -p:Platform=ARM64 --no-build
+cd windows
+msbuild .\PingWindows.sln /restore /m /p:Configuration=Debug /p:Platform=x64
+msbuild .\PingWindows.sln /restore /m /p:Configuration=Debug /p:Platform=ARM64
+msbuild .\PingWindows.sln /m /p:Configuration=Release /p:Platform=x64
+msbuild .\PingWindows.sln /m /p:Configuration=Release /p:Platform=ARM64
+```
+
+Managed-only test projects can also be run with the .NET SDK:
+
+```powershell
+cd windows
+dotnet test .\tests\Ping.Windows.Core.Tests\Ping.Windows.Core.Tests.csproj -c Debug
+dotnet test .\tests\Ping.Windows.App.Tests\Ping.Windows.App.Tests.csproj -c Debug
 ```
 
 The WinUI app is under `src/Ping.Windows.App`, shared product logic belongs in `src/Ping.Windows.Core`, native Windows capture work belongs in `src/Ping.Windows.NativeCapture`, and tests belong under `tests`.
