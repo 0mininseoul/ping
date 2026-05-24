@@ -28,7 +28,7 @@
 기준 조사일: 2026-05-25.
 
 - 1차 지원 OS는 **Windows 11 24H2 이상**으로 둔다. Windows 10은 2025-10-14 일반 지원이 끝났으므로 Windows 10 22H2/ESU 환경은 v1 범위에서 best-effort로만 다룬다.
-- Windows App SDK는 production용 Stable channel만 사용한다. 구현 시작 시 `Microsoft.WindowsAppSDK` 최신 stable을 확인하고 pin한다. 조사 시점 최신 stable은 1.8.x 계열이다.
+- Windows App SDK는 production용 Stable channel만 사용한다. 2026-05-21 Microsoft 다운로드 페이지 기준 최신 stable인 `Microsoft.WindowsAppSDK` 2.1.3에 pin한다.
 - .NET은 .NET 10 LTS를 기준으로 한다. .NET 8은 2026-11 지원 종료라 새 Windows 클라이언트의 장기 유지보수 기준으로 약하다.
 - `RegisterHotKey`는 system-wide hotkey를 등록하지만 충돌 시 실패한다. 온보딩/Settings에서 충돌을 감지하고 대체 키를 녹음할 수 있어야 한다.
 - Windows notification area 아이콘은 `Shell_NotifyIcon` 기반으로 구현한다. Windows 11에서는 사용자가 tray overflow에서 아이콘을 숨길 수 있으므로 온보딩에서 "항상 보이게 고정"을 안내하되 강제하지 않는다.

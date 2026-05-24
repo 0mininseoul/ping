@@ -10,7 +10,7 @@ This directory contains the Windows client workspace scaffold. It is intentional
   - .NET desktop development.
   - Desktop development with C++.
   - MSVC v143 build tools, because `Ping.Windows.NativeCapture.vcxproj` currently targets `PlatformToolset` `v143`.
-  - Windows App SDK tooling.
+  - Windows App SDK tooling for the pinned `Microsoft.WindowsAppSDK` 2.1.3 stable package.
 - Windows SDK 10.0.26100.0 or newer.
 
 ## Environment Verification
