@@ -47,8 +47,8 @@ Windows 기본 단축키는 Mac의 Option 키를 Windows의 Alt 키로 대응한
 
 | Mac UX | Windows UX | 설명 |
 |---|---|---|
-| Option+P | Alt+P | 얼굴만 원형 mirror 표시, Enter로 3초 녹화/전송 |
-| Option+L | Alt+L | 화면+얼굴 mirror 표시, Enter로 3초 녹화/전송 |
+| Option+P | Alt+P | 얼굴만 원형 mirror 표시, Enter로 3초 녹화 후 review, review Enter로 전송 |
+| Option+L | Alt+L | 화면+얼굴 mirror 표시, Enter로 3초 녹화 후 review, review Enter로 전송 |
 | 신규 요구 | Alt+Shift+L | 화면+얼굴 quick send: 기본 룸 대상으로 즉시 3초 녹화/전송 |
 | Option+O | Alt+O | 내 룸/히스토리 창 |
 | Tab / 1-9 / 0/A / Esc / Enter | 동일 | 파트너 전환, 전체 발송, 닫기, 녹화 시작 |
@@ -741,7 +741,8 @@ Behavior:
 
 - show compact screen-face preview window
 - partner chip identical to face-only mirror
-- Enter records 3 seconds
+- Enter records 3 seconds, then shows review playback
+- Review Enter sends; Backspace/Delete discards and records again
 - upload uses `capture_mode_text = "screen_face"`
 - upload uses native engine `AspectRatio`
 - success fade-out, no success toast

@@ -27,6 +27,11 @@ public sealed class ScreenFaceMirrorViewModelTests
         Assert.False(model.IsAllTargetsSelected);
 
         await model.HandleEnterAsync();
+        Assert.Equal(MirrorState.Reviewing, model.State);
+        Assert.NotNull(model.ReviewVideoUri);
+        Assert.Null(sentInput);
+
+        await model.HandleEnterAsync();
 
         Assert.NotNull(sentInput);
         Assert.Equal(CaptureMode.ScreenFace, sentInput!.CaptureMode);
@@ -49,6 +54,7 @@ public sealed class ScreenFaceMirrorViewModelTests
                 return Task.CompletedTask;
             });
 
+        await model.HandleEnterAsync();
         await model.HandleEnterAsync();
 
         Assert.NotNull(sentInput);
@@ -94,6 +100,9 @@ public sealed class ScreenFaceMirrorViewModelTests
 
         engine.Complete();
         await recordingTask;
+
+        Assert.Equal(MirrorState.Reviewing, model.State);
+        Assert.NotNull(model.ReviewVideoUri);
     }
 
     [Fact]
@@ -131,6 +140,7 @@ public sealed class ScreenFaceMirrorViewModelTests
 
         await model.LoadPreviewAsync();
         model.UpdateCaptureMonitor(3);
+        await model.HandleEnterAsync();
         await model.HandleEnterAsync();
 
         Assert.Equal(2, engine.LastPreviewMonitorIndex);

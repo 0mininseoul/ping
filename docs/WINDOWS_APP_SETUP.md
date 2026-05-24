@@ -38,8 +38,8 @@ Windows and Mac installations are separate anonymous identities. Connect them th
 
 | macOS | Windows | Behavior |
 |---|---|---|
-| Option+P | Alt+P | Face-only mirror, Enter records/sends |
-| Option+L | Alt+L | Screen+face mirror, Enter records/sends |
+| Option+P | Alt+P | Face-only mirror, Enter records, review Enter sends |
+| Option+L | Alt+L | Screen+face mirror, Enter records, review Enter sends |
 | none | Alt+Shift+L | Quick screen+face send to default room |
 | Option+O | Alt+O | Room history |
 
@@ -107,8 +107,8 @@ Windows does not use Sparkle. v1 chooses MSIX distribution as the update boundar
 Manual checks after install:
 
 - First-run onboarding shows OS, config, camera, microphone, screen capture, notification, hotkey, and startup rows.
-- Alt+P records and sends `face_only`.
-- Alt+L records and sends `screen_face`.
+- Alt+P records `face_only`, shows review playback, then review Enter sends.
+- Alt+L records `screen_face`, shows review playback, then review Enter sends.
 - Alt+Shift+L records immediately to the default room after the 300ms HUD.
 - Notification click downloads from `ping-videos` and opens playback.
 - History shows video and chat in one room timeline, supports text/image chat, reply previews, sender chat delete, received video hide, sender video delete, and quick emoji reactions.

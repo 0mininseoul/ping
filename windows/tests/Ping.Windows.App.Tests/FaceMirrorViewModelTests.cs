@@ -28,6 +28,13 @@ public sealed class FaceMirrorViewModelTests
         await model.HandleEnterAsync();
 
         Assert.Equal(MirrorState.Recording, recorder.StateAtRecordStart);
+        Assert.Equal(MirrorState.Reviewing, model.State);
+        Assert.NotNull(model.ReviewVideoUri);
+        Assert.Null(sentInput);
+        Assert.False(model.IsCloseRequested);
+
+        await model.HandleEnterAsync();
+
         Assert.NotNull(sentInput);
         var input = sentInput!;
         Assert.Equal(CaptureMode.FaceOnly, input.CaptureMode);
@@ -54,6 +61,7 @@ public sealed class FaceMirrorViewModelTests
                 return Task.CompletedTask;
             });
 
+        await model.HandleEnterAsync();
         await model.HandleEnterAsync();
 
         Assert.NotNull(sentInput);
@@ -99,6 +107,9 @@ public sealed class FaceMirrorViewModelTests
 
         recorder.Complete();
         await recordingTask;
+
+        Assert.Equal(MirrorState.Reviewing, model.State);
+        Assert.NotNull(model.ReviewVideoUri);
     }
 
     [Fact]
@@ -109,6 +120,7 @@ public sealed class FaceMirrorViewModelTests
             new FakeFaceRecorder(),
             (_, _) => throw new InvalidOperationException("Upload failed."));
 
+        await model.HandleEnterAsync();
         await model.HandleEnterAsync();
 
         Assert.Equal(MirrorState.Failed, model.State);
@@ -133,6 +145,11 @@ public sealed class FaceMirrorViewModelTests
         Assert.True(model.SelectTargetAtIndex(1));
         Assert.Equal("Design", model.PartnerLabel);
 
+        await model.HandleEnterAsync();
+        Assert.Equal(MirrorState.Reviewing, model.State);
+        Assert.True(model.SelectAllTargets());
+        Assert.True(model.IsAllTargetsSelected);
+        Assert.True(model.SelectTargetAtIndex(1));
         await model.HandleEnterAsync();
 
         Assert.NotNull(sentInput);

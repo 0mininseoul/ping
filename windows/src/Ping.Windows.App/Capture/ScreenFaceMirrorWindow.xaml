@@ -45,6 +45,11 @@
                 <Image
                     Source="{Binding ScreenPreviewUri}"
                     Stretch="UniformToFill" />
+                <MediaPlayerElement
+                    x:Name="ReviewElement"
+                    AreTransportControlsEnabled="False"
+                    Stretch="UniformToFill"
+                    Visibility="Collapsed" />
                 <StackPanel
                     x:Name="ScreenPreviewPlaceholder"
                     HorizontalAlignment="Center"
@@ -63,6 +68,7 @@
                         Text="Screen+Face" />
                 </StackPanel>
                 <Border
+                    x:Name="FacePreviewBubble"
                     Width="74"
                     Height="74"
                     Margin="0,0,12,12"

@@ -12,6 +12,8 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
+using Windows.Media.Core;
+using Windows.Media.Playback;
 #endif
 
 namespace Ping.Windows.App.Capture;
@@ -44,6 +46,9 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
     private string partnerLabel;
     private Uri? screenPreviewUri;
     private string? screenPreviewPath;
+    private Uri? reviewVideoUri;
+    private string? reviewedPath;
+    private double reviewedAspectRatio = 16.0 / 9.0;
     private MirrorPosition mirrorPosition = new(0.5, 0.5);
     private int monitorIndex;
     private bool isCloseRequested;
@@ -94,6 +99,7 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
             OnPropertyChanged();
             OnPropertyChanged(nameof(StateText));
             OnPropertyChanged(nameof(CanRecord));
+            OnPropertyChanged(nameof(CanSelectTarget));
             OnPropertyChanged(nameof(RecordingCountdownOpacity));
         }
     }
@@ -102,6 +108,7 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
     {
         MirrorState.Idle => "Ready",
         MirrorState.Recording => "Recording",
+        MirrorState.Reviewing => "Review",
         MirrorState.Uploading => "Sending",
         MirrorState.Failed => "Failed",
         _ => throw new ArgumentOutOfRangeException(nameof(State), State, "Unknown mirror state.")
@@ -160,6 +167,21 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
 
     public IReadOnlyList<MirrorTargetOption> TargetOptions => targetSelector.Options;
 
+    public Uri? ReviewVideoUri
+    {
+        get => reviewVideoUri;
+        private set
+        {
+            if (Equals(reviewVideoUri, value))
+            {
+                return;
+            }
+
+            reviewVideoUri = value;
+            OnPropertyChanged();
+        }
+    }
+
     public MirrorPosition MirrorPosition => mirrorPosition;
 
     public int MonitorIndex => monitorIndex;
@@ -180,6 +202,8 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
     }
 
     public bool CanRecord => State is MirrorState.Idle or MirrorState.Failed;
+
+    public bool CanSelectTarget => State is MirrorState.Idle or MirrorState.Reviewing or MirrorState.Failed;
 
     public bool IsCloseRequested
     {
@@ -211,13 +235,13 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
         }
     }
 
-    public bool SelectNextTarget() => CanRecord && UpdateTarget(targetSelector.SelectNext());
+    public bool SelectNextTarget() => CanSelectTarget && UpdateTarget(targetSelector.SelectNext());
 
-    public bool SelectAllTargets() => CanRecord && UpdateTarget(targetSelector.SelectAll());
+    public bool SelectAllTargets() => CanSelectTarget && UpdateTarget(targetSelector.SelectAll());
 
-    public bool SelectTargetAtIndex(int index) => CanRecord && UpdateTarget(targetSelector.SelectIndex(index));
+    public bool SelectTargetAtIndex(int index) => CanSelectTarget && UpdateTarget(targetSelector.SelectIndex(index));
 
-    public bool SelectTargetOption(MirrorTargetOption option) => CanRecord && UpdateTarget(targetSelector.SelectOption(option));
+    public bool SelectTargetOption(MirrorTargetOption option) => CanSelectTarget && UpdateTarget(targetSelector.SelectOption(option));
 
     public void UpdateCaptureMonitor(int index)
     {
@@ -277,6 +301,12 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
 
     public async Task HandleEnterAsync()
     {
+        if (State == MirrorState.Reviewing)
+        {
+            await UploadReviewedClipAsync();
+            return;
+        }
+
         if (!CanRecord)
         {
             return;
@@ -286,7 +316,6 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
         operationCancellation = new CancellationTokenSource();
         var cancellationToken = operationCancellation.Token;
         string? recordedPath = null;
-        var sent = false;
         CancellationTokenSource? countdownCancellation = null;
         Task? countdownTask = null;
 
@@ -301,6 +330,55 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
             countdownTask = null;
             recordedPath = recording.FilePath;
 
+            EnterReview(recordedPath, recording.AspectRatio);
+            recordedPath = null;
+        }
+        catch (OperationCanceledException) when (IsCloseRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            State = MirrorState.Failed;
+            StatusMessage = $"Could not record. Press Enter to retry. {exception.Message}";
+        }
+        finally
+        {
+            await StopRecordingCountdownAsync(countdownCancellation, countdownTask);
+            operationCancellation?.Dispose();
+            operationCancellation = null;
+
+            if (recordedPath is not null)
+            {
+                TryDeleteTemporaryRecording(recordedPath);
+            }
+        }
+    }
+
+    public async Task HandleRedoAsync()
+    {
+        if (State != MirrorState.Reviewing)
+        {
+            return;
+        }
+
+        ClearReviewedClip(deleteFile: true);
+        await HandleEnterAsync();
+    }
+
+    private async Task UploadReviewedClipAsync()
+    {
+        if (reviewedPath is not { Length: > 0 } path)
+        {
+            return;
+        }
+
+        operationCancellation?.Dispose();
+        operationCancellation = new CancellationTokenSource();
+        var cancellationToken = operationCancellation.Token;
+        var sent = false;
+
+        try
+        {
             State = MirrorState.Uploading;
             StatusMessage = "Sending...";
 
@@ -312,7 +390,7 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
                 }
 
                 _ = await archive.SaveSentCopyAsync(
-                    recordedPath,
+                    path,
                     LocalArchiveKind.Sent,
                     PartnerLabel,
                     cancellationToken: cancellationToken);
@@ -321,15 +399,16 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
             await sendAsync(
                 new SendVideoInput(
                     targetSelector.SelectedRooms,
-                    recordedPath,
+                    path,
                     mirrorPosition,
                     context.SenderUid,
                     context.SenderNickname,
                     CaptureMode.ScreenFace,
-                    recording.AspectRatio,
+                    reviewedAspectRatio,
                     context.AllowsLocalSave),
                 cancellationToken);
             sent = true;
+            ClearReviewedClip(deleteFile: false);
             RequestFadeOutClose();
         }
         catch (OperationCanceledException) when (IsCloseRequested)
@@ -337,18 +416,18 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
         }
         catch (Exception exception)
         {
+            ClearReviewedClip(deleteFile: true);
             State = MirrorState.Failed;
             StatusMessage = $"Could not send. Press Enter to retry. {exception.Message}";
         }
         finally
         {
-            await StopRecordingCountdownAsync(countdownCancellation, countdownTask);
             operationCancellation?.Dispose();
             operationCancellation = null;
 
-            if (sent && recordedPath is not null)
+            if (sent)
             {
-                TryDeleteTemporaryRecording(recordedPath);
+                TryDeleteTemporaryRecording(path);
             }
         }
     }
@@ -395,6 +474,7 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
     public void HandleEscape()
     {
         operationCancellation?.Cancel();
+        ClearReviewedClip(deleteFile: true);
         RequestClose();
     }
 
@@ -409,6 +489,32 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
         TryDeleteTemporaryRecording(screenPreviewPath);
         screenPreviewPath = null;
     }
+
+    private void EnterReview(string path, double aspectRatio)
+    {
+        reviewedPath = path;
+        reviewedAspectRatio = NormalizeAspectRatio(aspectRatio);
+        ReviewVideoUri = new Uri(path);
+        State = MirrorState.Reviewing;
+        StatusMessage = "Press Enter to send. Backspace to redo.";
+    }
+
+    private void ClearReviewedClip(bool deleteFile)
+    {
+        var path = reviewedPath;
+        reviewedPath = null;
+        reviewedAspectRatio = 16.0 / 9.0;
+        ReviewVideoUri = null;
+        if (deleteFile && path is not null)
+        {
+            TryDeleteTemporaryRecording(path);
+        }
+    }
+
+    private static double NormalizeAspectRatio(double aspectRatio) =>
+        double.IsNaN(aspectRatio) || double.IsInfinity(aspectRatio) || aspectRatio <= 0
+            ? 16.0 / 9.0
+            : aspectRatio;
 
     private void RequestClose()
     {
@@ -480,6 +586,7 @@ public sealed partial class ScreenFaceMirrorWindow : Window
     private readonly FaceRecorder previewRecorder = new();
     private CancellationTokenSource? previewLoopCancellation;
     private Task? previewLoopTask;
+    private MediaPlayer? reviewPlayer;
     private AppWindow? appWindow;
     private IntPtr windowHandle;
     private bool shouldCloseAfterFade;
@@ -508,9 +615,26 @@ public sealed partial class ScreenFaceMirrorWindow : Window
         if (args.Key == Windows.System.VirtualKey.Enter)
         {
             args.Handled = true;
-            await StopPreviewAsync();
+            if (viewModel.State != MirrorState.Reviewing)
+            {
+                await StopPreviewAsync();
+            }
+
             await viewModel.HandleEnterAsync();
-            if (!viewModel.IsCloseRequested)
+            if (!viewModel.IsCloseRequested && viewModel.State != MirrorState.Reviewing)
+            {
+                _ = StartPreviewAsync();
+            }
+
+            return;
+        }
+
+        if (args.Key == Windows.System.VirtualKey.Back
+            || args.Key == Windows.System.VirtualKey.Delete)
+        {
+            args.Handled = true;
+            await viewModel.HandleRedoAsync();
+            if (!viewModel.IsCloseRequested && viewModel.State != MirrorState.Reviewing)
             {
                 _ = StartPreviewAsync();
             }
@@ -555,7 +679,7 @@ public sealed partial class ScreenFaceMirrorWindow : Window
 
     private void PartnerChip_Tapped(object sender, TappedRoutedEventArgs args)
     {
-        if (!viewModel.CanRecord || !viewModel.HasTargetMenu)
+        if (!viewModel.CanSelectTarget || !viewModel.HasTargetMenu)
         {
             return;
         }
@@ -590,10 +714,18 @@ public sealed partial class ScreenFaceMirrorWindow : Window
             SetStateBrush();
         }
 
+        if (args.PropertyName == nameof(ScreenFaceMirrorViewModel.State)
+            || args.PropertyName == nameof(ScreenFaceMirrorViewModel.ReviewVideoUri))
+        {
+            UpdateReviewPlayback();
+        }
+
         if (args.PropertyName == nameof(ScreenFaceMirrorViewModel.ScreenPreviewUri))
         {
             ScreenPreviewPlaceholder.Visibility =
-                viewModel.ScreenPreviewUri is null ? Visibility.Visible : Visibility.Collapsed;
+                viewModel.ScreenPreviewUri is null && viewModel.State != MirrorState.Reviewing
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
         }
     }
 
@@ -694,6 +826,11 @@ public sealed partial class ScreenFaceMirrorWindow : Window
 
     private async Task StartPreviewAsync()
     {
+        if (viewModel.State == MirrorState.Reviewing)
+        {
+            return;
+        }
+
         if (previewLoopCancellation is not null)
         {
             await StopPreviewAsync();
@@ -756,8 +893,58 @@ public sealed partial class ScreenFaceMirrorWindow : Window
 
     private async void HandleClosed(object sender, WindowEventArgs args)
     {
+        StopReviewPlayback();
         await StopPreviewAsync();
         viewModel.DisposePreview();
+    }
+
+    private void UpdateReviewPlayback()
+    {
+        if (viewModel.ReviewVideoUri is not { } uri || viewModel.State != MirrorState.Reviewing)
+        {
+            StopReviewPlayback();
+            ReviewElement.Visibility = Visibility.Collapsed;
+            FacePreviewBubble.Visibility = Visibility.Visible;
+            if (viewModel.ScreenPreviewUri is null)
+            {
+                ScreenPreviewPlaceholder.Visibility = Visibility.Visible;
+            }
+
+            return;
+        }
+
+        ScreenPreviewPlaceholder.Visibility = Visibility.Collapsed;
+        FacePreviewBubble.Visibility = Visibility.Collapsed;
+        ReviewElement.Visibility = Visibility.Visible;
+        StopReviewPlayback();
+        reviewPlayer = new MediaPlayer
+        {
+            AutoPlay = false,
+            IsMuted = true,
+            Source = MediaSource.CreateFromUri(uri)
+        };
+        reviewPlayer.MediaEnded += HandleReviewMediaEnded;
+        ReviewElement.SetMediaPlayer(reviewPlayer);
+        reviewPlayer.Play();
+    }
+
+    private void StopReviewPlayback()
+    {
+        ReviewElement.SetMediaPlayer(null);
+        if (reviewPlayer is null)
+        {
+            return;
+        }
+
+        reviewPlayer.MediaEnded -= HandleReviewMediaEnded;
+        reviewPlayer.Dispose();
+        reviewPlayer = null;
+    }
+
+    private static void HandleReviewMediaEnded(MediaPlayer sender, object args)
+    {
+        sender.PlaybackSession.Position = TimeSpan.Zero;
+        sender.Play();
     }
 
     private void SetStateBrush()
@@ -765,14 +952,16 @@ public sealed partial class ScreenFaceMirrorWindow : Window
         var key = viewModel.State switch
         {
             MirrorState.Idle when viewModel.IsAllTargetsSelected => "PingRainbowBorderBrush",
+            MirrorState.Reviewing when viewModel.IsAllTargetsSelected => "PingRainbowBorderBrush",
             MirrorState.Idle => "PingBorderIdleBrush",
+            MirrorState.Reviewing => "PingBorderIdleBrush",
             MirrorState.Recording => "PingBorderRecordingBrush",
             MirrorState.Uploading => "PingRainbowBorderBrush",
             MirrorState.Failed => "PingBorderFailedBrush",
             _ => "PingBorderIdleBrush"
         };
 
-        var thickness = viewModel.State == MirrorState.Idle && !viewModel.IsAllTargetsSelected ? 1 : 2;
+        var thickness = (viewModel.State is MirrorState.Idle or MirrorState.Reviewing) && !viewModel.IsAllTargetsSelected ? 1 : 2;
         MirrorBorder.BorderBrush = Root.Resources[key] as Brush;
         MirrorBorder.BorderThickness = new Thickness(thickness);
     }

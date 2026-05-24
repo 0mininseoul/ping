@@ -485,6 +485,7 @@ public sealed class QuickSendHudViewModel : INotifyPropertyChanged
     {
         MirrorState.Idle => "Ready",
         MirrorState.Recording => "Recording",
+        MirrorState.Reviewing => "Review",
         MirrorState.Uploading => "Sending",
         MirrorState.Failed => "Failed",
         _ => throw new ArgumentOutOfRangeException(nameof(State), State, "Unknown HUD state.")
@@ -730,6 +731,7 @@ public sealed partial class QuickSendHudWindow : Window, IQuickSendHudSession
         {
             MirrorState.Idle => "PingBorderIdleBrush",
             MirrorState.Recording => "PingBorderRecordingBrush",
+            MirrorState.Reviewing => "PingBorderIdleBrush",
             MirrorState.Uploading => "PingRainbowBorderBrush",
             MirrorState.Failed => "PingBorderFailedBrush",
             _ => "PingBorderIdleBrush"

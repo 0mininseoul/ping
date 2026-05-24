@@ -13,6 +13,8 @@ using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using Windows.Graphics;
+using Windows.Media.Core;
+using Windows.Media.Playback;
 #endif
 
 namespace Ping.Windows.App.Capture;
@@ -21,6 +23,7 @@ public enum MirrorState
 {
     Idle,
     Recording,
+    Reviewing,
     Uploading,
     Failed
 }
@@ -65,6 +68,8 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
     private string statusMessage = "Press Enter to record.";
     private string recordingCountdownText = "3";
     private string partnerLabel;
+    private Uri? reviewVideoUri;
+    private string? reviewedPath;
     private MirrorPosition mirrorPosition = new(0.5, 0.5);
     private bool isCloseRequested;
     private bool isFadeOutRequested;
@@ -113,6 +118,7 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
             OnPropertyChanged();
             OnPropertyChanged(nameof(StateText));
             OnPropertyChanged(nameof(CanRecord));
+            OnPropertyChanged(nameof(CanSelectTarget));
             OnPropertyChanged(nameof(RecordingCountdownOpacity));
         }
     }
@@ -121,6 +127,7 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
     {
         MirrorState.Idle => "Ready",
         MirrorState.Recording => "Recording",
+        MirrorState.Reviewing => "Review",
         MirrorState.Uploading => "Sending",
         MirrorState.Failed => "Failed",
         _ => throw new ArgumentOutOfRangeException(nameof(State), State, "Unknown mirror state.")
@@ -179,11 +186,28 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
 
     public IReadOnlyList<MirrorTargetOption> TargetOptions => targetSelector.Options;
 
+    public Uri? ReviewVideoUri
+    {
+        get => reviewVideoUri;
+        private set
+        {
+            if (Equals(reviewVideoUri, value))
+            {
+                return;
+            }
+
+            reviewVideoUri = value;
+            OnPropertyChanged();
+        }
+    }
+
     public MirrorPosition MirrorPosition => mirrorPosition;
 
     public IFaceRecorder Recorder => recorder;
 
     public bool CanRecord => State is MirrorState.Idle or MirrorState.Failed;
+
+    public bool CanSelectTarget => State is MirrorState.Idle or MirrorState.Reviewing or MirrorState.Failed;
 
     public bool IsCloseRequested
     {
@@ -215,13 +239,13 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
         }
     }
 
-    public bool SelectNextTarget() => CanRecord && UpdateTarget(targetSelector.SelectNext());
+    public bool SelectNextTarget() => CanSelectTarget && UpdateTarget(targetSelector.SelectNext());
 
-    public bool SelectAllTargets() => CanRecord && UpdateTarget(targetSelector.SelectAll());
+    public bool SelectAllTargets() => CanSelectTarget && UpdateTarget(targetSelector.SelectAll());
 
-    public bool SelectTargetAtIndex(int index) => CanRecord && UpdateTarget(targetSelector.SelectIndex(index));
+    public bool SelectTargetAtIndex(int index) => CanSelectTarget && UpdateTarget(targetSelector.SelectIndex(index));
 
-    public bool SelectTargetOption(MirrorTargetOption option) => CanRecord && UpdateTarget(targetSelector.SelectOption(option));
+    public bool SelectTargetOption(MirrorTargetOption option) => CanSelectTarget && UpdateTarget(targetSelector.SelectOption(option));
 
     public void UpdateMirrorPosition(double centerX, double centerY, double displayWidth, double displayHeight)
     {
@@ -242,6 +266,12 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
 
     public async Task HandleEnterAsync()
     {
+        if (State == MirrorState.Reviewing)
+        {
+            await UploadReviewedClipAsync();
+            return;
+        }
+
         if (!CanRecord)
         {
             return;
@@ -251,7 +281,6 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
         operationCancellation = new CancellationTokenSource();
         var cancellationToken = operationCancellation.Token;
         string? recordedPath = null;
-        var sent = false;
         CancellationTokenSource? countdownCancellation = null;
         Task? countdownTask = null;
 
@@ -266,6 +295,55 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
             countdownTask = null;
             recordedPath = recording.FilePath;
 
+            EnterReview(recordedPath);
+            recordedPath = null;
+        }
+        catch (OperationCanceledException) when (IsCloseRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            State = MirrorState.Failed;
+            StatusMessage = $"Could not record. Press Enter to retry. {exception.Message}";
+        }
+        finally
+        {
+            await StopRecordingCountdownAsync(countdownCancellation, countdownTask);
+            operationCancellation?.Dispose();
+            operationCancellation = null;
+
+            if (recordedPath is not null)
+            {
+                TryDeleteTemporaryRecording(recordedPath);
+            }
+        }
+    }
+
+    public async Task HandleRedoAsync()
+    {
+        if (State != MirrorState.Reviewing)
+        {
+            return;
+        }
+
+        ClearReviewedClip(deleteFile: true);
+        await HandleEnterAsync();
+    }
+
+    private async Task UploadReviewedClipAsync()
+    {
+        if (reviewedPath is not { Length: > 0 } path)
+        {
+            return;
+        }
+
+        operationCancellation?.Dispose();
+        operationCancellation = new CancellationTokenSource();
+        var cancellationToken = operationCancellation.Token;
+        var sent = false;
+
+        try
+        {
             State = MirrorState.Uploading;
             StatusMessage = "Sending...";
 
@@ -277,7 +355,7 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
                 }
 
                 _ = await archive.SaveSentCopyAsync(
-                    recordedPath,
+                    path,
                     LocalArchiveKind.Sent,
                     PartnerLabel,
                     cancellationToken: cancellationToken);
@@ -286,7 +364,7 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
             await sendAsync(
                 new SendVideoInput(
                     targetSelector.SelectedRooms,
-                    recordedPath,
+                    path,
                     mirrorPosition,
                     context.SenderUid,
                     context.SenderNickname,
@@ -295,6 +373,7 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
                     context.AllowsLocalSave),
                 cancellationToken);
             sent = true;
+            ClearReviewedClip(deleteFile: false);
             RequestFadeOutClose();
         }
         catch (OperationCanceledException) when (IsCloseRequested)
@@ -302,18 +381,18 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
         }
         catch (Exception exception)
         {
+            ClearReviewedClip(deleteFile: true);
             State = MirrorState.Failed;
             StatusMessage = $"Could not send. Press Enter to retry. {exception.Message}";
         }
         finally
         {
-            await StopRecordingCountdownAsync(countdownCancellation, countdownTask);
             operationCancellation?.Dispose();
             operationCancellation = null;
 
-            if (sent && recordedPath is not null)
+            if (sent)
             {
-                TryDeleteTemporaryRecording(recordedPath);
+                TryDeleteTemporaryRecording(path);
             }
         }
     }
@@ -360,7 +439,27 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
     public void HandleEscape()
     {
         operationCancellation?.Cancel();
+        ClearReviewedClip(deleteFile: true);
         RequestClose();
+    }
+
+    private void EnterReview(string path)
+    {
+        reviewedPath = path;
+        ReviewVideoUri = new Uri(path);
+        State = MirrorState.Reviewing;
+        StatusMessage = "Press Enter to send. Backspace to redo.";
+    }
+
+    private void ClearReviewedClip(bool deleteFile)
+    {
+        var path = reviewedPath;
+        reviewedPath = null;
+        ReviewVideoUri = null;
+        if (deleteFile && path is not null)
+        {
+            TryDeleteTemporaryRecording(path);
+        }
     }
 
     private void RequestClose()
@@ -431,6 +530,7 @@ public sealed partial class FaceMirrorWindow : Window
 {
     private readonly FaceMirrorViewModel viewModel;
     private readonly FaceRecorder? previewRecorder;
+    private MediaPlayer? reviewPlayer;
     private AppWindow? appWindow;
     private bool shouldCloseAfterFade;
 
@@ -460,6 +560,14 @@ public sealed partial class FaceMirrorWindow : Window
         {
             args.Handled = true;
             await viewModel.HandleEnterAsync();
+            return;
+        }
+
+        if (args.Key == Windows.System.VirtualKey.Back
+            || args.Key == Windows.System.VirtualKey.Delete)
+        {
+            args.Handled = true;
+            await viewModel.HandleRedoAsync();
             return;
         }
 
@@ -500,7 +608,7 @@ public sealed partial class FaceMirrorWindow : Window
 
     private void PartnerChip_Tapped(object sender, TappedRoutedEventArgs args)
     {
-        if (!viewModel.CanRecord || !viewModel.HasTargetMenu)
+        if (!viewModel.CanSelectTarget || !viewModel.HasTargetMenu)
         {
             return;
         }
@@ -526,6 +634,12 @@ public sealed partial class FaceMirrorWindow : Window
             || args.PropertyName == nameof(FaceMirrorViewModel.IsAllTargetsSelected))
         {
             SetStateBrush();
+        }
+
+        if (args.PropertyName == nameof(FaceMirrorViewModel.State)
+            || args.PropertyName == nameof(FaceMirrorViewModel.ReviewVideoUri))
+        {
+            UpdateReviewPlayback();
         }
     }
 
@@ -590,6 +704,7 @@ public sealed partial class FaceMirrorWindow : Window
         {
             await previewRecorder.StartPreviewAsync(PreviewElement);
             PreviewPlaceholder.Visibility = Visibility.Collapsed;
+            UpdateReviewPlayback();
         }
         catch (Exception)
         {
@@ -644,10 +759,55 @@ public sealed partial class FaceMirrorWindow : Window
 
     private async void HandleClosed(object sender, WindowEventArgs args)
     {
+        StopReviewPlayback();
         if (previewRecorder is not null)
         {
             await previewRecorder.StopPreviewAsync(PreviewElement);
         }
+    }
+
+    private void UpdateReviewPlayback()
+    {
+        if (viewModel.ReviewVideoUri is not { } uri || viewModel.State != MirrorState.Reviewing)
+        {
+            StopReviewPlayback();
+            ReviewElement.Visibility = Visibility.Collapsed;
+            PreviewElement.Visibility = Visibility.Visible;
+            return;
+        }
+
+        PreviewElement.Visibility = Visibility.Collapsed;
+        PreviewPlaceholder.Visibility = Visibility.Collapsed;
+        ReviewElement.Visibility = Visibility.Visible;
+        StopReviewPlayback();
+        reviewPlayer = new MediaPlayer
+        {
+            AutoPlay = false,
+            IsMuted = true,
+            Source = MediaSource.CreateFromUri(uri)
+        };
+        reviewPlayer.MediaEnded += HandleReviewMediaEnded;
+        ReviewElement.SetMediaPlayer(reviewPlayer);
+        reviewPlayer.Play();
+    }
+
+    private void StopReviewPlayback()
+    {
+        ReviewElement.SetMediaPlayer(null);
+        if (reviewPlayer is null)
+        {
+            return;
+        }
+
+        reviewPlayer.MediaEnded -= HandleReviewMediaEnded;
+        reviewPlayer.Dispose();
+        reviewPlayer = null;
+    }
+
+    private static void HandleReviewMediaEnded(MediaPlayer sender, object args)
+    {
+        sender.PlaybackSession.Position = TimeSpan.Zero;
+        sender.Play();
     }
 
     private void SetStateBrush()
@@ -655,14 +815,16 @@ public sealed partial class FaceMirrorWindow : Window
         var key = viewModel.State switch
         {
             MirrorState.Idle when viewModel.IsAllTargetsSelected => "PingRainbowBorderBrush",
+            MirrorState.Reviewing when viewModel.IsAllTargetsSelected => "PingRainbowBorderBrush",
             MirrorState.Idle => "PingBorderIdleBrush",
+            MirrorState.Reviewing => "PingBorderIdleBrush",
             MirrorState.Recording => "PingBorderRecordingBrush",
             MirrorState.Uploading => "PingRainbowBorderBrush",
             MirrorState.Failed => "PingBorderFailedBrush",
             _ => "PingBorderIdleBrush"
         };
 
-        var thickness = viewModel.State == MirrorState.Idle && !viewModel.IsAllTargetsSelected ? 1 : 2;
+        var thickness = (viewModel.State is MirrorState.Idle or MirrorState.Reviewing) && !viewModel.IsAllTargetsSelected ? 1 : 2;
         MirrorBorder.BorderBrush = Root.Resources[key] as Brush;
         MirrorBorder.BorderThickness = new Thickness(thickness);
     }

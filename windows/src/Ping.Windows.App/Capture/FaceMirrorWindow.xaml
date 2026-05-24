@@ -42,6 +42,11 @@
                     x:Name="PreviewElement"
                     AreTransportControlsEnabled="False"
                     Stretch="UniformToFill" />
+                <MediaPlayerElement
+                    x:Name="ReviewElement"
+                    AreTransportControlsEnabled="False"
+                    Stretch="UniformToFill"
+                    Visibility="Collapsed" />
                 <StackPanel
                     x:Name="PreviewPlaceholder"
                     HorizontalAlignment="Center"
