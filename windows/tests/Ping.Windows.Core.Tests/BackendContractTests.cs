@@ -152,8 +152,12 @@ public sealed class BackendContractTests
             Assert.Equal(
                 "https://example.supabase.co/storage/v1/object/ping-videos/sender%20uid/video%20id.mp4",
                 request.RequestUri?.ToString());
+            Assert.Equal("anon-key", request.Headers.GetValues("apikey").Single());
+            Assert.Equal("Bearer", request.Headers.Authorization?.Scheme);
+            Assert.Equal("access-token", request.Headers.Authorization?.Parameter);
             Assert.Equal("true", request.Headers.GetValues("x-upsert").Single());
             Assert.Equal("video/mp4", request.Content?.Headers.ContentType?.MediaType);
+            Assert.Equal([0x00, 0x01, 0x02], request.Content?.ReadAsByteArrayAsync().GetAwaiter().GetResult());
             return JsonResponse("{}");
         });
         using var client = files.CreateClient(handler);
@@ -185,6 +189,9 @@ public sealed class BackendContractTests
         Assert.Equal("user-id", exception.UserId);
         Assert.Single(handler.Requests);
         Assert.DoesNotContain(handler.Requests, request => request.RequestUri?.AbsolutePath.EndsWith("/signup", StringComparison.Ordinal) == true);
+        var saved = JsonSerializer.Deserialize<SupabaseSession>(await File.ReadAllTextAsync(files.SessionPath), JsonOptions.Supabase);
+        Assert.Equal("user-id", saved?.UserId);
+        Assert.Equal("expired-refresh-token", saved?.RefreshToken);
     }
 
     [Fact]
