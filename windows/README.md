@@ -9,6 +9,7 @@ This directory contains the Windows client workspace scaffold. It is intentional
 - Visual Studio 2026 or newer with:
   - .NET desktop development.
   - Desktop development with C++.
+  - MSVC v143 build tools, because `Ping.Windows.NativeCapture.vcxproj` currently targets `PlatformToolset` `v143`.
   - Windows App SDK tooling.
 - Windows SDK 10.0.26100.0 or newer.
 
