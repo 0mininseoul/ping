@@ -364,6 +364,27 @@ public sealed class BackendContractTests
         Assert.Equal("ping_cleanup_expired_data", Assert.Single(rpc.Calls).Function);
     }
 
+    [Fact]
+    public async Task StorageServiceRejectsInvalidUploadPayloadsBeforeNetwork()
+    {
+        using var files = new SupabaseTestFiles();
+        using var client = files.CreateClient(new RecordingHttpMessageHandler(_ => throw new InvalidOperationException("network")));
+        var service = new StorageService(client);
+        var emptyMp4 = Path.Combine(files.DirectoryPath, "empty.mp4");
+        var textFile = Path.Combine(files.DirectoryPath, "clip.txt");
+        await File.WriteAllBytesAsync(emptyMp4, []);
+        await File.WriteAllTextAsync(textFile, "not video");
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.UploadVideoAsync(emptyMp4, "sender-uid", "video-id", ["receiver"], DateTimeOffset.UtcNow));
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => service.UploadVideoAsync(textFile, "sender-uid", "video-id", ["receiver"], DateTimeOffset.UtcNow));
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => service.UploadVideoAsync(emptyMp4, "sender/uid", "video-id", ["receiver"], DateTimeOffset.UtcNow));
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => service.DownloadVideoAsync("sender-uid/video-id.mov"));
+    }
+
     private sealed class RecordingRpcClient : ISupabaseRpcClient
     {
         public List<(string Function, object Body)> Calls { get; } = [];
