@@ -14,6 +14,8 @@ public sealed record LocalArchiveEntry(
 
 public sealed class LocalArchive
 {
+    private static readonly TimeSpan RetentionInterval = TimeSpan.FromDays(30);
+
     public LocalArchive(string rootDirectory)
     {
         if (string.IsNullOrWhiteSpace(rootDirectory))
@@ -83,6 +85,73 @@ public sealed class LocalArchive
         var safeLabel = SanitizeLabel(label);
         var path = Path.Combine(FolderFor(kind), ArchiveFileName(kind, safeLabel, timestamp));
         return File.Exists(path) ? path : null;
+    }
+
+    public void EnsureFolders()
+    {
+        Directory.CreateDirectory(FolderFor(LocalArchiveKind.Sent));
+        Directory.CreateDirectory(FolderFor(LocalArchiveKind.Received));
+    }
+
+    public int DeleteExpiredFiles(DateTimeOffset? now = null)
+    {
+        var deletedCount = 0;
+        var cutoff = (now ?? DateTimeOffset.Now).Subtract(RetentionInterval).UtcDateTime;
+        var folders = new[]
+        {
+            FolderFor(LocalArchiveKind.Sent),
+            FolderFor(LocalArchiveKind.Received)
+        };
+
+        foreach (var folder in folders)
+        {
+            if (!Directory.Exists(folder))
+            {
+                continue;
+            }
+
+            string[] filePaths;
+            try
+            {
+                filePaths = Directory.GetFiles(folder, "*.mp4", SearchOption.TopDirectoryOnly);
+            }
+            catch (IOException)
+            {
+                continue;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                continue;
+            }
+
+            foreach (var filePath in filePaths)
+            {
+                try
+                {
+                    var lastWriteTime = File.GetLastWriteTimeUtc(filePath);
+                    var creationTime = File.GetCreationTimeUtc(filePath);
+                    var fileTime = lastWriteTime == DateTime.MinValue
+                        ? creationTime
+                        : lastWriteTime;
+
+                    if (fileTime >= cutoff)
+                    {
+                        continue;
+                    }
+
+                    File.Delete(filePath);
+                    deletedCount += 1;
+                }
+                catch (IOException)
+                {
+                }
+                catch (UnauthorizedAccessException)
+                {
+                }
+            }
+        }
+
+        return deletedCount;
     }
 
     public Task DeleteAsync(LocalArchiveEntry entry, CancellationToken cancellationToken = default)

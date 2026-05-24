@@ -3,6 +3,8 @@ using System.Collections.ObjectModel;
 using System.Runtime.CompilerServices;
 using Ping.Windows.App.Capture;
 using Ping.Windows.App.Hotkeys;
+using Ping.Windows.App.Onboarding;
+using Ping.Windows.Core.LocalState;
 
 #if WINDOWS
 using Microsoft.UI.Xaml;
@@ -23,6 +25,9 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
 {
     private readonly Action<ScreenFaceQuickSendSettings> saveSettings;
     private readonly Action openRooms;
+    private readonly Action ensureArchiveFolders;
+    private readonly Action deleteExpiredArchiveFiles;
+    private readonly Func<string, Task<bool>> openArchiveFolder;
     private readonly IStartupTaskController startupTaskController;
     private readonly Func<HotkeyCommand, HotkeyBinding, HotkeyRegistrationResult> updateHotkey;
     private readonly Dictionary<HotkeyCommand, HotkeyBinding> hotkeys;
@@ -36,6 +41,7 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
     private string historyHotkey;
     private string quickSendOffContent;
     private string quickSendOnContent;
+    private string archiveFolderStatus = string.Empty;
     private int selectedTabIndex;
 
     public SettingsWindowViewModel(
@@ -46,14 +52,22 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
         Action openRooms,
         IStartupTaskController? startupTaskController = null,
         Func<HotkeyCommand, HotkeyBinding, HotkeyRegistrationResult>? updateHotkey = null,
-        SettingsSection initialSection = SettingsSection.General)
+        SettingsSection initialSection = SettingsSection.General,
+        string? archiveRootPath = null,
+        Action? ensureArchiveFolders = null,
+        Action? deleteExpiredArchiveFiles = null,
+        Func<string, Task<bool>>? openArchiveFolder = null)
     {
         Nickname = nickname;
         selectedTabIndex = (int)initialSection;
+        ArchiveRootPath = Path.GetFullPath(archiveRootPath ?? LocalArchive.DefaultRootDirectory());
         this.hotkeys = hotkeys.ToDictionary(pair => pair.Key, pair => pair.Value);
         this.settings = settings;
         this.saveSettings = saveSettings;
         this.openRooms = openRooms;
+        this.ensureArchiveFolders = ensureArchiveFolders ?? (() => new LocalArchive(ArchiveRootPath).EnsureFolders());
+        this.deleteExpiredArchiveFiles = deleteExpiredArchiveFiles ?? (() => _ = new LocalArchive(ArchiveRootPath).DeleteExpiredFiles());
+        this.openArchiveFolder = openArchiveFolder ?? SettingsLauncher.LaunchFolderAsync;
         this.startupTaskController = startupTaskController ?? new StartupTaskController();
         this.updateHotkey = updateHotkey ?? ((command, binding) => HotkeyRegistrationResult.Success(command, binding));
         faceHotkey = LabelFor("Face Ping", this.hotkeys, HotkeyCommand.FacePing);
@@ -69,6 +83,8 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public string Nickname { get; }
+
+    public string ArchiveRootPath { get; }
 
     public int SelectedTabIndex
     {
@@ -245,7 +261,57 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
         set => UpdatePreferences(settings.Preferences with { AllowsLocalSave = value });
     }
 
+    public bool AutoDeleteAfter30Days
+    {
+        get => settings.Preferences.AutoDeleteAfter30Days;
+        set
+        {
+            var updatedPreferences = settings.Preferences with { AutoDeleteAfter30Days = value };
+            if (settings.Preferences == updatedPreferences)
+            {
+                return;
+            }
+
+            UpdatePreferences(updatedPreferences);
+            if (value)
+            {
+                CleanupExpiredArchiveFiles();
+            }
+        }
+    }
+
+    public string ArchiveFolderStatus
+    {
+        get => archiveFolderStatus;
+        private set
+        {
+            if (archiveFolderStatus == value)
+            {
+                return;
+            }
+
+            archiveFolderStatus = value;
+            OnPropertyChanged();
+        }
+    }
+
     public void OpenRooms() => openRooms();
+
+    public async Task OpenArchiveFolderAsync()
+    {
+        try
+        {
+            ensureArchiveFolders();
+            var opened = await openArchiveFolder(ArchiveRootPath);
+            ArchiveFolderStatus = opened
+                ? "Archive folder opened."
+                : "Could not open archive folder.";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        {
+            ArchiveFolderStatus = "Could not open archive folder.";
+        }
+    }
 
     public void SelectSection(SettingsSection section)
     {
@@ -291,6 +357,7 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(SaveSentCopy));
         OnPropertyChanged(nameof(SaveReceivedCopy));
         OnPropertyChanged(nameof(AllowsLocalSave));
+        OnPropertyChanged(nameof(AutoDeleteAfter30Days));
     }
 
     private void UpdatePreferences(ScreenFaceQuickSendPreferences preferences)
@@ -306,6 +373,21 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(SaveSentCopy));
         OnPropertyChanged(nameof(SaveReceivedCopy));
         OnPropertyChanged(nameof(AllowsLocalSave));
+        OnPropertyChanged(nameof(AutoDeleteAfter30Days));
+    }
+
+    private void CleanupExpiredArchiveFiles()
+    {
+        try
+        {
+            ensureArchiveFolders();
+            deleteExpiredArchiveFiles();
+            ArchiveFolderStatus = "Expired local copies cleaned.";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        {
+            ArchiveFolderStatus = "Could not clean expired local copies.";
+        }
     }
 
     private async Task SetStartupEnabledAsync(bool isEnabled)
@@ -370,6 +452,11 @@ public sealed partial class SettingsWindow : Window
     private void OpenRoomsButton_Click(object sender, RoutedEventArgs args)
     {
         viewModel.OpenRooms();
+    }
+
+    private async void OpenArchiveFolderButton_Click(object sender, RoutedEventArgs args)
+    {
+        await viewModel.OpenArchiveFolderAsync();
     }
 
     private void ApplyHotkeyButton_Click(object sender, RoutedEventArgs args)

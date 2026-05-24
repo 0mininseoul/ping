@@ -82,6 +82,43 @@ public sealed class LocalArchiveTests : IDisposable
             timestamp.AddSeconds(1)));
     }
 
+    [Fact]
+    public void EnsureFolders_CreatesSentAndReceivedDirectories()
+    {
+        var archive = new LocalArchive(root);
+
+        archive.EnsureFolders();
+
+        Assert.True(Directory.Exists(Path.Combine(root, "sent")));
+        Assert.True(Directory.Exists(Path.Combine(root, "received")));
+    }
+
+    [Fact]
+    public void DeleteExpiredFiles_RemovesOnlyOldMp4Copies()
+    {
+        var archive = new LocalArchive(root);
+        archive.EnsureFolders();
+        var now = new DateTimeOffset(2026, 5, 25, 12, 0, 0, TimeSpan.Zero);
+        var oldTime = now.AddDays(-31).UtcDateTime;
+        var freshTime = now.AddDays(-5).UtcDateTime;
+        var oldSent = Path.Combine(root, "sent", "old.mp4");
+        var freshReceived = Path.Combine(root, "received", "fresh.mp4");
+        var oldNote = Path.Combine(root, "sent", "old.txt");
+        File.WriteAllBytes(oldSent, [0x00]);
+        File.WriteAllBytes(freshReceived, [0x01]);
+        File.WriteAllText(oldNote, "keep");
+        File.SetLastWriteTimeUtc(oldSent, oldTime);
+        File.SetLastWriteTimeUtc(freshReceived, freshTime);
+        File.SetLastWriteTimeUtc(oldNote, oldTime);
+
+        var deleted = archive.DeleteExpiredFiles(now);
+
+        Assert.Equal(1, deleted);
+        Assert.False(File.Exists(oldSent));
+        Assert.True(File.Exists(freshReceived));
+        Assert.True(File.Exists(oldNote));
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(root))

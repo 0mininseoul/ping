@@ -46,12 +46,14 @@ public sealed record ScreenFaceQuickSendPreferences
         bool IsEnabled,
         bool SaveSentCopy = false,
         bool AllowsLocalSave = false,
-        bool SaveReceivedCopy = true)
+        bool SaveReceivedCopy = true,
+        bool AutoDeleteAfter30Days = false)
     {
         this.IsEnabled = IsEnabled;
         this.SaveSentCopy = SaveSentCopy;
         this.AllowsLocalSave = AllowsLocalSave;
         this.SaveReceivedCopy = SaveReceivedCopy;
+        this.AutoDeleteAfter30Days = AutoDeleteAfter30Days;
     }
 
     public bool IsEnabled { get; init; }
@@ -61,6 +63,8 @@ public sealed record ScreenFaceQuickSendPreferences
     public bool AllowsLocalSave { get; init; }
 
     public bool SaveReceivedCopy { get; init; }
+
+    public bool AutoDeleteAfter30Days { get; init; }
 }
 
 public sealed record ScreenFaceQuickSendSettings

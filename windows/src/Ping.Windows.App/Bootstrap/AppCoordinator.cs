@@ -350,7 +350,11 @@ public sealed class AppCoordinator : IDisposable
             ApplyQuickSendSettings,
             OpenRoomManagerWindow,
             updateHotkey: ApplyHotkeySetting,
-            initialSection: section));
+            initialSection: section,
+            archiveRootPath: localArchive.RootDirectory,
+            ensureArchiveFolders: localArchive.EnsureFolders,
+            deleteExpiredArchiveFiles: () => _ = localArchive.DeleteExpiredFiles(),
+            openArchiveFolder: SettingsLauncher.LaunchFolderAsync));
         settingsWindow.Closed += (_, _) => settingsWindow = null;
         settingsWindow.Activate();
     }
@@ -1022,6 +1026,21 @@ public sealed class AppCoordinator : IDisposable
         catch (Exception ex)
         {
             Debug.WriteLine($"Ping cleanup failed: {ex}");
+        }
+
+        if (!quickSendSettings.Preferences.AutoDeleteAfter30Days)
+        {
+            return;
+        }
+
+        try
+        {
+            localArchive.EnsureFolders();
+            _ = localArchive.DeleteExpiredFiles();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Ping local archive cleanup failed: {ex}");
         }
     }
 

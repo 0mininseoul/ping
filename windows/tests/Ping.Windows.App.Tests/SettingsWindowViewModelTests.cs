@@ -16,16 +16,20 @@ public sealed class SettingsWindowViewModelTests
             HotkeyBinding.Defaults(),
             ScreenFaceQuickSendSettings.Default,
             settings => saved = settings,
-            () => { });
+            () => { },
+            ensureArchiveFolders: () => { },
+            deleteExpiredArchiveFiles: () => { });
 
         viewModel.SaveSentCopy = true;
         viewModel.SaveReceivedCopy = false;
         viewModel.AllowsLocalSave = true;
+        viewModel.AutoDeleteAfter30Days = true;
 
         var finalSettings = saved ?? throw new InvalidOperationException("Settings were not saved.");
         Assert.True(finalSettings.Preferences.SaveSentCopy);
         Assert.False(finalSettings.Preferences.SaveReceivedCopy);
         Assert.True(finalSettings.Preferences.AllowsLocalSave);
+        Assert.True(finalSettings.Preferences.AutoDeleteAfter30Days);
     }
 
     [Fact]
@@ -42,6 +46,85 @@ public sealed class SettingsWindowViewModelTests
         viewModel.OpenRooms();
 
         Assert.True(opened);
+    }
+
+    [Fact]
+    public async Task OpenArchiveFolderEnsuresFoldersAndLaunchesConfiguredPath()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "PingSettingsTests", Guid.NewGuid().ToString("N"));
+        var ensured = false;
+        string? launchedPath = null;
+        var viewModel = new SettingsWindowViewModel(
+            "Youngmin",
+            HotkeyBinding.Defaults(),
+            ScreenFaceQuickSendSettings.Default,
+            _ => { },
+            () => { },
+            archiveRootPath: root,
+            ensureArchiveFolders: () => ensured = true,
+            openArchiveFolder: path =>
+            {
+                launchedPath = path;
+                return Task.FromResult(true);
+            });
+
+        await viewModel.OpenArchiveFolderAsync();
+
+        Assert.Equal(Path.GetFullPath(root), viewModel.ArchiveRootPath);
+        Assert.True(ensured);
+        Assert.Equal(Path.GetFullPath(root), launchedPath);
+        Assert.Equal("Archive folder opened.", viewModel.ArchiveFolderStatus);
+    }
+
+    [Fact]
+    public void EnablingAutoDeletePersistsPreferenceAndRunsCleanup()
+    {
+        ScreenFaceQuickSendSettings? saved = null;
+        var ensuredCount = 0;
+        var cleanupCount = 0;
+        var viewModel = new SettingsWindowViewModel(
+            "Youngmin",
+            HotkeyBinding.Defaults(),
+            ScreenFaceQuickSendSettings.Default,
+            settings => saved = settings,
+            () => { },
+            ensureArchiveFolders: () => ensuredCount += 1,
+            deleteExpiredArchiveFiles: () => cleanupCount += 1);
+
+        viewModel.AutoDeleteAfter30Days = true;
+
+        Assert.True(viewModel.AutoDeleteAfter30Days);
+        Assert.True(saved?.Preferences.AutoDeleteAfter30Days);
+        Assert.Equal(1, ensuredCount);
+        Assert.Equal(1, cleanupCount);
+    }
+
+    [Fact]
+    public void QuickSendSettingsStorePersistsAutoDeletePreference()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "PingSettingsStoreTests", Guid.NewGuid().ToString("N"));
+        var path = Path.Combine(directory, "QuickSendSettings.json");
+        try
+        {
+            var store = new ScreenFaceQuickSendSettingsStore(path);
+            store.Save(new ScreenFaceQuickSendSettings
+            {
+                Preferences = new ScreenFaceQuickSendPreferences(
+                    IsEnabled: true,
+                    AutoDeleteAfter30Days: true)
+            });
+
+            var loaded = store.Load();
+
+            Assert.True(loaded.Preferences.AutoDeleteAfter30Days);
+        }
+        finally
+        {
+            if (Directory.Exists(directory))
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
     }
 
     [Fact]

@@ -158,6 +158,35 @@
                         IsOn="{Binding AllowsLocalSave, Mode=TwoWay}"
                         OffContent="Off"
                         OnContent="On" />
+                    <ToggleSwitch
+                        Header="Delete local copies after 30 days"
+                        IsOn="{Binding AutoDeleteAfter30Days, Mode=TwoWay}"
+                        OffContent="Off"
+                        OnContent="On" />
+                    <Grid ColumnSpacing="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="144" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox
+                            Header="Archive folder"
+                            IsReadOnly="True"
+                            Text="{Binding ArchiveRootPath}" />
+                        <Button
+                            Grid.Column="1"
+                            Margin="0,24,0,0"
+                            HorizontalAlignment="Stretch"
+                            Click="OpenArchiveFolderButton_Click"
+                            Content="Open in Explorer" />
+                    </Grid>
+                    <TextBlock
+                        Foreground="{StaticResource PingMutedBrush}"
+                        Text="Sent and received videos are saved under the sent and received folders here."
+                        TextWrapping="WrapWholeWords" />
+                    <TextBlock
+                        Foreground="{StaticResource PingMutedBrush}"
+                        Text="{Binding ArchiveFolderStatus}"
+                        TextWrapping="WrapWholeWords" />
                 </StackPanel>
             </TabViewItem>
 

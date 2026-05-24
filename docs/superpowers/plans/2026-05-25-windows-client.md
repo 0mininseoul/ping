@@ -910,7 +910,7 @@ Tabs:
 - General: startup, nickname
 - Hotkeys: Alt+P, Alt+L, Alt+Shift+L, Alt+O
 - Rooms
-- Storage
+- Storage: sent-copy saving, received-video saving, recipient local-save permission, 30-day local archive deletion, archive path display, Explorer open
 - Info/update
 
 - [ ] **Step 5: Commit**
