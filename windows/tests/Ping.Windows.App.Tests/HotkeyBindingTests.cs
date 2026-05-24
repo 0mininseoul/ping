@@ -119,6 +119,46 @@ public sealed class HotkeyBindingTests
     }
 
     [Fact]
+    public void Invalid_hotkey_values_fall_back_per_command()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "PingHotkeyTests", Guid.NewGuid().ToString("N"));
+        var store = new HotkeyPreferencesStore(root);
+
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(store.PreferencesPath)!);
+            File.WriteAllText(
+                store.PreferencesPath,
+                """
+                {
+                  "hotkeys": {
+                    "facePing": { "modifiers": 1, "key": "Slash" },
+                    "screenFacePing": { "modifiers": 3, "key": "S" },
+                    "quickScreenFacePing": { "modifiers": 16, "key": "Q" },
+                    "history": { "modifiers": 0, "key": "O" }
+                  }
+                }
+                """);
+
+            var loaded = store.Load();
+
+            Assert.Equal(HotkeyBinding.Defaults()[HotkeyCommand.FacePing], loaded[HotkeyCommand.FacePing]);
+            Assert.Equal(
+                HotkeyBinding.FromParts(HotkeyModifiers.Alt | HotkeyModifiers.Control, "S"),
+                loaded[HotkeyCommand.ScreenFacePing]);
+            Assert.Equal(HotkeyBinding.Defaults()[HotkeyCommand.QuickScreenFacePing], loaded[HotkeyCommand.QuickScreenFacePing]);
+            Assert.Equal(HotkeyBinding.Defaults()[HotkeyCommand.History], loaded[HotkeyCommand.History]);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public void Status_text_uses_customized_hotkey_bindings()
     {
         var bindings = HotkeyBinding.Defaults()

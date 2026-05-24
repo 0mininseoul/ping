@@ -180,6 +180,11 @@ public sealed class HotkeyPreferencesStore
 
         foreach (var pair in preferences.Hotkeys)
         {
+            if (!IsValidBinding(pair.Value))
+            {
+                continue;
+            }
+
             defaults[pair.Key] = pair.Value;
         }
 
@@ -195,6 +200,33 @@ public sealed class HotkeyPreferencesStore
         var preferences = new UserPreferences(bindings.ToDictionary(pair => pair.Key, pair => pair.Value));
         var json = JsonSerializer.Serialize(preferences, SerializerOptions);
         File.WriteAllText(PreferencesPath, json);
+    }
+
+    private static bool IsValidBinding(HotkeyBinding? binding)
+    {
+        const HotkeyModifiers allowedModifiers =
+            HotkeyModifiers.Alt
+            | HotkeyModifiers.Control
+            | HotkeyModifiers.Shift
+            | HotkeyModifiers.Windows;
+
+        if (binding is null
+            || string.IsNullOrWhiteSpace(binding.Key)
+            || binding.Modifiers == HotkeyModifiers.None
+            || (binding.Modifiers & ~allowedModifiers) != HotkeyModifiers.None)
+        {
+            return false;
+        }
+
+        try
+        {
+            _ = binding.ToVirtualKey();
+            return true;
+        }
+        catch (InvalidOperationException)
+        {
+            return false;
+        }
     }
 
     private sealed record UserPreferences(Dictionary<HotkeyCommand, HotkeyBinding> Hotkeys);
