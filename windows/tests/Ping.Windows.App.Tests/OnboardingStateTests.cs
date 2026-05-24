@@ -127,6 +127,21 @@ public sealed class OnboardingStateTests
         Assert.Equal(OnboardingProbeStatus.Unchecked, (await probe.CheckNotificationsAsync()).Status);
     }
 
+    [Fact]
+    public void PermissionProbe_unregisters_probe_hotkeys_when_later_registration_conflicts()
+    {
+        var hotkeys = new RecordingHotkeyProbe(conflictingId: 'L');
+        var probe = new PermissionProbe(
+            Path.Combine(Path.GetTempPath(), "missing-supabase.json"),
+            hotkeyRegistrationProbe: hotkeys);
+
+        var state = probe.CheckDefaultHotkeys();
+
+        Assert.Equal(OnboardingProbeStatus.Blocked, state.Status);
+        Assert.Equal(new[] { (int)'P', (int)'L' }, hotkeys.RegisteredIds);
+        Assert.Equal(new[] { (int)'P' }, hotkeys.UnregisteredIds);
+    }
+
     private static void AssertSettingsAction(
         OnboardingViewModel model,
         OnboardingRowKind kind,
@@ -138,5 +153,25 @@ public sealed class OnboardingStateTests
         Assert.Equal(OnboardingActionKind.Settings, row.PrimaryAction?.Kind);
         Assert.Equal(expectedUri, row.PrimaryAction?.Uri);
         Assert.Equal("Open settings", row.PrimaryAction?.Label);
+    }
+
+    private sealed class RecordingHotkeyProbe(int conflictingId) : IHotkeyRegistrationProbe
+    {
+        public List<int> RegisteredIds { get; } = [];
+
+        public List<int> UnregisteredIds { get; } = [];
+
+        public bool TryRegister(int id, uint modifiers, uint virtualKey)
+        {
+            _ = modifiers;
+            _ = virtualKey;
+            RegisteredIds.Add(id);
+            return id != conflictingId;
+        }
+
+        public void Unregister(int id)
+        {
+            UnregisteredIds.Add(id);
+        }
     }
 }

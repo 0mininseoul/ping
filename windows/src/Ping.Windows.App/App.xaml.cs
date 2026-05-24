@@ -20,6 +20,7 @@ public partial class App : Application
         window.InitializeTrayWindowBehavior();
         coordinator = new AppCoordinator(window);
         coordinator.Start();
+        coordinator.HandleInitialNotificationActivation();
         window.Activate();
     }
 

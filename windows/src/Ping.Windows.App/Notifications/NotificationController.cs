@@ -3,6 +3,7 @@ using Ping.Windows.Core.Backend;
 using Ping.Windows.Core.Models;
 
 #if WINDOWS
+using Microsoft.Windows.AppLifecycle;
 using Microsoft.Windows.AppNotifications;
 #endif
 
@@ -131,6 +132,30 @@ public sealed class NotificationController : IDisposable
 #endif
     }
 
+    public NotificationActivationArguments? TryGetInitialActivationArguments()
+    {
+#if WINDOWS
+        try
+        {
+            var activatedArgs = AppInstance.GetCurrent().GetActivatedEventArgs();
+            if (activatedArgs is null || activatedArgs.Kind != ExtendedActivationKind.AppNotification)
+            {
+                return null;
+            }
+
+            return activatedArgs.Data is AppNotificationActivatedEventArgs notificationArgs
+                ? ParseActivationArguments(notificationArgs)
+                : null;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+#else
+        return null;
+#endif
+    }
+
     public bool TryShowIncoming(VideoMessage message)
     {
         if (!registry.TryMarkNotified(message))
@@ -163,7 +188,7 @@ public sealed class NotificationController : IDisposable
         AppNotificationManager sender,
         AppNotificationActivatedEventArgs args)
     {
-        var parsed = NotificationActivationArguments.Parse(args.Argument);
+        var parsed = ParseActivationArguments(args);
         if (!string.Equals(parsed.Action, "play", StringComparison.Ordinal)
             || string.IsNullOrWhiteSpace(parsed.MessageId))
         {
@@ -171,6 +196,14 @@ public sealed class NotificationController : IDisposable
         }
 
         _ = openMessageAsync(parsed.MessageId, CancellationToken.None);
+    }
+
+    private static NotificationActivationArguments ParseActivationArguments(AppNotificationActivatedEventArgs args)
+    {
+        var parsed = NotificationActivationArguments.From(args.Arguments);
+        return parsed.HasValues
+            ? parsed
+            : NotificationActivationArguments.Parse(args.Argument);
     }
 #endif
 
@@ -194,6 +227,16 @@ public sealed class NotificationController : IDisposable
 
 public sealed record NotificationActivationArguments(string? Action, string? MessageId)
 {
+    public bool HasValues =>
+        !string.IsNullOrWhiteSpace(Action) || !string.IsNullOrWhiteSpace(MessageId);
+
+    public static NotificationActivationArguments From(IDictionary<string, string> values)
+    {
+        values.TryGetValue("action", out var action);
+        values.TryGetValue("message_id", out var messageId);
+        return new(action, messageId);
+    }
+
     public static NotificationActivationArguments Parse(string? arguments)
     {
         if (string.IsNullOrWhiteSpace(arguments))

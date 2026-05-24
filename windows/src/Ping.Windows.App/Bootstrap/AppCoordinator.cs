@@ -129,6 +129,29 @@ public sealed class AppCoordinator : IDisposable
         }
     }
 
+    public void HandleInitialNotificationActivation()
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+
+        HandleNotificationActivation(notificationController.TryGetInitialActivationArguments());
+    }
+
+    private void HandleNotificationActivation(NotificationActivationArguments? parsed)
+    {
+        if (parsed is null)
+        {
+            return;
+        }
+
+        if (!string.Equals(parsed.Action, "play", StringComparison.Ordinal)
+            || string.IsNullOrWhiteSpace(parsed.MessageId))
+        {
+            return;
+        }
+
+        _ = OpenMessageFromNotificationAsync(parsed.MessageId, CancellationToken.None);
+    }
+
     public void Dispose()
     {
         if (disposed)

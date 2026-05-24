@@ -7,17 +7,27 @@ public interface INativeScreenCaptureSelfTest
     Task<OnboardingProbeState> CapturePrimaryMonitorFrameAsync(CancellationToken cancellationToken = default);
 }
 
+public interface IHotkeyRegistrationProbe
+{
+    bool TryRegister(int id, uint modifiers, uint virtualKey);
+
+    void Unregister(int id);
+}
+
 public sealed class PermissionProbe
 {
     private readonly string supabaseConfigPath;
     private readonly INativeScreenCaptureSelfTest screenCaptureSelfTest;
+    private readonly IHotkeyRegistrationProbe? hotkeyRegistrationProbe;
 
     public PermissionProbe(
         string? supabaseConfigPath = null,
-        INativeScreenCaptureSelfTest? screenCaptureSelfTest = null)
+        INativeScreenCaptureSelfTest? screenCaptureSelfTest = null,
+        IHotkeyRegistrationProbe? hotkeyRegistrationProbe = null)
     {
         this.supabaseConfigPath = supabaseConfigPath ?? DefaultSupabaseConfigPath();
         this.screenCaptureSelfTest = screenCaptureSelfTest ?? new NativeScreenCaptureSelfTest();
+        this.hotkeyRegistrationProbe = hotkeyRegistrationProbe;
     }
 
     public async Task<OnboardingEnvironmentState> ProbeAsync(CancellationToken cancellationToken = default) =>
@@ -167,10 +177,13 @@ public sealed class PermissionProbe
 
     public OnboardingProbeState CheckDefaultHotkeys()
     {
-        if (!OperatingSystem.IsWindows())
+        var probe = hotkeyRegistrationProbe;
+        if (probe is null && !OperatingSystem.IsWindows())
         {
             return OnboardingProbeState.Unchecked("Hotkey registration check requires user32.dll on Windows.");
         }
+
+        probe ??= new Win32HotkeyRegistrationProbe();
 
         var registrations = new[]
         {
@@ -180,18 +193,28 @@ public sealed class PermissionProbe
             HotkeyRegistration.Alt('O')
         };
 
-        foreach (var registration in registrations)
+        var registeredIds = new List<int>();
+        try
         {
-            if (!TryRegisterHotKey(registration))
+            foreach (var registration in registrations)
             {
-                return OnboardingProbeState.Blocked(
-                    $"{registration.DisplayName} is already used by another app.",
-                    actionKind: OnboardingActionKind.Configure,
-                    actionLabel: "Change hotkeys");
-            }
-        }
+                if (!probe.TryRegister(registration.Id, registration.Modifiers, registration.VirtualKey))
+                {
+                    return OnboardingProbeState.Blocked(
+                        $"{registration.DisplayName} is already used by another app.",
+                        actionKind: OnboardingActionKind.Configure,
+                        actionLabel: "Change hotkeys");
+                }
 
-        return OnboardingProbeState.Available("Default hotkeys are ready.");
+                registeredIds.Add(registration.Id);
+            }
+
+            return OnboardingProbeState.Available("Default hotkeys are ready.");
+        }
+        finally
+        {
+            UnregisterAll(probe, registeredIds);
+        }
     }
 
     public OnboardingProbeState CheckStartup()
@@ -209,22 +232,28 @@ public sealed class PermissionProbe
     public static string DefaultSupabaseConfigPath() =>
         Path.Combine(DefaultSupabaseDirectoryPath(), "Supabase.json");
 
-    private static bool TryRegisterHotKey(HotkeyRegistration hotkey)
+    private static void UnregisterAll(IHotkeyRegistrationProbe probe, IEnumerable<int> ids)
     {
-        if (!RegisterHotKey(IntPtr.Zero, hotkey.Id, hotkey.Modifiers, hotkey.VirtualKey))
+        foreach (var id in ids)
         {
-            return false;
+            probe.Unregister(id);
         }
-
-        _ = UnregisterHotKey(IntPtr.Zero, hotkey.Id);
-        return true;
     }
 
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
+    private sealed class Win32HotkeyRegistrationProbe : IHotkeyRegistrationProbe
+    {
+        public bool TryRegister(int id, uint modifiers, uint virtualKey) =>
+            RegisterHotKey(IntPtr.Zero, id, modifiers, virtualKey);
 
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+        public void Unregister(int id) =>
+            _ = UnregisterHotKey(IntPtr.Zero, id);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+    }
 
     private sealed record HotkeyRegistration(
         int Id,
@@ -234,12 +263,13 @@ public sealed class PermissionProbe
     {
         private const uint ModAlt = 0x0001;
         private const uint ModShift = 0x0004;
+        private const uint ModNoRepeat = 0x4000;
 
         public static HotkeyRegistration Alt(char key) =>
-            new(key, ModAlt, key, $"Alt+{key}");
+            new(key, ModAlt | ModNoRepeat, key, $"Alt+{key}");
 
         public static HotkeyRegistration AltShift(char key) =>
-            new(1000 + key, ModAlt | ModShift, key, $"Alt+Shift+{key}");
+            new(1000 + key, ModAlt | ModShift | ModNoRepeat, key, $"Alt+Shift+{key}");
     }
 
     private sealed class NativeScreenCaptureSelfTest : INativeScreenCaptureSelfTest

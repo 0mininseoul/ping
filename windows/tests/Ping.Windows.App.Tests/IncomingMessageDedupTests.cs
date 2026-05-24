@@ -53,6 +53,21 @@ public sealed class IncomingMessageDedupTests
 
         Assert.Equal("play", parsed.Action);
         Assert.Equal("message 1", parsed.MessageId);
+        Assert.True(parsed.HasValues);
+    }
+
+    [Fact]
+    public void ActivationArguments_ReadsWindowsAppSdkDictionary()
+    {
+        var parsed = NotificationActivationArguments.From(new Dictionary<string, string>
+        {
+            ["action"] = "play",
+            ["message_id"] = "message-1"
+        });
+
+        Assert.Equal("play", parsed.Action);
+        Assert.Equal("message-1", parsed.MessageId);
+        Assert.True(parsed.HasValues);
     }
 
     private static VideoMessage Message(string id, DateTimeOffset createdAt) =>
