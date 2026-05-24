@@ -26,10 +26,26 @@
                         FontWeight="SemiBold"
                         Foreground="{StaticResource PingTextBrush}"
                         Text="General" />
-                    <TextBox
-                        Header="Nickname"
-                        IsReadOnly="True"
-                        Text="{Binding Nickname}" />
+                    <Grid ColumnSpacing="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="96" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox
+                            Header="Nickname"
+                            Text="{Binding NicknameDraft, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        <Button
+                            Grid.Column="1"
+                            Margin="0,24,0,0"
+                            HorizontalAlignment="Stretch"
+                            Click="SaveNicknameButton_Click"
+                            Content="Save"
+                            IsEnabled="{Binding CanSaveNickname}" />
+                    </Grid>
+                    <TextBlock
+                        Foreground="{StaticResource PingMutedBrush}"
+                        Text="{Binding NicknameStatus}"
+                        TextWrapping="WrapWholeWords" />
                     <ToggleSwitch
                         Header="화면+얼굴 빠른 전송"
                         IsOn="{Binding IsQuickSendEnabled, Mode=TwoWay}"

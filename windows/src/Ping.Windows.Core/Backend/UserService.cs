@@ -5,6 +5,21 @@ namespace Ping.Windows.Core.Backend;
 
 public sealed class UserService(ISupabaseRpcClient client)
 {
+    public async Task<PingUser?> UpsertAsync(string nickname, CancellationToken cancellationToken = default)
+    {
+        var normalized = string.Join(" ", (nickname ?? string.Empty).Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            throw new ArgumentException("Nickname is required.", nameof(nickname));
+        }
+
+        var users = await client.RpcArrayAsync<PingUser>(
+            "ping_upsert_profile",
+            new UpsertProfileRpcBody(normalized, SearchableText.Normalize(normalized)),
+            cancellationToken).ConfigureAwait(false);
+        return users.FirstOrDefault();
+    }
+
     public async Task<PingUser?> GetAsync(string uid, CancellationToken cancellationToken = default)
     {
         var users = await client.RpcArrayAsync<PingUser>(
@@ -20,6 +35,10 @@ public sealed class UserService(ISupabaseRpcClient client)
             new UpdateLastUsedRoomRpcBody(roomId),
             cancellationToken);
 }
+
+public sealed record UpsertProfileRpcBody(
+    [property: JsonPropertyName("nickname_text")] string NicknameText,
+    [property: JsonPropertyName("searchable_nickname_text")] string SearchableNicknameText);
 
 public sealed record GetProfileRpcBody(
     [property: JsonPropertyName("target_uid")] string TargetUid);

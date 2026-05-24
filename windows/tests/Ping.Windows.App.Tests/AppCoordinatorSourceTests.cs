@@ -23,6 +23,24 @@ public sealed class AppCoordinatorSourceTests
             StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void SenderFlowsUseSavedProfileNickname()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Bootstrap",
+            "AppCoordinator.cs"));
+
+        Assert.Contains("private string currentNickname = Environment.UserName;", source, StringComparison.Ordinal);
+        Assert.Contains("userService.UpsertAsync(nickname, cancellationToken)", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("SenderNickname: Environment.UserName", source, StringComparison.Ordinal);
+        Assert.Contains("SenderNickname: CurrentNickname", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("invitationService,\n            Environment.UserName", source, StringComparison.Ordinal);
+    }
+
     private static string RepoRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

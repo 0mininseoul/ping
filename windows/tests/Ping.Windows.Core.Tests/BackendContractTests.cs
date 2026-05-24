@@ -419,22 +419,30 @@ public sealed class BackendContractTests
         var rpc = new RecordingProfileRpcClient();
         var service = new UserService(rpc);
 
+        var savedProfile = await service.UpsertAsync("  Youngmin  Park  ");
         var profile = await service.GetAsync("sender-uid");
         await service.UpdateLastUsedRoomAsync("room-id");
 
+        Assert.Equal("Youngmin Park", savedProfile?.Nickname);
         Assert.Equal("room-id", profile?.LastUsedRoomId);
+        Assert.Equal("ping_upsert_profile", rpc.Calls[0].Function);
+        Assert.Equal(
+            """
+            {"nickname_text":"Youngmin Park","searchable_nickname_text":"youngmin park"}
+            """,
+            JsonSerializer.Serialize(rpc.Calls[0].Body, JsonOptions.Supabase));
+        Assert.Equal("ping_get_profile", rpc.Calls[1].Function);
         Assert.Equal(
             """
             {"target_uid":"sender-uid"}
             """,
-            JsonSerializer.Serialize(rpc.Calls[0].Body, JsonOptions.Supabase));
-        Assert.Equal("ping_get_profile", rpc.Calls[0].Function);
-        Assert.Equal("ping_update_last_used_room", rpc.Calls[1].Function);
+            JsonSerializer.Serialize(rpc.Calls[1].Body, JsonOptions.Supabase));
+        Assert.Equal("ping_update_last_used_room", rpc.Calls[2].Function);
         Assert.Equal(
             """
             {"room_uuid":"room-id"}
             """,
-            JsonSerializer.Serialize(rpc.Calls[1].Body, JsonOptions.Supabase));
+            JsonSerializer.Serialize(rpc.Calls[2].Body, JsonOptions.Supabase));
     }
 
     [Fact]
@@ -505,12 +513,20 @@ public sealed class BackendContractTests
         public Task<IReadOnlyList<T>> RpcArrayAsync<T>(string function, object? body = null, CancellationToken cancellationToken = default)
         {
             Calls.Add((function, body ?? new { }));
+            var nickname = "Youngmin";
+            if (function == "ping_upsert_profile" && body is not null)
+            {
+                var json = JsonSerializer.Serialize(body, JsonOptions.Supabase);
+                using var document = JsonDocument.Parse(json);
+                nickname = document.RootElement.GetProperty("nickname_text").GetString() ?? nickname;
+            }
+
             object result = new[]
             {
                 new PingUser(
                     Id: "sender-uid",
-                    Nickname: "Youngmin",
-                    SearchableNickname: "youngmin",
+                    Nickname: nickname,
+                    SearchableNickname: SearchableText.Normalize(nickname),
                     Rooms: ["room-id"],
                     LastUsedRoomId: "room-id")
             };

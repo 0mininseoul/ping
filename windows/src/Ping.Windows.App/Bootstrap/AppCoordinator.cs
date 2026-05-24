@@ -40,6 +40,7 @@ public sealed class AppCoordinator : IDisposable
     private readonly MirrorPlacementStore mirrorPlacementStore;
     private IReadOnlyCollection<Room> rooms = [];
     private string? currentUid;
+    private string currentNickname = Environment.UserName;
     private string? remoteDefaultRoomId;
     private ScreenFaceQuickSendSettings quickSendSettings;
     private IReadOnlyList<HotkeyRegistrationResult> lastHotkeyRegistrations = [];
@@ -118,6 +119,11 @@ public sealed class AppCoordinator : IDisposable
         MaybeOpenOnboardingAtStartup(lastHotkeyRegistrations);
         _ = BootstrapAndLoadRoomsAsync();
     }
+
+    private string CurrentNickname =>
+        string.IsNullOrWhiteSpace(currentNickname)
+            ? Environment.UserName
+            : currentNickname;
 
     public void Execute(HotkeyCommand command)
     {
@@ -296,7 +302,7 @@ public sealed class AppCoordinator : IDisposable
         roomManagerWindow = new RoomManagerWindow(new RoomManagerViewModel(
             roomService,
             invitationService,
-            Environment.UserName));
+            CurrentNickname));
         roomManagerWindow.Closed += (_, _) =>
         {
             roomManagerWindow = null;
@@ -338,13 +344,14 @@ public sealed class AppCoordinator : IDisposable
         if (settingsWindow is not null)
         {
             settingsWindow.RefreshSettings(quickSendSettings);
+            settingsWindow.RefreshProfileNickname(CurrentNickname);
             settingsWindow.ShowSection(section);
             settingsWindow.Activate();
             return;
         }
 
         settingsWindow = new SettingsWindow(new SettingsWindowViewModel(
-            Environment.UserName,
+            CurrentNickname,
             preferencesStore.Load(),
             quickSendSettings,
             ApplyQuickSendSettings,
@@ -354,7 +361,8 @@ public sealed class AppCoordinator : IDisposable
             archiveRootPath: localArchive.RootDirectory,
             ensureArchiveFolders: localArchive.EnsureFolders,
             deleteExpiredArchiveFiles: () => _ = localArchive.DeleteExpiredFiles(),
-            openArchiveFolder: SettingsLauncher.LaunchFolderAsync));
+            openArchiveFolder: SettingsLauncher.LaunchFolderAsync,
+            saveNickname: SaveProfileNicknameAsync));
         settingsWindow.Closed += (_, _) => settingsWindow = null;
         settingsWindow.Activate();
     }
@@ -505,7 +513,7 @@ public sealed class AppCoordinator : IDisposable
         var context = new FaceMirrorContext(
             Rooms: sendableRooms,
             SenderUid: uid,
-            SenderNickname: Environment.UserName,
+            SenderNickname: CurrentNickname,
             PartnerLabel: sendableRooms.Length == 1 ? sendableRooms[0].Name : "All rooms",
             AllowsLocalSave: quickSendSettings.Preferences.AllowsLocalSave,
             SaveSentCopy: quickSendSettings.Preferences.SaveSentCopy,
@@ -559,7 +567,7 @@ public sealed class AppCoordinator : IDisposable
         ShowScreenFaceMirror(new ScreenFaceMirrorContext(
             Rooms: sendableRooms,
             SenderUid: uid,
-            SenderNickname: Environment.UserName,
+            SenderNickname: CurrentNickname,
             PartnerLabel: PartnerLabelFor(sendableRooms),
             AllowsLocalSave: quickSendSettings.Preferences.AllowsLocalSave,
             SaveSentCopy: quickSendSettings.Preferences.SaveSentCopy,
@@ -677,7 +685,7 @@ public sealed class AppCoordinator : IDisposable
             var context = new QuickSendContext(
                 Rooms: rooms,
                 SenderUid: uid,
-                SenderNickname: Environment.UserName,
+                SenderNickname: CurrentNickname,
                 PartnerLabel: defaultRoom?.Name ?? "Default room",
                 AllowsLocalSave: quickSendSettings.Preferences.AllowsLocalSave,
                 SaveSentCopy: quickSendSettings.Preferences.SaveSentCopy,
@@ -985,6 +993,12 @@ public sealed class AppCoordinator : IDisposable
             var uid = currentUid;
             await RunCleanupAsync();
             var profile = await userService.GetAsync(uid);
+            if (!string.IsNullOrWhiteSpace(profile?.Nickname))
+            {
+                currentNickname = profile.Nickname;
+                settingsWindow?.RefreshProfileNickname(CurrentNickname);
+            }
+
             remoteDefaultRoomId = profile?.LastUsedRoomId;
             rooms = await roomService.MyRoomsAsync();
             if (ResolvePreferredDefaultRoom(SendableRoomsFor(uid)) is { Id: { } defaultRoomId })
@@ -1042,6 +1056,15 @@ public sealed class AppCoordinator : IDisposable
         {
             Debug.WriteLine($"Ping local archive cleanup failed: {ex}");
         }
+    }
+
+    private async Task<string> SaveProfileNicknameAsync(string nickname, CancellationToken cancellationToken)
+    {
+        var profile = await userService.UpsertAsync(nickname, cancellationToken);
+        currentNickname = string.IsNullOrWhiteSpace(profile?.Nickname)
+            ? nickname
+            : profile.Nickname;
+        return CurrentNickname;
     }
 
     private sealed class CoordinatorQuickSendPresenter(AppCoordinator owner) : IQuickSendPresenter

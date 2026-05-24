@@ -49,6 +49,92 @@ public sealed class SettingsWindowViewModelTests
     }
 
     [Fact]
+    public async Task SaveNicknameTrimsPersistsAndUpdatesDraft()
+    {
+        string? savedNickname = null;
+        var viewModel = new SettingsWindowViewModel(
+            "Youngmin",
+            HotkeyBinding.Defaults(),
+            ScreenFaceQuickSendSettings.Default,
+            _ => { },
+            () => { },
+            saveNickname: (nickname, _) =>
+            {
+                savedNickname = nickname;
+                return Task.FromResult(nickname);
+            });
+
+        viewModel.NicknameDraft = "  Park   Youngmin  ";
+
+        Assert.True(viewModel.CanSaveNickname);
+
+        await viewModel.SaveNicknameAsync();
+
+        Assert.Equal("Park Youngmin", savedNickname);
+        Assert.Equal("Park Youngmin", viewModel.Nickname);
+        Assert.Equal("Park Youngmin", viewModel.NicknameDraft);
+        Assert.Equal("Saved.", viewModel.NicknameStatus);
+        Assert.False(viewModel.CanSaveNickname);
+    }
+
+    [Fact]
+    public async Task SaveNicknameRequiresNonEmptyValue()
+    {
+        var saveCalled = false;
+        var viewModel = new SettingsWindowViewModel(
+            "Youngmin",
+            HotkeyBinding.Defaults(),
+            ScreenFaceQuickSendSettings.Default,
+            _ => { },
+            () => { },
+            saveNickname: (_, _) =>
+            {
+                saveCalled = true;
+                return Task.FromResult("ignored");
+            });
+
+        viewModel.NicknameDraft = "   ";
+        await viewModel.SaveNicknameAsync();
+
+        Assert.False(saveCalled);
+        Assert.Equal("Nickname is required.", viewModel.NicknameStatus);
+    }
+
+    [Fact]
+    public void ApplyProfileNicknameRefreshesUneditedDraft()
+    {
+        var viewModel = new SettingsWindowViewModel(
+            "Youngmin",
+            HotkeyBinding.Defaults(),
+            ScreenFaceQuickSendSettings.Default,
+            _ => { },
+            () => { });
+
+        viewModel.ApplyProfileNickname("  Remote  Name ");
+
+        Assert.Equal("Remote Name", viewModel.Nickname);
+        Assert.Equal("Remote Name", viewModel.NicknameDraft);
+    }
+
+    [Fact]
+    public void ApplyProfileNicknameDoesNotOverwriteUnsavedDraft()
+    {
+        var viewModel = new SettingsWindowViewModel(
+            "Youngmin",
+            HotkeyBinding.Defaults(),
+            ScreenFaceQuickSendSettings.Default,
+            _ => { },
+            () => { });
+
+        viewModel.NicknameDraft = "Local Edit";
+        viewModel.ApplyProfileNickname("Remote Name");
+
+        Assert.Equal("Remote Name", viewModel.Nickname);
+        Assert.Equal("Local Edit", viewModel.NicknameDraft);
+        Assert.True(viewModel.CanSaveNickname);
+    }
+
+    [Fact]
     public async Task OpenArchiveFolderEnsuresFoldersAndLaunchesConfiguredPath()
     {
         var root = Path.Combine(Path.GetTempPath(), "PingSettingsTests", Guid.NewGuid().ToString("N"));

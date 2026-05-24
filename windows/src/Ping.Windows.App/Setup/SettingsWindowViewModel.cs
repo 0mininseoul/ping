@@ -28,12 +28,17 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
     private readonly Action ensureArchiveFolders;
     private readonly Action deleteExpiredArchiveFiles;
     private readonly Func<string, Task<bool>> openArchiveFolder;
+    private readonly Func<string, CancellationToken, Task<string>> saveNickname;
     private readonly IStartupTaskController startupTaskController;
     private readonly Func<HotkeyCommand, HotkeyBinding, HotkeyRegistrationResult> updateHotkey;
     private readonly Dictionary<HotkeyCommand, HotkeyBinding> hotkeys;
     private ScreenFaceQuickSendSettings settings;
     private bool isStartupEnabled;
     private bool canToggleStartup;
+    private bool isSavingNickname;
+    private string nickname;
+    private string nicknameDraft;
+    private string nicknameStatus = "Shown to room members and message recipients.";
     private string startupStatus = "Checking startup registration...";
     private string faceHotkey;
     private string screenFaceHotkey;
@@ -56,9 +61,11 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
         string? archiveRootPath = null,
         Action? ensureArchiveFolders = null,
         Action? deleteExpiredArchiveFiles = null,
-        Func<string, Task<bool>>? openArchiveFolder = null)
+        Func<string, Task<bool>>? openArchiveFolder = null,
+        Func<string, CancellationToken, Task<string>>? saveNickname = null)
     {
-        Nickname = nickname;
+        this.nickname = NormalizeNickname(nickname);
+        nicknameDraft = this.nickname;
         selectedTabIndex = (int)initialSection;
         ArchiveRootPath = Path.GetFullPath(archiveRootPath ?? LocalArchive.DefaultRootDirectory());
         this.hotkeys = hotkeys.ToDictionary(pair => pair.Key, pair => pair.Value);
@@ -68,6 +75,7 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
         this.ensureArchiveFolders = ensureArchiveFolders ?? (() => new LocalArchive(ArchiveRootPath).EnsureFolders());
         this.deleteExpiredArchiveFiles = deleteExpiredArchiveFiles ?? (() => _ = new LocalArchive(ArchiveRootPath).DeleteExpiredFiles());
         this.openArchiveFolder = openArchiveFolder ?? SettingsLauncher.LaunchFolderAsync;
+        this.saveNickname = saveNickname ?? ((value, _) => Task.FromResult(NormalizeNickname(value)));
         this.startupTaskController = startupTaskController ?? new StartupTaskController();
         this.updateHotkey = updateHotkey ?? ((command, binding) => HotkeyRegistrationResult.Success(command, binding));
         faceHotkey = LabelFor("Face Ping", this.hotkeys, HotkeyCommand.FacePing);
@@ -82,7 +90,73 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public string Nickname { get; }
+    public string Nickname
+    {
+        get => nickname;
+        private set
+        {
+            if (string.Equals(nickname, value, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            nickname = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(CanSaveNickname));
+        }
+    }
+
+    public string NicknameDraft
+    {
+        get => nicknameDraft;
+        set
+        {
+            if (string.Equals(nicknameDraft, value, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            nicknameDraft = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(CanSaveNickname));
+        }
+    }
+
+    public string NicknameStatus
+    {
+        get => nicknameStatus;
+        private set
+        {
+            if (string.Equals(nicknameStatus, value, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            nicknameStatus = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public bool IsSavingNickname
+    {
+        get => isSavingNickname;
+        private set
+        {
+            if (isSavingNickname == value)
+            {
+                return;
+            }
+
+            isSavingNickname = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(CanSaveNickname));
+        }
+    }
+
+    public bool CanSaveNickname =>
+        !IsSavingNickname
+        && !string.IsNullOrWhiteSpace(NormalizeNickname(NicknameDraft))
+        && !string.Equals(NormalizeNickname(NicknameDraft), Nickname, StringComparison.Ordinal);
 
     public string ArchiveRootPath { get; }
 
@@ -297,6 +371,44 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
 
     public void OpenRooms() => openRooms();
 
+    public async Task SaveNicknameAsync(CancellationToken cancellationToken = default)
+    {
+        var normalized = NormalizeNickname(NicknameDraft);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            NicknameStatus = "Nickname is required.";
+            return;
+        }
+
+        if (!CanSaveNickname)
+        {
+            return;
+        }
+
+        try
+        {
+            IsSavingNickname = true;
+            NicknameStatus = "Saving...";
+            var savedNickname = await saveNickname(normalized, cancellationToken);
+            var displayNickname = NormalizeNickname(savedNickname);
+            Nickname = string.IsNullOrWhiteSpace(displayNickname) ? normalized : displayNickname;
+            NicknameDraft = Nickname;
+            NicknameStatus = "Saved.";
+        }
+        catch (OperationCanceledException)
+        {
+            NicknameStatus = "Nickname save canceled.";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException or HttpRequestException)
+        {
+            NicknameStatus = "Could not save nickname.";
+        }
+        finally
+        {
+            IsSavingNickname = false;
+        }
+    }
+
     public async Task OpenArchiveFolderAsync()
     {
         try
@@ -360,6 +472,27 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(AutoDeleteAfter30Days));
     }
 
+    public void ApplyProfileNickname(string updatedNickname)
+    {
+        var previousNickname = Nickname;
+        var normalized = NormalizeNickname(updatedNickname);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return;
+        }
+
+        Nickname = normalized;
+        if (!IsSavingNickname
+            && string.Equals(NormalizeNickname(NicknameDraft), previousNickname, StringComparison.Ordinal))
+        {
+            NicknameDraft = normalized;
+        }
+        else
+        {
+            OnPropertyChanged(nameof(CanSaveNickname));
+        }
+    }
+
     private void UpdatePreferences(ScreenFaceQuickSendPreferences preferences)
     {
         if (settings.Preferences == preferences)
@@ -412,6 +545,9 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
     private static string QuickSendModeText(string action, IReadOnlyDictionary<HotkeyCommand, HotkeyBinding> hotkeys) =>
         $"{HotkeyStatusText.BindingLabel(hotkeys, HotkeyCommand.QuickScreenFacePing)} {action}";
 
+    private static string NormalizeNickname(string value) =>
+        string.Join(" ", (value ?? string.Empty).Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries));
+
     private void RefreshHotkeyLabels()
     {
         FaceHotkey = LabelFor("Face Ping", hotkeys, HotkeyCommand.FacePing);
@@ -444,6 +580,11 @@ public sealed partial class SettingsWindow : Window
         viewModel.ApplySettings(settings);
     }
 
+    public void RefreshProfileNickname(string nickname)
+    {
+        viewModel.ApplyProfileNickname(nickname);
+    }
+
     public void ShowSection(SettingsSection section)
     {
         viewModel.SelectSection(section);
@@ -452,6 +593,11 @@ public sealed partial class SettingsWindow : Window
     private void OpenRoomsButton_Click(object sender, RoutedEventArgs args)
     {
         viewModel.OpenRooms();
+    }
+
+    private async void SaveNicknameButton_Click(object sender, RoutedEventArgs args)
+    {
+        await viewModel.SaveNicknameAsync();
     }
 
     private async void OpenArchiveFolderButton_Click(object sender, RoutedEventArgs args)

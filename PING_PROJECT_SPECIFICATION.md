@@ -169,6 +169,8 @@ Supabase Dashboard에서 Anonymous sign-ins가 켜져 있어야 한다.
 
 Windows 클라이언트는 macOS plist를 사용하지 않고 다음 JSON 파일을 읽는다.
 
+Windows도 Settings > General의 닉네임 저장 시 `ping_upsert_profile`을 호출하고, 이후 룸 생성/초대/영상 메시지의 발신자 표시에는 OS 계정명이 아니라 저장된 Supabase 프로필 닉네임을 사용한다.
+
 ```text
 %LOCALAPPDATA%\Ping\Supabase.json
 ```
