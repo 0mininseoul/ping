@@ -1,6 +1,7 @@
 using Microsoft.UI.Xaml;
 using Ping.Windows.App.Capture;
 using Ping.Windows.App.Hotkeys;
+using Ping.Windows.App.Onboarding;
 using Ping.Windows.App.Tray;
 using Ping.Windows.Core.Backend;
 using Ping.Windows.Core.LocalState;
@@ -16,13 +17,19 @@ public sealed class AppCoordinator : IDisposable
     private readonly TrayIconController tray;
     private readonly SupabaseClient supabaseClient;
     private readonly MessageService messageService;
+    private readonly UserService userService;
     private readonly IScreenFaceCaptureEngine screenFaceCaptureEngine;
     private readonly QuickSendController quickSendController;
+    private readonly PermissionProbe permissionProbe;
+    private readonly ScreenFaceQuickSendSettingsStore quickSendSettingsStore;
     private IReadOnlyCollection<Room> rooms = [];
     private string? currentUid;
+    private string? remoteDefaultRoomId;
+    private ScreenFaceQuickSendSettings quickSendSettings;
     private FaceMirrorWindow? faceMirrorWindow;
     private ScreenFaceMirrorWindow? screenFaceMirrorWindow;
     private QuickSendHudWindow? quickSendHudWindow;
+    private OnboardingWindow? onboardingWindow;
     private CancellationTokenSource? quickSendCancellation;
     private bool disposed;
 
@@ -48,14 +55,19 @@ public sealed class AppCoordinator : IDisposable
         this.hotkeys = hotkeys;
         this.supabaseClient = supabaseClient ?? new SupabaseClient();
         messageService = new MessageService(this.supabaseClient, new StorageService(this.supabaseClient));
+        userService = new UserService(this.supabaseClient);
         screenFaceCaptureEngine = new NativeCaptureEngine();
+        permissionProbe = new PermissionProbe();
+        quickSendSettingsStore = new ScreenFaceQuickSendSettingsStore();
+        quickSendSettings = quickSendSettingsStore.Load();
         quickSendController = new QuickSendController(
             screenFaceCaptureEngine,
-            messageService,
+            SendVideoAndRememberRoomAsync,
             new CoordinatorQuickSendPresenter(this),
-            new ScreenFaceQuickSendPreferencesStore().Load(),
-            new LocalArchive(LocalArchive.DefaultRootDirectory()));
+            () => quickSendSettings.Preferences,
+            archive: new LocalArchive(LocalArchive.DefaultRootDirectory()));
         this.tray = tray ?? new TrayIconController(ExecuteTrayCommand);
+        mainWindow.QuickSendToggleChanged += HandleQuickSendToggleChanged;
     }
 
     public void Start()
@@ -101,6 +113,7 @@ public sealed class AppCoordinator : IDisposable
         }
 
         hotkeys.HotkeyPressed -= HandleHotkeyPressed;
+        mainWindow.QuickSendToggleChanged -= HandleQuickSendToggleChanged;
         supabaseClient.Dispose();
         hotkeys.Dispose();
         quickSendCancellation?.Cancel();
@@ -138,10 +151,7 @@ public sealed class AppCoordinator : IDisposable
                 Execute(HotkeyCommand.QuickScreenFacePing);
                 break;
             case TrayCommand.Settings:
-                ShowBlockedState(
-                    "Settings",
-                    "Settings is wired from the tray. Hotkey recording and account settings arrive in later tasks.",
-                    "Settings window not implemented yet.");
+                ShowSettings();
                 break;
             case TrayCommand.Quit:
                 Dispose();
@@ -167,6 +177,7 @@ public sealed class AppCoordinator : IDisposable
         mainWindow.StateBorder.BorderBrush = mainWindow.IdleBorderBrush;
         mainWindow.HistoryPanel.Visibility = Visibility.Visible;
         mainWindow.BlockedPanel.Visibility = Visibility.Collapsed;
+        mainWindow.SettingsPanel.Visibility = Visibility.Collapsed;
         mainWindow.ShowShell();
     }
 
@@ -180,7 +191,38 @@ public sealed class AppCoordinator : IDisposable
         mainWindow.StateBorder.BorderBrush = mainWindow.WarningBorderBrush;
         mainWindow.HistoryPanel.Visibility = Visibility.Collapsed;
         mainWindow.BlockedPanel.Visibility = Visibility.Visible;
+        mainWindow.SettingsPanel.Visibility = Visibility.Collapsed;
         mainWindow.ShowShell();
+    }
+
+    private void ShowSettings()
+    {
+        var uid = currentUid;
+        var sendableRooms = uid is null ? Array.Empty<Room>() : SendableRoomsFor(uid);
+        var defaultRoom = ResolvePreferredDefaultRoom(sendableRooms);
+
+        mainWindow.ShellTitle.Text = "Settings";
+        mainWindow.StateBadge.Text = "Settings";
+        mainWindow.StateTitle.Text = "Windows quick send";
+        mainWindow.StateDetail.Text = "Configure screen+face quick send for Alt+Shift+L.";
+        mainWindow.StateBorder.BorderBrush = mainWindow.IdleBorderBrush;
+        mainWindow.HistoryPanel.Visibility = Visibility.Collapsed;
+        mainWindow.BlockedPanel.Visibility = Visibility.Collapsed;
+        mainWindow.SettingsPanel.Visibility = Visibility.Visible;
+        mainWindow.ConfigureQuickSendSettings(
+            quickSendSettings.Preferences.IsEnabled,
+            defaultRoom?.Name ?? "No sendable default room");
+        mainWindow.ShowShell();
+    }
+
+    private void HandleQuickSendToggleChanged(object? sender, bool isEnabled)
+    {
+        quickSendSettings = quickSendSettings with
+        {
+            Preferences = quickSendSettings.Preferences with { IsEnabled = isEnabled }
+        };
+        quickSendSettingsStore.Save(quickSendSettings);
+        ShowSettings();
     }
 
     private void ShowRegistrationState(IReadOnlyList<HotkeyRegistrationResult> registrations)
@@ -310,18 +352,24 @@ public sealed class AppCoordinator : IDisposable
         quickSendCancellation?.Cancel();
         var cancellation = new CancellationTokenSource();
         quickSendCancellation = cancellation;
-        var context = new QuickSendContext(
-            Rooms: rooms,
-            SenderUid: uid,
-            SenderNickname: Environment.UserName,
-            PartnerLabel: "Default room",
-            AllowsLocalSave: false,
-            SaveSentCopy: false,
-            MirrorPosition: new MirrorPosition(0.5, 0.5),
-            Preconditions: QuickSendPreconditions.Ready());
 
         try
         {
+            var sendableRooms = SendableRoomsFor(uid);
+            var defaultRoom = ResolvePreferredDefaultRoom(sendableRooms);
+            var preconditions = sendableRooms.Length > 0 && quickSendSettings.Preferences.IsEnabled
+                ? await LoadQuickSendPreconditionsAsync(cancellation.Token)
+                : QuickSendPreconditions.Ready();
+            var context = new QuickSendContext(
+                Rooms: rooms,
+                SenderUid: uid,
+                SenderNickname: Environment.UserName,
+                PartnerLabel: defaultRoom?.Name ?? "Default room",
+                AllowsLocalSave: false,
+                SaveSentCopy: false,
+                MirrorPosition: new MirrorPosition(0.5, 0.5),
+                Preconditions: preconditions,
+                DefaultRoomId: defaultRoom?.Id);
             _ = await quickSendController.ExecuteAsync(context, cancellation.Token);
         }
         finally
@@ -333,6 +381,88 @@ public sealed class AppCoordinator : IDisposable
 
             cancellation.Dispose();
         }
+    }
+
+    private async Task<QuickSendPreconditions> LoadQuickSendPreconditionsAsync(CancellationToken cancellationToken)
+    {
+        var isSupportedWindows = WindowsVersionProbe.CurrentStatus() == WindowsSupportStatus.Supported;
+        if (!isSupportedWindows)
+        {
+            return new QuickSendPreconditions(
+                IsCameraAvailable: false,
+                IsMicrophoneAvailable: false,
+                IsScreenCaptureAvailable: false);
+        }
+
+        var camera = await permissionProbe.CheckCameraAsync(cancellationToken);
+        var microphone = await permissionProbe.CheckMicrophoneAsync(cancellationToken);
+        var screenCapture = await permissionProbe.CheckScreenCaptureAsync(cancellationToken);
+        return new QuickSendPreconditions(
+            IsCameraAvailable: camera.Status == OnboardingProbeStatus.Available,
+            IsMicrophoneAvailable: microphone.Status == OnboardingProbeStatus.Available,
+            IsScreenCaptureAvailable: screenCapture.Status == OnboardingProbeStatus.Available);
+    }
+
+    private Room? ResolvePreferredDefaultRoom(IReadOnlyCollection<Room> sendableRooms)
+    {
+        if (sendableRooms.Count == 0)
+        {
+            return null;
+        }
+
+        foreach (var roomId in new[] { remoteDefaultRoomId, quickSendSettings.DefaultRoomId })
+        {
+            if (string.IsNullOrWhiteSpace(roomId))
+            {
+                continue;
+            }
+
+            var room = sendableRooms.FirstOrDefault(candidate =>
+                string.Equals(candidate.Id, roomId, StringComparison.Ordinal));
+            if (room is not null)
+            {
+                return room;
+            }
+        }
+
+        return sendableRooms
+            .OrderByDescending(room => room.CreatedAt ?? DateTimeOffset.MinValue)
+            .ThenBy(room => room.Name, StringComparer.OrdinalIgnoreCase)
+            .First();
+    }
+
+    private async Task SendVideoAndRememberRoomAsync(SendVideoInput input, CancellationToken cancellationToken)
+    {
+        await messageService.SendAsync(input, cancellationToken);
+
+        if (input.Rooms.Count != 1 || input.Rooms.Single().Id is not { } roomId)
+        {
+            return;
+        }
+
+        remoteDefaultRoomId = roomId;
+        SaveQuickSendDefaultRoom(roomId);
+        try
+        {
+            await userService.UpdateLastUsedRoomAsync(roomId, cancellationToken);
+        }
+        catch (HttpRequestException)
+        {
+        }
+        catch (InvalidOperationException)
+        {
+        }
+    }
+
+    private void SaveQuickSendDefaultRoom(string roomId)
+    {
+        if (string.Equals(quickSendSettings.DefaultRoomId, roomId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        quickSendSettings = quickSendSettings with { DefaultRoomId = roomId };
+        quickSendSettingsStore.Save(quickSendSettings);
     }
 
     private Room[] SendableRoomsFor(string uid) =>
@@ -349,7 +479,14 @@ public sealed class AppCoordinator : IDisposable
         {
             currentUid = await supabaseClient.BootstrapAsync();
             var uid = currentUid;
+            var profile = await userService.GetAsync(uid);
+            remoteDefaultRoomId = profile?.LastUsedRoomId;
             rooms = await supabaseClient.RpcArrayAsync<Room>("ping_my_rooms");
+            if (ResolvePreferredDefaultRoom(SendableRoomsFor(uid)) is { Id: { } defaultRoomId })
+            {
+                SaveQuickSendDefaultRoom(defaultRoomId);
+            }
+
             var sendableCount = rooms.Count(room =>
                 room.Id is not null
                 && room.MemberUids.Contains(uid)
@@ -373,6 +510,7 @@ public sealed class AppCoordinator : IDisposable
             var cancellation = owner.quickSendCancellation ?? new CancellationTokenSource();
             owner.quickSendCancellation ??= cancellation;
             owner.quickSendHudWindow = new QuickSendHudWindow(context, cancellation);
+            owner.quickSendHudWindow.RetryRequested += (_, _) => owner.Execute(HotkeyCommand.QuickScreenFacePing);
             owner.quickSendHudWindow.Closed += (_, _) => owner.quickSendHudWindow = null;
             owner.quickSendHudWindow.Activate();
             return owner.quickSendHudWindow;
@@ -393,9 +531,16 @@ public sealed class AppCoordinator : IDisposable
 
         public void ShowPermissionBlocked(QuickSendPermissionKind permission, string message)
         {
+            if (owner.onboardingWindow is null)
+            {
+                owner.onboardingWindow = new OnboardingWindow();
+                owner.onboardingWindow.Closed += (_, _) => owner.onboardingWindow = null;
+            }
+
+            owner.onboardingWindow.Activate();
             owner.ShowBlockedState(
                 "Screen+Face permissions",
-                $"Alt+Shift+L reached Ping, but {permission} is blocked.",
+                $"Alt+Shift+L reached Ping, but {permission} is blocked. The onboarding checks are open.",
                 message);
         }
     }

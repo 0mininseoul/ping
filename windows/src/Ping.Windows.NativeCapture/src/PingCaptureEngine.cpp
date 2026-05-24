@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <future>
+#include <limits>
 
 using namespace Ping::Windows::NativeCapture;
 
@@ -27,6 +28,12 @@ namespace
     int NormalizeCaptureFailure(int errorCode)
     {
         return errorCode == PingCaptureSuccess ? PingCaptureCaptureFailure : errorCode;
+    }
+
+    bool WriteAll(HANDLE file, void const* data, DWORD byteCount)
+    {
+        DWORD written = 0;
+        return WriteFile(file, data, byteCount, &written, nullptr) && written == byteCount;
     }
 }
 
@@ -115,6 +122,91 @@ int PingCapture_SelfTestScreenCapture()
 {
     MonitorCaptureResult monitorResult{};
     return CaptureOneMonitorFrame(-1, monitorResult);
+}
+
+extern "C" __declspec(dllexport)
+int PingCapture_WriteScreenPreviewBmp(
+    const wchar_t* outputPath,
+    int targetMonitorIndex,
+    double* outAspectRatio)
+{
+    if (outAspectRatio != nullptr)
+    {
+        *outAspectRatio = 1.0;
+    }
+
+    if (outputPath == nullptr || outputPath[0] == L'\0')
+    {
+        return PingCaptureCaptureFailure;
+    }
+
+    MonitorCaptureResult monitorResult{};
+    int captureResult = CaptureOneMonitorFrame(targetMonitorIndex, monitorResult);
+    if (captureResult != PingCaptureSuccess)
+    {
+        return NormalizeCaptureFailure(captureResult);
+    }
+
+    if (monitorResult.SourceSize.Width <= 0
+        || monitorResult.SourceSize.Height <= 0
+        || monitorResult.BgraPixels.empty()
+        || monitorResult.BgraPixels.size() > std::numeric_limits<DWORD>::max())
+    {
+        return PingCaptureCaptureFailure;
+    }
+
+    if (outAspectRatio != nullptr)
+    {
+        *outAspectRatio =
+            static_cast<double>(monitorResult.SourceSize.Width)
+            / static_cast<double>(monitorResult.SourceSize.Height);
+    }
+
+    BITMAPFILEHEADER fileHeader{};
+    BITMAPINFOHEADER infoHeader{};
+    auto const pixelByteCount = static_cast<DWORD>(monitorResult.BgraPixels.size());
+    fileHeader.bfType = 0x4D42;
+    fileHeader.bfOffBits = static_cast<DWORD>(sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER));
+    if (pixelByteCount > std::numeric_limits<DWORD>::max() - fileHeader.bfOffBits)
+    {
+        return PingCaptureCaptureFailure;
+    }
+
+    fileHeader.bfSize = fileHeader.bfOffBits + pixelByteCount;
+
+    infoHeader.biSize = sizeof(BITMAPINFOHEADER);
+    infoHeader.biWidth = monitorResult.SourceSize.Width;
+    infoHeader.biHeight = -monitorResult.SourceSize.Height;
+    infoHeader.biPlanes = 1;
+    infoHeader.biBitCount = 32;
+    infoHeader.biCompression = BI_RGB;
+    infoHeader.biSizeImage = pixelByteCount;
+
+    HANDLE file = CreateFileW(
+        outputPath,
+        GENERIC_WRITE,
+        0,
+        nullptr,
+        CREATE_ALWAYS,
+        FILE_ATTRIBUTE_TEMPORARY,
+        nullptr);
+    if (file == INVALID_HANDLE_VALUE)
+    {
+        return PingCaptureCaptureFailure;
+    }
+
+    bool ok = WriteAll(file, &fileHeader, static_cast<DWORD>(sizeof(fileHeader)))
+        && WriteAll(file, &infoHeader, static_cast<DWORD>(sizeof(infoHeader)))
+        && WriteAll(file, monitorResult.BgraPixels.data(), pixelByteCount);
+    CloseHandle(file);
+
+    if (!ok)
+    {
+        DeleteFileW(outputPath);
+        return PingCaptureCaptureFailure;
+    }
+
+    return PingCaptureSuccess;
 }
 
 extern "C" __declspec(dllexport)

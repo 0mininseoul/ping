@@ -267,8 +267,8 @@ public sealed class PermissionProbe
                 return Task.FromResult(selfTest() switch
                 {
                     0 => OnboardingProbeState.Available("Screen capture self-test passed."),
-                    1 => OnboardingProbeState.Blocked("Programmatic screen capture is blocked.", SettingsLauncher.GraphicsCapturePrivacyUri),
-                    2 => OnboardingProbeState.Unsupported("Graphics Capture is not supported on this device."),
+                    1 => OnboardingProbeState.Unsupported("Graphics Capture is not supported on this device."),
+                    2 => OnboardingProbeState.Blocked("Programmatic screen capture is blocked.", SettingsLauncher.GraphicsCapturePrivacyUri),
                     var code => OnboardingProbeState.Blocked($"Native screen capture self-test failed with code {code}.")
                 });
             }

@@ -19,6 +19,10 @@ public sealed record ScreenFaceCaptureResult(
     string FilePath,
     double AspectRatio);
 
+public sealed record ScreenFacePreviewResult(
+    string FilePath,
+    double AspectRatio);
+
 public sealed record ScreenCaptureSelfTestResult(
     bool IsSupported,
     PingCaptureErrorCode ErrorCode,
@@ -28,6 +32,10 @@ public interface IScreenFaceCaptureEngine
 {
     Task<ScreenFaceCaptureResult> RecordAsync(
         TimeSpan duration,
+        int monitorIndex,
+        CancellationToken cancellationToken);
+
+    Task<ScreenFacePreviewResult> CapturePreviewAsync(
         int monitorIndex,
         CancellationToken cancellationToken);
 
@@ -128,6 +136,53 @@ public sealed class NativeCaptureEngine : IScreenFaceCaptureEngine
         }
     }
 
+    public async Task<ScreenFacePreviewResult> CapturePreviewAsync(
+        int monitorIndex,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        Directory.CreateDirectory(TemporaryDirectory);
+        var outputPath = Path.Combine(
+            TemporaryDirectory,
+            $"screen-preview-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss-fff}-{Guid.NewGuid():N}.bmp");
+
+        double aspectRatio = 1;
+        int result;
+        try
+        {
+            result = await Task.Run(
+                () => PingCapture_WriteScreenPreviewBmp(outputPath, monitorIndex, out aspectRatio),
+                cancellationToken).ConfigureAwait(false);
+        }
+        catch (DllNotFoundException exception)
+        {
+            throw new PlatformNotSupportedException("Native screen capture DLL was not found.", exception);
+        }
+        catch (EntryPointNotFoundException exception)
+        {
+            throw new PlatformNotSupportedException("Native screen preview entry point is unavailable.", exception);
+        }
+        catch (BadImageFormatException exception)
+        {
+            throw new PlatformNotSupportedException("Native screen capture DLL architecture does not match this process.", exception);
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        if (result != (int)PingCaptureErrorCode.Success)
+        {
+            TryDelete(outputPath);
+            throw CreateException(result);
+        }
+
+        if (!File.Exists(outputPath) || new FileInfo(outputPath).Length == 0)
+        {
+            TryDelete(outputPath);
+            throw new IOException("Native capture reported success but did not create a usable preview image.");
+        }
+
+        return new ScreenFacePreviewResult(outputPath, NormalizeAspectRatio(aspectRatio));
+    }
+
     public static ScreenCaptureSelfTestResult ToSelfTestResult(int nativeCode)
     {
         var code = ToErrorCode(nativeCode);
@@ -212,4 +267,11 @@ public sealed class NativeCaptureEngine : IScreenFaceCaptureEngine
     [DllImport(NativeLibraryName, CallingConvention = CallingConvention.Winapi, ExactSpelling = true)]
     [DefaultDllImportSearchPaths(DllImportSearchPath.ApplicationDirectory)]
     private static extern int PingCapture_SelfTestScreenCapture();
+
+    [DllImport(NativeLibraryName, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Unicode, ExactSpelling = true)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.ApplicationDirectory)]
+    private static extern int PingCapture_WriteScreenPreviewBmp(
+        string outputPath,
+        int targetMonitorIndex,
+        out double outAspectRatio);
 }

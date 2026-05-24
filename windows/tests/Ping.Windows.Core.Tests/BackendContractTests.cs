@@ -235,6 +235,30 @@ public sealed class BackendContractTests
             JsonSerializer.Serialize(rpc.Calls.Single().Body, JsonOptions.Supabase));
     }
 
+    [Fact]
+    public async Task UserServiceUsesMacOSProfileRpcBodies()
+    {
+        var rpc = new RecordingProfileRpcClient();
+        var service = new UserService(rpc);
+
+        var profile = await service.GetAsync("sender-uid");
+        await service.UpdateLastUsedRoomAsync("room-id");
+
+        Assert.Equal("room-id", profile?.LastUsedRoomId);
+        Assert.Equal(
+            """
+            {"target_uid":"sender-uid"}
+            """,
+            JsonSerializer.Serialize(rpc.Calls[0].Body, JsonOptions.Supabase));
+        Assert.Equal("ping_get_profile", rpc.Calls[0].Function);
+        Assert.Equal("ping_update_last_used_room", rpc.Calls[1].Function);
+        Assert.Equal(
+            """
+            {"room_uuid":"room-id"}
+            """,
+            JsonSerializer.Serialize(rpc.Calls[1].Body, JsonOptions.Supabase));
+    }
+
     private sealed class RecordingRpcClient : ISupabaseRpcClient
     {
         public List<(string Function, object Body)> Calls { get; } = [];
@@ -249,6 +273,37 @@ public sealed class BackendContractTests
             Calls.Add((function, body ?? new { }));
             object value = "message-id";
             return Task.FromResult((T)value);
+        }
+
+        public Task RpcVoidAsync(string function, object? body = null, CancellationToken cancellationToken = default)
+        {
+            Calls.Add((function, body ?? new { }));
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class RecordingProfileRpcClient : ISupabaseRpcClient
+    {
+        public List<(string Function, object Body)> Calls { get; } = [];
+
+        public Task<IReadOnlyList<T>> RpcArrayAsync<T>(string function, object? body = null, CancellationToken cancellationToken = default)
+        {
+            Calls.Add((function, body ?? new { }));
+            object result = new[]
+            {
+                new PingUser(
+                    Id: "sender-uid",
+                    Nickname: "Youngmin",
+                    SearchableNickname: "youngmin",
+                    Rooms: ["room-id"],
+                    LastUsedRoomId: "room-id")
+            };
+            return Task.FromResult((IReadOnlyList<T>)result);
+        }
+
+        public Task<T> RpcValueAsync<T>(string function, object? body = null, CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
         }
 
         public Task RpcVoidAsync(string function, object? body = null, CancellationToken cancellationToken = default)

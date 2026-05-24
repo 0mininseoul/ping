@@ -8,6 +8,7 @@ public sealed partial class MainWindow : Window
 {
     private AppWindow? appWindow;
     private bool allowClose;
+    private bool isUpdatingSettingsControls;
 
     public MainWindow()
     {
@@ -17,6 +18,8 @@ public sealed partial class MainWindow : Window
     public Brush? IdleBorderBrush => Root.Resources["PingIdleBrush"] as Brush;
 
     public Brush? WarningBorderBrush => Root.Resources["PingWarningBrush"] as Brush;
+
+    public event EventHandler<bool>? QuickSendToggleChanged;
 
     public void InitializeTrayWindowBehavior()
     {
@@ -30,6 +33,20 @@ public sealed partial class MainWindow : Window
     {
         appWindow?.Show(true);
         Activate();
+    }
+
+    public void ConfigureQuickSendSettings(bool isEnabled, string defaultRoomLabel)
+    {
+        isUpdatingSettingsControls = true;
+        try
+        {
+            QuickSendToggle.IsOn = isEnabled;
+            QuickSendDefaultRoom.Text = defaultRoomLabel;
+        }
+        finally
+        {
+            isUpdatingSettingsControls = false;
+        }
     }
 
     public void CloseForQuit()
@@ -47,5 +64,15 @@ public sealed partial class MainWindow : Window
 
         args.Cancel = true;
         sender.Hide();
+    }
+
+    private void HandleQuickSendToggleToggled(object sender, RoutedEventArgs args)
+    {
+        if (isUpdatingSettingsControls)
+        {
+            return;
+        }
+
+        QuickSendToggleChanged?.Invoke(this, QuickSendToggle.IsOn);
     }
 }

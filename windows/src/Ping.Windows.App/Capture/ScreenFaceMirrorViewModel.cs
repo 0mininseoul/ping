@@ -26,6 +26,7 @@ public sealed record ScreenFaceMirrorContext(
 public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
 {
     private static readonly TimeSpan RecordingDuration = TimeSpan.FromSeconds(3);
+    private static readonly TimeSpan PreviewRefreshInterval = TimeSpan.FromMilliseconds(700);
 
     private readonly ScreenFaceMirrorContext context;
     private readonly IScreenFaceCaptureEngine captureEngine;
@@ -34,6 +35,8 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
     private CancellationTokenSource? operationCancellation;
     private MirrorState state = MirrorState.Idle;
     private string statusMessage = "Press Enter to record.";
+    private Uri? screenPreviewUri;
+    private string? screenPreviewPath;
     private MirrorPosition mirrorPosition = new(0.5, 0.5);
     private bool isCloseRequested;
     private bool isFadeOutRequested;
@@ -109,6 +112,21 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
 
     public string PartnerLabel { get; }
 
+    public Uri? ScreenPreviewUri
+    {
+        get => screenPreviewUri;
+        private set
+        {
+            if (Equals(screenPreviewUri, value))
+            {
+                return;
+            }
+
+            screenPreviewUri = value;
+            OnPropertyChanged();
+        }
+    }
+
     public bool CanRecord => State is MirrorState.Idle or MirrorState.Failed;
 
     public bool IsCloseRequested
@@ -152,6 +170,34 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
         mirrorPosition = new MirrorPosition(
             ClampRatio(centerX / displayWidth),
             ClampRatio(centerY / displayHeight));
+    }
+
+    public async Task LoadPreviewAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var preview = await captureEngine.CapturePreviewAsync(monitorIndex: 0, cancellationToken);
+            DisposePreview();
+            screenPreviewPath = preview.FilePath;
+            ScreenPreviewUri = new Uri(preview.FilePath);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            StatusMessage = $"Preview unavailable. Press Enter to record. {ex.Message}";
+        }
+    }
+
+    public async Task RunPreviewLoopAsync(CancellationToken cancellationToken = default)
+    {
+        while (!cancellationToken.IsCancellationRequested && !IsCloseRequested)
+        {
+            if (State is MirrorState.Idle or MirrorState.Failed)
+            {
+                await LoadPreviewAsync(cancellationToken);
+            }
+
+            await Task.Delay(PreviewRefreshInterval, cancellationToken);
+        }
     }
 
     public async Task HandleEnterAsync()
@@ -231,6 +277,18 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
         RequestClose();
     }
 
+    public void DisposePreview()
+    {
+        ScreenPreviewUri = null;
+        if (screenPreviewPath is null)
+        {
+            return;
+        }
+
+        TryDeleteTemporaryRecording(screenPreviewPath);
+        screenPreviewPath = null;
+    }
+
     private void RequestClose()
     {
         IsCloseRequested = true;
@@ -279,6 +337,9 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
 public sealed partial class ScreenFaceMirrorWindow : Window
 {
     private readonly ScreenFaceMirrorViewModel viewModel;
+    private readonly FaceRecorder previewRecorder = new();
+    private CancellationTokenSource? previewLoopCancellation;
+    private Task? previewLoopTask;
     private AppWindow? appWindow;
     private bool shouldCloseAfterFade;
 
@@ -300,7 +361,13 @@ public sealed partial class ScreenFaceMirrorWindow : Window
         if (args.Key == Windows.System.VirtualKey.Enter)
         {
             args.Handled = true;
+            await StopPreviewAsync();
             await viewModel.HandleEnterAsync();
+            if (!viewModel.IsCloseRequested)
+            {
+                _ = StartPreviewAsync();
+            }
+
             return;
         }
 
@@ -315,6 +382,7 @@ public sealed partial class ScreenFaceMirrorWindow : Window
     {
         Root.Focus(FocusState.Programmatic);
         UpdatePositionFromWindow();
+        _ = StartPreviewAsync();
     }
 
     private void HandleViewModelPropertyChanged(object? sender, PropertyChangedEventArgs args)
@@ -322,6 +390,12 @@ public sealed partial class ScreenFaceMirrorWindow : Window
         if (args.PropertyName == nameof(ScreenFaceMirrorViewModel.State))
         {
             SetStateBrush();
+        }
+
+        if (args.PropertyName == nameof(ScreenFaceMirrorViewModel.ScreenPreviewUri))
+        {
+            ScreenPreviewPlaceholder.Visibility =
+                viewModel.ScreenPreviewUri is null ? Visibility.Visible : Visibility.Collapsed;
         }
     }
 
@@ -388,6 +462,74 @@ public sealed partial class ScreenFaceMirrorWindow : Window
             position.Y + size.Height / 2d - workArea.Y,
             workArea.Width,
             workArea.Height);
+    }
+
+    private async Task StartPreviewAsync()
+    {
+        if (previewLoopCancellation is not null)
+        {
+            await StopPreviewAsync();
+        }
+
+        previewLoopCancellation = new CancellationTokenSource();
+        var token = previewLoopCancellation.Token;
+
+        previewLoopTask = viewModel.RunPreviewLoopAsync(token);
+        try
+        {
+            await previewRecorder.StartPreviewAsync(FacePreviewElement, token);
+            FacePreviewPlaceholder.Visibility = Visibility.Collapsed;
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception) when (!token.IsCancellationRequested)
+        {
+            FacePreviewPlaceholder.Visibility = Visibility.Visible;
+        }
+
+        _ = previewLoopTask.ContinueWith(
+            task =>
+            {
+                _ = task.Exception;
+            },
+            CancellationToken.None,
+            TaskContinuationOptions.OnlyOnFaulted,
+            TaskScheduler.Default);
+    }
+
+    private async Task StopPreviewAsync()
+    {
+        var cancellation = previewLoopCancellation;
+        var previewTask = previewLoopTask;
+        previewLoopCancellation = null;
+        previewLoopTask = null;
+        cancellation?.Cancel();
+        if (previewTask is not null)
+        {
+            try
+            {
+                await previewTask;
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        }
+
+        cancellation?.Dispose();
+        try
+        {
+            await previewRecorder.StopPreviewAsync(FacePreviewElement);
+        }
+        catch (Exception)
+        {
+        }
+    }
+
+    private async void HandleClosed(object sender, WindowEventArgs args)
+    {
+        await StopPreviewAsync();
+        viewModel.DisposePreview();
     }
 
     private void SetStateBrush()

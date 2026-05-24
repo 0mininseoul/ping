@@ -26,6 +26,12 @@ int PingCapture_RecordScreenFaceMp4(
 extern "C" __declspec(dllexport)
 int PingCapture_SelfTestScreenCapture();
 
+extern "C" __declspec(dllexport)
+int PingCapture_WriteScreenPreviewBmp(
+    const wchar_t* outputPath,
+    int targetMonitorIndex,
+    double* outAspectRatio);
+
 // Compatibility alias used by the Task 3 onboarding probe.
 // Returns the same PingCaptureErrorCode values as PingCapture_SelfTestScreenCapture.
 extern "C" __declspec(dllexport)

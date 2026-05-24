@@ -58,6 +58,26 @@ public sealed class QuickSendStateTests
     }
 
     [Fact]
+    public async Task DefaultRoomId_SelectsPreferredSendableRoom()
+    {
+        SendVideoInput? sent = null;
+        var controller = CreateController(sendAsync: (input, _) =>
+        {
+            sent = input;
+            return Task.CompletedTask;
+        });
+        var preferred = SendableRoom("room-preferred", "Preferred", DateTimeOffset.UtcNow.AddDays(-1));
+        var newest = SendableRoom("room-newest", "Newest", DateTimeOffset.UtcNow);
+
+        var outcome = await controller.ExecuteAsync(ContextWith(
+            rooms: [newest, preferred],
+            defaultRoomId: "room-preferred"));
+
+        Assert.Equal(QuickSendOutcome.StartedRecording, outcome);
+        Assert.Equal("room-preferred", sent?.Rooms.Single().Id);
+    }
+
+    [Fact]
     public async Task DisabledQuickSend_OpensScreenFaceMirrorInsteadOfRecording()
     {
         var presenter = new FakeQuickSendPresenter();
@@ -65,11 +85,26 @@ public sealed class QuickSendStateTests
             presenter: presenter,
             preferences: new ScreenFaceQuickSendPreferences(IsEnabled: false));
 
-        var outcome = await controller.ExecuteAsync(ContextWith());
+        var outcome = await controller.ExecuteAsync(ContextWith(
+            preconditions: QuickSendPreconditions.Ready() with
+            {
+                IsScreenCaptureAvailable = false
+            }));
 
         Assert.Equal(QuickSendOutcome.OpenedMirror, outcome);
         Assert.Equal(QuickSendPresenterAction.ScreenFaceMirror, presenter.LastAction);
         Assert.False(controller.CaptureEngine.RecordWasCalled);
+    }
+
+    [Fact]
+    public void FailedHudMessage_AllowsEnterRetry()
+    {
+        var viewModel = new QuickSendHudViewModel(new QuickSendHudContext("Main", "화면+얼굴"));
+
+        viewModel.SetFailed("network");
+
+        Assert.True(viewModel.CanRetry);
+        Assert.Contains("Press Enter to retry", viewModel.StatusMessage, StringComparison.Ordinal);
     }
 
     private static TestQuickSendController CreateController(
@@ -82,14 +117,15 @@ public sealed class QuickSendStateTests
             engine,
             sendAsync ?? ((_, _) => Task.CompletedTask),
             presenter ?? new FakeQuickSendPresenter(),
-            preferences ?? new ScreenFaceQuickSendPreferences(IsEnabled: true),
+            () => preferences ?? new ScreenFaceQuickSendPreferences(IsEnabled: true),
             (_, _) => Task.CompletedTask);
         return new TestQuickSendController(controller, engine);
     }
 
     private static QuickSendContext ContextWith(
         IReadOnlyCollection<Room>? rooms = null,
-        QuickSendPreconditions? preconditions = null) =>
+        QuickSendPreconditions? preconditions = null,
+        string? defaultRoomId = null) =>
         new(
             Rooms: rooms ?? [SendableRoom()],
             SenderUid: "sender",
@@ -98,13 +134,17 @@ public sealed class QuickSendStateTests
             AllowsLocalSave: false,
             SaveSentCopy: false,
             MirrorPosition: new MirrorPosition(0.5, 0.5),
-            Preconditions: preconditions ?? QuickSendPreconditions.Ready());
+            Preconditions: preconditions ?? QuickSendPreconditions.Ready(),
+            DefaultRoomId: defaultRoomId);
 
-    private static Room SendableRoom() =>
+    private static Room SendableRoom(
+        string id = "room-1",
+        string name = "Main",
+        DateTimeOffset? createdAt = null) =>
         new(
-            Id: "room-1",
-            Name: "Main",
-            SearchableName: "main",
+            Id: id,
+            Name: name,
+            SearchableName: name.ToLowerInvariant(),
             OwnerUid: "sender",
             MemberUids: ["sender", "receiver"],
             MemberNicknames: new Dictionary<string, string>
@@ -112,7 +152,8 @@ public sealed class QuickSendStateTests
                 ["sender"] = "Sender",
                 ["receiver"] = "Receiver"
             },
-            Status: RoomStatus.Open);
+            Status: RoomStatus.Open,
+            CreatedAt: createdAt);
 
     private sealed record TestQuickSendController(
         QuickSendController Controller,
@@ -136,6 +177,11 @@ public sealed class QuickSendStateTests
             RecordWasCalled = true;
             return Task.FromResult(Result);
         }
+
+        public Task<ScreenFacePreviewResult> CapturePreviewAsync(
+            int monitorIndex,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new ScreenFacePreviewResult("preview.bmp", 16.0 / 9.0));
 
         public Task<ScreenCaptureSelfTestResult> SelfTestAsync() =>
             Task.FromResult(new ScreenCaptureSelfTestResult(true, PingCaptureErrorCode.Success, "OK"));

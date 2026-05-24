@@ -166,6 +166,41 @@
                             TextWrapping="WrapWholeWords" />
                     </StackPanel>
                 </Border>
+
+                <StackPanel
+                    x:Name="SettingsPanel"
+                    x:FieldModifier="public"
+                    Grid.Row="1"
+                    Spacing="12"
+                    Visibility="Collapsed">
+                    <ToggleSwitch
+                        x:Name="QuickSendToggle"
+                        Header="화면+얼굴 빠른 전송 사용"
+                        OffContent="미러 먼저 열기"
+                        OnContent="즉시 녹화/전송"
+                        Toggled="HandleQuickSendToggleToggled" />
+
+                    <Border
+                        Padding="12"
+                        Background="#1AFFFFFF"
+                        BorderBrush="{StaticResource PingIdleBrush}"
+                        BorderThickness="1"
+                        CornerRadius="12">
+                        <StackPanel Spacing="5">
+                            <TextBlock
+                                FontSize="13"
+                                FontWeight="SemiBold"
+                                Foreground="{StaticResource PingTextBrush}"
+                                Text="Default room" />
+                            <TextBlock
+                                x:Name="QuickSendDefaultRoom"
+                                FontSize="12"
+                                Foreground="{StaticResource PingMutedBrush}"
+                                Text="No sendable default room"
+                                TextWrapping="WrapWholeWords" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
             </Grid>
         </Border>
 

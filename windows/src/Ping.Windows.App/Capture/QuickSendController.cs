@@ -38,52 +38,56 @@ public sealed record ScreenFaceQuickSendPreferences(bool IsEnabled)
     public static ScreenFaceQuickSendPreferences Default { get; } = new(IsEnabled: true);
 }
 
-public sealed class ScreenFaceQuickSendPreferencesStore
+public sealed record ScreenFaceQuickSendSettings
+{
+    public static ScreenFaceQuickSendSettings Default { get; } = new();
+
+    public ScreenFaceQuickSendPreferences Preferences { get; init; } = ScreenFaceQuickSendPreferences.Default;
+
+    public string? DefaultRoomId { get; init; }
+}
+
+public sealed class ScreenFaceQuickSendSettingsStore
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
     private readonly string path;
 
-    public ScreenFaceQuickSendPreferencesStore()
+    public ScreenFaceQuickSendSettingsStore()
         : this(Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "Ping",
-            "QuickSendPreferences.json"))
+            "QuickSendSettings.json"))
     {
     }
 
-    public ScreenFaceQuickSendPreferencesStore(string path)
+    public ScreenFaceQuickSendSettingsStore(string path)
     {
         this.path = path;
     }
 
-    public ScreenFaceQuickSendPreferences Load()
+    public ScreenFaceQuickSendSettings Load()
     {
         try
         {
             if (!File.Exists(path))
             {
-                return ScreenFaceQuickSendPreferences.Default;
+                return ScreenFaceQuickSendSettings.Default;
             }
 
-            return JsonSerializer.Deserialize<ScreenFaceQuickSendPreferences>(
+            var settings = JsonSerializer.Deserialize<ScreenFaceQuickSendSettings>(
                 File.ReadAllText(path),
-                JsonOptions) ?? ScreenFaceQuickSendPreferences.Default;
+                JsonOptions);
+            return settings is null
+                ? ScreenFaceQuickSendSettings.Default
+                : settings;
         }
-        catch (IOException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
         {
-            return ScreenFaceQuickSendPreferences.Default;
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return ScreenFaceQuickSendPreferences.Default;
-        }
-        catch (JsonException)
-        {
-            return ScreenFaceQuickSendPreferences.Default;
+            return ScreenFaceQuickSendSettings.Default;
         }
     }
 
-    public void Save(ScreenFaceQuickSendPreferences preferences)
+    public void Save(ScreenFaceQuickSendSettings settings)
     {
         var directory = Path.GetDirectoryName(path);
         if (!string.IsNullOrWhiteSpace(directory))
@@ -91,7 +95,7 @@ public sealed class ScreenFaceQuickSendPreferencesStore
             Directory.CreateDirectory(directory);
         }
 
-        File.WriteAllText(path, JsonSerializer.Serialize(preferences, JsonOptions));
+        File.WriteAllText(path, JsonSerializer.Serialize(settings, JsonOptions));
     }
 }
 
@@ -154,7 +158,7 @@ public sealed class QuickSendController
     private readonly IScreenFaceCaptureEngine captureEngine;
     private readonly Func<SendVideoInput, CancellationToken, Task> sendAsync;
     private readonly IQuickSendPresenter presenter;
-    private readonly ScreenFaceQuickSendPreferences preferences;
+    private readonly Func<ScreenFaceQuickSendPreferences> loadPreferences;
     private readonly Func<TimeSpan, CancellationToken, Task> delayAsync;
     private readonly LocalArchive? archive;
 
@@ -164,7 +168,7 @@ public sealed class QuickSendController
         IQuickSendPresenter presenter,
         ScreenFaceQuickSendPreferences preferences,
         LocalArchive? archive = null)
-        : this(captureEngine, messageService.SendAsync, presenter, preferences, (duration, token) => Task.Delay(duration, token), archive)
+        : this(captureEngine, messageService.SendAsync, presenter, () => preferences, (duration, token) => Task.Delay(duration, token), archive)
     {
     }
 
@@ -172,14 +176,14 @@ public sealed class QuickSendController
         IScreenFaceCaptureEngine captureEngine,
         Func<SendVideoInput, CancellationToken, Task> sendAsync,
         IQuickSendPresenter presenter,
-        ScreenFaceQuickSendPreferences preferences,
+        Func<ScreenFaceQuickSendPreferences> loadPreferences,
         Func<TimeSpan, CancellationToken, Task>? delayAsync = null,
         LocalArchive? archive = null)
     {
         this.captureEngine = captureEngine;
         this.sendAsync = sendAsync;
         this.presenter = presenter;
-        this.preferences = preferences;
+        this.loadPreferences = loadPreferences;
         this.delayAsync = delayAsync ?? ((duration, token) => Task.Delay(duration, token));
         this.archive = archive;
     }
@@ -195,6 +199,12 @@ public sealed class QuickSendController
             return QuickSendOutcome.RoomBlocked;
         }
 
+        if (!loadPreferences().IsEnabled)
+        {
+            presenter.OpenScreenFaceMirror(MirrorContextFor(context, [room]));
+            return QuickSendOutcome.OpenedMirror;
+        }
+
         var blockedPermission = BlockedPermission(context.Preconditions);
         if (blockedPermission is not null)
         {
@@ -202,12 +212,6 @@ public sealed class QuickSendController
                 blockedPermission.Value,
                 PermissionBlockedMessage(blockedPermission.Value));
             return QuickSendOutcome.PermissionBlocked;
-        }
-
-        if (!preferences.IsEnabled)
-        {
-            presenter.OpenScreenFaceMirror(MirrorContextFor(context, [room]));
-            return QuickSendOutcome.OpenedMirror;
         }
 
         var hud = presenter.ShowHud(new QuickSendHudContext(room.Name, "화면+얼굴"));
@@ -393,6 +397,7 @@ public sealed class QuickSendHudViewModel : INotifyPropertyChanged
             state = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(StateText));
+            OnPropertyChanged(nameof(CanRetry));
         }
     }
 
@@ -404,6 +409,8 @@ public sealed class QuickSendHudViewModel : INotifyPropertyChanged
         MirrorState.Failed => "Failed",
         _ => throw new ArgumentOutOfRangeException(nameof(State), State, "Unknown HUD state.")
     };
+
+    public bool CanRetry => State == MirrorState.Failed;
 
     public string StatusMessage
     {
@@ -465,7 +472,7 @@ public sealed class QuickSendHudViewModel : INotifyPropertyChanged
     public void SetFailed(string message)
     {
         State = MirrorState.Failed;
-        StatusMessage = $"Could not send. Press Alt+Shift+L to retry. {message}";
+        StatusMessage = $"Could not send. Press Enter to retry, or Esc to close. {message}";
     }
 
     public void RequestFadeOutClose()
@@ -508,6 +515,8 @@ public sealed partial class QuickSendHudWindow : Window, IQuickSendHudSession
         ConfigureWindow();
     }
 
+    public event EventHandler? RetryRequested;
+
     public void SetRecording() => viewModel.SetRecording();
 
     public void SetUploading()
@@ -532,15 +541,28 @@ public sealed partial class QuickSendHudWindow : Window, IQuickSendHudSession
 
     private void HandleKeyDown(object sender, KeyRoutedEventArgs args)
     {
+        if (args.Key == Windows.System.VirtualKey.Enter && viewModel.CanRetry)
+        {
+            args.Handled = true;
+            RetryRequested?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
         if (args.Key != Windows.System.VirtualKey.Escape)
         {
             return;
         }
 
         args.Handled = true;
-        if (!uploadStarted)
+        if (!uploadStarted && !viewModel.CanRetry)
         {
-            cancellation.Cancel();
+            try
+            {
+                cancellation.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+            }
         }
 
         Hide();
