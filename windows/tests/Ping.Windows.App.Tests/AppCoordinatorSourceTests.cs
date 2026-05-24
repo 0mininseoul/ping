@@ -185,6 +185,38 @@ public sealed class AppCoordinatorSourceTests
             StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void AppStartupTreatsTrayRegistrationFailureAsNonFatal()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Bootstrap",
+            "AppCoordinator.cs"));
+
+        Assert.Contains("TryAddOrUpdateTrayIcon()", source, StringComparison.Ordinal);
+        Assert.Contains("catch (Win32Exception)", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("tray.AddOrUpdateIcon();\n        notificationController.Start();", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TrayTaskbarRecreationTreatsIconFailureAsNonFatal()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Tray",
+            "TrayIconController.cs"));
+
+        Assert.Contains("TryAddOrUpdateIcon()", source, StringComparison.Ordinal);
+        Assert.Contains("catch (Win32Exception)", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("iconVisible = false;\n            AddOrUpdateIcon();", source, StringComparison.Ordinal);
+    }
+
     private static string RepoRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

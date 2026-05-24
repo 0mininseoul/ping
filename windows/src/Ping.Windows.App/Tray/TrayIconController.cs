@@ -93,7 +93,7 @@ public sealed class TrayIconController : IDisposable
         if (message == taskbarCreatedMessage)
         {
             iconVisible = false;
-            AddOrUpdateIcon();
+            TryAddOrUpdateIcon();
             return;
         }
 
@@ -110,6 +110,19 @@ public sealed class TrayIconController : IDisposable
         else if (trayEvent is WmRButtonUp or WmContextMenu)
         {
             ShowContextMenu();
+        }
+    }
+
+    private bool TryAddOrUpdateIcon()
+    {
+        try
+        {
+            AddOrUpdateIcon();
+            return true;
+        }
+        catch (Win32Exception)
+        {
+            return false;
         }
     }
 

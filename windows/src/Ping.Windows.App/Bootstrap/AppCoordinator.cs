@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using Microsoft.UI.Xaml;
 using Ping.Windows.App.Capture;
@@ -113,11 +114,23 @@ public sealed class AppCoordinator : IDisposable
 
         hotkeys.HotkeyPressed += HandleHotkeyPressed;
         lastHotkeyRegistrations = RegisterSavedHotkeys();
-        tray.AddOrUpdateIcon();
+        TryAddOrUpdateTrayIcon();
         notificationController.Start();
         ShowRegistrationState(lastHotkeyRegistrations);
         MaybeOpenOnboardingAtStartup(lastHotkeyRegistrations);
         _ = BootstrapAndLoadRoomsAsync();
+    }
+
+    private void TryAddOrUpdateTrayIcon()
+    {
+        try
+        {
+            tray.AddOrUpdateIcon();
+        }
+        catch (Win32Exception)
+        {
+            Debug.WriteLine("Ping tray icon registration failed.");
+        }
     }
 
     private string CurrentNickname =>
