@@ -10,6 +10,39 @@ using Microsoft.UI.Xaml.Media.Imaging;
 
 namespace Ping.Windows.App.History;
 
+public sealed class TimelineHistoryItem
+{
+    public TimelineHistoryItem(VideoHistoryItem video)
+    {
+        Video = video;
+    }
+
+    public TimelineHistoryItem(ChatHistoryItem chat)
+    {
+        Chat = chat;
+    }
+
+    public VideoHistoryItem? Video { get; }
+
+    public ChatHistoryItem? Chat { get; }
+
+    public DateTimeOffset? CreatedAt => Video?.Message.CreatedAt ?? Chat?.Message.CreatedAt;
+
+    public string SortId => Video?.Message.Id ?? Chat?.Message.Id ?? string.Empty;
+
+    public int SortKind => Video is not null ? 0 : 1;
+
+#if WINDOWS
+    public Visibility VideoVisibility => Video is null ? Visibility.Collapsed : Visibility.Visible;
+
+    public Visibility ChatVisibility => Chat is null ? Visibility.Collapsed : Visibility.Visible;
+#else
+    public bool VideoVisibility => Video is not null;
+
+    public bool ChatVisibility => Chat is not null;
+#endif
+}
+
 public sealed class VideoHistoryItem
 {
     public VideoHistoryItem(

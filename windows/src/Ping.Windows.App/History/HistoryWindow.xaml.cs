@@ -50,7 +50,12 @@ public sealed partial class HistoryWindow : Window
 
     private void VideosList_SelectionChanged(object sender, SelectionChangedEventArgs args)
     {
-        viewModel.SelectedVideo = VideosList.SelectedItem as VideoHistoryItem;
+        viewModel.SelectedVideo = VideosList.SelectedItem switch
+        {
+            VideoHistoryItem item => item,
+            TimelineHistoryItem { Video: { } video } => video,
+            _ => null
+        };
     }
 
     private async void PlayVideoButton_Click(object sender, RoutedEventArgs args)
@@ -87,7 +92,7 @@ public sealed partial class HistoryWindow : Window
 
     private void ReplyVideoButton_Click(object sender, RoutedEventArgs args)
     {
-        if ((sender as FrameworkElement)?.DataContext is VideoHistoryItem item)
+        if (VideoItem(sender) is { } item)
         {
             viewModel.BeginReplyToVideo(item);
         }
@@ -95,7 +100,7 @@ public sealed partial class HistoryWindow : Window
 
     private async void DeleteVideoButton_Click(object sender, RoutedEventArgs args)
     {
-        if ((sender as FrameworkElement)?.DataContext is VideoHistoryItem item)
+        if (VideoItem(sender) is { } item)
         {
             await RunAsync(() => viewModel.DeleteVideoAsync(item));
         }
@@ -103,7 +108,7 @@ public sealed partial class HistoryWindow : Window
 
     private void ReplyChatButton_Click(object sender, RoutedEventArgs args)
     {
-        if ((sender as FrameworkElement)?.DataContext is ChatHistoryItem item)
+        if (ChatItem(sender) is { } item)
         {
             viewModel.BeginReplyToChat(item);
         }
@@ -111,7 +116,7 @@ public sealed partial class HistoryWindow : Window
 
     private async void DeleteChatButton_Click(object sender, RoutedEventArgs args)
     {
-        if ((sender as FrameworkElement)?.DataContext is ChatHistoryItem item)
+        if (ChatItem(sender) is { } item)
         {
             await RunAsync(() => viewModel.DeleteChatAsync(item));
         }
@@ -165,6 +170,22 @@ public sealed partial class HistoryWindow : Window
         selectedChatImagePath = null;
         SelectedImageText.Text = string.Empty;
     }
+
+    private static VideoHistoryItem? VideoItem(object sender) =>
+        (sender as FrameworkElement)?.DataContext switch
+        {
+            VideoHistoryItem item => item,
+            TimelineHistoryItem { Video: { } video } => video,
+            _ => null
+        };
+
+    private static ChatHistoryItem? ChatItem(object sender) =>
+        (sender as FrameworkElement)?.DataContext switch
+        {
+            ChatHistoryItem item => item,
+            TimelineHistoryItem { Chat: { } chat } => chat,
+            _ => null
+        };
 
     private async Task<bool> RunAsync(Func<Task> work)
     {

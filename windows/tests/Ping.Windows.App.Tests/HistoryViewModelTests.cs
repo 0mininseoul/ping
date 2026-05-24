@@ -8,6 +8,8 @@ namespace Ping.Windows.App.Tests;
 
 public sealed class HistoryViewModelTests
 {
+    private static readonly DateTimeOffset BaseTime = new(2026, 1, 1, 10, 0, 0, TimeSpan.Zero);
+
     [Fact]
     public async Task LoadAsync_SelectsPreferredRoomAndMarksItRead()
     {
@@ -33,6 +35,10 @@ public sealed class HistoryViewModelTests
                 Assert.Equal("Sender: Screen + face video", chat.ReplyPreview);
                 Assert.Collection(chat.Reactions, reaction => Assert.Equal("❤️", reaction.Emoji));
             });
+        Assert.Collection(
+            viewModel.Timeline,
+            row => Assert.Equal("video-message-2", row.Video?.Message.Id),
+            row => Assert.Equal("chat-2", row.Chat?.Message.Id));
         Assert.Equal(["room-2"], rpc.MarkedReadRoomIds);
         Assert.Contains("1 videos, 1 chats, 2 reactions.", viewModel.StatusMessage, StringComparison.Ordinal);
     }
@@ -111,6 +117,7 @@ public sealed class HistoryViewModelTests
 
         Assert.Equal(["chat-1"], rpc.DeletedChatIds);
         Assert.Empty(viewModel.Chats);
+        Assert.Collection(viewModel.Timeline, row => Assert.Equal("video-message-1", row.Video?.Message.Id));
     }
 
     [Fact]
@@ -124,6 +131,7 @@ public sealed class HistoryViewModelTests
 
         Assert.Equal(["video-message-2"], rpc.HiddenVideoIds);
         Assert.Empty(viewModel.Videos);
+        Assert.Collection(viewModel.Timeline, row => Assert.Equal("chat-2", row.Chat?.Message.Id));
     }
 
     private static HistoryViewModel ViewModel(RecordingHistoryRpcClient rpc) =>
@@ -135,7 +143,7 @@ public sealed class HistoryViewModelTests
             new StorageService(new SupabaseClient()),
             () => "receiver");
 
-    private static VideoMessage VideoMessage(string id, string roomId) =>
+    private static VideoMessage VideoMessage(string id, string roomId, DateTimeOffset createdAt) =>
         new()
         {
             Id = id,
@@ -148,7 +156,7 @@ public sealed class HistoryViewModelTests
             DurationMs = 3000,
             MirrorPosition = new MirrorPosition(0.5, 0.5),
             Status = MessageStatus.Uploaded,
-            CreatedAt = DateTimeOffset.UtcNow,
+            CreatedAt = createdAt,
             ExpiresAt = DateTimeOffset.UtcNow.AddDays(1),
             CaptureMode = CaptureMode.ScreenFace,
             AspectRatio = 1.6
@@ -158,7 +166,8 @@ public sealed class HistoryViewModelTests
         string id,
         string roomId,
         string senderUid = "sender",
-        string? replyToVideoId = null) =>
+        string? replyToVideoId = null,
+        DateTimeOffset? createdAt = null) =>
         new()
         {
             Id = id,
@@ -167,7 +176,7 @@ public sealed class HistoryViewModelTests
             SenderNickname = senderUid == "receiver" ? "Receiver" : "Sender",
             Body = $"chat {id}",
             ReplyToVideoId = replyToVideoId,
-            CreatedAt = DateTimeOffset.UtcNow
+            CreatedAt = createdAt ?? BaseTime
         };
 
     private sealed class RecordingHistoryRpcClient : ISupabaseRpcClient
@@ -197,14 +206,14 @@ public sealed class HistoryViewModelTests
                 },
                 "ping_room_messages" => RoomId(body) switch
                 {
-                    "room-1" => new[] { VideoMessage("video-message-1", "room-1") },
-                    "room-2" => new[] { VideoMessage("video-message-2", "room-2") },
+                    "room-1" => new[] { VideoMessage("video-message-1", "room-1", BaseTime.AddMinutes(1)) },
+                    "room-2" => new[] { VideoMessage("video-message-2", "room-2", BaseTime.AddMinutes(1)) },
                     _ => []
                 },
                 "ping_room_chat_messages" => RoomId(body) switch
                 {
-                    "room-1" => new[] { ChatMessage("chat-1", "room-1", senderUid: "receiver") },
-                    "room-2" => new[] { ChatMessage("chat-2", "room-2", replyToVideoId: "video-message-2") },
+                    "room-1" => new[] { ChatMessage("chat-1", "room-1", senderUid: "receiver", createdAt: BaseTime.AddMinutes(2)) },
+                    "room-2" => new[] { ChatMessage("chat-2", "room-2", replyToVideoId: "video-message-2", createdAt: BaseTime.AddMinutes(2)) },
                     _ => []
                 },
                 "ping_message_reactions" => ReactionsFor(body),

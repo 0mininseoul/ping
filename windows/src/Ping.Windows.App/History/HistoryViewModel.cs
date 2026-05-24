@@ -48,6 +48,8 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
 
     public ObservableCollection<ChatHistoryItem> Chats { get; } = [];
 
+    public ObservableCollection<TimelineHistoryItem> Timeline { get; } = [];
+
     public ObservableCollection<MessageReaction> Reactions { get; } = [];
 
     public Room? SelectedRoom
@@ -143,6 +145,7 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
     {
         Videos.Clear();
         Chats.Clear();
+        Timeline.Clear();
         Reactions.Clear();
         if (SelectedRoom?.Id is not { } roomId)
         {
@@ -168,17 +171,19 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
 
         foreach (var video in videos)
         {
-            Videos.Add(new VideoHistoryItem(video, QuickReactions, ReactionsFor(reactionMap, ReactionTargetKind.Video, video.Id), currentUid));
+            var row = new VideoHistoryItem(video, QuickReactions, ReactionsFor(reactionMap, ReactionTargetKind.Video, video.Id), currentUid);
+            Videos.Add(row);
         }
 
         foreach (var chat in chats)
         {
-            Chats.Add(new ChatHistoryItem(
+            var row = new ChatHistoryItem(
                 chat,
                 QuickReactions,
                 ReactionsFor(reactionMap, ReactionTargetKind.Chat, chat.Id),
                 currentUid,
-                ReplyPreviewFor(chat, chatById, videoById)));
+                ReplyPreviewFor(chat, chatById, videoById));
+            Chats.Add(row);
         }
 
         foreach (var reaction in reactions)
@@ -186,6 +191,7 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
             Reactions.Add(reaction);
         }
 
+        RebuildTimeline();
         await LoadChatImagesAsync(cancellationToken);
         await MarkSelectedRoomReadAsync(roomId, cancellationToken);
         StatusMessage = $"{Videos.Count} videos, {Chats.Count} chats, {Reactions.Count} reactions.";
@@ -290,6 +296,7 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
 
         await chatService.DeleteChatAsync(item.Message.Id, cancellationToken);
         Chats.Remove(item);
+        RemoveTimeline(item);
         RemoveReactions(ReactionTargetKind.Chat, item.Message.Id);
         if (string.Equals(ReplyTarget?.ChatId, item.Message.Id, StringComparison.Ordinal))
         {
@@ -317,6 +324,7 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         }
 
         Videos.Remove(item);
+        RemoveTimeline(item);
         RemoveReactions(ReactionTargetKind.Video, item.Message.Id);
         if (ReferenceEquals(SelectedVideo, item))
         {
@@ -468,6 +476,44 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
             if (reaction.TargetKind == targetKind && string.Equals(reaction.TargetId, targetId, StringComparison.Ordinal))
             {
                 Reactions.RemoveAt(index);
+            }
+        }
+    }
+
+    private void RebuildTimeline()
+    {
+        Timeline.Clear();
+        var rows = Videos
+            .Select(video => new TimelineHistoryItem(video))
+            .Concat(Chats.Select(chat => new TimelineHistoryItem(chat)))
+            .OrderBy(row => row.CreatedAt ?? DateTimeOffset.MaxValue)
+            .ThenBy(row => row.SortKind)
+            .ThenBy(row => row.SortId, StringComparer.Ordinal);
+
+        foreach (var row in rows)
+        {
+            Timeline.Add(row);
+        }
+    }
+
+    private void RemoveTimeline(VideoHistoryItem item)
+    {
+        for (var index = Timeline.Count - 1; index >= 0; index--)
+        {
+            if (ReferenceEquals(Timeline[index].Video, item))
+            {
+                Timeline.RemoveAt(index);
+            }
+        }
+    }
+
+    private void RemoveTimeline(ChatHistoryItem item)
+    {
+        for (var index = Timeline.Count - 1; index >= 0; index--)
+        {
+            if (ReferenceEquals(Timeline[index].Chat, item))
+            {
+                Timeline.RemoveAt(index);
             }
         }
     }
