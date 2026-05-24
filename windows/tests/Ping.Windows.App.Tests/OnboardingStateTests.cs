@@ -37,6 +37,30 @@ public sealed class OnboardingStateTests
         Assert.All(model.Rows, row => Assert.Equal(OnboardingRowStatus.Ready, row.Status));
     }
 
+    [Fact]
+    public void OnboardingRows_include_process_privilege_check()
+    {
+        var model = new OnboardingViewModel(OnboardingEnvironmentState.Ready());
+
+        var row = Assert.Single(model.Rows, row => row.Title == "Process privileges");
+        Assert.Equal(OnboardingRowStatus.Ready, row.Status);
+        Assert.Contains("normal user", row.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Elevated_process_privileges_map_to_restart_action()
+    {
+        var model = new OnboardingViewModel(OnboardingEnvironmentState.Ready() with
+        {
+            IsElevated = true
+        });
+
+        var row = Assert.Single(model.Rows, row => row.Kind == OnboardingRowKind.ProcessPrivileges);
+        Assert.Equal(OnboardingRowStatus.Blocked, row.Status);
+        Assert.Equal(OnboardingActionKind.Relaunch, row.PrimaryAction?.Kind);
+        Assert.Equal("Restart normally", row.PrimaryAction?.Label);
+    }
+
     [Theory]
     [InlineData(WindowsSupportStatus.UnsupportedWindows10, "Windows 10 is not a supported target for Ping Windows.")]
     [InlineData(WindowsSupportStatus.UnsupportedOldWindows11, "Windows 11 24H2 or newer is required for full support.")]

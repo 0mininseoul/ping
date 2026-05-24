@@ -8,6 +8,7 @@ public enum OnboardingRowKind
 {
     WindowsVersion,
     SupabaseConfig,
+    ProcessPrivileges,
     Camera,
     Microphone,
     ScreenCapture,
@@ -88,6 +89,7 @@ public sealed record OnboardingProbeState(
 public sealed record OnboardingEnvironmentState(
     WindowsSupportStatus WindowsStatus,
     bool IsSupabaseConfigured,
+    bool IsElevated,
     OnboardingProbeState Camera,
     OnboardingProbeState Microphone,
     OnboardingProbeState ScreenCapture,
@@ -98,6 +100,7 @@ public sealed record OnboardingEnvironmentState(
     public static OnboardingEnvironmentState Initial() =>
         new(
             WindowsVersionProbe.CurrentStatus(),
+            false,
             false,
             OnboardingProbeState.Unchecked("Camera has not been checked yet."),
             OnboardingProbeState.Unchecked("Microphone has not been checked yet."),
@@ -110,6 +113,7 @@ public sealed record OnboardingEnvironmentState(
         new(
             WindowsSupportStatus.Supported,
             true,
+            false,
             OnboardingProbeState.Available(),
             OnboardingProbeState.Available(),
             OnboardingProbeState.Available(),
@@ -191,6 +195,7 @@ public sealed class OnboardingViewModel : INotifyPropertyChanged
         [
             WindowsRow(state.WindowsStatus),
             SupabaseRow(state.IsSupabaseConfigured),
+            ProcessPrivilegesRow(state.IsElevated),
             ProbeRow(OnboardingRowKind.Camera, "Camera", state.Camera),
             ProbeRow(OnboardingRowKind.Microphone, "Microphone", state.Microphone),
             ProbeRow(OnboardingRowKind.ScreenCapture, "Screen capture", state.ScreenCapture),
@@ -222,6 +227,27 @@ public sealed class OnboardingViewModel : INotifyPropertyChanged
                 CanRetry: true),
             _ => throw new ArgumentOutOfRangeException(nameof(status), status, null)
         };
+
+    private static OnboardingRowState ProcessPrivilegesRow(bool isElevated)
+    {
+        if (!isElevated)
+        {
+            return new(
+                OnboardingRowKind.ProcessPrivileges,
+                "Process privileges",
+                OnboardingRowStatus.Ready,
+                "Ping is running as a normal user process.",
+                CanRetry: true);
+        }
+
+        return new(
+            OnboardingRowKind.ProcessPrivileges,
+            "Process privileges",
+            OnboardingRowStatus.Blocked,
+            "Ping is running as administrator. Windows app notifications are unavailable while elevated.",
+            CanRetry: true,
+            PrimaryAction: new OnboardingAction(OnboardingActionKind.Relaunch, "Restart normally"));
+    }
 
     private static OnboardingRowState SupabaseRow(bool configured)
     {

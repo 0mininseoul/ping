@@ -55,6 +55,7 @@ public sealed class PermissionProbe
         new(
             WindowsVersionProbe.CurrentStatus(),
             IsSupabaseConfigured(),
+            elevationProbe.IsElevated,
             await CheckCameraAsync(cancellationToken).ConfigureAwait(false),
             await CheckMicrophoneAsync(cancellationToken).ConfigureAwait(false),
             await CheckScreenCaptureAsync(cancellationToken).ConfigureAwait(false),
