@@ -659,9 +659,15 @@ public sealed class AppCoordinator : IDisposable
 
         try
         {
+            if (!quickSendSettings.Preferences.IsEnabled)
+            {
+                await ShowScreenFaceMirrorAsync();
+                return;
+            }
+
             var sendableRooms = SendableRoomsFor(uid);
             var defaultRoom = ResolvePreferredDefaultRoom(sendableRooms);
-            var preconditions = sendableRooms.Length > 0 && quickSendSettings.Preferences.IsEnabled
+            var preconditions = sendableRooms.Length > 0
                 ? await LoadQuickSendPreconditionsAsync(cancellation.Token)
                 : QuickSendPreconditions.Ready();
             var context = new QuickSendContext(
