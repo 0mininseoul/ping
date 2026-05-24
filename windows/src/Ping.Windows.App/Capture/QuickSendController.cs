@@ -607,6 +607,7 @@ public sealed partial class QuickSendHudWindow : Window, IQuickSendHudSession
     private IntPtr windowHandle;
     private bool shouldCloseAfterFade;
     private bool uploadStarted;
+    private bool isClosed;
 
     public QuickSendHudWindow(QuickSendHudContext context, CancellationTokenSource cancellation)
     {
@@ -618,6 +619,7 @@ public sealed partial class QuickSendHudWindow : Window, IQuickSendHudSession
         viewModel.PropertyChanged += HandleViewModelPropertyChanged;
         viewModel.FadeOutRequested += HandleFadeOutRequested;
         viewModel.CloseRequested += HandleCloseRequested;
+        Closed += HandleClosed;
         SetStateBrush();
         ConfigureWindow();
     }
@@ -640,10 +642,7 @@ public sealed partial class QuickSendHudWindow : Window, IQuickSendHudSession
 
     public void RequestFadeOutClose() => viewModel.RequestFadeOutClose();
 
-    public void Hide()
-    {
-        appWindow?.Hide();
-    }
+    public void Hide() => CloseSafely();
 
     private void HandleLoaded(object sender, RoutedEventArgs args)
     {
@@ -665,18 +664,8 @@ public sealed partial class QuickSendHudWindow : Window, IQuickSendHudSession
         }
 
         args.Handled = true;
-        if (!uploadStarted && !viewModel.CanRetry)
-        {
-            try
-            {
-                cancellation.Cancel();
-            }
-            catch (ObjectDisposedException)
-            {
-            }
-        }
-
-        Hide();
+        CancelIfBeforeUpload();
+        CloseSafely();
     }
 
     private void HandleViewModelPropertyChanged(object? sender, PropertyChangedEventArgs args)
@@ -694,7 +683,7 @@ public sealed partial class QuickSendHudWindow : Window, IQuickSendHudSession
             return;
         }
 
-        Close();
+        CloseSafely();
     }
 
     private async void HandleFadeOutRequested(object? sender, EventArgs args)
@@ -713,6 +702,38 @@ public sealed partial class QuickSendHudWindow : Window, IQuickSendHudSession
         storyboard.Completed += (_, _) => completed.SetResult();
         storyboard.Begin();
         await completed.Task;
+        CloseSafely();
+    }
+
+    private void HandleClosed(object sender, WindowEventArgs args)
+    {
+        isClosed = true;
+        CancelIfBeforeUpload();
+    }
+
+    private void CancelIfBeforeUpload()
+    {
+        if (uploadStarted || viewModel.CanRetry)
+        {
+            return;
+        }
+
+        try
+        {
+            cancellation.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+    }
+
+    private void CloseSafely()
+    {
+        if (isClosed)
+        {
+            return;
+        }
+
         Close();
     }
 

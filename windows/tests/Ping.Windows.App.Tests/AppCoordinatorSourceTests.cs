@@ -108,6 +108,24 @@ public sealed class AppCoordinatorSourceTests
         Assert.Contains("viewModel.HandleWindowClosed();", screenFace, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void QuickSendHudClosesAndCancelsBeforeUpload()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Capture",
+            "QuickSendController.cs"));
+
+        Assert.Contains("Closed += HandleClosed;", source, StringComparison.Ordinal);
+        Assert.Contains("private void HandleClosed(object sender, WindowEventArgs args)", source, StringComparison.Ordinal);
+        Assert.Contains("CancelIfBeforeUpload();", source, StringComparison.Ordinal);
+        Assert.Contains("public void Hide() => CloseSafely();", source, StringComparison.Ordinal);
+        Assert.Contains("if (uploadStarted || viewModel.CanRetry)", source, StringComparison.Ordinal);
+    }
+
     private static string RepoRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
