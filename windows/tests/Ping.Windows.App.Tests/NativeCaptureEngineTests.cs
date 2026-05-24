@@ -5,6 +5,22 @@ namespace Ping.Windows.App.Tests;
 
 public sealed class NativeCaptureEngineTests
 {
+    [Fact]
+    public void ScreenFaceCompositor_UsesMacLayoutRatios()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            "windows",
+            "src",
+            "Ping.Windows.NativeCapture",
+            "src",
+            "ScreenFaceCompositor.cpp"));
+
+        Assert.Contains("DefaultFaceDiameterRatio = 0.32", source, StringComparison.Ordinal);
+        Assert.Contains("DefaultPaddingRatio = 0.045", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("PipMarginPixels", source, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData(PingCaptureErrorCode.Success, true)]
     [InlineData(PingCaptureErrorCode.UnsupportedOs, false)]
@@ -39,5 +55,17 @@ public sealed class NativeCaptureEngineTests
 
         Assert.IsType(expectedType, exception);
         Assert.Contains(code.ToString(), exception.Message, StringComparison.Ordinal);
+    }
+
+    private static string RepoRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "PING_PROJECT_SPECIFICATION.md")))
+        {
+            directory = directory.Parent;
+        }
+
+        return directory?.FullName
+            ?? throw new DirectoryNotFoundException("Could not locate Ping repository root.");
     }
 }

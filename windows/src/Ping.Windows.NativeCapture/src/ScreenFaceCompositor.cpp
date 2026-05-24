@@ -6,8 +6,8 @@
 namespace
 {
     constexpr int MaxOutputWidth = 1920;
-    constexpr int PipMarginPixels = 24;
     constexpr double DefaultFaceDiameterRatio = 0.32;
+    constexpr double DefaultPaddingRatio = 0.045;
 
     double SanitizeRatio(double value)
     {
@@ -35,7 +35,7 @@ namespace Ping::Windows::NativeCapture
 
         int shortestSide = std::min(outputWidth, outputHeight);
         int faceDiameter = std::max(1, static_cast<int>(std::lround(shortestSide * SanitizeRatio(faceDiameterRatio))));
-        int margin = std::min(PipMarginPixels, std::max(0, shortestSide / 12));
+        int margin = std::max(0, static_cast<int>(std::lround(shortestSide * DefaultPaddingRatio)));
         int faceX = std::max(0, outputWidth - faceDiameter - margin);
         int faceY = std::max(0, outputHeight - faceDiameter - margin);
 
