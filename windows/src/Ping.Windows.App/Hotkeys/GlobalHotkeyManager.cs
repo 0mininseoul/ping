@@ -30,16 +30,16 @@ public sealed class GlobalHotkeyManager : IDisposable
     {
         ObjectDisposedException.ThrowIf(disposed, this);
 
-        if (commandIds.Remove(command, out var existingId))
-        {
-            idCommands.Remove(existingId);
-            registrar.Unregister(existingId);
-        }
-
         var id = nextId++;
         var registrarResult = registrar.Register(id, binding);
         if (registrarResult.Status == HotkeyRegistrarStatus.Success)
         {
+            if (commandIds.Remove(command, out var existingId))
+            {
+                idCommands.Remove(existingId);
+                registrar.Unregister(existingId);
+            }
+
             commandIds[command] = id;
             idCommands[id] = command;
             return HotkeyRegistrationResult.Success(command, binding);

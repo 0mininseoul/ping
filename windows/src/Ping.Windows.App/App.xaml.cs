@@ -17,15 +17,10 @@ public partial class App : Application
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
         window = new MainWindow();
-        window.Closed += HandleWindowClosed;
+        window.InitializeTrayWindowBehavior();
         coordinator = new AppCoordinator(window);
         coordinator.Start();
         window.Activate();
-    }
-
-    private void HandleWindowClosed(object sender, WindowEventArgs args)
-    {
-        DisposeCoordinator();
     }
 
     private void HandleProcessExit(object? sender, EventArgs args)

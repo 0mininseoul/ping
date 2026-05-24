@@ -124,6 +124,8 @@ public sealed class AppCoordinator : IDisposable
                     "Settings window not implemented yet.");
                 break;
             case TrayCommand.Quit:
+                Dispose();
+                mainWindow.CloseForQuit();
                 Application.Current.Exit();
                 break;
             default:
@@ -142,10 +144,10 @@ public sealed class AppCoordinator : IDisposable
         mainWindow.StateBadge.Text = "History";
         mainWindow.StateTitle.Text = "Rooms and recent pings";
         mainWindow.StateDetail.Text = detail;
-        mainWindow.StateBorder.BorderBrush = mainWindow.Resources["PingIdleBrush"] as Microsoft.UI.Xaml.Media.Brush;
+        mainWindow.StateBorder.BorderBrush = mainWindow.IdleBorderBrush;
         mainWindow.HistoryPanel.Visibility = Visibility.Visible;
         mainWindow.BlockedPanel.Visibility = Visibility.Collapsed;
-        mainWindow.Activate();
+        mainWindow.ShowShell();
     }
 
     private void ShowBlockedState(string title, string detail, string reason)
@@ -155,10 +157,10 @@ public sealed class AppCoordinator : IDisposable
         mainWindow.StateTitle.Text = title;
         mainWindow.StateDetail.Text = detail;
         mainWindow.BlockedReason.Text = reason;
-        mainWindow.StateBorder.BorderBrush = mainWindow.Resources["PingWarningBrush"] as Microsoft.UI.Xaml.Media.Brush;
+        mainWindow.StateBorder.BorderBrush = mainWindow.WarningBorderBrush;
         mainWindow.HistoryPanel.Visibility = Visibility.Collapsed;
         mainWindow.BlockedPanel.Visibility = Visibility.Visible;
-        mainWindow.Activate();
+        mainWindow.ShowShell();
     }
 
     private void ShowRegistrationState(IReadOnlyList<HotkeyRegistrationResult> registrations)

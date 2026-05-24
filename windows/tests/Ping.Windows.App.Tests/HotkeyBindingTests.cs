@@ -49,6 +49,22 @@ public sealed class HotkeyBindingTests
     }
 
     [Fact]
+    public void Failed_rebind_keeps_existing_hotkey_registered()
+    {
+        using var registrar = new FakeHotkeyRegistrar();
+        using var manager = new GlobalHotkeyManager(registrar);
+
+        var first = manager.Register(HotkeyCommand.FacePing, HotkeyBinding.Alt("P"));
+        registrar.ConflictOnRegister = true;
+        var second = manager.Register(HotkeyCommand.FacePing, HotkeyBinding.AltShift("P"));
+
+        Assert.Equal(HotkeyRegistrationStatus.Success, first.Status);
+        Assert.Equal(HotkeyRegistrationStatus.Conflict, second.Status);
+        Assert.Single(registrar.RegisteredIds);
+        Assert.Empty(registrar.UnregisteredIds);
+    }
+
+    [Fact]
     public void Preferences_round_trip_under_local_app_data_shape()
     {
         var root = Path.Combine(Path.GetTempPath(), "PingHotkeyTests", Guid.NewGuid().ToString("N"));
@@ -79,7 +95,7 @@ public sealed class HotkeyBindingTests
 
     private sealed class FakeHotkeyRegistrar : IHotkeyRegistrar
     {
-        public bool ConflictOnRegister { get; init; }
+        public bool ConflictOnRegister { get; set; }
         public HashSet<int> RegisteredIds { get; } = [];
         public List<int> UnregisteredIds { get; } = [];
 
