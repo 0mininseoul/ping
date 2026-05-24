@@ -1,3 +1,4 @@
+using System.Xml.Linq;
 using Xunit;
 
 namespace Ping.Windows.App.Tests;
@@ -260,6 +261,24 @@ public sealed class AppCoordinatorSourceTests
         Assert.Contains("coordinator.HandleNotificationActivation(", app, StringComparison.Ordinal);
         Assert.DoesNotContain("coordinator?.HandleNotificationActivation(", app, StringComparison.Ordinal);
         Assert.Contains("public void HandleNotificationActivation(NotificationActivationArguments? parsed)", coordinator, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void StartupTaskManifestKeepsStartupOptInByDefault()
+    {
+        var manifest = XDocument.Load(Path.Combine(
+            RepoRoot(),
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Package.appxmanifest"));
+        XNamespace desktop = "http://schemas.microsoft.com/appx/manifest/desktop/windows10";
+        var startupTask = manifest
+            .Descendants(desktop + "StartupTask")
+            .Single();
+
+        Assert.Equal("PingWindowsStartup", startupTask.Attribute("TaskId")?.Value);
+        Assert.Equal("false", startupTask.Attribute("Enabled")?.Value);
     }
 
     private static string RepoRoot()

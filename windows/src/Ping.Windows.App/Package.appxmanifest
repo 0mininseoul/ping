@@ -57,7 +57,7 @@
           EntryPoint="Windows.FullTrustApplication">
           <desktop:StartupTask
             TaskId="PingWindowsStartup"
-            Enabled="true"
+            Enabled="false"
             DisplayName="Ping" />
         </desktop:Extension>
       </Extensions>
