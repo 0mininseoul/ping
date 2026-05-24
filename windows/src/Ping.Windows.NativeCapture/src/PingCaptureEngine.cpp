@@ -8,7 +8,7 @@ using namespace Ping::Windows::NativeCapture;
 
 namespace
 {
-    constexpr int CaptureFramesPerSecond = 15;
+    constexpr int CaptureFramesPerSecond = 30;
 
     bool IsValidDuration(int durationMs)
     {

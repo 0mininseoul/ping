@@ -21,6 +21,21 @@ public sealed class NativeCaptureEngineTests
         Assert.DoesNotContain("PipMarginPixels", source, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void NativeCaptureEngine_CapturesThirtyFramesPerSecond()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            "windows",
+            "src",
+            "Ping.Windows.NativeCapture",
+            "src",
+            "PingCaptureEngine.cpp"));
+
+        Assert.Contains("CaptureFramesPerSecond = 30", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("CaptureFramesPerSecond = 15", source, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData(PingCaptureErrorCode.Success, true)]
     [InlineData(PingCaptureErrorCode.UnsupportedOs, false)]
