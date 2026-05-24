@@ -250,7 +250,6 @@ public sealed class QuickSendController
         var hud = presenter.ShowHud(new QuickSendHudContext(room.Name, "화면+얼굴"));
         string? recordedPath = null;
         var uploadStarted = false;
-        var sent = false;
         CancellationTokenSource? countdownCancellation = null;
         Task? countdownTask = null;
 
@@ -294,7 +293,6 @@ public sealed class QuickSendController
                     recording.AspectRatio,
                     context.AllowsLocalSave),
                 CancellationToken.None).ConfigureAwait(false);
-            sent = true;
             hud.RequestFadeOutClose();
             return QuickSendOutcome.StartedRecording;
         }
@@ -311,7 +309,7 @@ public sealed class QuickSendController
         finally
         {
             await StopRecordingCountdownAsync(countdownCancellation, countdownTask).ConfigureAwait(false);
-            if (sent && recordedPath is not null)
+            if (recordedPath is not null)
             {
                 TryDeleteTemporaryRecording(recordedPath);
             }

@@ -152,12 +152,30 @@ public sealed class QuickSendStateTests
         Assert.Equal("Recording 2...", viewModel.StatusMessage);
     }
 
+    [Fact]
+    public async Task FailedQuickSend_DeletesTemporaryRecording()
+    {
+        var tempPath = Path.Combine(Path.GetTempPath(), "PingWindowsTests", $"{Guid.NewGuid():N}.mp4");
+        Directory.CreateDirectory(Path.GetDirectoryName(tempPath)!);
+        await File.WriteAllBytesAsync(tempPath, [0x00, 0x01]);
+        var engine = new FakeScreenFaceCaptureEngine(new ScreenFaceCaptureResult(tempPath, 16.0 / 9.0));
+        var controller = CreateController(
+            engine: engine,
+            sendAsync: (_, _) => throw new HttpRequestException("offline"));
+
+        var outcome = await controller.ExecuteAsync(ContextWith());
+
+        Assert.Equal(QuickSendOutcome.Failed, outcome);
+        Assert.False(File.Exists(tempPath));
+    }
+
     private static TestQuickSendController CreateController(
         FakeQuickSendPresenter? presenter = null,
         ScreenFaceQuickSendPreferences? preferences = null,
-        Func<SendVideoInput, CancellationToken, Task>? sendAsync = null)
+        Func<SendVideoInput, CancellationToken, Task>? sendAsync = null,
+        FakeScreenFaceCaptureEngine? engine = null)
     {
-        var engine = new FakeScreenFaceCaptureEngine();
+        engine ??= new FakeScreenFaceCaptureEngine();
         var controller = new QuickSendController(
             engine,
             sendAsync ?? ((_, _) => Task.CompletedTask),
@@ -211,7 +229,17 @@ public sealed class QuickSendStateTests
 
     private sealed class FakeScreenFaceCaptureEngine : IScreenFaceCaptureEngine
     {
-        public ScreenFaceCaptureResult Result { get; } = new("screen-face.mp4", 16.0 / 9.0);
+        public FakeScreenFaceCaptureEngine()
+            : this(new ScreenFaceCaptureResult("screen-face.mp4", 16.0 / 9.0))
+        {
+        }
+
+        public FakeScreenFaceCaptureEngine(ScreenFaceCaptureResult result)
+        {
+            Result = result;
+        }
+
+        public ScreenFaceCaptureResult Result { get; }
 
         public bool RecordWasCalled { get; private set; }
 
