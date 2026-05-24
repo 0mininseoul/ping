@@ -17,6 +17,7 @@ struct MessageRowView: View {
     let onToggleReaction: (String) -> Void
     let canSave: Bool
     let usesExternalScreenFaceExpansion: Bool
+    let onScreenFaceExpansionChange: (ScreenFaceExpansionAnchor?, ScreenFaceExpansionContext?) -> Void
 
     var body: some View {
         HStack {
@@ -80,12 +81,17 @@ struct MessageRowView: View {
     @ViewBuilder
     private var expandedVideo: some View {
         if usesExternalScreenFaceExpansion && message.captureMode == .screenFace, let id = message.id {
-            Color.clear
-                .frame(width: 1, height: InlinePlayerView.playerSize(for: message).height)
-                .anchorPreference(
-                    key: ExpandedScreenFaceVideoAnchorKey.self,
-                    value: .bounds
-                ) { [id: $0] }
+            let size = InlinePlayerView.playerSize(for: message)
+            let context = ScreenFaceExpansionContext(
+                message: message,
+                isMine: isMine,
+                archivePeerName: archivePeerName,
+                cacheService: cacheService,
+                controller: inlineController
+            )
+            ScreenFaceExpansionFrameReporter(messageId: id, size: size) { anchor in
+                onScreenFaceExpansionChange(anchor, anchor == nil ? nil : context)
+            }
         } else {
             InlinePlayerView(
                 message: message,

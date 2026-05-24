@@ -237,16 +237,24 @@ final class RoomManagerUXContractTests: XCTestCase {
     func testScreenFaceExpansionOverlaysAcrossSidebarWithoutShrinkingSidebar() throws {
         let historySource = try readSourceFile("Ping/UI/History/HistoryView.swift")
         let rowSource = try readSourceFile("Ping/UI/History/MessageRowView.swift")
+        let timelineSource = try readSourceFile("Ping/UI/History/RoomTimelineView.swift")
+        let overlaySource = try readSourceFile("Ping/UI/History/ScreenFaceExpansionOverlay.swift")
+        let roomManagerSource = try readSourceFile("Ping/UI/Setup/RoomManagerWindow.swift")
+        let roomDetailSource = try readSourceFile("Ping/UI/Setup/RoomDetailView.swift")
 
         XCTAssertTrue(historySource.contains(".frame(minWidth: 220, idealWidth: 240, maxWidth: 320)"))
-        XCTAssertTrue(historySource.contains(".overlayPreferenceValue(ExpandedScreenFaceVideoAnchorKey.self)"))
-        XCTAssertTrue(historySource.contains("private func screenFaceExpansionOverlay"))
-        XCTAssertTrue(historySource.contains("private func screenFaceOverlayX"))
-        XCTAssertTrue(historySource.contains("message.captureMode == .screenFace"))
+        XCTAssertTrue(historySource.contains("ScreenFaceExpansionOverlay("))
+        XCTAssertTrue(roomManagerSource.contains("ScreenFaceExpansionOverlay("))
+        XCTAssertTrue(roomManagerSource.contains("usesExternalScreenFaceExpansion: true"))
+        XCTAssertTrue(roomDetailSource.contains("usesExternalScreenFaceExpansion: Bool = false"))
+        XCTAssertTrue(timelineSource.contains("var usesExternalScreenFaceExpansion: Bool = false"))
+        XCTAssertTrue(rowSource.contains("ScreenFaceExpansionFrameReporter"))
+        XCTAssertTrue(overlaySource.contains("proxy.frame(in: .global)"))
+        XCTAssertTrue(overlaySource.contains("static func overlayX"))
         XCTAssertFalse(historySource.contains("sidebarWidthRange"))
+        XCTAssertFalse(historySource.contains(".overlayPreferenceValue("))
         XCTAssertTrue(rowSource.contains("usesExternalScreenFaceExpansion"))
-        XCTAssertTrue(rowSource.contains(".anchorPreference("))
-        XCTAssertTrue(rowSource.contains("key: ExpandedScreenFaceVideoAnchorKey.self"))
+        XCTAssertFalse(rowSource.contains(".anchorPreference("))
     }
 
     func testVideoExpansionUsesNonBouncyEaseOutAnimation() throws {

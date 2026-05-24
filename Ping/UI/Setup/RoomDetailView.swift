@@ -9,6 +9,8 @@ struct RoomDetailView: View {
     let cacheService: HistoryCacheService
     var onCopyInviteLink: ((Room) -> Void)?
     var roomService: RoomService?
+    var usesExternalScreenFaceExpansion: Bool
+    var onScreenFaceExpansionChange: (ScreenFaceExpansionAnchor?, ScreenFaceExpansionContext?) -> Void
 
     @StateObject private var viewModel: HistoryViewModel
     @State private var isMembersPopoverPresented: Bool = false
@@ -23,7 +25,9 @@ struct RoomDetailView: View {
         messageService: MessageService,
         cacheService: HistoryCacheService,
         onCopyInviteLink: ((Room) -> Void)? = nil,
-        roomService: RoomService? = nil
+        roomService: RoomService? = nil,
+        usesExternalScreenFaceExpansion: Bool = false,
+        onScreenFaceExpansionChange: @escaping (ScreenFaceExpansionAnchor?, ScreenFaceExpansionContext?) -> Void = { _, _ in }
     ) {
         self.roomId = roomId
         self.appState = appState
@@ -32,6 +36,8 @@ struct RoomDetailView: View {
         self.cacheService = cacheService
         self.onCopyInviteLink = onCopyInviteLink
         self.roomService = roomService
+        self.usesExternalScreenFaceExpansion = usesExternalScreenFaceExpansion
+        self.onScreenFaceExpansionChange = onScreenFaceExpansionChange
         _viewModel = StateObject(wrappedValue: HistoryViewModel(messageService: messageService, appState: appState))
     }
 
@@ -104,7 +110,13 @@ struct RoomDetailView: View {
                 Divider()
             }
 
-            RoomTimelineView(viewModel: viewModel, cacheService: cacheService, appState: appState)
+            RoomTimelineView(
+                viewModel: viewModel,
+                cacheService: cacheService,
+                appState: appState,
+                usesExternalScreenFaceExpansion: usesExternalScreenFaceExpansion,
+                onScreenFaceExpansionChange: onScreenFaceExpansionChange
+            )
         }
         .onAppear {
             Task { await viewModel.selectRoom(roomId) }
@@ -114,6 +126,9 @@ struct RoomDetailView: View {
         }
         .onReceive(realtime.$lastEvent.compactMap { $0 }) { event in
             viewModel.handleRealtimeEvent(event)
+        }
+        .onDisappear {
+            onScreenFaceExpansionChange(nil, nil)
         }
     }
 

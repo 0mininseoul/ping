@@ -11,8 +11,8 @@ settings:
   base:
     SWIFT_VERSION: "6.0"
     MACOSX_DEPLOYMENT_TARGET: "13.0"
-    MARKETING_VERSION: "0.3.24"
-    CURRENT_PROJECT_VERSION: "34"
+    MARKETING_VERSION: "0.3.25"
+    CURRENT_PROJECT_VERSION: "35"
     PRODUCT_NAME: Ping
     ENABLE_HARDENED_RUNTIME: YES
     CODE_SIGN_STYLE: Manual
@@ -127,6 +127,7 @@ targets:
           cp "$PROJECT_DIR/Ping/UI/History/HistoryViewModel.swift" "$DST/HistoryViewModel.swift"
           cp "$PROJECT_DIR/Ping/UI/History/MessageRowView.swift" "$DST/MessageRowView.swift"
           cp "$PROJECT_DIR/Ping/UI/History/InlinePlayerView.swift" "$DST/InlinePlayerView.swift"
+          cp "$PROJECT_DIR/Ping/UI/History/ScreenFaceExpansionOverlay.swift" "$DST/ScreenFaceExpansionOverlay.swift"
           cp "$PROJECT_DIR/Ping/UI/History/ChatMessageRowView.swift" "$DST/ChatMessageRowView.swift"
           cp "$PROJECT_DIR/Ping/UI/History/ChatComposerView.swift" "$DST/ChatComposerView.swift"
           cp "$PROJECT_DIR/Ping/UI/History/SelectableTextView.swift" "$DST/SelectableTextView.swift"
@@ -194,6 +195,7 @@ targets:
           - "$(PROJECT_DIR)/Ping/UI/History/HistoryViewModel.swift"
           - "$(PROJECT_DIR)/Ping/UI/History/MessageRowView.swift"
           - "$(PROJECT_DIR)/Ping/UI/History/InlinePlayerView.swift"
+          - "$(PROJECT_DIR)/Ping/UI/History/ScreenFaceExpansionOverlay.swift"
           - "$(PROJECT_DIR)/Ping/UI/History/ChatMessageRowView.swift"
           - "$(PROJECT_DIR)/Ping/UI/History/ChatComposerView.swift"
           - "$(PROJECT_DIR)/Ping/UI/History/SelectableTextView.swift"
@@ -261,6 +263,7 @@ targets:
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/HistoryViewModel.swift"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/MessageRowView.swift"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/InlinePlayerView.swift"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/ScreenFaceExpansionOverlay.swift"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/ChatMessageRowView.swift"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/ChatComposerView.swift"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/SelectableTextView.swift"

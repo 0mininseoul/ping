@@ -5,6 +5,8 @@ struct RoomTimelineView: View {
     @ObservedObject var viewModel: HistoryViewModel
     let cacheService: HistoryCacheService
     @ObservedObject var appState: AppState
+    var usesExternalScreenFaceExpansion: Bool = false
+    var onScreenFaceExpansionChange: (ScreenFaceExpansionAnchor?, ScreenFaceExpansionContext?) -> Void = { _, _ in }
 
     @State private var draft: String = ""
     @State private var reactionPickerTargetKind: MessageReaction.TargetKind?
@@ -158,6 +160,7 @@ struct RoomTimelineView: View {
                 NSEvent.removeMonitor(scrollWheelMonitor)
                 self.scrollWheelMonitor = nil
             }
+            onScreenFaceExpansionChange(nil, nil)
             revealResetTask?.cancel()
             revealResetTask = nil
         }
@@ -265,7 +268,8 @@ struct RoomTimelineView: View {
                     Task { await viewModel.toggleReaction(target: .video, targetId: vid, emoji: emoji) }
                 },
                 canSave: v.canBeSavedLocally(by: myUid),
-                usesExternalScreenFaceExpansion: true
+                usesExternalScreenFaceExpansion: usesExternalScreenFaceExpansion,
+                onScreenFaceExpansionChange: onScreenFaceExpansionChange
             )
         case .chat(let c):
             let key = "chat:" + (c.id ?? "")

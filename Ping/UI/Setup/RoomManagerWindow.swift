@@ -155,6 +155,8 @@ struct RoomManagerView: View {
 
     @State private var selectedRoomId: String?
     @State private var isSearchPresented: Bool = false
+    @State private var screenFaceExpansionAnchor: ScreenFaceExpansionAnchor?
+    @State private var screenFaceExpansionContext: ScreenFaceExpansionContext?
 
     @StateObject private var searchViewModel: RoomSearchViewModel
     private let searchInitialTab: RoomSearchTab
@@ -202,6 +204,12 @@ struct RoomManagerView: View {
         .removingDefaultSidebarToggle()
         .toolbar(.hidden, for: .windowToolbar)
         .frame(minWidth: 480, minHeight: 560)
+        .overlay {
+            ScreenFaceExpansionOverlay(
+                anchor: screenFaceExpansionAnchor,
+                context: screenFaceExpansionContext
+            )
+        }
         .sheet(isPresented: $isSearchPresented) {
             VStack(spacing: 0) {
                 HStack {
@@ -253,6 +261,7 @@ struct RoomManagerView: View {
         }
         .onChange(of: selectedRoomId) { newValue in
             appState.lastSelectedRoomId = newValue
+            updateScreenFaceExpansion(anchor: nil, context: nil)
         }
     }
 
@@ -321,7 +330,11 @@ struct RoomManagerView: View {
                 messageService: msgService,
                 cacheService: cache,
                 onCopyInviteLink: onCopyInviteLink,
-                roomService: roomService
+                roomService: roomService,
+                usesExternalScreenFaceExpansion: true,
+                onScreenFaceExpansionChange: { anchor, context in
+                    updateScreenFaceExpansion(anchor: anchor, context: context)
+                }
             )
         } else {
             VStack(spacing: 12) {
@@ -349,6 +362,14 @@ struct RoomManagerView: View {
         }
 
         selectedRoomId = appState.defaultRoom?.id ?? appState.rooms.first?.id
+    }
+
+    private func updateScreenFaceExpansion(
+        anchor: ScreenFaceExpansionAnchor?,
+        context: ScreenFaceExpansionContext?
+    ) {
+        screenFaceExpansionAnchor = anchor
+        screenFaceExpansionContext = context
     }
 
     private func joinRoom(_ room: Room) {
