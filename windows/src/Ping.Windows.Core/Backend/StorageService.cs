@@ -126,7 +126,8 @@ public sealed class StorageService(SupabaseClient client) : IStorageService
     {
         if (string.IsNullOrWhiteSpace(value)
             || value.Contains('/', StringComparison.Ordinal)
-            || value.Contains('\\', StringComparison.Ordinal))
+            || value.Contains('\\', StringComparison.Ordinal)
+            || value.Contains("..", StringComparison.Ordinal))
         {
             throw new ArgumentException(message, parameterName);
         }

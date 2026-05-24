@@ -482,11 +482,17 @@ public sealed class BackendContractTests
         await Assert.ThrowsAsync<ArgumentException>(
             () => service.UploadVideoAsync(emptyMp4, "sender/uid", "video-id", ["receiver"], DateTimeOffset.UtcNow));
         await Assert.ThrowsAsync<ArgumentException>(
+            () => service.UploadVideoAsync(emptyMp4, "sender..uid", "video-id", ["receiver"], DateTimeOffset.UtcNow));
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => service.UploadVideoAsync(emptyMp4, "sender-uid", "video..id", ["receiver"], DateTimeOffset.UtcNow));
+        await Assert.ThrowsAsync<ArgumentException>(
             () => service.DownloadVideoAsync("sender-uid/video-id.mov"));
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.UploadChatImageAsync(emptyMp4, "sender-uid", "message-id"));
         await Assert.ThrowsAsync<ArgumentException>(
             () => service.UploadChatImageAsync(textFile, "sender-uid", "message-id"));
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => service.UploadChatImageAsync(emptyMp4, "sender-uid", "message..id"));
         await Assert.ThrowsAsync<ArgumentException>(
             () => service.DownloadChatMediaAsync("../sender/chat-images/message.png", "png"));
     }

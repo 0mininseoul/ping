@@ -121,6 +121,16 @@ public sealed class IncomingMessageDedupTests
     }
 
     [Fact]
+    public void ActivationArguments_IgnoresDuplicateKeysWithoutThrowing()
+    {
+        var parsed = NotificationActivationArguments.Parse("action=play&message_id=message-1&message_id=message-2");
+
+        Assert.Equal("play", parsed.Action);
+        Assert.Equal("message-1", parsed.MessageId);
+        Assert.True(parsed.HasValues);
+    }
+
+    [Fact]
     public void ActivationArguments_ReadsWindowsAppSdkDictionary()
     {
         var parsed = NotificationActivationArguments.From(new Dictionary<string, string>

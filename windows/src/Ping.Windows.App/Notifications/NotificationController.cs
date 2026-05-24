@@ -502,14 +502,24 @@ public sealed record NotificationActivationArguments(
             return new(null, null);
         }
 
-        var values = arguments
-            .Split('&', StringSplitOptions.RemoveEmptyEntries)
-            .Select(part => part.Split('=', 2))
-            .Where(parts => parts.Length == 2)
-            .ToDictionary(
-                parts => Uri.UnescapeDataString(parts[0]),
-                parts => Uri.UnescapeDataString(parts[1]),
-                StringComparer.Ordinal);
+        var values = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var part in arguments.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var parts = part.Split('=', 2);
+            if (parts.Length != 2)
+            {
+                continue;
+            }
+
+            var key = Uri.UnescapeDataString(parts[0]);
+            if (values.ContainsKey(key))
+            {
+                continue;
+            }
+
+            values[key] = Uri.UnescapeDataString(parts[1]);
+        }
+
         values.TryGetValue("action", out var action);
         values.TryGetValue("message_id", out var messageId);
         values.TryGetValue("chat_id", out var chatId);
