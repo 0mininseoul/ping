@@ -674,7 +674,12 @@ public sealed class AppCoordinator : IDisposable
             return;
         }
 
-        quickSendCancellation?.Cancel();
+        if (quickSendCancellation is not null)
+        {
+            quickSendCancellation.Cancel();
+            return;
+        }
+
         var cancellation = new CancellationTokenSource();
         quickSendCancellation = cancellation;
 

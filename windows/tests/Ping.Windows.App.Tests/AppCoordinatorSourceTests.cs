@@ -142,6 +142,26 @@ public sealed class AppCoordinatorSourceTests
         Assert.Contains("CancelPausedCloseTimeout();", source, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void QuickScreenFaceHotkeyCancelsActiveQuickSendWithoutStartingOverlap()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Bootstrap",
+            "AppCoordinator.cs"));
+
+        Assert.Contains("if (quickSendCancellation is not null)", source, StringComparison.Ordinal);
+        Assert.Contains("quickSendCancellation.Cancel();", source, StringComparison.Ordinal);
+        Assert.Contains("var cancellation = new CancellationTokenSource();", source, StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "quickSendCancellation?.Cancel();\n        var cancellation = new CancellationTokenSource();",
+            source,
+            StringComparison.Ordinal);
+    }
+
     private static string RepoRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
