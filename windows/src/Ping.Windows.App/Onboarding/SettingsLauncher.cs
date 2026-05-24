@@ -20,6 +20,38 @@ public static class SettingsLauncher
     public static Task<bool> LaunchGraphicsCapturePrivacyAsync() =>
         LaunchAsync(GraphicsCapturePrivacyUri);
 
+    public static Task<bool> RelaunchNormallyAsync()
+    {
+#if NET8_0_WINDOWS || NET9_0_WINDOWS || NET10_0_WINDOWS
+        var executablePath = Environment.ProcessPath;
+        if (string.IsNullOrWhiteSpace(executablePath))
+        {
+            return Task.FromResult(false);
+        }
+
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
+                "explorer.exe",
+                $"\"{executablePath}\"")
+            {
+                UseShellExecute = false
+            });
+            return Task.FromResult(true);
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            return Task.FromResult(false);
+        }
+        catch (InvalidOperationException)
+        {
+            return Task.FromResult(false);
+        }
+#else
+        return Task.FromResult(false);
+#endif
+    }
+
     public static async Task<bool> LaunchFolderAsync(string folderPath)
     {
 #if NET8_0_WINDOWS || NET9_0_WINDOWS || NET10_0_WINDOWS

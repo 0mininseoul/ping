@@ -15,23 +15,31 @@ public interface IHotkeyRegistrationProbe
     void Unregister(int id);
 }
 
+public interface IElevationProbe
+{
+    bool IsElevated { get; }
+}
+
 public sealed class PermissionProbe
 {
     private readonly string supabaseConfigPath;
     private readonly INativeScreenCaptureSelfTest screenCaptureSelfTest;
     private readonly IHotkeyRegistrationProbe? hotkeyRegistrationProbe;
     private readonly IStartupTaskController startupTaskController;
+    private readonly IElevationProbe elevationProbe;
 
     public PermissionProbe(
         string? supabaseConfigPath = null,
         INativeScreenCaptureSelfTest? screenCaptureSelfTest = null,
         IHotkeyRegistrationProbe? hotkeyRegistrationProbe = null,
-        IStartupTaskController? startupTaskController = null)
+        IStartupTaskController? startupTaskController = null,
+        IElevationProbe? elevationProbe = null)
     {
         this.supabaseConfigPath = supabaseConfigPath ?? DefaultSupabaseConfigPath();
         this.screenCaptureSelfTest = screenCaptureSelfTest ?? new NativeScreenCaptureSelfTest();
         this.hotkeyRegistrationProbe = hotkeyRegistrationProbe;
         this.startupTaskController = startupTaskController ?? new StartupTaskController();
+        this.elevationProbe = elevationProbe ?? new WindowsElevationProbe();
     }
 
     public async Task<OnboardingEnvironmentState> ProbeAsync(CancellationToken cancellationToken = default) =>
@@ -151,6 +159,14 @@ public sealed class PermissionProbe
     public Task<OnboardingProbeState> CheckNotificationsAsync(CancellationToken cancellationToken = default)
     {
         _ = cancellationToken;
+        if (elevationProbe.IsElevated)
+        {
+            return Task.FromResult(OnboardingProbeState.Blocked(
+                "Windows app notifications are unavailable while Ping runs as administrator.",
+                actionKind: OnboardingActionKind.Relaunch,
+                actionLabel: "Restart normally"));
+        }
+
 #if NET8_0_WINDOWS || NET9_0_WINDOWS || NET10_0_WINDOWS
         try
         {
@@ -264,6 +280,39 @@ public sealed class PermissionProbe
 
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+    }
+
+    private sealed class WindowsElevationProbe : IElevationProbe
+    {
+        public bool IsElevated
+        {
+            get
+            {
+                if (!OperatingSystem.IsWindows())
+                {
+                    return false;
+                }
+
+#if NET8_0_WINDOWS || NET9_0_WINDOWS || NET10_0_WINDOWS
+                try
+                {
+                    var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+                    var principal = new System.Security.Principal.WindowsPrincipal(identity);
+                    return principal.IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
+                }
+                catch (System.Security.SecurityException)
+                {
+                    return false;
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    return false;
+                }
+#else
+                return false;
+#endif
+            }
+        }
     }
 
     private sealed record HotkeyRegistration(

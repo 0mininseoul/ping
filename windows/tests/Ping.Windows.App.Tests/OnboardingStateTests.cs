@@ -129,6 +129,20 @@ public sealed class OnboardingStateTests
     }
 
     [Fact]
+    public async Task PermissionProbe_blocks_notifications_when_process_is_elevated()
+    {
+        var probe = new PermissionProbe(
+            Path.Combine(Path.GetTempPath(), "missing-supabase.json"),
+            elevationProbe: new FixedElevationProbe(isElevated: true));
+
+        var state = await probe.CheckNotificationsAsync();
+
+        Assert.Equal(OnboardingProbeStatus.Blocked, state.Status);
+        Assert.Equal(OnboardingActionKind.Relaunch, state.ActionKind);
+        Assert.Equal("Restart normally", state.ActionLabel);
+    }
+
+    [Fact]
     public void PermissionProbe_unregisters_probe_hotkeys_when_later_registration_conflicts()
     {
         var hotkeys = new RecordingHotkeyProbe(conflictingId: 'L');
@@ -205,5 +219,10 @@ public sealed class OnboardingStateTests
             _ = cancellationToken;
             return Task.FromResult(status);
         }
+    }
+
+    private sealed class FixedElevationProbe(bool isElevated) : IElevationProbe
+    {
+        public bool IsElevated { get; } = isElevated;
     }
 }

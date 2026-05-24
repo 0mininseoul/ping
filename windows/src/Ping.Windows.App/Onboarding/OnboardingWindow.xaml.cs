@@ -58,9 +58,17 @@ public sealed partial class OnboardingWindow : Window
             case OnboardingActionKind.OpenFolder:
                 _ = await SettingsLauncher.LaunchFolderAsync(PermissionProbe.DefaultSupabaseDirectoryPath());
                 break;
+            case OnboardingActionKind.Relaunch:
+                if (await SettingsLauncher.RelaunchNormallyAsync())
+                {
+                    Application.Current.Exit();
+                    break;
+                }
+
+                await RefreshAsync();
+                break;
             case OnboardingActionKind.Retry:
             case OnboardingActionKind.Configure:
-            case OnboardingActionKind.Relaunch:
             case OnboardingActionKind.None:
             default:
                 await RefreshAsync();
