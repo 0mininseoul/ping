@@ -142,6 +142,7 @@ public sealed class RoomContractTests
         Assert.Equal("abc12345", PingInviteLink.TokenFrom("https://ping0min.vercel.app/invite/abc12345"));
         Assert.Equal("abc12345", PingInviteLink.TokenFrom("ping://invite/abc12345"));
         Assert.Equal("abc12345", PingInviteLink.TokenFrom("https://example.com/join?token=abc12345"));
+        Assert.Equal("path12345", PingInviteLink.TokenFrom("https://example.com/invite/path12345?token=query12345"));
         Assert.Equal("abc12345", PingInviteLink.TokenFrom("abc12345"));
         Assert.Null(PingInviteLink.TokenFrom("not valid"));
     }

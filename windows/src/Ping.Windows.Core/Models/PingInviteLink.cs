@@ -46,12 +46,6 @@ public static class PingInviteLink
             return FirstPathToken(uri);
         }
 
-        var queryToken = QueryToken(uri);
-        if (!string.IsNullOrWhiteSpace(queryToken))
-        {
-            return IsToken(queryToken) ? queryToken : null;
-        }
-
         var segments = uri.AbsolutePath
             .Split('/', StringSplitOptions.RemoveEmptyEntries)
             .Select(Uri.UnescapeDataString)
@@ -63,6 +57,12 @@ public static class PingInviteLink
                 var token = segments[index + 1];
                 return IsToken(token) ? token : null;
             }
+        }
+
+        var queryToken = QueryToken(uri);
+        if (!string.IsNullOrWhiteSpace(queryToken))
+        {
+            return IsToken(queryToken) ? queryToken : null;
         }
 
         return null;
