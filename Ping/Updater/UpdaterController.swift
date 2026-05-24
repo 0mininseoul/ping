@@ -6,10 +6,12 @@ final class UpdaterController: NSObject, @preconcurrency SPUStandardUserDriverDe
     static let shared = UpdaterController()
 
     private var controller: SPUStandardUpdaterController!
+    private let updateReminderStore: UpdateReminderStore
 
     var updater: SPUUpdater { controller.updater }
 
     private override init() {
+        updateReminderStore = UpdateReminderStore()
         super.init()
         controller = SPUStandardUpdaterController(
             startingUpdater: false,
@@ -31,7 +33,10 @@ final class UpdaterController: NSObject, @preconcurrency SPUStandardUserDriverDe
 
         guard !state.userInitiated else { return }
         NSApp.dockTile.badgeLabel = "1"
+        guard updateReminderStore.shouldNotify(version: update.displayVersionString) else { return }
+
         LocalNotificationCenter.shared.notifyUpdateAvailable(version: update.displayVersionString)
+        updateReminderStore.markNotified(version: update.displayVersionString)
     }
 
     func standardUserDriverDidReceiveUserAttention(forUpdate update: SUAppcastItem) {

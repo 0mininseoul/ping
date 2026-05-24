@@ -4,6 +4,7 @@ import UserNotifications
 @MainActor
 final class LocalNotificationCenter: NSObject, UNUserNotificationCenterDelegate {
     static let shared = LocalNotificationCenter()
+    static let updateAvailableIdentifier = "ping.update.available"
 
     enum Category: String {
         case incomingMessage = "ping.message"
@@ -148,15 +149,18 @@ final class LocalNotificationCenter: NSObject, UNUserNotificationCenterDelegate 
     }
 
     func notifyUpdateAvailable(version: String) {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [Self.updateAvailableIdentifier])
+        UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: [Self.updateAvailableIdentifier])
+
         let content = UNMutableNotificationContent()
         content.title = "Ping \(version) 업데이트 가능"
         content.body = "클릭하면 변경 내용을 확인하고 바로 설치할 수 있습니다."
         content.sound = .default
         content.categoryIdentifier = Category.availableUpdate.rawValue
-        content.userInfo = ["type": "update"]
+        content.userInfo = ["type": "update", "version": version]
 
         let request = UNNotificationRequest(
-            identifier: "ping.update.available",
+            identifier: Self.updateAvailableIdentifier,
             content: content,
             trigger: nil
         )
@@ -165,7 +169,7 @@ final class LocalNotificationCenter: NSObject, UNUserNotificationCenterDelegate 
 
     func clearUpdateAvailableNotification() {
         UNUserNotificationCenter.current().removeDeliveredNotifications(
-            withIdentifiers: ["ping.update.available"]
+            withIdentifiers: [Self.updateAvailableIdentifier]
         )
     }
 

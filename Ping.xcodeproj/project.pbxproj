@@ -82,6 +82,8 @@
 		A2A8F13860B8335BA473B110 /* PIPCompositor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C961D96527E4B05B3F131D0 /* PIPCompositor.swift */; };
 		A35216D4802F7669D7CEE926 /* RoomSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B5BE5E27DBD69263538CCD7 /* RoomSearchView.swift */; };
 		A548B41AA3E0A501424B712B /* PairingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B86EF836E41F27EB9EA7504 /* PairingView.swift */; };
+		AA6D58F4D096AF00DA5C5B80 /* UpdateReminderStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B5BB40E86D90C32CA784A61 /* UpdateReminderStoreTests.swift */; };
+		AB2E62FD9D04CB1415A796F5 /* UpdateReminderStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4D9879934F48283F7A2774C /* UpdateReminderStore.swift */; };
 		ACDDF0E513D2F7D330B6A9C7 /* SmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEBA01FC9DCA088BE83E5C4F /* SmokeTests.swift */; };
 		AE0BAABF032564CD75C6AC48 /* RoomManagerWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2F526895AEBD9128DA1538F /* RoomManagerWindow.swift */; };
 		B516DA8E35BE22691A6F324C /* LocalNotificationCenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFCF08C61ECD845F231DFFE4 /* LocalNotificationCenter.swift */; };
@@ -162,6 +164,7 @@
 		3F670415508116D43886183A /* MirrorViewModelStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MirrorViewModelStateTests.swift; sourceTree = "<group>"; };
 		4741EB3E3614D20DF3C78279 /* VideoCropper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoCropper.swift; sourceTree = "<group>"; };
 		4768EC8284B544E3649C4507 /* HistoryViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryViewModelTests.swift; sourceTree = "<group>"; };
+		4B5BB40E86D90C32CA784A61 /* UpdateReminderStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateReminderStoreTests.swift; sourceTree = "<group>"; };
 		4CD854FC545A367784978698 /* RoomListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomListView.swift; sourceTree = "<group>"; };
 		4E1A841BBD8BDD965C164BF8 /* OnboardingInputContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingInputContractTests.swift; sourceTree = "<group>"; };
 		4F542186B03D30E2C8BE833E /* OnboardingCopyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingCopyTests.swift; sourceTree = "<group>"; };
@@ -211,6 +214,7 @@
 		B2F526895AEBD9128DA1538F /* RoomManagerWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomManagerWindow.swift; sourceTree = "<group>"; };
 		B34FE34A23EC76CE975F980D /* MenuBarIconContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarIconContractTests.swift; sourceTree = "<group>"; };
 		B4C8ECCC44B398DBC07CB2C3 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
+		B4D9879934F48283F7A2774C /* UpdateReminderStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateReminderStore.swift; sourceTree = "<group>"; };
 		B5C8F83E9CBB7B5717E22773 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		B6D978D1D0ADEFE94F8E2D9D /* HotkeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyManager.swift; sourceTree = "<group>"; };
 		BA897CE96651014C4A14D9FF /* WindowPositioningTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowPositioningTests.swift; sourceTree = "<group>"; };
@@ -392,6 +396,7 @@
 			isa = PBXGroup;
 			children = (
 				C0F79541C73EA6A1AA177880 /* UpdaterController.swift */,
+				B4D9879934F48283F7A2774C /* UpdateReminderStore.swift */,
 			);
 			path = Updater;
 			sourceTree = "<group>";
@@ -488,6 +493,7 @@
 				2319CC860C1B8D1CEC0E1E4E /* SupabaseDecodingTests.swift */,
 				D09E2E7CA36EC901ED5EE3FB /* SupabaseSessionContractTests.swift */,
 				3BFB39C830F5652627E5C107 /* UpdaterBehaviorContractTests.swift */,
+				4B5BB40E86D90C32CA784A61 /* UpdateReminderStoreTests.swift */,
 				9B138D453327DB1DC53FA2EF /* VideoMessageCodingTests.swift */,
 				FA17BAFB8C514438C7961E5F /* VideoRecordingContractTests.swift */,
 				BA897CE96651014C4A14D9FF /* WindowPositioningTests.swift */,
@@ -818,6 +824,7 @@
 				293C6BA962C302D688D3B028 /* StoragePolicyContractTests.swift in Sources */,
 				D291A0F09A96CC00D2E3E020 /* SupabaseDecodingTests.swift in Sources */,
 				D3660AF8AC6874725F533E10 /* SupabaseSessionContractTests.swift in Sources */,
+				AA6D58F4D096AF00DA5C5B80 /* UpdateReminderStoreTests.swift in Sources */,
 				8C39D7D5F6F0FFC6649DB52C /* UpdaterBehaviorContractTests.swift in Sources */,
 				E084BE11E5BC26F4B3EAB844 /* VideoMessageCodingTests.swift in Sources */,
 				CA2DF3196CAE29536E2450C1 /* VideoRecordingContractTests.swift in Sources */,
@@ -897,6 +904,7 @@
 				3B5117F35AEE41A4224D9837 /* StorageService.swift in Sources */,
 				BD4B27A9FA26170478465688 /* SupabaseClient.swift in Sources */,
 				18F76346F0F837EF6E0BA48D /* Typography.swift in Sources */,
+				AB2E62FD9D04CB1415A796F5 /* UpdateReminderStore.swift in Sources */,
 				C928EDBE9BA49D5188B218A3 /* UpdaterController.swift in Sources */,
 				15FA5EA0B50E0383E9791360 /* UserPreferences.swift in Sources */,
 				776C909E046ADCF36EFB3CB8 /* UserService.swift in Sources */,
@@ -1028,7 +1036,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 37;
+				CURRENT_PROJECT_VERSION = 38;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -1048,7 +1056,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 0.3.27;
+				MARKETING_VERSION = 0.3.28;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -1097,7 +1105,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 37;
+				CURRENT_PROJECT_VERSION = 38;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1111,7 +1119,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 0.3.27;
+				MARKETING_VERSION = 0.3.28;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				OTHER_CODE_SIGN_FLAGS = "--requirements '=designated => identifier \"com.youngminpark.ping.Ping\"'";

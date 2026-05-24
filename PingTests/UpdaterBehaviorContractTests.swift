@@ -31,6 +31,19 @@ final class UpdaterBehaviorContractTests: XCTestCase {
         XCTAssertTrue(appDelegate.contains("LocalNotificationCenter.shared.onCheckForUpdates"))
     }
 
+    func testScheduledUpdateNotificationIsOnePerLatestVersion() throws {
+        let updater = try readSourceFile("UpdaterController.swift")
+        let notifications = try readSourceFile("LocalNotificationCenter.swift")
+
+        XCTAssertTrue(updater.contains("UpdateReminderStore"))
+        XCTAssertTrue(updater.contains("shouldNotify(version: update.displayVersionString)"))
+        XCTAssertTrue(updater.contains("markNotified(version: update.displayVersionString)"))
+        XCTAssertTrue(notifications.contains("static let updateAvailableIdentifier = \"ping.update.available\""))
+        XCTAssertTrue(notifications.contains("removePendingNotificationRequests(withIdentifiers: [Self.updateAvailableIdentifier])"))
+        XCTAssertTrue(notifications.contains("removeDeliveredNotifications(withIdentifiers: [Self.updateAvailableIdentifier])"))
+        XCTAssertTrue(notifications.contains("\"version\": version"))
+    }
+
     private func readSourceFile(_ relativePath: String) throws -> String {
         let fileName = URL(fileURLWithPath: relativePath).lastPathComponent
         let fileURL = try XCTUnwrap(Bundle(for: Self.self).resourceURL?.appendingPathComponent(fileName))
