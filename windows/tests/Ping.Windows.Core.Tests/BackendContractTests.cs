@@ -227,6 +227,33 @@ public sealed class BackendContractTests
     }
 
     [Fact]
+    public async Task CorruptStoredSessionFallsBackToAnonymousSignup()
+    {
+        using var files = new SupabaseTestFiles();
+        await File.WriteAllTextAsync(files.SessionPath, "{not-json");
+        var handler = new RecordingHttpMessageHandler(request =>
+        {
+            Assert.Equal("https://example.supabase.co/auth/v1/signup", request.RequestUri?.ToString());
+            return JsonResponse("""
+                {
+                  "access_token": "new-access-token",
+                  "refresh_token": "new-refresh-token",
+                  "expires_in": 3600,
+                  "user": { "id": "new-user-id" }
+                }
+                """);
+        });
+        using var client = files.CreateClient(handler);
+
+        var uid = await client.BootstrapAsync();
+
+        Assert.Equal("new-user-id", uid);
+        Assert.Single(handler.Requests);
+        var saved = JsonSerializer.Deserialize<SupabaseSession>(await File.ReadAllTextAsync(files.SessionPath), JsonOptions.Supabase);
+        Assert.Equal("new-refresh-token", saved?.RefreshToken);
+    }
+
+    [Fact]
     public void MessageServiceUsesMacOSCreateMessageRpcBody()
     {
         var rpc = new RecordingRpcClient();

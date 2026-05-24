@@ -94,6 +94,31 @@ public sealed class HotkeyBindingTests
     }
 
     [Fact]
+    public void Corrupt_preferences_fall_back_to_default_hotkeys()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "PingHotkeyTests", Guid.NewGuid().ToString("N"));
+        var store = new HotkeyPreferencesStore(root);
+
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(store.PreferencesPath)!);
+            File.WriteAllText(store.PreferencesPath, "{not-json");
+
+            var loaded = store.Load();
+
+            Assert.Equal(HotkeyBinding.Defaults()[HotkeyCommand.FacePing], loaded[HotkeyCommand.FacePing]);
+            Assert.Equal(HotkeyBinding.Defaults()[HotkeyCommand.QuickScreenFacePing], loaded[HotkeyCommand.QuickScreenFacePing]);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public void Status_text_uses_customized_hotkey_bindings()
     {
         var bindings = HotkeyBinding.Defaults()

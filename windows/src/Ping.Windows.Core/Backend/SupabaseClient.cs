@@ -194,8 +194,15 @@ public sealed class SupabaseClient : ISupabaseRpcClient, IDisposable
             return null;
         }
 
-        await using var stream = File.OpenRead(sessionPath);
-        return await JsonSerializer.DeserializeAsync<SupabaseSession>(stream, JsonOptions.Supabase, cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await using var stream = File.OpenRead(sessionPath);
+            return await JsonSerializer.DeserializeAsync<SupabaseSession>(stream, JsonOptions.Supabase, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+        {
+            return null;
+        }
     }
 
     private async Task SaveSessionAsync(SupabaseSession value, CancellationToken cancellationToken)

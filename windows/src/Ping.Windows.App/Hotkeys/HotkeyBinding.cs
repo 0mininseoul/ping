@@ -162,8 +162,17 @@ public sealed class HotkeyPreferencesStore
             return defaults;
         }
 
-        var json = File.ReadAllText(PreferencesPath);
-        var preferences = JsonSerializer.Deserialize<UserPreferences>(json, SerializerOptions);
+        UserPreferences? preferences;
+        try
+        {
+            var json = File.ReadAllText(PreferencesPath);
+            preferences = JsonSerializer.Deserialize<UserPreferences>(json, SerializerOptions);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+        {
+            return defaults;
+        }
+
         if (preferences?.Hotkeys is null)
         {
             return defaults;
