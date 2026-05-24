@@ -10,7 +10,9 @@ public enum PingCaptureErrorCode
     NoMonitor = 3,
     NoCamera = 4,
     EncoderFailure = 5,
-    CaptureFailure = 6
+    CaptureFailure = 6,
+    ProtectedContent = 7,
+    NoMicrophone = 8
 }
 
 public sealed record ScreenFaceCaptureResult(
@@ -140,7 +142,9 @@ public sealed class NativeCaptureEngine : IScreenFaceCaptureEngine
                 PingCaptureErrorCode.NoMonitor => "No monitor was available for capture.",
                 PingCaptureErrorCode.NoCamera => "No camera was available.",
                 PingCaptureErrorCode.EncoderFailure => "The MP4 encoder could not be initialized.",
-                PingCaptureErrorCode.CaptureFailure => "Screen capture failed or returned protected content.",
+                PingCaptureErrorCode.CaptureFailure => "Screen capture failed.",
+                PingCaptureErrorCode.ProtectedContent => "Screen capture returned protected content.",
+                PingCaptureErrorCode.NoMicrophone => "No microphone was available.",
                 _ => "Screen capture failed with an unknown error."
             });
     }
@@ -157,6 +161,8 @@ public sealed class NativeCaptureEngine : IScreenFaceCaptureEngine
             PingCaptureErrorCode.NoCamera => new InvalidOperationException(message),
             PingCaptureErrorCode.EncoderFailure => new IOException(message),
             PingCaptureErrorCode.CaptureFailure => new IOException(message),
+            PingCaptureErrorCode.ProtectedContent => new IOException(message),
+            PingCaptureErrorCode.NoMicrophone => new InvalidOperationException(message),
             PingCaptureErrorCode.Success => new InvalidOperationException("Native capture success is not an exception."),
             _ => new IOException(message)
         };

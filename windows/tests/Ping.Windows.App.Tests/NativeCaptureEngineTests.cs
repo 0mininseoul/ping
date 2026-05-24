@@ -12,6 +12,8 @@ public sealed class NativeCaptureEngineTests
     [InlineData(PingCaptureErrorCode.NoCamera, false)]
     [InlineData(PingCaptureErrorCode.EncoderFailure, false)]
     [InlineData(PingCaptureErrorCode.CaptureFailure, false)]
+    [InlineData(PingCaptureErrorCode.ProtectedContent, false)]
+    [InlineData(PingCaptureErrorCode.NoMicrophone, false)]
     public void SelfTestResult_MapsNativeErrorCode(PingCaptureErrorCode code, bool expectedSupported)
     {
         var result = NativeCaptureEngine.ToSelfTestResult((int)code);
@@ -28,6 +30,8 @@ public sealed class NativeCaptureEngineTests
     [InlineData(PingCaptureErrorCode.NoCamera, typeof(InvalidOperationException))]
     [InlineData(PingCaptureErrorCode.EncoderFailure, typeof(IOException))]
     [InlineData(PingCaptureErrorCode.CaptureFailure, typeof(IOException))]
+    [InlineData(PingCaptureErrorCode.ProtectedContent, typeof(IOException))]
+    [InlineData(PingCaptureErrorCode.NoMicrophone, typeof(InvalidOperationException))]
     public void CreateException_MapsNativeErrorCode(PingCaptureErrorCode code, Type expectedType)
     {
         var exception = NativeCaptureEngine.CreateException((int)code);

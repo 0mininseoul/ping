@@ -1,11 +1,14 @@
 #include "PingCaptureEngine.h"
 
 #include <cmath>
+#include <future>
 
 using namespace Ping::Windows::NativeCapture;
 
 namespace
 {
+    constexpr int CaptureFramesPerSecond = 15;
+
     bool IsValidDuration(int durationMs)
     {
         return durationMs > 0 && durationMs <= 30'000;
@@ -45,26 +48,59 @@ int PingCapture_RecordScreenFaceMp4(
         return PingCaptureEncoderFailure;
     }
 
-    MonitorCaptureResult monitorResult{};
-    int screenResult = CaptureOneMonitorFrame(targetMonitorIndex, monitorResult);
+    std::vector<MonitorCaptureResult> monitorFrames;
+    std::vector<CameraFrameResult> cameraFrames;
+    AudioCaptureResult audio{};
+
+    auto screenCapture = std::async(std::launch::async, [&]
+    {
+        return CaptureMonitorFrames(targetMonitorIndex, durationMs, CaptureFramesPerSecond, monitorFrames);
+    });
+    auto cameraCapture = std::async(std::launch::async, [&]
+    {
+        return CaptureCameraFrames(durationMs, CaptureFramesPerSecond, cameraFrames);
+    });
+    auto audioCapture = std::async(std::launch::async, [&]
+    {
+        return CaptureMicrophonePcm(durationMs, audio);
+    });
+
+    int screenResult = PingCaptureCaptureFailure;
+    int cameraResult = PingCaptureNoCamera;
+    int audioResult = PingCaptureNoMicrophone;
+    try
+    {
+        screenResult = screenCapture.get();
+        cameraResult = cameraCapture.get();
+        audioResult = audioCapture.get();
+    }
+    catch (...)
+    {
+        return PingCaptureCaptureFailure;
+    }
+
     if (screenResult != PingCaptureSuccess)
     {
         return NormalizeCaptureFailure(screenResult);
     }
 
-    int cameraResult = ProbeCameraFrameSource();
     if (cameraResult != PingCaptureSuccess)
     {
         return cameraResult;
     }
 
-    OutputLayout layout = CreateScreenFaceLayout(monitorResult.SourceSize, faceDiameterRatio);
+    if (audioResult != PingCaptureSuccess)
+    {
+        return audioResult;
+    }
+
+    OutputLayout layout = CreateScreenFaceLayout(monitorFrames.front().SourceSize, faceDiameterRatio);
     if (outAspectRatio != nullptr)
     {
         *outAspectRatio = SafeAspectRatio(layout);
     }
 
-    int writerResult = InitializeMp4SinkWriter(outputPath, layout, durationMs);
+    int writerResult = WriteScreenFaceMp4(outputPath, layout, monitorFrames, cameraFrames, audio, durationMs);
     if (writerResult != PingCaptureSuccess)
     {
         DeleteFileW(outputPath);

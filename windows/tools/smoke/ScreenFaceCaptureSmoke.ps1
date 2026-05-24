@@ -4,7 +4,8 @@ param(
     [string]$OutputPath,
     [int]$DurationMs = 3000,
     [int]$MonitorIndex = -1,
-    [double]$FaceDiameterRatio = 0.32
+    [double]$FaceDiameterRatio = 0.32,
+    [switch]$AllowSmallMonitor
 )
 
 $ErrorActionPreference = "Stop"
@@ -89,9 +90,6 @@ try {
     Write-Host "Output path: $OutputPath"
 
     if ($recordCode -ne 0) {
-        if ($recordCode -eq 5) {
-            Write-Warning "The native engine reached the encoder boundary and failed closed with EncoderFailure. Complete Media Foundation sample writing before expecting MP4 output."
-        }
         throw "Screen-face recording failed with native code $recordCode."
     }
 
@@ -102,13 +100,28 @@ try {
 
     Write-Host "MP4 bytes: $($file.Length)"
 
-    $ffprobe = Get-Command ffprobe -ErrorAction SilentlyContinue
-    if ($ffprobe) {
-        $probe = & $ffprobe.Source -v error -show_entries format=duration:stream=width,height -of default=noprint_wrappers=1 "$OutputPath"
-        Write-Host $probe
-    } else {
-        Write-Warning "ffprobe is not installed; manually verify 2.9-3.2s duration, resolution, bottom-right face PIP, Windows Media Player, and macOS QuickTime playback."
+    $ffprobe = Get-Command ffprobe -ErrorAction Stop
+    $probeJson = & $ffprobe.Source -v error -show_entries format=duration -show_entries stream=codec_type,width,height -of json "$OutputPath"
+    $probe = $probeJson | ConvertFrom-Json
+    $duration = [double]$probe.format.duration
+    if ($duration -lt 2.9 -or $duration -gt 3.2) {
+        throw "Expected 2.9-3.2s duration, got $duration seconds."
     }
+
+    $videoStream = @($probe.streams | Where-Object { $_.codec_type -eq "video" } | Select-Object -First 1)[0]
+    if (-not $videoStream) {
+        throw "ffprobe did not find a video stream."
+    }
+
+    $width = [int]$videoStream.width
+    $height = [int]$videoStream.height
+    if ($width -lt 1280 -and -not $AllowSmallMonitor) {
+        throw "Expected video width >= 1280px unless using -AllowSmallMonitor, got ${width}x${height}."
+    }
+
+    Write-Host "Verified duration: $duration"
+    Write-Host "Verified resolution: ${width}x${height}"
+    Write-Warning "Manual check still required: bottom-right face PIP visibility, Windows Media Player playback, and macOS QuickTime playback."
 }
 finally {
     [System.Runtime.InteropServices.NativeLibrary]::Free($library)
