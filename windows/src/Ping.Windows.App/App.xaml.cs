@@ -21,7 +21,6 @@ public partial class App : Application
         coordinator = new AppCoordinator(window);
         coordinator.Start();
         coordinator.HandleInitialNotificationActivation();
-        window.Activate();
     }
 
     private void HandleProcessExit(object? sender, EventArgs args)

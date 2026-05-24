@@ -106,7 +106,6 @@ public sealed class AppCoordinator : IDisposable
         var registrations = RegisterSavedHotkeys();
         tray.AddOrUpdateIcon();
         notificationController.Start();
-        ShowHistory("Starting Ping and preparing your rooms.");
         ShowRegistrationState(registrations);
         MaybeOpenOnboardingAtStartup(registrations);
         _ = BootstrapAndLoadRoomsAsync();
@@ -827,6 +826,10 @@ public sealed class AppCoordinator : IDisposable
         catch (Exception ex)
         {
             mainWindow.HotkeyState.Text = $"Supabase setup blocked: {ex.Message}";
+            ShowBlockedState(
+                "Supabase setup",
+                "Ping could not connect to Supabase. Check your Windows runtime config and network, then retry from onboarding or relaunch Ping.",
+                ex.Message);
         }
     }
 
