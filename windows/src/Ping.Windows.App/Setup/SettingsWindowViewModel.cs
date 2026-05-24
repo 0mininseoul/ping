@@ -34,6 +34,8 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
     private string screenFaceHotkey;
     private string quickSendHotkey;
     private string historyHotkey;
+    private string quickSendOffContent;
+    private string quickSendOnContent;
     private int selectedTabIndex;
 
     public SettingsWindowViewModel(
@@ -58,6 +60,8 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
         screenFaceHotkey = LabelFor("Screen+Face Ping", this.hotkeys, HotkeyCommand.ScreenFacePing);
         quickSendHotkey = LabelFor("Quick Screen+Face Ping", this.hotkeys, HotkeyCommand.QuickScreenFacePing);
         historyHotkey = LabelFor("History", this.hotkeys, HotkeyCommand.History);
+        quickSendOffContent = QuickSendModeText("opens mirror", this.hotkeys);
+        quickSendOnContent = QuickSendModeText("records immediately", this.hotkeys);
         HotkeyRows = new ObservableCollection<HotkeySettingRow>(
             HotkeySettingRow.FromBindings(this.hotkeys));
     }
@@ -137,6 +141,36 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
             }
 
             historyHotkey = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public string QuickSendOffContent
+    {
+        get => quickSendOffContent;
+        private set
+        {
+            if (quickSendOffContent == value)
+            {
+                return;
+            }
+
+            quickSendOffContent = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public string QuickSendOnContent
+    {
+        get => quickSendOnContent;
+        private set
+        {
+            if (quickSendOnContent == value)
+            {
+                return;
+            }
+
+            quickSendOnContent = value;
             OnPropertyChanged();
         }
     }
@@ -285,12 +319,17 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
     private static string LabelFor(string label, IReadOnlyDictionary<HotkeyCommand, HotkeyBinding> hotkeys, HotkeyCommand command) =>
         hotkeys.TryGetValue(command, out var binding) ? $"{label}: {binding}" : $"{label}: Unassigned";
 
+    private static string QuickSendModeText(string action, IReadOnlyDictionary<HotkeyCommand, HotkeyBinding> hotkeys) =>
+        $"{HotkeyStatusText.BindingLabel(hotkeys, HotkeyCommand.QuickScreenFacePing)} {action}";
+
     private void RefreshHotkeyLabels()
     {
         FaceHotkey = LabelFor("Face Ping", hotkeys, HotkeyCommand.FacePing);
         ScreenFaceHotkey = LabelFor("Screen+Face Ping", hotkeys, HotkeyCommand.ScreenFacePing);
         QuickSendHotkey = LabelFor("Quick Screen+Face Ping", hotkeys, HotkeyCommand.QuickScreenFacePing);
         HistoryHotkey = LabelFor("History", hotkeys, HotkeyCommand.History);
+        QuickSendOffContent = QuickSendModeText("opens mirror", hotkeys);
+        QuickSendOnContent = QuickSendModeText("records immediately", hotkeys);
     }
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>

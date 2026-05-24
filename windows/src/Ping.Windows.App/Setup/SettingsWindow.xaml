@@ -33,8 +33,8 @@
                     <ToggleSwitch
                         Header="화면+얼굴 빠른 전송"
                         IsOn="{Binding IsQuickSendEnabled, Mode=TwoWay}"
-                        OffContent="Alt+Shift+L opens mirror"
-                        OnContent="Alt+Shift+L records immediately" />
+                        OffContent="{Binding QuickSendOffContent}"
+                        OnContent="{Binding QuickSendOnContent}" />
                     <ToggleSwitch
                         Header="Start Ping with Windows"
                         IsEnabled="{Binding CanToggleStartup}"

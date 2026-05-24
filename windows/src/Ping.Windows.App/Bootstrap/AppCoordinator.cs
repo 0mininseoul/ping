@@ -254,7 +254,7 @@ public sealed class AppCoordinator : IDisposable
         mainWindow.ShellTitle.Text = "Settings";
         mainWindow.StateBadge.Text = "Settings";
         mainWindow.StateTitle.Text = "Windows quick send";
-        mainWindow.StateDetail.Text = "Configure screen+face quick send for Alt+Shift+L.";
+        mainWindow.StateDetail.Text = QuickSendSettingsDetail(preferencesStore.Load());
         mainWindow.StateBorder.BorderBrush = mainWindow.IdleBorderBrush;
         mainWindow.HistoryPanel.Visibility = Visibility.Collapsed;
         mainWindow.BlockedPanel.Visibility = Visibility.Collapsed;
@@ -382,7 +382,7 @@ public sealed class AppCoordinator : IDisposable
 
         if (failures.Length == 0)
         {
-            mainWindow.HotkeyState.Text = HotkeySummary(preferencesStore.Load());
+            mainWindow.HotkeyState.Text = HotkeyStatusText.Summary(preferencesStore.Load());
             return;
         }
 
@@ -402,20 +402,20 @@ public sealed class AppCoordinator : IDisposable
             .ToDictionary(pair => pair.Key, pair => pair.Value);
         bindings[command] = binding;
         preferencesStore.Save(bindings);
-        mainWindow.HotkeyState.Text = HotkeySummary(bindings);
+        mainWindow.HotkeyState.Text = HotkeyStatusText.Summary(bindings);
+        if (command == HotkeyCommand.QuickScreenFacePing && mainWindow.SettingsPanel.Visibility == Visibility.Visible)
+        {
+            mainWindow.StateDetail.Text = QuickSendSettingsDetail(bindings);
+        }
+
         return result;
     }
 
-    private static string HotkeySummary(IReadOnlyDictionary<HotkeyCommand, HotkeyBinding> bindings) =>
-        $"{BindingLabel(bindings, HotkeyCommand.FacePing)} face, "
-        + $"{BindingLabel(bindings, HotkeyCommand.ScreenFacePing)} screen+face, "
-        + $"{BindingLabel(bindings, HotkeyCommand.QuickScreenFacePing)} quick send, "
-        + $"{BindingLabel(bindings, HotkeyCommand.History)} history";
+    private string HotkeyLabel(HotkeyCommand command) =>
+        HotkeyStatusText.BindingLabel(preferencesStore.Load(), command);
 
-    private static string BindingLabel(IReadOnlyDictionary<HotkeyCommand, HotkeyBinding> bindings, HotkeyCommand command) =>
-        bindings.TryGetValue(command, out var binding)
-            ? binding.ToString()
-            : HotkeyBinding.Defaults()[command].ToString();
+    private static string QuickSendSettingsDetail(IReadOnlyDictionary<HotkeyCommand, HotkeyBinding> bindings) =>
+        $"Configure screen+face quick send for {HotkeyStatusText.BindingLabel(bindings, HotkeyCommand.QuickScreenFacePing)}.";
 
     private void ShowFaceMirror()
     {
@@ -424,7 +424,7 @@ public sealed class AppCoordinator : IDisposable
         {
             ShowBlockedState(
                 "Face Ping",
-                "Alt+P reached Ping. Supabase session is still starting or blocked by missing config.",
+                $"{HotkeyLabel(HotkeyCommand.FacePing)} reached Ping. Supabase session is still starting or blocked by missing config.",
                 "Supabase session not ready.");
             return;
         }
@@ -434,7 +434,7 @@ public sealed class AppCoordinator : IDisposable
         {
             ShowBlockedState(
                 "Face Ping",
-                "Alt+P reached Ping. Create or join a room before sending a face ping.",
+                $"{HotkeyLabel(HotkeyCommand.FacePing)} reached Ping. Create or join a room before sending a face ping.",
                 "No sendable room available.");
             OpenRoomManagerWindow();
             return;
@@ -471,7 +471,7 @@ public sealed class AppCoordinator : IDisposable
         {
             ShowBlockedState(
                 "Screen+Face Ping",
-                "Alt+L reached Ping. Supabase session is still starting or blocked by missing config.",
+                $"{HotkeyLabel(HotkeyCommand.ScreenFacePing)} reached Ping. Supabase session is still starting or blocked by missing config.",
                 "Supabase session not ready.");
             return;
         }
@@ -481,7 +481,7 @@ public sealed class AppCoordinator : IDisposable
         {
             ShowBlockedState(
                 "Screen+Face Ping",
-                "Alt+L reached Ping. Create or join a room before sending a screen+face ping.",
+                $"{HotkeyLabel(HotkeyCommand.ScreenFacePing)} reached Ping. Create or join a room before sending a screen+face ping.",
                 "No sendable room available.");
             OpenRoomManagerWindow();
             return;
@@ -522,7 +522,7 @@ public sealed class AppCoordinator : IDisposable
         {
             ShowBlockedState(
                 "Quick Screen+Face",
-                "Alt+Shift+L reached Ping. Supabase session is still starting or blocked by missing config.",
+                $"{HotkeyLabel(HotkeyCommand.QuickScreenFacePing)} reached Ping. Supabase session is still starting or blocked by missing config.",
                 "Supabase session not ready.");
             return;
         }
@@ -769,10 +769,7 @@ public sealed class AppCoordinator : IDisposable
                 room.Id is not null
                 && room.MemberUids.Contains(uid)
                 && room.MemberUids.Count >= 2);
-            mainWindow.HotkeyState.Text =
-                sendableCount == 0
-                    ? "Alt+P ready, but no sendable room is available."
-                    : $"Alt+P face, Alt+L screen+face, and Alt+Shift+L quick send ready for {sendableCount} room(s).";
+            mainWindow.HotkeyState.Text = HotkeyStatusText.RoomSummary(preferencesStore.Load(), sendableCount);
             StartIncomingPolling();
         }
         catch (Exception ex)
@@ -804,7 +801,7 @@ public sealed class AppCoordinator : IDisposable
         {
             owner.ShowBlockedState(
                 "Rooms and recent pings",
-                "Alt+Shift+L reached Ping, but there is no sendable default room.",
+                $"{owner.HotkeyLabel(HotkeyCommand.QuickScreenFacePing)} reached Ping, but there is no sendable default room.",
                 message);
             owner.OpenRoomManagerWindow();
         }
@@ -814,7 +811,7 @@ public sealed class AppCoordinator : IDisposable
             owner.OpenOnboardingWindow();
             owner.ShowBlockedState(
                 "Screen+Face permissions",
-                $"Alt+Shift+L reached Ping, but {permission} is blocked. The onboarding checks are open.",
+                $"{owner.HotkeyLabel(HotkeyCommand.QuickScreenFacePing)} reached Ping, but {permission} is blocked. The onboarding checks are open.",
                 message);
         }
     }

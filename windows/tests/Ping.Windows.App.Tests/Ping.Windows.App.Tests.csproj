@@ -21,6 +21,7 @@
     <Compile Include="..\..\src\Ping.Windows.App\Onboarding\WindowsVersionProbe.cs" Link="Onboarding\WindowsVersionProbe.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Hotkeys\GlobalHotkeyManager.cs" Link="Hotkeys\GlobalHotkeyManager.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Hotkeys\HotkeyBinding.cs" Link="Hotkeys\HotkeyBinding.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Hotkeys\HotkeyStatusText.cs" Link="Hotkeys\HotkeyStatusText.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Capture\FaceMirrorViewModel.cs" Link="Capture\FaceMirrorViewModel.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Capture\NativeCaptureEngine.cs" Link="Capture\NativeCaptureEngine.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Capture\QuickSendController.cs" Link="Capture\QuickSendController.cs" />

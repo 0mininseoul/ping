@@ -115,6 +115,29 @@ public sealed class SettingsWindowViewModelTests
     }
 
     [Fact]
+    public void ApplyingQuickSendHotkeyRefreshesQuickSendModeCopy()
+    {
+        var viewModel = new SettingsWindowViewModel(
+            "Youngmin",
+            HotkeyBinding.Defaults(),
+            ScreenFaceQuickSendSettings.Default,
+            _ => { },
+            () => { },
+            updateHotkey: (command, binding) => HotkeyRegistrationResult.Success(command, binding));
+        var row = Assert.Single(viewModel.HotkeyRows, row => row.Command == HotkeyCommand.QuickScreenFacePing);
+
+        row.IsControl = true;
+        row.IsAlt = true;
+        row.IsShift = true;
+        row.SelectedKey = "Q";
+        viewModel.ApplyHotkey(row);
+
+        Assert.Equal("Quick Screen+Face Ping: Ctrl+Alt+Shift+Q", viewModel.QuickSendHotkey);
+        Assert.Equal("Ctrl+Alt+Shift+Q opens mirror", viewModel.QuickSendOffContent);
+        Assert.Equal("Ctrl+Alt+Shift+Q records immediately", viewModel.QuickSendOnContent);
+    }
+
+    [Fact]
     public void ApplyingHotkeyRequiresModifier()
     {
         var viewModel = new SettingsWindowViewModel(

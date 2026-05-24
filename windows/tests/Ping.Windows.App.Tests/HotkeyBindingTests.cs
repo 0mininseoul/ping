@@ -93,6 +93,25 @@ public sealed class HotkeyBindingTests
         }
     }
 
+    [Fact]
+    public void Status_text_uses_customized_hotkey_bindings()
+    {
+        var bindings = HotkeyBinding.Defaults()
+            .ToDictionary(pair => pair.Key, pair => pair.Value);
+        bindings[HotkeyCommand.FacePing] = HotkeyBinding.FromParts(HotkeyModifiers.Control | HotkeyModifiers.Shift, "F");
+        bindings[HotkeyCommand.ScreenFacePing] = HotkeyBinding.FromParts(HotkeyModifiers.Control | HotkeyModifiers.Alt, "S");
+        bindings[HotkeyCommand.QuickScreenFacePing] = HotkeyBinding.FromParts(HotkeyModifiers.Control | HotkeyModifiers.Alt | HotkeyModifiers.Shift, "Q");
+
+        var summary = HotkeyStatusText.Summary(bindings);
+        var emptyRoomSummary = HotkeyStatusText.RoomSummary(bindings, sendableRoomCount: 0);
+        var readyRoomSummary = HotkeyStatusText.RoomSummary(bindings, sendableRoomCount: 2);
+
+        Assert.Equal("Ctrl+Shift+F face, Ctrl+Alt+S screen+face, Ctrl+Alt+Shift+Q quick send, Alt+O history", summary);
+        Assert.Equal("Ctrl+Alt+Shift+Q", HotkeyStatusText.BindingLabel(bindings, HotkeyCommand.QuickScreenFacePing));
+        Assert.Equal("Ctrl+Shift+F ready, but no sendable room is available.", emptyRoomSummary);
+        Assert.Equal("Ctrl+Shift+F face, Ctrl+Alt+S screen+face, and Ctrl+Alt+Shift+Q quick send ready for 2 room(s).", readyRoomSummary);
+    }
+
     private sealed class FakeHotkeyRegistrar : IHotkeyRegistrar
     {
         public bool ConflictOnRegister { get; set; }
