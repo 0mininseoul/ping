@@ -9,6 +9,7 @@ public sealed class GlobalHotkeyManager : IDisposable
     private readonly IHotkeyRegistrar registrar;
     private readonly Dictionary<HotkeyCommand, int> commandIds = [];
     private readonly Dictionary<int, HotkeyCommand> idCommands = [];
+    private readonly Dictionary<HotkeyCommand, HotkeyBinding> commandBindings = [];
     private int nextId = 0x5100;
     private bool disposed;
 
@@ -30,6 +31,12 @@ public sealed class GlobalHotkeyManager : IDisposable
     {
         ObjectDisposedException.ThrowIf(disposed, this);
 
+        if (commandBindings.TryGetValue(command, out var existingBinding)
+            && existingBinding == binding)
+        {
+            return HotkeyRegistrationResult.Success(command, binding);
+        }
+
         var id = nextId++;
         var registrarResult = registrar.Register(id, binding);
         if (registrarResult.Status == HotkeyRegistrarStatus.Success)
@@ -42,6 +49,7 @@ public sealed class GlobalHotkeyManager : IDisposable
 
             commandIds[command] = id;
             idCommands[id] = command;
+            commandBindings[command] = binding;
             return HotkeyRegistrationResult.Success(command, binding);
         }
 
@@ -59,6 +67,7 @@ public sealed class GlobalHotkeyManager : IDisposable
 
         commandIds.Clear();
         idCommands.Clear();
+        commandBindings.Clear();
     }
 
     public void Dispose()

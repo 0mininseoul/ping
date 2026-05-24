@@ -65,6 +65,22 @@ public sealed class HotkeyBindingTests
     }
 
     [Fact]
+    public void RebindingSameCommandToSameHotkeyIsNoopSuccess()
+    {
+        using var registrar = new FakeHotkeyRegistrar();
+        using var manager = new GlobalHotkeyManager(registrar);
+
+        var first = manager.Register(HotkeyCommand.FacePing, HotkeyBinding.Alt("P"));
+        var second = manager.Register(HotkeyCommand.FacePing, HotkeyBinding.Alt("P"));
+
+        Assert.Equal(HotkeyRegistrationStatus.Success, first.Status);
+        Assert.Equal(HotkeyRegistrationStatus.Success, second.Status);
+        Assert.Equal(1, registrar.RegisterCallCount);
+        Assert.Single(registrar.RegisteredIds);
+        Assert.Empty(registrar.UnregisteredIds);
+    }
+
+    [Fact]
     public void Preferences_round_trip_under_local_app_data_shape()
     {
         var root = Path.Combine(Path.GetTempPath(), "PingHotkeyTests", Guid.NewGuid().ToString("N"));
@@ -212,6 +228,7 @@ public sealed class HotkeyBindingTests
         public bool ConflictOnRegister { get; set; }
         public HashSet<int> RegisteredIds { get; } = [];
         public List<int> UnregisteredIds { get; } = [];
+        public int RegisterCallCount { get; private set; }
 
         public event EventHandler<int>? HotkeyPressed
         {
@@ -221,6 +238,7 @@ public sealed class HotkeyBindingTests
 
         public HotkeyRegistrarResult Register(int id, HotkeyBinding binding)
         {
+            RegisterCallCount += 1;
             if (ConflictOnRegister)
             {
                 return HotkeyRegistrarResult.Conflict("Hotkey is already registered by another app.");
