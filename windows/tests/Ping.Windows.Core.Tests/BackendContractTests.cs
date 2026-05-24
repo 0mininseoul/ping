@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Net;
 using Ping.Windows.Core.Backend;
 using Ping.Windows.Core.Models;
 using Xunit;
@@ -54,6 +55,136 @@ public sealed class BackendContractTests
         Assert.Equal(CaptureMode.ScreenFace, message.CaptureMode);
         Assert.Equal(1.7777778, message.AspectRatio);
         Assert.True(message.AllowsLocalSave);
+    }
+
+    [Theory]
+    [InlineData("\"seen\"", MessageStatus.Seen)]
+    public void MessageStatusDecodesMacOSWireValues(string payload, MessageStatus expected)
+    {
+        Assert.Equal(expected, JsonSerializer.Deserialize<MessageStatus>(payload, JsonOptions.Supabase));
+    }
+
+    [Theory]
+    [InlineData("\"open\"", RoomStatus.Open)]
+    [InlineData("\"full\"", RoomStatus.Full)]
+    public void RoomStatusDecodesMacOSWireValues(string payload, RoomStatus expected)
+    {
+        Assert.Equal(expected, JsonSerializer.Deserialize<RoomStatus>(payload, JsonOptions.Supabase));
+    }
+
+    [Fact]
+    public async Task BootstrapWithoutSessionPostsAnonymousSignupAndSavesSession()
+    {
+        using var files = new SupabaseTestFiles();
+        var handler = new RecordingHttpMessageHandler(request =>
+        {
+            Assert.Equal(HttpMethod.Post, request.Method);
+            Assert.Equal("https://example.supabase.co/auth/v1/signup", request.RequestUri?.ToString());
+            Assert.Equal("anon-key", request.Headers.GetValues("apikey").Single());
+            Assert.Equal("Bearer", request.Headers.Authorization?.Scheme);
+            Assert.Equal("anon-key", request.Headers.Authorization?.Parameter);
+
+            return JsonResponse("""
+                {
+                  "access_token": "access-token",
+                  "refresh_token": "refresh-token",
+                  "expires_in": 3600,
+                  "user": { "id": "user-id" }
+                }
+                """);
+        });
+        using var client = files.CreateClient(handler);
+
+        var uid = await client.BootstrapAsync();
+
+        Assert.Equal("user-id", uid);
+        Assert.Single(handler.Requests);
+        var saved = JsonSerializer.Deserialize<SupabaseSession>(await File.ReadAllTextAsync(files.SessionPath), JsonOptions.Supabase);
+        Assert.Equal("access-token", saved?.AccessToken);
+        Assert.Equal("refresh-token", saved?.RefreshToken);
+        Assert.Equal("user-id", saved?.UserId);
+    }
+
+    [Fact]
+    public async Task RpcValueUsesSavedAccessTokenAndJsonBody()
+    {
+        using var files = new SupabaseTestFiles();
+        await files.SaveSessionAsync(new SupabaseSession(
+            AccessToken: "access-token",
+            RefreshToken: "refresh-token",
+            ExpiresAt: DateTimeOffset.UtcNow.AddHours(1),
+            UserId: "user-id"));
+        var handler = new RecordingHttpMessageHandler(request =>
+        {
+            Assert.Equal(HttpMethod.Post, request.Method);
+            Assert.Equal("https://example.supabase.co/rest/v1/rpc/ping_test", request.RequestUri?.ToString());
+            Assert.Equal("anon-key", request.Headers.GetValues("apikey").Single());
+            Assert.Equal("Bearer", request.Headers.Authorization?.Scheme);
+            Assert.Equal("access-token", request.Headers.Authorization?.Parameter);
+            Assert.Equal("application/json", request.Content?.Headers.ContentType?.MediaType);
+
+            var body = request.Content?.ReadAsStringAsync().GetAwaiter().GetResult();
+            Assert.Equal("""{"room_uuid":"room-id"}""", body);
+            return JsonResponse("\"ok\"");
+        });
+        using var client = files.CreateClient(handler);
+
+        var value = await client.RpcValueAsync<string>("ping_test", new { room_uuid = "room-id" });
+
+        Assert.Equal("ok", value);
+        Assert.Single(handler.Requests);
+    }
+
+    [Fact]
+    public async Task UploadObjectPostsPrivateStorageObjectWithMp4Contract()
+    {
+        using var files = new SupabaseTestFiles();
+        await files.SaveSessionAsync(new SupabaseSession(
+            AccessToken: "access-token",
+            RefreshToken: "refresh-token",
+            ExpiresAt: DateTimeOffset.UtcNow.AddHours(1),
+            UserId: "user-id"));
+        var localVideoPath = Path.Combine(files.DirectoryPath, "clip.mp4");
+        await File.WriteAllBytesAsync(localVideoPath, [0x00, 0x01, 0x02]);
+        var handler = new RecordingHttpMessageHandler(request =>
+        {
+            Assert.Equal(HttpMethod.Post, request.Method);
+            Assert.Equal(
+                "https://example.supabase.co/storage/v1/object/ping-videos/sender%20uid/video%20id.mp4",
+                request.RequestUri?.ToString());
+            Assert.Equal("true", request.Headers.GetValues("x-upsert").Single());
+            Assert.Equal("video/mp4", request.Content?.Headers.ContentType?.MediaType);
+            return JsonResponse("{}");
+        });
+        using var client = files.CreateClient(handler);
+
+        await client.UploadObjectAsync("ping-videos", "sender uid/video id.mp4", localVideoPath, "video/mp4");
+
+        Assert.Single(handler.Requests);
+    }
+
+    [Fact]
+    public async Task ExpiredStoredSessionRefreshFailureThrowsDomainExceptionWithoutSignup()
+    {
+        using var files = new SupabaseTestFiles();
+        await files.SaveSessionAsync(new SupabaseSession(
+            AccessToken: "old-access-token",
+            RefreshToken: "expired-refresh-token",
+            ExpiresAt: DateTimeOffset.UtcNow.AddMinutes(-5),
+            UserId: "user-id"));
+        var handler = new RecordingHttpMessageHandler(request =>
+        {
+            Assert.Equal("https://example.supabase.co/auth/v1/token?grant_type=refresh_token", request.RequestUri?.ToString());
+            return JsonResponse("""{"message":"Invalid Refresh Token"}""", HttpStatusCode.Unauthorized);
+        });
+        using var client = files.CreateClient(handler);
+
+        var exception = await Assert.ThrowsAsync<SupabaseSessionExpiredException>(
+            () => client.BootstrapAsync());
+
+        Assert.Equal("user-id", exception.UserId);
+        Assert.Single(handler.Requests);
+        Assert.DoesNotContain(handler.Requests, request => request.RequestUri?.AbsolutePath.EndsWith("/signup", StringComparison.Ordinal) == true);
     }
 
     [Fact]
@@ -135,6 +266,65 @@ public sealed class BackendContractTests
             Assert.Equal("shared-video-id", videoId);
             Assert.Equal(new[] { "receiver-uid" }, authorizedReceiverUids);
             return Task.FromResult(storagePath);
+        }
+    }
+
+    private static HttpResponseMessage JsonResponse(string json, HttpStatusCode statusCode = HttpStatusCode.OK)
+    {
+        return new HttpResponseMessage(statusCode)
+        {
+            Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+        };
+    }
+
+    private sealed class RecordingHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> responder) : HttpMessageHandler
+    {
+        public List<HttpRequestMessage> Requests { get; } = [];
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Requests.Add(request);
+            return Task.FromResult(responder(request));
+        }
+    }
+
+    private sealed class SupabaseTestFiles : IDisposable
+    {
+        public SupabaseTestFiles()
+        {
+            DirectoryPath = Path.Combine(Path.GetTempPath(), "PingWindowsTests", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(DirectoryPath);
+            ConfigPath = Path.Combine(DirectoryPath, "Supabase.json");
+            SessionPath = Path.Combine(DirectoryPath, "SupabaseSession.json");
+            File.WriteAllText(
+                ConfigPath,
+                """
+                {
+                  "SUPABASE_URL": "https://example.supabase.co",
+                  "SUPABASE_ANON_KEY": "anon-key"
+                }
+                """);
+        }
+
+        public string DirectoryPath { get; }
+
+        public string ConfigPath { get; }
+
+        public string SessionPath { get; }
+
+        public SupabaseClient CreateClient(HttpMessageHandler handler)
+        {
+            return new SupabaseClient(new HttpClient(handler), ConfigPath, SessionPath);
+        }
+
+        public async Task SaveSessionAsync(SupabaseSession session)
+        {
+            await File.WriteAllTextAsync(SessionPath, JsonSerializer.Serialize(session, JsonOptions.Supabase));
+        }
+
+        public void Dispose()
+        {
+            Directory.Delete(DirectoryPath, recursive: true);
         }
     }
 }

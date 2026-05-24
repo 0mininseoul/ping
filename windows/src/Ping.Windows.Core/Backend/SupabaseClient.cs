@@ -141,7 +141,14 @@ public sealed class SupabaseClient : ISupabaseRpcClient, IDisposable
             }
             else if (session.NeedsRefresh)
             {
-                authenticated = await RefreshSessionAsync(session.RefreshToken, cancellationToken).ConfigureAwait(false);
+                try
+                {
+                    authenticated = await RefreshSessionAsync(session.RefreshToken, cancellationToken).ConfigureAwait(false);
+                }
+                catch (HttpRequestException ex)
+                {
+                    throw new SupabaseSessionExpiredException(session.UserId, ex);
+                }
             }
             else
             {
@@ -325,13 +332,13 @@ public sealed record SupabaseConfiguration
     public string AnonKey { get; private init; } = string.Empty;
 
     [JsonIgnore]
-    public Uri AuthUrl => new($"{Url}/auth/v1");
+    public Uri AuthUrl => new(Url, "auth/v1");
 
     [JsonIgnore]
-    public Uri RestUrl => new($"{Url}/rest/v1");
+    public Uri RestUrl => new(Url, "rest/v1");
 
     [JsonIgnore]
-    public Uri StorageUrl => new($"{Url}/storage/v1");
+    public Uri StorageUrl => new(Url, "storage/v1");
 
     public SupabaseConfiguration Normalize()
     {
