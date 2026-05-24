@@ -148,6 +148,28 @@ public sealed class ScreenFaceMirrorViewModelTests
         Assert.NotNull(sentInput);
     }
 
+    [Fact]
+    public async Task LoadPreviewFailureClearsStalePreview()
+    {
+        var engine = new FailingAfterFirstPreviewEngine();
+        var model = new ScreenFaceMirrorViewModel(
+            MultiRoomContext(),
+            engine,
+            (_, _) => Task.CompletedTask);
+
+        await model.LoadPreviewAsync();
+        var firstPreviewPath = engine.FirstPreviewPath;
+
+        Assert.NotNull(model.ScreenPreviewUri);
+        Assert.True(File.Exists(firstPreviewPath));
+
+        await model.LoadPreviewAsync();
+
+        Assert.Null(model.ScreenPreviewUri);
+        Assert.False(File.Exists(firstPreviewPath));
+        Assert.Contains("Preview unavailable", model.StatusMessage, StringComparison.Ordinal);
+    }
+
     private static ScreenFaceMirrorContext MultiRoomContext() =>
         new(
             Rooms:
@@ -254,5 +276,48 @@ public sealed class ScreenFaceMirrorViewModelTests
                 "screen-face.mp4");
             recording.SetResult(new ScreenFaceCaptureResult(uniquePath, 16.0 / 9.0));
         }
+    }
+
+    private sealed class FailingAfterFirstPreviewEngine : IScreenFaceCaptureEngine
+    {
+        private bool hasReturnedPreview;
+
+        public string FirstPreviewPath { get; private set; } = string.Empty;
+
+        public Task<ScreenFaceCaptureResult> RecordAsync(
+            TimeSpan duration,
+            int monitorIndex,
+            CancellationToken cancellationToken)
+        {
+            _ = duration;
+            _ = monitorIndex;
+            _ = cancellationToken;
+            return Task.FromResult(new ScreenFaceCaptureResult(
+                Path.Combine(Path.GetTempPath(), "screen-face.mp4"),
+                16.0 / 9.0));
+        }
+
+        public Task<ScreenFacePreviewResult> CapturePreviewAsync(int monitorIndex, CancellationToken cancellationToken)
+        {
+            _ = monitorIndex;
+            _ = cancellationToken;
+            if (hasReturnedPreview)
+            {
+                throw new InvalidOperationException("capture failed");
+            }
+
+            hasReturnedPreview = true;
+            var directory = Path.Combine(
+                Path.GetTempPath(),
+                "PingScreenFaceMirrorPreviewTests",
+                Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(directory);
+            FirstPreviewPath = Path.Combine(directory, "preview.bmp");
+            File.WriteAllBytes(FirstPreviewPath, [0x01, 0x02]);
+            return Task.FromResult(new ScreenFacePreviewResult(FirstPreviewPath, 16.0 / 9.0));
+        }
+
+        public Task<ScreenCaptureSelfTestResult> SelfTestAsync() =>
+            Task.FromResult(new ScreenCaptureSelfTestResult(true, PingCaptureErrorCode.Success, "ok"));
     }
 }

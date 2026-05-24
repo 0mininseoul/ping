@@ -282,6 +282,7 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            DisposePreview();
             StatusMessage = $"Preview unavailable. Press Enter to record. {ex.Message}";
         }
     }
