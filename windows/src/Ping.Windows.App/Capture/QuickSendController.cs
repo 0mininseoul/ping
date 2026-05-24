@@ -350,7 +350,8 @@ public sealed class QuickSendController
             context.SenderNickname,
             context.PartnerLabel,
             context.AllowsLocalSave,
-            context.SaveSentCopy);
+            context.SaveSentCopy,
+            InitialPosition: context.MirrorPosition);
 
     private static async Task RunRecordingCountdownAsync(
         IQuickSendHudSession hud,

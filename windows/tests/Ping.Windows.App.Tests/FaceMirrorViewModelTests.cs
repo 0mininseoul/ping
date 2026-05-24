@@ -39,6 +39,48 @@ public sealed class FaceMirrorViewModelTests
     }
 
     [Fact]
+    public async Task Enter_UsesInitialMirrorPositionWhenWindowHasNotMoved()
+    {
+        SendVideoInput? sentInput = null;
+        var model = new FaceMirrorViewModel(
+            FaceMirrorContextFor(saveSentCopy: false) with
+            {
+                InitialPosition = new MirrorPosition(0.8, 0.2)
+            },
+            new FakeFaceRecorder(),
+            (input, _) =>
+            {
+                sentInput = input;
+                return Task.CompletedTask;
+            });
+
+        await model.HandleEnterAsync();
+
+        Assert.NotNull(sentInput);
+        Assert.Equal(0.8, sentInput!.MirrorPosition.XRatio, precision: 6);
+        Assert.Equal(0.2, sentInput.MirrorPosition.YRatio, precision: 6);
+    }
+
+    [Fact]
+    public void UpdateMirrorPosition_SavesLatestPlacement()
+    {
+        MirrorPosition? saved = null;
+        var model = new FaceMirrorViewModel(
+            FaceMirrorContextFor(saveSentCopy: false) with
+            {
+                SaveMirrorPosition = position => saved = position
+            },
+            new FakeFaceRecorder(),
+            (_, _) => Task.CompletedTask);
+
+        model.UpdateMirrorPosition(80, 20, 100, 100);
+
+        Assert.NotNull(saved);
+        Assert.Equal(0.8, saved!.XRatio, precision: 6);
+        Assert.Equal(0.2, saved.YRatio, precision: 6);
+    }
+
+    [Fact]
     public async Task Enter_ShowsRecordingCountdownWhileRecorderRuns()
     {
         var recorder = new BlockingFaceRecorder();

@@ -48,13 +48,16 @@ public sealed class QuickSendStateTests
             return Task.CompletedTask;
         });
 
-        var outcome = await controller.ExecuteAsync(ContextWith());
+        var outcome = await controller.ExecuteAsync(ContextWith(
+            mirrorPosition: new MirrorPosition(0.2, 0.8)));
 
         Assert.Equal(QuickSendOutcome.StartedRecording, outcome);
         Assert.True(controller.CaptureEngine.RecordWasCalled);
         Assert.NotNull(sent);
         Assert.Equal(CaptureMode.ScreenFace, sent!.CaptureMode);
         Assert.Equal(controller.CaptureEngine.Result.AspectRatio, sent.AspectRatio);
+        Assert.Equal(0.2, sent.MirrorPosition.XRatio, precision: 6);
+        Assert.Equal(0.8, sent.MirrorPosition.YRatio, precision: 6);
     }
 
     [Fact]
@@ -108,6 +111,23 @@ public sealed class QuickSendStateTests
     }
 
     [Fact]
+    public async Task DisabledQuickSend_OpensScreenFaceMirrorAtContextPosition()
+    {
+        var presenter = new FakeQuickSendPresenter();
+        var controller = CreateController(
+            presenter: presenter,
+            preferences: new ScreenFaceQuickSendPreferences(IsEnabled: false));
+
+        var outcome = await controller.ExecuteAsync(ContextWith(
+            mirrorPosition: new MirrorPosition(0.25, 0.75)));
+
+        Assert.Equal(QuickSendOutcome.OpenedMirror, outcome);
+        Assert.NotNull(presenter.OpenedMirrorContext?.InitialPosition);
+        Assert.Equal(0.25, presenter.OpenedMirrorContext!.InitialPosition!.XRatio, precision: 6);
+        Assert.Equal(0.75, presenter.OpenedMirrorContext.InitialPosition.YRatio, precision: 6);
+    }
+
+    [Fact]
     public void FailedHudMessage_AllowsEnterRetry()
     {
         var viewModel = new QuickSendHudViewModel(new QuickSendHudContext("Main", "화면+얼굴"));
@@ -150,7 +170,8 @@ public sealed class QuickSendStateTests
     private static QuickSendContext ContextWith(
         IReadOnlyCollection<Room>? rooms = null,
         QuickSendPreconditions? preconditions = null,
-        string? defaultRoomId = null) =>
+        string? defaultRoomId = null,
+        MirrorPosition? mirrorPosition = null) =>
         new(
             Rooms: rooms ?? [SendableRoom()],
             SenderUid: "sender",
@@ -158,7 +179,7 @@ public sealed class QuickSendStateTests
             PartnerLabel: "Receiver",
             AllowsLocalSave: false,
             SaveSentCopy: false,
-            MirrorPosition: new MirrorPosition(0.5, 0.5),
+            MirrorPosition: mirrorPosition ?? new MirrorPosition(0.5, 0.5),
             Preconditions: preconditions ?? QuickSendPreconditions.Ready(),
             DefaultRoomId: defaultRoomId);
 
@@ -230,6 +251,8 @@ public sealed class QuickSendStateTests
 
         public QuickSendPermissionKind? BlockedPermission { get; private set; }
 
+        public ScreenFaceMirrorContext? OpenedMirrorContext { get; private set; }
+
         public IQuickSendHudSession ShowHud(QuickSendHudContext context)
         {
             LastAction = QuickSendPresenterAction.Hud;
@@ -239,6 +262,7 @@ public sealed class QuickSendStateTests
         public void OpenScreenFaceMirror(ScreenFaceMirrorContext context)
         {
             LastAction = QuickSendPresenterAction.ScreenFaceMirror;
+            OpenedMirrorContext = context;
         }
 
         public void ShowRoomBlocked(string message)

@@ -31,7 +31,9 @@ public sealed record FaceMirrorContext(
     string SenderNickname,
     string PartnerLabel,
     bool AllowsLocalSave,
-    bool SaveSentCopy);
+    bool SaveSentCopy,
+    MirrorPosition? InitialPosition = null,
+    Action<MirrorPosition>? SaveMirrorPosition = null);
 
 public interface IFaceRecorder
 {
@@ -88,6 +90,7 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
         this.archive = archive;
         targetSelector = new MirrorTargetSelector(context.Rooms, context.PartnerLabel);
         partnerLabel = targetSelector.Label;
+        mirrorPosition = NormalizePosition(context.InitialPosition) ?? mirrorPosition;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -176,6 +179,8 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
 
     public IReadOnlyList<MirrorTargetOption> TargetOptions => targetSelector.Options;
 
+    public MirrorPosition MirrorPosition => mirrorPosition;
+
     public IFaceRecorder Recorder => recorder;
 
     public bool CanRecord => State is MirrorState.Idle or MirrorState.Failed;
@@ -223,12 +228,16 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
         if (displayWidth <= 0 || displayHeight <= 0)
         {
             mirrorPosition = new MirrorPosition(0.5, 0.5);
+            OnPropertyChanged(nameof(MirrorPosition));
+            context.SaveMirrorPosition?.Invoke(mirrorPosition);
             return;
         }
 
         mirrorPosition = new MirrorPosition(
             ClampRatio(centerX / displayWidth),
             ClampRatio(centerY / displayHeight));
+        OnPropertyChanged(nameof(MirrorPosition));
+        context.SaveMirrorPosition?.Invoke(mirrorPosition);
     }
 
     public async Task HandleEnterAsync()
@@ -388,6 +397,13 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
 
         return Math.Max(0, Math.Min(1, value));
     }
+
+    private static MirrorPosition? NormalizePosition(MirrorPosition? position) =>
+        position is null
+            ? null
+            : new MirrorPosition(
+                ClampRatio(position.XRatio),
+                ClampRatio(position.YRatio));
 
     private static void TryDeleteTemporaryRecording(string path)
     {
@@ -550,6 +566,7 @@ public sealed partial class FaceMirrorWindow : Window
         appWindow.Resize(new Windows.Graphics.SizeInt32(260, 270));
         appWindow.TitleBar.ExtendsContentIntoTitleBar = true;
         appWindow.SetPresenter(AppWindowPresenterKind.CompactOverlay);
+        MoveToMirrorPosition(viewModel.MirrorPosition);
         UpdatePositionFromWindow();
         appWindow.Changed += (_, args) =>
         {
@@ -596,6 +613,33 @@ public sealed partial class FaceMirrorWindow : Window
             position.Y + size.Height / 2d - workArea.Y,
             workArea.Width,
             workArea.Height);
+    }
+
+    private void MoveToMirrorPosition(MirrorPosition position)
+    {
+        if (appWindow is null)
+        {
+            return;
+        }
+
+        var area = DisplayArea.GetFromWindowId(appWindow.Id, DisplayAreaFallback.Primary);
+        var workArea = area.WorkArea;
+        var size = appWindow.Size;
+        var left = workArea.X + (int)Math.Round(workArea.Width * position.XRatio) - size.Width / 2;
+        var top = workArea.Y + (int)Math.Round(workArea.Height * position.YRatio) - size.Height / 2;
+        appWindow.Move(new Windows.Graphics.PointInt32(
+            ClampWindowCoordinate(left, workArea.X, workArea.X + workArea.Width - size.Width),
+            ClampWindowCoordinate(top, workArea.Y, workArea.Y + workArea.Height - size.Height)));
+    }
+
+    private static int ClampWindowCoordinate(int value, int min, int max)
+    {
+        if (max < min)
+        {
+            return min;
+        }
+
+        return Math.Max(min, Math.Min(max, value));
     }
 
     private async void HandleClosed(object sender, WindowEventArgs args)

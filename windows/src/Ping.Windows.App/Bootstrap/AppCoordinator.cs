@@ -37,6 +37,7 @@ public sealed class AppCoordinator : IDisposable
     private readonly QuickSendController quickSendController;
     private readonly PermissionProbe permissionProbe;
     private readonly ScreenFaceQuickSendSettingsStore quickSendSettingsStore;
+    private readonly MirrorPlacementStore mirrorPlacementStore;
     private IReadOnlyCollection<Room> rooms = [];
     private string? currentUid;
     private string? remoteDefaultRoomId;
@@ -93,6 +94,7 @@ public sealed class AppCoordinator : IDisposable
             hotkeyBindingsProvider: preferencesStore.Load,
             activeHotkeyRegistrationsProvider: () => lastHotkeyRegistrations);
         quickSendSettingsStore = new ScreenFaceQuickSendSettingsStore();
+        mirrorPlacementStore = new MirrorPlacementStore();
         quickSendSettings = quickSendSettingsStore.Load();
         quickSendController = new QuickSendController(
             screenFaceCaptureEngine,
@@ -491,7 +493,9 @@ public sealed class AppCoordinator : IDisposable
             SenderNickname: Environment.UserName,
             PartnerLabel: sendableRooms.Length == 1 ? sendableRooms[0].Name : "All rooms",
             AllowsLocalSave: quickSendSettings.Preferences.AllowsLocalSave,
-            SaveSentCopy: quickSendSettings.Preferences.SaveSentCopy);
+            SaveSentCopy: quickSendSettings.Preferences.SaveSentCopy,
+            InitialPosition: mirrorPlacementStore.Load(CaptureMode.FaceOnly),
+            SaveMirrorPosition: position => mirrorPlacementStore.Save(CaptureMode.FaceOnly, position));
         var viewModel = new FaceMirrorViewModel(
             context,
             new FaceRecorder(),
@@ -532,7 +536,9 @@ public sealed class AppCoordinator : IDisposable
             SenderNickname: Environment.UserName,
             PartnerLabel: PartnerLabelFor(sendableRooms),
             AllowsLocalSave: quickSendSettings.Preferences.AllowsLocalSave,
-            SaveSentCopy: quickSendSettings.Preferences.SaveSentCopy));
+            SaveSentCopy: quickSendSettings.Preferences.SaveSentCopy,
+            InitialPosition: mirrorPlacementStore.Load(CaptureMode.ScreenFace),
+            SaveMirrorPosition: position => mirrorPlacementStore.Save(CaptureMode.ScreenFace, position)));
     }
 
     private void ShowScreenFaceMirror(ScreenFaceMirrorContext context)
@@ -542,6 +548,13 @@ public sealed class AppCoordinator : IDisposable
             screenFaceMirrorWindow.Activate();
             return;
         }
+
+        context = context with
+        {
+            InitialPosition = context.InitialPosition ?? mirrorPlacementStore.Load(CaptureMode.ScreenFace),
+            SaveMirrorPosition = context.SaveMirrorPosition
+                ?? (position => mirrorPlacementStore.Save(CaptureMode.ScreenFace, position))
+        };
 
         var viewModel = new ScreenFaceMirrorViewModel(
             context,
@@ -584,7 +597,7 @@ public sealed class AppCoordinator : IDisposable
                 PartnerLabel: defaultRoom?.Name ?? "Default room",
                 AllowsLocalSave: quickSendSettings.Preferences.AllowsLocalSave,
                 SaveSentCopy: quickSendSettings.Preferences.SaveSentCopy,
-                MirrorPosition: new MirrorPosition(0.5, 0.5),
+                MirrorPosition: mirrorPlacementStore.Load(CaptureMode.ScreenFace),
                 Preconditions: preconditions,
                 DefaultRoomId: defaultRoom?.Id);
             _ = await quickSendController.ExecuteAsync(context, cancellation.Token);

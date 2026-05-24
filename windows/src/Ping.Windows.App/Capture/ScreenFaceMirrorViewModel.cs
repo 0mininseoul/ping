@@ -23,7 +23,9 @@ public sealed record ScreenFaceMirrorContext(
     string PartnerLabel,
     bool AllowsLocalSave,
     bool SaveSentCopy,
-    int MonitorIndex = MonitorTargetResolver.DefaultMonitorIndex);
+    int MonitorIndex = MonitorTargetResolver.DefaultMonitorIndex,
+    MirrorPosition? InitialPosition = null,
+    Action<MirrorPosition>? SaveMirrorPosition = null);
 
 public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
 {
@@ -69,6 +71,7 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
         targetSelector = new MirrorTargetSelector(context.Rooms, context.PartnerLabel);
         partnerLabel = targetSelector.Label;
         monitorIndex = context.MonitorIndex;
+        mirrorPosition = NormalizePosition(context.InitialPosition) ?? mirrorPosition;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -157,6 +160,8 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
 
     public IReadOnlyList<MirrorTargetOption> TargetOptions => targetSelector.Options;
 
+    public MirrorPosition MirrorPosition => mirrorPosition;
+
     public int MonitorIndex => monitorIndex;
 
     public Uri? ScreenPreviewUri
@@ -230,12 +235,16 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
         if (displayWidth <= 0 || displayHeight <= 0)
         {
             mirrorPosition = new MirrorPosition(0.5, 0.5);
+            OnPropertyChanged(nameof(MirrorPosition));
+            context.SaveMirrorPosition?.Invoke(mirrorPosition);
             return;
         }
 
         mirrorPosition = new MirrorPosition(
             ClampRatio(centerX / displayWidth),
             ClampRatio(centerY / displayHeight));
+        OnPropertyChanged(nameof(MirrorPosition));
+        context.SaveMirrorPosition?.Invoke(mirrorPosition);
     }
 
     public async Task LoadPreviewAsync(CancellationToken cancellationToken = default)
@@ -436,6 +445,13 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
         return Math.Max(0, Math.Min(1, value));
     }
 
+    private static MirrorPosition? NormalizePosition(MirrorPosition? position) =>
+        position is null
+            ? null
+            : new MirrorPosition(
+                ClampRatio(position.XRatio),
+                ClampRatio(position.YRatio));
+
     private static void TryDeleteTemporaryRecording(string path)
     {
         try
@@ -619,6 +635,7 @@ public sealed partial class ScreenFaceMirrorWindow : Window
         appWindow.Resize(new Windows.Graphics.SizeInt32(390, 300));
         appWindow.TitleBar.ExtendsContentIntoTitleBar = true;
         appWindow.SetPresenter(AppWindowPresenterKind.CompactOverlay);
+        MoveToMirrorPosition(viewModel.MirrorPosition);
         UpdatePositionFromWindow();
         appWindow.Changed += (_, args) =>
         {
@@ -646,6 +663,33 @@ public sealed partial class ScreenFaceMirrorWindow : Window
             workArea.Width,
             workArea.Height);
         viewModel.UpdateCaptureMonitor(MonitorTargetResolver.ResolveIndexForWindow(windowHandle));
+    }
+
+    private void MoveToMirrorPosition(MirrorPosition position)
+    {
+        if (appWindow is null)
+        {
+            return;
+        }
+
+        var area = DisplayArea.GetFromWindowId(appWindow.Id, DisplayAreaFallback.Primary);
+        var workArea = area.WorkArea;
+        var size = appWindow.Size;
+        var left = workArea.X + (int)Math.Round(workArea.Width * position.XRatio) - size.Width / 2;
+        var top = workArea.Y + (int)Math.Round(workArea.Height * position.YRatio) - size.Height / 2;
+        appWindow.Move(new Windows.Graphics.PointInt32(
+            ClampWindowCoordinate(left, workArea.X, workArea.X + workArea.Width - size.Width),
+            ClampWindowCoordinate(top, workArea.Y, workArea.Y + workArea.Height - size.Height)));
+    }
+
+    private static int ClampWindowCoordinate(int value, int min, int max)
+    {
+        if (max < min)
+        {
+            return min;
+        }
+
+        return Math.Max(min, Math.Min(max, value));
     }
 
     private async Task StartPreviewAsync()
