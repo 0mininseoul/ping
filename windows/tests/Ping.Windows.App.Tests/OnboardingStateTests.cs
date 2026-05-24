@@ -1,3 +1,4 @@
+using Ping.Windows.App.Hotkeys;
 using Ping.Windows.App.Onboarding;
 using Ping.Windows.App.Setup;
 using Xunit;
@@ -94,6 +95,27 @@ public sealed class OnboardingStateTests
         Assert.Equal(OnboardingActionKind.OpenFolder, row.PrimaryAction?.Kind);
         Assert.Equal("Open config folder", row.PrimaryAction?.Label);
         Assert.True(row.CanRetry);
+    }
+
+    [Fact]
+    public void StartupPolicy_opens_onboarding_for_missing_config_or_hotkey_conflicts()
+    {
+        Assert.True(OnboardingStartupPolicy.ShouldOpen(
+            WindowsSupportStatus.Supported,
+            isSupabaseConfigured: false,
+            [HotkeyRegistrationResult.Success(HotkeyCommand.FacePing, HotkeyBinding.Alt("P"))]));
+        Assert.True(OnboardingStartupPolicy.ShouldOpen(
+            WindowsSupportStatus.Supported,
+            isSupabaseConfigured: true,
+            [HotkeyRegistrationResult.Conflict(HotkeyCommand.FacePing, HotkeyBinding.Alt("P"), "used")]));
+        Assert.True(OnboardingStartupPolicy.ShouldOpen(
+            WindowsSupportStatus.UnsupportedOldWindows11,
+            isSupabaseConfigured: true,
+            [HotkeyRegistrationResult.Success(HotkeyCommand.FacePing, HotkeyBinding.Alt("P"))]));
+        Assert.False(OnboardingStartupPolicy.ShouldOpen(
+            WindowsSupportStatus.Supported,
+            isSupabaseConfigured: true,
+            [HotkeyRegistrationResult.Success(HotkeyCommand.FacePing, HotkeyBinding.Alt("P"))]));
     }
 
     [Fact]

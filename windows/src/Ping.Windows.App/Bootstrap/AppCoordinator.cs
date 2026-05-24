@@ -103,6 +103,7 @@ public sealed class AppCoordinator : IDisposable
         notificationController.Start();
         ShowHistory("Ping is running. Capture commands are wired and waiting for the capture windows.");
         ShowRegistrationState(registrations);
+        MaybeOpenOnboardingAtStartup(registrations);
         _ = BootstrapAndLoadRoomsAsync();
     }
 
@@ -321,6 +322,30 @@ public sealed class AppCoordinator : IDisposable
             initialSection: section));
         settingsWindow.Closed += (_, _) => settingsWindow = null;
         settingsWindow.Activate();
+    }
+
+    private void OpenOnboardingWindow()
+    {
+        if (onboardingWindow is null)
+        {
+            onboardingWindow = new OnboardingWindow(
+                permissionProbe,
+                () => OpenSettingsWindow(SettingsSection.Hotkeys));
+            onboardingWindow.Closed += (_, _) => onboardingWindow = null;
+        }
+
+        onboardingWindow.Activate();
+    }
+
+    private void MaybeOpenOnboardingAtStartup(IReadOnlyList<HotkeyRegistrationResult> registrations)
+    {
+        if (OnboardingStartupPolicy.ShouldOpen(
+            WindowsVersionProbe.CurrentStatus(),
+            permissionProbe.IsSupabaseConfigured(),
+            registrations))
+        {
+            OpenOnboardingWindow();
+        }
     }
 
     private void HandleQuickSendToggleChanged(object? sender, bool isEnabled)
@@ -786,15 +811,7 @@ public sealed class AppCoordinator : IDisposable
 
         public void ShowPermissionBlocked(QuickSendPermissionKind permission, string message)
         {
-            if (owner.onboardingWindow is null)
-            {
-                owner.onboardingWindow = new OnboardingWindow(
-                    new PermissionProbe(),
-                    () => owner.OpenSettingsWindow(SettingsSection.Hotkeys));
-                owner.onboardingWindow.Closed += (_, _) => owner.onboardingWindow = null;
-            }
-
-            owner.onboardingWindow.Activate();
+            owner.OpenOnboardingWindow();
             owner.ShowBlockedState(
                 "Screen+Face permissions",
                 $"Alt+Shift+L reached Ping, but {permission} is blocked. The onboarding checks are open.",
