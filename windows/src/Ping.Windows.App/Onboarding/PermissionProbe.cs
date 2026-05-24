@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using Ping.Windows.App.Hotkeys;
 using Ping.Windows.App.Setup;
 
 namespace Ping.Windows.App.Onboarding;
@@ -27,19 +28,22 @@ public sealed class PermissionProbe
     private readonly IHotkeyRegistrationProbe? hotkeyRegistrationProbe;
     private readonly IStartupTaskController startupTaskController;
     private readonly IElevationProbe elevationProbe;
+    private readonly Func<IReadOnlyDictionary<HotkeyCommand, HotkeyBinding>> hotkeyBindingsProvider;
 
     public PermissionProbe(
         string? supabaseConfigPath = null,
         INativeScreenCaptureSelfTest? screenCaptureSelfTest = null,
         IHotkeyRegistrationProbe? hotkeyRegistrationProbe = null,
         IStartupTaskController? startupTaskController = null,
-        IElevationProbe? elevationProbe = null)
+        IElevationProbe? elevationProbe = null,
+        Func<IReadOnlyDictionary<HotkeyCommand, HotkeyBinding>>? hotkeyBindingsProvider = null)
     {
         this.supabaseConfigPath = supabaseConfigPath ?? DefaultSupabaseConfigPath();
         this.screenCaptureSelfTest = screenCaptureSelfTest ?? new NativeScreenCaptureSelfTest();
         this.hotkeyRegistrationProbe = hotkeyRegistrationProbe;
         this.startupTaskController = startupTaskController ?? new StartupTaskController();
         this.elevationProbe = elevationProbe ?? new WindowsElevationProbe();
+        this.hotkeyBindingsProvider = hotkeyBindingsProvider ?? HotkeyBinding.Defaults;
     }
 
     public async Task<OnboardingEnvironmentState> ProbeAsync(CancellationToken cancellationToken = default) =>
@@ -205,13 +209,7 @@ public sealed class PermissionProbe
 
         probe ??= new Win32HotkeyRegistrationProbe();
 
-        var registrations = new[]
-        {
-            HotkeyRegistration.Alt('P'),
-            HotkeyRegistration.Alt('L'),
-            HotkeyRegistration.AltShift('L'),
-            HotkeyRegistration.Alt('O')
-        };
+        var registrations = ConfiguredHotkeyRegistrations();
 
         var registeredIds = new List<int>();
         try
@@ -234,6 +232,24 @@ public sealed class PermissionProbe
         finally
         {
             UnregisterAll(probe, registeredIds);
+        }
+    }
+
+    private IReadOnlyList<HotkeyRegistration> ConfiguredHotkeyRegistrations()
+    {
+        try
+        {
+            return hotkeyBindingsProvider()
+                .OrderBy(pair => pair.Key)
+                .Select(pair => HotkeyRegistration.FromBinding(pair.Key, pair.Value))
+                .ToArray();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
+        {
+            return HotkeyBinding.Defaults()
+                .OrderBy(pair => pair.Key)
+                .Select(pair => HotkeyRegistration.FromBinding(pair.Key, pair.Value))
+                .ToArray();
         }
     }
 
@@ -321,15 +337,18 @@ public sealed class PermissionProbe
         uint VirtualKey,
         string DisplayName)
     {
-        private const uint ModAlt = 0x0001;
-        private const uint ModShift = 0x0004;
-        private const uint ModNoRepeat = 0x4000;
+        public static HotkeyRegistration FromBinding(HotkeyCommand command, HotkeyBinding binding) =>
+            new(RegistrationId(command), binding.ToModifierFlags(), binding.ToVirtualKey(), binding.ToString());
 
-        public static HotkeyRegistration Alt(char key) =>
-            new(key, ModAlt | ModNoRepeat, key, $"Alt+{key}");
-
-        public static HotkeyRegistration AltShift(char key) =>
-            new(1000 + key, ModAlt | ModShift | ModNoRepeat, key, $"Alt+Shift+{key}");
+        private static int RegistrationId(HotkeyCommand command) =>
+            command switch
+            {
+                HotkeyCommand.FacePing => 'P',
+                HotkeyCommand.ScreenFacePing => 'L',
+                HotkeyCommand.QuickScreenFacePing => 1000 + 'L',
+                HotkeyCommand.History => 'O',
+                _ => throw new ArgumentOutOfRangeException(nameof(command), command, "Unknown hotkey command.")
+            };
     }
 
     private sealed class NativeScreenCaptureSelfTest : INativeScreenCaptureSelfTest

@@ -88,7 +88,7 @@ public sealed class AppCoordinator : IDisposable
         incomingChatPoller = new IncomingChatPoller(chatService, roomService, () => currentUid);
         notificationController = new NotificationController(OpenMessageFromNotificationAsync, OpenChatFromNotificationAsync);
         screenFaceCaptureEngine = new NativeCaptureEngine();
-        permissionProbe = new PermissionProbe();
+        permissionProbe = new PermissionProbe(hotkeyBindingsProvider: preferencesStore.Load);
         quickSendSettingsStore = new ScreenFaceQuickSendSettingsStore();
         quickSendSettings = quickSendSettingsStore.Load();
         quickSendController = new QuickSendController(

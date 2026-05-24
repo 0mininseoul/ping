@@ -196,6 +196,31 @@ public sealed class OnboardingStateTests
     }
 
     [Fact]
+    public void PermissionProbe_checks_configured_hotkeys_instead_of_defaults()
+    {
+        var hotkeys = new RecordingHotkeyProbe(conflictingId: -1);
+        var probe = new PermissionProbe(
+            Path.Combine(Path.GetTempPath(), "missing-supabase.json"),
+            hotkeyRegistrationProbe: hotkeys,
+            hotkeyBindingsProvider: () => new Dictionary<HotkeyCommand, HotkeyBinding>
+            {
+                [HotkeyCommand.FacePing] = HotkeyBinding.FromParts(HotkeyModifiers.Control | HotkeyModifiers.Shift, "F"),
+                [HotkeyCommand.ScreenFacePing] = HotkeyBinding.FromParts(HotkeyModifiers.Control | HotkeyModifiers.Alt, "S"),
+                [HotkeyCommand.QuickScreenFacePing] = HotkeyBinding.FromParts(HotkeyModifiers.Control | HotkeyModifiers.Alt | HotkeyModifiers.Shift, "Q"),
+                [HotkeyCommand.History] = HotkeyBinding.Alt("O")
+            });
+
+        var state = probe.CheckDefaultHotkeys();
+
+        Assert.Equal(OnboardingProbeStatus.Available, state.Status);
+        Assert.Contains((uint)'F', hotkeys.RegisteredVirtualKeys);
+        Assert.Contains((uint)'S', hotkeys.RegisteredVirtualKeys);
+        Assert.Contains((uint)'Q', hotkeys.RegisteredVirtualKeys);
+        Assert.DoesNotContain((uint)'P', hotkeys.RegisteredVirtualKeys);
+        Assert.Equal(hotkeys.RegisteredIds, hotkeys.UnregisteredIds);
+    }
+
+    [Fact]
     public async Task PermissionProbe_maps_user_disabled_startup_to_windows_settings()
     {
         var probe = new PermissionProbe(
@@ -229,11 +254,13 @@ public sealed class OnboardingStateTests
 
         public List<int> UnregisteredIds { get; } = [];
 
+        public List<uint> RegisteredVirtualKeys { get; } = [];
+
         public bool TryRegister(int id, uint modifiers, uint virtualKey)
         {
             _ = modifiers;
-            _ = virtualKey;
             RegisteredIds.Add(id);
+            RegisteredVirtualKeys.Add(virtualKey);
             return id != conflictingId;
         }
 
