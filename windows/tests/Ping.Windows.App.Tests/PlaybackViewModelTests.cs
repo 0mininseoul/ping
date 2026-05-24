@@ -7,7 +7,7 @@ namespace Ping.Windows.App.Tests;
 public sealed class PlaybackViewModelTests
 {
     [Fact]
-    public async Task PlaybackEnded_MarksSeenOnceAndRequestsClose()
+    public async Task PlaybackEnded_MarksSeenOnceAndWaitsForDismissal()
     {
         var markSeenCount = 0;
         var viewModel = new PlaybackViewModel(
@@ -19,12 +19,50 @@ public sealed class PlaybackViewModelTests
                 return Task.CompletedTask;
             });
         var didClose = false;
+        var endedCount = 0;
         viewModel.CloseRequested += (_, _) => didClose = true;
+        viewModel.PlaybackEnded += (_, _) => endedCount++;
 
         await viewModel.HandlePlaybackEndedAsync();
         await viewModel.HandlePlaybackEndedAsync();
 
         Assert.Equal(1, markSeenCount);
+        Assert.Equal(1, endedCount);
+        Assert.True(viewModel.IsAwaitingDismissal);
+        Assert.False(didClose);
+    }
+
+    [Fact]
+    public async Task EnterAfterPlaybackEndedRequestsReplayAndCancelsDismissal()
+    {
+        var viewModel = new PlaybackViewModel(
+            Message(CaptureMode.FaceOnly, aspectRatio: 1),
+            "clip.mp4",
+            _ => Task.CompletedTask);
+        var replayCount = 0;
+        viewModel.ReplayRequested += (_, _) => replayCount++;
+
+        await viewModel.HandlePlaybackEndedAsync();
+        viewModel.HandleEnter();
+        viewModel.HandleEnter();
+
+        Assert.Equal(1, replayCount);
+        Assert.False(viewModel.IsAwaitingDismissal);
+    }
+
+    [Fact]
+    public async Task PausedTimeoutRequestsClose()
+    {
+        var viewModel = new PlaybackViewModel(
+            Message(CaptureMode.FaceOnly, aspectRatio: 1),
+            "clip.mp4",
+            _ => Task.CompletedTask);
+        var didClose = false;
+        viewModel.CloseRequested += (_, _) => didClose = true;
+
+        await viewModel.HandlePlaybackEndedAsync();
+        viewModel.HandlePausedTimeoutElapsed();
+
         Assert.True(didClose);
     }
 

@@ -110,8 +110,8 @@ Manual checks after install:
 - Alt+P records `face_only`, shows review playback, then review Enter sends.
 - Alt+L records `screen_face`, shows review playback, then review Enter sends.
 - Alt+Shift+L records immediately to the default room after the 300ms HUD.
-- Notification click downloads from `ping-videos` and opens playback.
-- History shows video and chat in one room timeline, supports text/image chat, reply previews, sender chat delete, received video hide, sender video delete, and quick emoji reactions.
+- Notification click downloads from `ping-videos` and opens playback at the sender position. After the first play ends, Enter replays, Esc closes, and idle playback fades out after about 10 seconds.
+- History shows video and chat in one room timeline, supports direct video Play/double-click playback, text/image chat, reply previews, sender chat delete, received video hide, sender video delete, and quick emoji reactions.
 - Unread room chat from another user shows one Windows notification per room, and clicking it opens History.
 - Settings toggles for quick send, Windows startup, sent-copy saving, received-video saving, and recipient local-save permission persist.
 - Create invite link writes the Mac-compatible `/invite/<token>` URL into the field and to the Windows clipboard.

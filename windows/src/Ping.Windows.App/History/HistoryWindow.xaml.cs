@@ -1,5 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
 using Ping.Windows.App.Playback;
 using Ping.Windows.Core.Backend;
 using Ping.Windows.Core.Models;
@@ -65,17 +67,33 @@ public sealed partial class HistoryWindow : Window
             return;
         }
 
-        await RunAsync(async () =>
+        await PlayVideoAsync(video);
+    }
+
+    private async void PlayVideoItemButton_Click(object sender, RoutedEventArgs args)
+    {
+        if (VideoItem(sender) is not { } item)
         {
-            var localPath = await downloadVideoAsync(video, CancellationToken.None);
-            var playback = new PlaybackWindow(new PlaybackViewModel(
-                video,
-                localPath,
-                token => video.Id is null ? Task.CompletedTask : messageService.MarkSeenAsync(video.Id, token)));
-            playback.Closed += (_, _) => playbackWindows.Remove(playback);
-            playbackWindows.Add(playback);
-            playback.Activate();
-        });
+            return;
+        }
+
+        viewModel.SelectedVideo = item;
+        await PlayVideoAsync(item.Message);
+    }
+
+    private async void VideosList_DoubleTapped(object sender, DoubleTappedRoutedEventArgs args)
+    {
+        if (IsWithinButton(args.OriginalSource))
+        {
+            return;
+        }
+
+        if (viewModel.SelectedVideo?.Message is not { } video)
+        {
+            return;
+        }
+
+        await PlayVideoAsync(video);
     }
 
     private async void RefreshButton_Click(object sender, RoutedEventArgs args) =>
@@ -171,6 +189,21 @@ public sealed partial class HistoryWindow : Window
         SelectedImageText.Text = string.Empty;
     }
 
+    private async Task PlayVideoAsync(VideoMessage video)
+    {
+        await RunAsync(async () =>
+        {
+            var localPath = await downloadVideoAsync(video, CancellationToken.None);
+            var playback = new PlaybackWindow(new PlaybackViewModel(
+                video,
+                localPath,
+                token => video.Id is null ? Task.CompletedTask : messageService.MarkSeenAsync(video.Id, token)));
+            playback.Closed += (_, _) => playbackWindows.Remove(playback);
+            playbackWindows.Add(playback);
+            playback.Activate();
+        });
+    }
+
     private static VideoHistoryItem? VideoItem(object sender) =>
         (sender as FrameworkElement)?.DataContext switch
         {
@@ -186,6 +219,22 @@ public sealed partial class HistoryWindow : Window
             TimelineHistoryItem { Chat: { } chat } => chat,
             _ => null
         };
+
+    private static bool IsWithinButton(object? source)
+    {
+        var current = source as DependencyObject;
+        while (current is not null)
+        {
+            if (current is Button)
+            {
+                return true;
+            }
+
+            current = VisualTreeHelper.GetParent(current);
+        }
+
+        return false;
+    }
 
     private async Task<bool> RunAsync(Func<Task> work)
     {

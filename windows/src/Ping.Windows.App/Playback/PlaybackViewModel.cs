@@ -14,8 +14,11 @@ namespace Ping.Windows.App.Playback;
 
 public sealed class PlaybackViewModel : INotifyPropertyChanged
 {
+    public static readonly TimeSpan PausedTimeout = TimeSpan.FromSeconds(10);
+
     private readonly Func<CancellationToken, Task> markSeenAsync;
     private bool didMarkSeen;
+    private bool isAwaitingDismissal;
     private bool isCloseRequested;
 
     public PlaybackViewModel(
@@ -31,6 +34,10 @@ public sealed class PlaybackViewModel : INotifyPropertyChanged
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public event EventHandler? CloseRequested;
+
+    public event EventHandler? PlaybackEnded;
+
+    public event EventHandler? ReplayRequested;
 
     public VideoMessage Message { get; }
 
@@ -49,6 +56,21 @@ public sealed class PlaybackViewModel : INotifyPropertyChanged
     }
 
     public string SenderLabel => Message.SenderNickname;
+
+    public bool IsAwaitingDismissal
+    {
+        get => isAwaitingDismissal;
+        private set
+        {
+            if (isAwaitingDismissal == value)
+            {
+                return;
+            }
+
+            isAwaitingDismissal = value;
+            OnPropertyChanged();
+        }
+    }
 
     public bool IsCloseRequested
     {
@@ -79,8 +101,27 @@ public sealed class PlaybackViewModel : INotifyPropertyChanged
         {
         }
 
-        RequestClose();
+        if (IsAwaitingDismissal)
+        {
+            return;
+        }
+
+        IsAwaitingDismissal = true;
+        PlaybackEnded?.Invoke(this, EventArgs.Empty);
     }
+
+    public void HandleEnter()
+    {
+        if (!IsAwaitingDismissal)
+        {
+            return;
+        }
+
+        IsAwaitingDismissal = false;
+        ReplayRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void HandlePausedTimeoutElapsed() => RequestClose();
 
     public void HandleEscape() => RequestClose();
 
@@ -100,6 +141,7 @@ public sealed partial class PlaybackWindow : Window
     private readonly PlaybackViewModel viewModel;
     private readonly VideoPlayerHost playerHost = new();
     private AppWindow? appWindow;
+    private CancellationTokenSource? closeTimeoutCancellation;
     private bool shouldCloseAfterFade;
 
     public PlaybackWindow(PlaybackViewModel viewModel)
@@ -109,6 +151,8 @@ public sealed partial class PlaybackWindow : Window
         Root.DataContext = viewModel;
         Root.Loaded += HandleLoaded;
         viewModel.CloseRequested += HandleCloseRequested;
+        viewModel.PlaybackEnded += HandlePlaybackEnded;
+        viewModel.ReplayRequested += HandleReplayRequested;
         ConfigureWindow();
     }
 
@@ -124,13 +168,17 @@ public sealed partial class PlaybackWindow : Window
 
     private void HandleKeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs args)
     {
-        if (args.Key != Windows.System.VirtualKey.Escape)
+        switch (args.Key)
         {
-            return;
+            case Windows.System.VirtualKey.Enter:
+                args.Handled = true;
+                viewModel.HandleEnter();
+                break;
+            case Windows.System.VirtualKey.Escape:
+                args.Handled = true;
+                viewModel.HandleEscape();
+                break;
         }
-
-        args.Handled = true;
-        viewModel.HandleEscape();
     }
 
     private void HandleCloseRequested(object? sender, EventArgs args)
@@ -143,8 +191,50 @@ public sealed partial class PlaybackWindow : Window
         _ = FadeOutAndCloseAsync();
     }
 
+    private void HandlePlaybackEnded(object? sender, EventArgs args)
+    {
+        StartPausedCloseTimeout();
+    }
+
+    private void HandleReplayRequested(object? sender, EventArgs args)
+    {
+        CancelPausedCloseTimeout();
+        playerHost.Replay();
+    }
+
+    private void StartPausedCloseTimeout()
+    {
+        CancelPausedCloseTimeout();
+        closeTimeoutCancellation = new CancellationTokenSource();
+        var token = closeTimeoutCancellation.Token;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(PlaybackViewModel.PausedTimeout, token);
+                if (token.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                _ = Root.DispatcherQueue.TryEnqueue(() => viewModel.HandlePausedTimeoutElapsed());
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        }, token);
+    }
+
+    private void CancelPausedCloseTimeout()
+    {
+        closeTimeoutCancellation?.Cancel();
+        closeTimeoutCancellation?.Dispose();
+        closeTimeoutCancellation = null;
+    }
+
     private async Task FadeOutAndCloseAsync()
     {
+        CancelPausedCloseTimeout();
         shouldCloseAfterFade = true;
         var animation = new DoubleAnimation
         {
@@ -219,6 +309,10 @@ public sealed partial class PlaybackWindow : Window
 
     private void HandleClosed(object sender, WindowEventArgs args)
     {
+        viewModel.CloseRequested -= HandleCloseRequested;
+        viewModel.PlaybackEnded -= HandlePlaybackEnded;
+        viewModel.ReplayRequested -= HandleReplayRequested;
+        CancelPausedCloseTimeout();
         playerHost.Dispose();
     }
 }

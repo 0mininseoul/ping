@@ -820,7 +820,8 @@ Use `AppNotificationManager` and encode `message_id` in activation arguments. No
 1. call `ping_get_message(message_uuid)`
 2. download Storage object
 3. open playback window
-4. after playback end, call `ping_mark_message_seen(message_uuid)`
+4. after first playback end, call `ping_mark_message_seen(message_uuid)` once
+5. keep the window briefly for Enter replay or Esc close, then fade out after about 10 seconds of idle time
 
 - [ ] **Step 3: Implement playback window**
 
@@ -833,7 +834,7 @@ Screen-face:
 
 - preserve `aspect_ratio`
 - use compact playback by default
-- support expanded playback in history
+- support direct playback from history rows
 
 - [ ] **Step 4: Run Windows receives Mac test**
 
@@ -896,7 +897,7 @@ Keep it visually close to Mac:
 Show:
 
 - video rows
-- screen-face expanded playback
+- direct video playback from each history row
 - sender labels for group rooms
 - chat messages and image attachments if supported by current backend
 - reactions if supported by current backend

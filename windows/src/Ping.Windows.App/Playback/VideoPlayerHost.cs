@@ -38,6 +38,18 @@ public sealed class VideoPlayerHost : IDisposable
         return Task.CompletedTask;
     }
 
+    public void Replay()
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        if (player is null)
+        {
+            return;
+        }
+
+        player.Position = TimeSpan.Zero;
+        player.Play();
+    }
+
     public void Dispose()
     {
         if (disposed)

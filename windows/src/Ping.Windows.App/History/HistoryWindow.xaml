@@ -93,6 +93,7 @@
                 <ListView
                     x:Name="VideosList"
                     ItemsSource="{Binding Timeline}"
+                    DoubleTapped="VideosList_DoubleTapped"
                     SelectionChanged="VideosList_SelectionChanged">
                     <ListView.ItemTemplate>
                         <DataTemplate>
@@ -114,6 +115,10 @@
                                             Foreground="{StaticResource PingMutedBrush}"
                                             Text="{Binding Video.VideoId}" />
                                         <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <Button
+                                                Padding="6,2"
+                                                Click="PlayVideoItemButton_Click"
+                                                Content="Play" />
                                             <Button
                                                 Padding="6,2"
                                                 Click="ReplyVideoButton_Click"

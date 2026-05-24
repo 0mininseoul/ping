@@ -122,8 +122,8 @@ Windows packaged client는 Windows 11 24H2 미만에서는 설치 대상이 아�
 - Supabase polling으로 새 메시지를 감지하면 로컬 알림을 띄운다.
 - 알림 클릭 또는 액션 선택 시 Storage에서 영상을 다운로드한다.
 - 발신자의 `x_ratio`, `y_ratio`를 수신자 메인 스크린 좌표로 변환하고 safe area로 clamp한다.
-- 200px 원형 playback window에서 정확히 3초 재생한 뒤 닫는다.
-- 재생 후 `ping_mark_message_seen(message_uuid)`를 호출한다.
+- Face-only는 200px 원형 playback window, screen+face는 저장된 `aspect_ratio` 기반 compact playback window에서 발신자 위치에 맞춰 재생한다.
+- 첫 재생이 끝나면 `ping_mark_message_seen(message_uuid)`를 1회 호출하고, 창은 잠시 유지한다. `Enter`로 다시 재생하거나 `Esc`로 닫을 수 있으며, 추가 입력이 없으면 약 10초 뒤 fade-out한다.
 
 ### Settings
 
