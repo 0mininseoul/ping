@@ -482,7 +482,7 @@ public sealed class AppCoordinator : IDisposable
         var viewModel = new FaceMirrorViewModel(
             context,
             new FaceRecorder(),
-            messageService,
+            SendVideoAndRememberRoomAsync,
             localArchive);
 
         faceMirrorWindow = new FaceMirrorWindow(viewModel);
@@ -533,7 +533,7 @@ public sealed class AppCoordinator : IDisposable
         var viewModel = new ScreenFaceMirrorViewModel(
             context,
             screenFaceCaptureEngine,
-            messageService,
+            SendVideoAndRememberRoomAsync,
             localArchive);
 
         screenFaceMirrorWindow = new ScreenFaceMirrorWindow(viewModel);
