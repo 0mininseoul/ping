@@ -41,6 +41,7 @@ public sealed class AppCoordinator : IDisposable
     private string? currentUid;
     private string? remoteDefaultRoomId;
     private ScreenFaceQuickSendSettings quickSendSettings;
+    private IReadOnlyList<HotkeyRegistrationResult> lastHotkeyRegistrations = [];
     private FaceMirrorWindow? faceMirrorWindow;
     private ScreenFaceMirrorWindow? screenFaceMirrorWindow;
     private QuickSendHudWindow? quickSendHudWindow;
@@ -88,7 +89,9 @@ public sealed class AppCoordinator : IDisposable
         incomingChatPoller = new IncomingChatPoller(chatService, roomService, () => currentUid);
         notificationController = new NotificationController(OpenMessageFromNotificationAsync, OpenChatFromNotificationAsync);
         screenFaceCaptureEngine = new NativeCaptureEngine();
-        permissionProbe = new PermissionProbe(hotkeyBindingsProvider: preferencesStore.Load);
+        permissionProbe = new PermissionProbe(
+            hotkeyBindingsProvider: preferencesStore.Load,
+            activeHotkeyRegistrationsProvider: () => lastHotkeyRegistrations);
         quickSendSettingsStore = new ScreenFaceQuickSendSettingsStore();
         quickSendSettings = quickSendSettingsStore.Load();
         quickSendController = new QuickSendController(
@@ -106,11 +109,11 @@ public sealed class AppCoordinator : IDisposable
         ObjectDisposedException.ThrowIf(disposed, this);
 
         hotkeys.HotkeyPressed += HandleHotkeyPressed;
-        var registrations = RegisterSavedHotkeys();
+        lastHotkeyRegistrations = RegisterSavedHotkeys();
         tray.AddOrUpdateIcon();
         notificationController.Start();
-        ShowRegistrationState(registrations);
-        MaybeOpenOnboardingAtStartup(registrations);
+        ShowRegistrationState(lastHotkeyRegistrations);
+        MaybeOpenOnboardingAtStartup(lastHotkeyRegistrations);
         _ = BootstrapAndLoadRoomsAsync();
     }
 
@@ -428,6 +431,7 @@ public sealed class AppCoordinator : IDisposable
             .ToDictionary(pair => pair.Key, pair => pair.Value);
         bindings[command] = binding;
         preferencesStore.Save(bindings);
+        UpdateHotkeyRegistrationResult(result);
         mainWindow.HotkeyState.Text = HotkeyStatusText.Summary(bindings);
         if (command == HotkeyCommand.QuickScreenFacePing && mainWindow.SettingsPanel.Visibility == Visibility.Visible)
         {
@@ -435,6 +439,15 @@ public sealed class AppCoordinator : IDisposable
         }
 
         return result;
+    }
+
+    private void UpdateHotkeyRegistrationResult(HotkeyRegistrationResult result)
+    {
+        lastHotkeyRegistrations = lastHotkeyRegistrations
+            .Where(existing => existing.Command != result.Command)
+            .Append(result)
+            .OrderBy(existing => existing.Command)
+            .ToArray();
     }
 
     private string HotkeyLabel(HotkeyCommand command) =>

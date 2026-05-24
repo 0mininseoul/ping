@@ -29,6 +29,7 @@ public sealed class PermissionProbe
     private readonly IStartupTaskController startupTaskController;
     private readonly IElevationProbe elevationProbe;
     private readonly Func<IReadOnlyDictionary<HotkeyCommand, HotkeyBinding>> hotkeyBindingsProvider;
+    private readonly Func<IReadOnlyList<HotkeyRegistrationResult>>? activeHotkeyRegistrationsProvider;
 
     public PermissionProbe(
         string? supabaseConfigPath = null,
@@ -36,7 +37,8 @@ public sealed class PermissionProbe
         IHotkeyRegistrationProbe? hotkeyRegistrationProbe = null,
         IStartupTaskController? startupTaskController = null,
         IElevationProbe? elevationProbe = null,
-        Func<IReadOnlyDictionary<HotkeyCommand, HotkeyBinding>>? hotkeyBindingsProvider = null)
+        Func<IReadOnlyDictionary<HotkeyCommand, HotkeyBinding>>? hotkeyBindingsProvider = null,
+        Func<IReadOnlyList<HotkeyRegistrationResult>>? activeHotkeyRegistrationsProvider = null)
     {
         this.supabaseConfigPath = supabaseConfigPath ?? DefaultSupabaseConfigPath();
         this.screenCaptureSelfTest = screenCaptureSelfTest ?? new NativeScreenCaptureSelfTest();
@@ -44,6 +46,7 @@ public sealed class PermissionProbe
         this.startupTaskController = startupTaskController ?? new StartupTaskController();
         this.elevationProbe = elevationProbe ?? new WindowsElevationProbe();
         this.hotkeyBindingsProvider = hotkeyBindingsProvider ?? HotkeyBinding.Defaults;
+        this.activeHotkeyRegistrationsProvider = activeHotkeyRegistrationsProvider;
     }
 
     public async Task<OnboardingEnvironmentState> ProbeAsync(CancellationToken cancellationToken = default) =>
@@ -201,6 +204,11 @@ public sealed class PermissionProbe
 
     public OnboardingProbeState CheckDefaultHotkeys()
     {
+        if (ActiveHotkeyRegistrationState() is { } activeState)
+        {
+            return activeState;
+        }
+
         var probe = hotkeyRegistrationProbe;
         if (probe is null && !OperatingSystem.IsWindows())
         {
@@ -232,6 +240,35 @@ public sealed class PermissionProbe
         finally
         {
             UnregisterAll(probe, registeredIds);
+        }
+    }
+
+    private OnboardingProbeState? ActiveHotkeyRegistrationState()
+    {
+        var activeResults = ActiveHotkeyRegistrations();
+        if (activeResults is null || activeResults.Count == 0)
+        {
+            return null;
+        }
+
+        var failure = activeResults.FirstOrDefault(result => result.Status != HotkeyRegistrationStatus.Success);
+        return failure is null
+            ? OnboardingProbeState.Available("Configured hotkeys are ready.")
+            : OnboardingProbeState.Blocked(
+                failure.Message,
+                actionKind: OnboardingActionKind.Configure,
+                actionLabel: "Change hotkeys");
+    }
+
+    private IReadOnlyList<HotkeyRegistrationResult>? ActiveHotkeyRegistrations()
+    {
+        try
+        {
+            return activeHotkeyRegistrationsProvider?.Invoke();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
+        {
+            return null;
         }
     }
 

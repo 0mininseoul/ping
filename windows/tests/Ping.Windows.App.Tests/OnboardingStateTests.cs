@@ -221,6 +221,53 @@ public sealed class OnboardingStateTests
     }
 
     [Fact]
+    public void PermissionProbe_uses_active_hotkey_registrations_without_reprobing()
+    {
+        var hotkeys = new RecordingHotkeyProbe(conflictingId: -1);
+        var probe = new PermissionProbe(
+            Path.Combine(Path.GetTempPath(), "missing-supabase.json"),
+            hotkeyRegistrationProbe: hotkeys,
+            activeHotkeyRegistrationsProvider: () =>
+            [
+                HotkeyRegistrationResult.Success(HotkeyCommand.FacePing, HotkeyBinding.Alt("P")),
+                HotkeyRegistrationResult.Success(HotkeyCommand.ScreenFacePing, HotkeyBinding.Alt("L")),
+                HotkeyRegistrationResult.Success(HotkeyCommand.QuickScreenFacePing, HotkeyBinding.FromParts(HotkeyModifiers.Alt | HotkeyModifiers.Shift, "L")),
+                HotkeyRegistrationResult.Success(HotkeyCommand.History, HotkeyBinding.Alt("O"))
+            ]);
+
+        var state = probe.CheckDefaultHotkeys();
+
+        Assert.Equal(OnboardingProbeStatus.Available, state.Status);
+        Assert.Equal("Configured hotkeys are ready.", state.Message);
+        Assert.Empty(hotkeys.RegisteredIds);
+    }
+
+    [Fact]
+    public void PermissionProbe_maps_active_hotkey_registration_conflicts_to_configure_action()
+    {
+        var hotkeys = new RecordingHotkeyProbe(conflictingId: -1);
+        var probe = new PermissionProbe(
+            Path.Combine(Path.GetTempPath(), "missing-supabase.json"),
+            hotkeyRegistrationProbe: hotkeys,
+            activeHotkeyRegistrationsProvider: () =>
+            [
+                HotkeyRegistrationResult.Success(HotkeyCommand.FacePing, HotkeyBinding.Alt("P")),
+                HotkeyRegistrationResult.Conflict(
+                    HotkeyCommand.ScreenFacePing,
+                    HotkeyBinding.Alt("L"),
+                    "Alt+L is already used by another app.")
+            ]);
+
+        var state = probe.CheckDefaultHotkeys();
+
+        Assert.Equal(OnboardingProbeStatus.Blocked, state.Status);
+        Assert.Equal("Alt+L is already used by another app.", state.Message);
+        Assert.Equal(OnboardingActionKind.Configure, state.ActionKind);
+        Assert.Equal("Change hotkeys", state.ActionLabel);
+        Assert.Empty(hotkeys.RegisteredIds);
+    }
+
+    [Fact]
     public async Task PermissionProbe_maps_user_disabled_startup_to_windows_settings()
     {
         var probe = new PermissionProbe(
