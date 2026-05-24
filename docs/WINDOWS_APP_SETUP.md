@@ -112,6 +112,7 @@ Manual checks after install:
 - Alt+Shift+L records immediately to the default room after the 300ms HUD.
 - Notification click downloads from `ping-videos` and opens playback.
 - History can send/display room text chat, `ping-media` image attachments, and quick emoji reactions.
+- Unread room chat from another user shows one Windows notification per room, and clicking it opens History.
 - Settings toggles for quick send, Windows startup, sent-copy saving, received-video saving, and recipient local-save permission persist.
 - Create invite link writes the Mac-compatible `/invite/<token>` URL into the field and to the Windows clipboard.
 

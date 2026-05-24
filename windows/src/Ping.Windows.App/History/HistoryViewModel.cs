@@ -88,7 +88,7 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         }
     }
 
-    public async Task LoadAsync(CancellationToken cancellationToken = default)
+    public async Task LoadAsync(string? preferredRoomId = null, CancellationToken cancellationToken = default)
     {
         Rooms.Clear();
         foreach (var room in (await roomService.MyRoomsAsync(cancellationToken)).OrderBy(room => room.Name, StringComparer.OrdinalIgnoreCase))
@@ -96,7 +96,21 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
             Rooms.Add(room);
         }
 
-        SelectedRoom = Rooms.FirstOrDefault();
+        SelectedRoom = preferredRoomId is null
+            ? Rooms.FirstOrDefault()
+            : Rooms.FirstOrDefault(room => string.Equals(room.Id, preferredRoomId, StringComparison.Ordinal)) ?? Rooms.FirstOrDefault();
+        await LoadSelectedRoomAsync(cancellationToken);
+    }
+
+    public async Task SelectRoomAsync(string roomId, CancellationToken cancellationToken = default)
+    {
+        if (Rooms.Count == 0)
+        {
+            await LoadAsync(roomId, cancellationToken);
+            return;
+        }
+
+        SelectedRoom = Rooms.FirstOrDefault(room => string.Equals(room.Id, roomId, StringComparison.Ordinal)) ?? SelectedRoom;
         await LoadSelectedRoomAsync(cancellationToken);
     }
 

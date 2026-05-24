@@ -1,4 +1,5 @@
 using Ping.Windows.App.Notifications;
+using Ping.Windows.Core.Backend;
 using Ping.Windows.Core.Models;
 using Xunit;
 
@@ -70,12 +71,52 @@ public sealed class IncomingMessageDedupTests
     }
 
     [Fact]
+    public async Task IncomingChatPoller_NotifiesLatestUnreadChatPerRoom()
+    {
+        var rpc = new RecordingChatRpcClient();
+        var chatService = new ChatMessageService(rpc);
+        var roomService = new RoomService(rpc);
+        var poller = new IncomingChatPoller(chatService, roomService, () => "receiver");
+        var yieldedIds = new HashSet<string>(StringComparer.Ordinal);
+
+        var first = await poller.PollOnceAsync(yieldedIds);
+        var second = await poller.PollOnceAsync(yieldedIds);
+
+        var notification = Assert.Single(first);
+        Assert.Equal("chat-new", notification.Message.Id);
+        Assert.Equal("Main", notification.RoomName);
+        Assert.Equal(2, notification.UnreadCount);
+        Assert.Empty(second);
+    }
+
+    [Fact]
+    public void NotificationController_DeduplicatesShownChatsInPortableTests()
+    {
+        using var controller = new NotificationController((_, _) => Task.CompletedTask);
+        var notification = new IncomingChatNotification(Chat("chat-1", "room-1", "sender", "hello", DateTimeOffset.UtcNow), "Main", 1);
+
+        Assert.True(controller.TryShowIncomingChat(notification));
+        Assert.False(controller.TryShowIncomingChat(notification));
+    }
+
+    [Fact]
     public void ActivationArguments_ParsesMessageId()
     {
         var parsed = NotificationActivationArguments.Parse("action=play&message_id=message%201");
 
         Assert.Equal("play", parsed.Action);
         Assert.Equal("message 1", parsed.MessageId);
+        Assert.True(parsed.HasValues);
+    }
+
+    [Fact]
+    public void ActivationArguments_ParsesChatTarget()
+    {
+        var parsed = NotificationActivationArguments.Parse("action=chat&chat_id=chat%201&room_id=room%201");
+
+        Assert.Equal("chat", parsed.Action);
+        Assert.Equal("chat 1", parsed.ChatId);
+        Assert.Equal("room 1", parsed.RoomId);
         Assert.True(parsed.HasValues);
     }
 
@@ -111,4 +152,62 @@ public sealed class IncomingMessageDedupTests
             CaptureMode = CaptureMode.FaceOnly,
             AspectRatio = 1
         };
+
+    private static ChatMessage Chat(string id, string roomId, string senderUid, string body, DateTimeOffset createdAt) =>
+        new()
+        {
+            Id = id,
+            RoomId = roomId,
+            SenderUid = senderUid,
+            SenderNickname = senderUid,
+            Body = body,
+            CreatedAt = createdAt
+        };
+
+    private sealed class RecordingChatRpcClient : ISupabaseRpcClient
+    {
+        public Task<IReadOnlyList<T>> RpcArrayAsync<T>(string function, object? body = null, CancellationToken cancellationToken = default)
+        {
+            object result = function switch
+            {
+                "ping_unread_chat_counts" => new[]
+                {
+                    new UnreadChatCount("room-1", 2)
+                },
+                "ping_my_rooms" => new[]
+                {
+                    new Room(
+                        Id: "room-1",
+                        Name: "Main",
+                        SearchableName: "main",
+                        OwnerUid: "sender",
+                        MemberUids: ["sender", "receiver"],
+                        MemberNicknames: new Dictionary<string, string>
+                        {
+                            ["sender"] = "Sender",
+                            ["receiver"] = "Receiver"
+                        },
+                        Status: RoomStatus.Open)
+                },
+                "ping_room_chat_messages" => new[]
+                {
+                    Chat("own-new", "room-1", "receiver", "mine", DateTimeOffset.UtcNow.AddSeconds(2)),
+                    Chat("chat-new", "room-1", "sender", "new", DateTimeOffset.UtcNow.AddSeconds(1)),
+                    Chat("chat-old", "room-1", "sender", "old", DateTimeOffset.UtcNow)
+                },
+                _ => Array.Empty<object>()
+            };
+            return Task.FromResult((IReadOnlyList<T>)result);
+        }
+
+        public Task<T> RpcValueAsync<T>(string function, object? body = null, CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task RpcVoidAsync(string function, object? body = null, CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+    }
 }

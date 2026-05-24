@@ -31,6 +31,7 @@ public sealed class AppCoordinator : IDisposable
     private readonly CleanupService cleanupService;
     private readonly LocalArchive localArchive;
     private readonly IncomingMessagePoller incomingPoller;
+    private readonly IncomingChatPoller incomingChatPoller;
     private readonly NotificationController notificationController;
     private readonly IScreenFaceCaptureEngine screenFaceCaptureEngine;
     private readonly QuickSendController quickSendController;
@@ -50,6 +51,7 @@ public sealed class AppCoordinator : IDisposable
     private readonly List<PlaybackWindow> playbackWindows = [];
     private CancellationTokenSource? quickSendCancellation;
     private CancellationTokenSource? incomingPollingCancellation;
+    private CancellationTokenSource? incomingChatPollingCancellation;
     private bool disposed;
 
     public AppCoordinator(MainWindow mainWindow)
@@ -83,7 +85,8 @@ public sealed class AppCoordinator : IDisposable
         cleanupService = new CleanupService(this.supabaseClient);
         localArchive = new LocalArchive(LocalArchive.DefaultRootDirectory());
         incomingPoller = new IncomingMessagePoller(messageService);
-        notificationController = new NotificationController(OpenMessageFromNotificationAsync);
+        incomingChatPoller = new IncomingChatPoller(chatService, roomService, () => currentUid);
+        notificationController = new NotificationController(OpenMessageFromNotificationAsync, OpenChatFromNotificationAsync);
         screenFaceCaptureEngine = new NativeCaptureEngine();
         permissionProbe = new PermissionProbe();
         quickSendSettingsStore = new ScreenFaceQuickSendSettingsStore();
@@ -148,13 +151,19 @@ public sealed class AppCoordinator : IDisposable
             return;
         }
 
-        if (!string.Equals(parsed.Action, "play", StringComparison.Ordinal)
-            || string.IsNullOrWhiteSpace(parsed.MessageId))
+        if (string.Equals(parsed.Action, "play", StringComparison.Ordinal)
+            && !string.IsNullOrWhiteSpace(parsed.MessageId))
         {
+            _ = OpenMessageFromNotificationAsync(parsed.MessageId, CancellationToken.None);
             return;
         }
 
-        _ = OpenMessageFromNotificationAsync(parsed.MessageId, CancellationToken.None);
+        if (string.Equals(parsed.Action, "chat", StringComparison.Ordinal)
+            && !string.IsNullOrWhiteSpace(parsed.ChatId)
+            && !string.IsNullOrWhiteSpace(parsed.RoomId))
+        {
+            _ = OpenChatFromNotificationAsync(parsed.ChatId, parsed.RoomId, CancellationToken.None);
+        }
     }
 
     public void Dispose()
@@ -167,6 +176,7 @@ public sealed class AppCoordinator : IDisposable
         hotkeys.HotkeyPressed -= HandleHotkeyPressed;
         mainWindow.QuickSendToggleChanged -= HandleQuickSendToggleChanged;
         StopIncomingPolling();
+        StopIncomingChatPolling();
         notificationController.Dispose();
         supabaseClient.Dispose();
         hotkeys.Dispose();
@@ -290,11 +300,16 @@ public sealed class AppCoordinator : IDisposable
         roomManagerWindow.Activate();
     }
 
-    private void OpenHistoryWindow()
+    private void OpenHistoryWindow(string? preferredRoomId = null)
     {
         if (historyWindow is not null)
         {
             historyWindow.Activate();
+            if (!string.IsNullOrWhiteSpace(preferredRoomId))
+            {
+                _ = historyWindow.FocusRoomAsync(preferredRoomId);
+            }
+
             return;
         }
 
@@ -307,7 +322,8 @@ public sealed class AppCoordinator : IDisposable
                 storageService,
                 () => currentUid),
             DownloadVideoForPlaybackAsync,
-            messageService);
+            messageService,
+            preferredRoomId);
         historyWindow.Closed += (_, _) => historyWindow = null;
         historyWindow.Activate();
     }
@@ -675,16 +691,51 @@ public sealed class AppCoordinator : IDisposable
         }, cancellation.Token);
     }
 
+    private void StartIncomingChatPolling()
+    {
+        StopIncomingChatPolling();
+        var cancellation = new CancellationTokenSource();
+        incomingChatPollingCancellation = cancellation;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await incomingChatPoller.RunAsync(HandleIncomingChatAsync, cancellation.Token);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            finally
+            {
+                cancellation.Dispose();
+            }
+        }, cancellation.Token);
+    }
+
     private void StopIncomingPolling()
     {
         incomingPollingCancellation?.Cancel();
         incomingPollingCancellation = null;
     }
 
+    private void StopIncomingChatPolling()
+    {
+        incomingChatPollingCancellation?.Cancel();
+        incomingChatPollingCancellation = null;
+    }
+
     private Task HandleIncomingMessageAsync(VideoMessage message, CancellationToken cancellationToken)
     {
         _ = cancellationToken;
         notificationController.TryShowIncoming(message);
+        return Task.CompletedTask;
+    }
+
+    private Task HandleIncomingChatAsync(IncomingChatNotification notification, CancellationToken cancellationToken)
+    {
+        _ = cancellationToken;
+        notificationController.TryShowIncomingChat(notification);
         return Task.CompletedTask;
     }
 
@@ -723,6 +774,22 @@ public sealed class AppCoordinator : IDisposable
         playbackWindows.Add(window);
         window.Closed += (_, _) => playbackWindows.Remove(window);
         window.Activate();
+    }
+
+    private async Task OpenChatFromNotificationAsync(
+        string chatId,
+        string roomId,
+        CancellationToken cancellationToken)
+    {
+        _ = chatId;
+        await RunOnUiThreadAsync(() => OpenHistoryWindow(roomId));
+        try
+        {
+            await chatService.MarkRoomReadAsync(roomId, cancellationToken);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException)
+        {
+        }
     }
 
     private async Task<string> DownloadVideoForPlaybackAsync(
@@ -828,6 +895,7 @@ public sealed class AppCoordinator : IDisposable
 
             mainWindow.HotkeyState.Text = HotkeyStatusText.RoomSummary(preferencesStore.Load(), sendableCount);
             StartIncomingPolling();
+            StartIncomingChatPolling();
         }
         catch (Exception ex)
         {

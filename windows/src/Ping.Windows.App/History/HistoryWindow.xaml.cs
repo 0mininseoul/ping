@@ -14,16 +14,19 @@ public sealed partial class HistoryWindow : Window
     private readonly Func<VideoMessage, CancellationToken, Task<string>> downloadVideoAsync;
     private readonly MessageService messageService;
     private readonly List<PlaybackWindow> playbackWindows = [];
+    private readonly string? initialRoomId;
     private string? selectedChatImagePath;
 
     public HistoryWindow(
         HistoryViewModel viewModel,
         Func<VideoMessage, CancellationToken, Task<string>> downloadVideoAsync,
-        MessageService messageService)
+        MessageService messageService,
+        string? initialRoomId = null)
     {
         this.viewModel = viewModel;
         this.downloadVideoAsync = downloadVideoAsync;
         this.messageService = messageService;
+        this.initialRoomId = initialRoomId;
         InitializeComponent();
         Root.DataContext = viewModel;
         Root.Loaded += HandleLoaded;
@@ -31,7 +34,12 @@ public sealed partial class HistoryWindow : Window
 
     private async void HandleLoaded(object sender, RoutedEventArgs args)
     {
-        await RunAsync(() => viewModel.LoadAsync());
+        await RunAsync(() => viewModel.LoadAsync(initialRoomId));
+    }
+
+    public async Task FocusRoomAsync(string roomId)
+    {
+        await RunAsync(() => viewModel.SelectRoomAsync(roomId));
     }
 
     private async void RoomsList_SelectionChanged(object sender, SelectionChangedEventArgs args)

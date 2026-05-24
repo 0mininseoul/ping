@@ -84,6 +84,106 @@ public sealed class IncomingMessagePoller
     }
 }
 
+public sealed class IncomingChatPoller
+{
+    private static readonly TimeSpan DefaultInterval = TimeSpan.FromSeconds(10);
+    private readonly ChatMessageService chatService;
+    private readonly RoomService roomService;
+    private readonly Func<string?> currentUidProvider;
+    private readonly Func<TimeSpan, CancellationToken, Task> delayAsync;
+    private readonly TimeSpan interval;
+
+    public IncomingChatPoller(
+        ChatMessageService chatService,
+        RoomService roomService,
+        Func<string?> currentUidProvider,
+        TimeSpan? interval = null,
+        Func<TimeSpan, CancellationToken, Task>? delayAsync = null)
+    {
+        this.chatService = chatService;
+        this.roomService = roomService;
+        this.currentUidProvider = currentUidProvider;
+        this.interval = interval ?? DefaultInterval;
+        this.delayAsync = delayAsync ?? ((duration, token) => Task.Delay(duration, token));
+    }
+
+    public async Task RunAsync(
+        Func<IncomingChatNotification, CancellationToken, Task> onChatAsync,
+        CancellationToken cancellationToken = default)
+    {
+        var yieldedChatIds = new HashSet<string>(StringComparer.Ordinal);
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            try
+            {
+                foreach (var notification in await PollOnceAsync(yieldedChatIds, cancellationToken).ConfigureAwait(false))
+                {
+                    await onChatAsync(notification, cancellationToken).ConfigureAwait(false);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception)
+            {
+            }
+
+            await delayAsync(interval, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    public async Task<IReadOnlyList<IncomingChatNotification>> PollOnceAsync(
+        ISet<string> yieldedChatIds,
+        CancellationToken cancellationToken = default)
+    {
+        var currentUid = currentUidProvider();
+        if (string.IsNullOrWhiteSpace(currentUid))
+        {
+            return [];
+        }
+
+        var unreadCounts = await chatService.UnreadChatCountsAsync(cancellationToken).ConfigureAwait(false);
+        if (unreadCounts.Count == 0)
+        {
+            return [];
+        }
+
+        var rooms = await roomService.MyRoomsAsync(cancellationToken).ConfigureAwait(false);
+        var roomsById = rooms
+            .Where(room => room.Id is not null)
+            .ToDictionary(room => room.Id!, StringComparer.Ordinal);
+        var notifications = new List<IncomingChatNotification>();
+
+        foreach (var (roomId, unreadCount) in unreadCounts.OrderBy(pair => pair.Key, StringComparer.Ordinal))
+        {
+            if (unreadCount <= 0 || !roomsById.TryGetValue(roomId, out var room))
+            {
+                continue;
+            }
+
+            var pageLimit = Math.Clamp(unreadCount, 1, 20);
+            var messages = await chatService.RoomChatMessagesAsync(roomId, limit: pageLimit, cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
+            var latestUnread = messages
+                .Where(message => !string.Equals(message.SenderUid, currentUid, StringComparison.Ordinal))
+                .OrderByDescending(message => message.CreatedAt ?? DateTimeOffset.MinValue)
+                .FirstOrDefault();
+            if (latestUnread?.Id is not { Length: > 0 } chatId || yieldedChatIds.Contains(chatId))
+            {
+                continue;
+            }
+
+            yieldedChatIds.Add(chatId);
+            notifications.Add(new IncomingChatNotification(latestUnread, room.Name, unreadCount));
+        }
+
+        return notifications;
+    }
+}
+
+public sealed record IncomingChatNotification(ChatMessage Message, string RoomName, int UnreadCount);
+
 public sealed class NotifiedMessageRegistry
 {
     private readonly HashSet<string> notifiedIds = new(StringComparer.Ordinal);
@@ -122,17 +222,25 @@ public sealed class NotificationController : IDisposable
 {
     private readonly Func<string, CancellationToken, Task> openMessageAsync;
     private readonly NotifiedMessageRegistry registry;
+    private readonly NotifiedChatRegistry chatRegistry;
     private bool disposed;
 #if WINDOWS
+    private readonly Func<string, string, CancellationToken, Task>? openChatAsync;
     private bool isRegistered;
 #endif
 
     public NotificationController(
         Func<string, CancellationToken, Task> openMessageAsync,
-        NotifiedMessageRegistry? registry = null)
+        Func<string, string, CancellationToken, Task>? openChatAsync = null,
+        NotifiedMessageRegistry? registry = null,
+        NotifiedChatRegistry? chatRegistry = null)
     {
         this.openMessageAsync = openMessageAsync;
+#if WINDOWS
+        this.openChatAsync = openChatAsync;
+#endif
         this.registry = registry ?? new NotifiedMessageRegistry();
+        this.chatRegistry = chatRegistry ?? new NotifiedChatRegistry();
     }
 
     public void Start()
@@ -209,6 +317,39 @@ public sealed class NotificationController : IDisposable
         return true;
     }
 
+    public bool TryShowIncomingChat(IncomingChatNotification notification)
+    {
+#if WINDOWS
+        if (!isRegistered)
+        {
+            return false;
+        }
+#endif
+
+        if (!chatRegistry.TryMarkNotified(notification.Message))
+        {
+            return false;
+        }
+
+#if WINDOWS
+        try
+        {
+            var toast = new AppNotification(NotificationXml(notification));
+            AppNotificationManager.Default.Show(toast);
+        }
+        catch (Exception)
+        {
+            if (notification.Message.Id is { Length: > 0 } id)
+            {
+                chatRegistry.Forget(id);
+            }
+
+            return false;
+        }
+#endif
+        return true;
+    }
+
     public void Dispose()
     {
         if (disposed)
@@ -229,13 +370,22 @@ public sealed class NotificationController : IDisposable
         AppNotificationActivatedEventArgs args)
     {
         var parsed = ParseActivationArguments(args);
-        if (!string.Equals(parsed.Action, "play", StringComparison.Ordinal)
-            || string.IsNullOrWhiteSpace(parsed.MessageId))
+        if (string.Equals(parsed.Action, "play", StringComparison.Ordinal)
+            && !string.IsNullOrWhiteSpace(parsed.MessageId))
+        {
+            _ = openMessageAsync(parsed.MessageId, CancellationToken.None);
+            return;
+        }
+
+        if (!string.Equals(parsed.Action, "chat", StringComparison.Ordinal)
+            || string.IsNullOrWhiteSpace(parsed.ChatId)
+            || string.IsNullOrWhiteSpace(parsed.RoomId)
+            || openChatAsync is null)
         {
             return;
         }
 
-        _ = openMessageAsync(parsed.MessageId, CancellationToken.None);
+        _ = openChatAsync(parsed.ChatId, parsed.RoomId, CancellationToken.None);
     }
 
     private static NotificationActivationArguments ParseActivationArguments(AppNotificationActivatedEventArgs args)
@@ -263,18 +413,86 @@ public sealed class NotificationController : IDisposable
             </toast>
             """;
     }
+
+    private static string NotificationXml(IncomingChatNotification notification)
+    {
+        var chatId = Uri.EscapeDataString(notification.Message.Id ?? string.Empty);
+        var roomId = Uri.EscapeDataString(notification.Message.RoomId);
+        var sender = SecurityElement.Escape(notification.Message.SenderNickname) ?? "Ping";
+        var roomName = SecurityElement.Escape(notification.RoomName) ?? "Room";
+        var body = string.IsNullOrWhiteSpace(notification.Message.Body)
+            ? "Image attachment"
+            : notification.Message.Body;
+        if (body.Length > 160)
+        {
+            body = body[..160] + "...";
+        }
+
+        var escapedBody = SecurityElement.Escape(body) ?? string.Empty;
+        var countText = notification.UnreadCount > 1
+            ? $"{notification.UnreadCount} unread messages"
+            : roomName;
+        var escapedCount = SecurityElement.Escape(countText) ?? roomName;
+        return
+            $"""
+            <toast launch="action=chat&amp;chat_id={chatId}&amp;room_id={roomId}">
+              <visual>
+                <binding template="ToastGeneric">
+                  <text>{sender}</text>
+                  <text>{escapedBody}</text>
+                  <text>{escapedCount}</text>
+                </binding>
+              </visual>
+            </toast>
+            """;
+    }
 }
 
-public sealed record NotificationActivationArguments(string? Action, string? MessageId)
+public sealed class NotifiedChatRegistry
+{
+    private readonly HashSet<string> notifiedIds = new(StringComparer.Ordinal);
+
+    public bool TryMarkNotified(ChatMessage message)
+    {
+        if (message.Id is not { Length: > 0 } id)
+        {
+            return false;
+        }
+
+        lock (notifiedIds)
+        {
+            return notifiedIds.Add(id);
+        }
+    }
+
+    public void Forget(string chatId)
+    {
+        lock (notifiedIds)
+        {
+            notifiedIds.Remove(chatId);
+        }
+    }
+}
+
+public sealed record NotificationActivationArguments(
+    string? Action,
+    string? MessageId,
+    string? ChatId = null,
+    string? RoomId = null)
 {
     public bool HasValues =>
-        !string.IsNullOrWhiteSpace(Action) || !string.IsNullOrWhiteSpace(MessageId);
+        !string.IsNullOrWhiteSpace(Action)
+        || !string.IsNullOrWhiteSpace(MessageId)
+        || !string.IsNullOrWhiteSpace(ChatId)
+        || !string.IsNullOrWhiteSpace(RoomId);
 
     public static NotificationActivationArguments From(IDictionary<string, string> values)
     {
         values.TryGetValue("action", out var action);
         values.TryGetValue("message_id", out var messageId);
-        return new(action, messageId);
+        values.TryGetValue("chat_id", out var chatId);
+        values.TryGetValue("room_id", out var roomId);
+        return new(action, messageId, chatId, roomId);
     }
 
     public static NotificationActivationArguments Parse(string? arguments)
@@ -294,6 +512,8 @@ public sealed record NotificationActivationArguments(string? Action, string? Mes
                 StringComparer.Ordinal);
         values.TryGetValue("action", out var action);
         values.TryGetValue("message_id", out var messageId);
-        return new(action, messageId);
+        values.TryGetValue("chat_id", out var chatId);
+        values.TryGetValue("room_id", out var roomId);
+        return new(action, messageId, chatId, roomId);
     }
 }
