@@ -78,6 +78,17 @@ public sealed class QuickSendStateTests
     }
 
     [Fact]
+    public async Task EnabledQuickSend_UsesHudMonitorIndexForCapture()
+    {
+        var presenter = new FakeQuickSendPresenter(monitorIndex: 2);
+        var controller = CreateController(presenter: presenter);
+
+        await controller.ExecuteAsync(ContextWith());
+
+        Assert.Equal(2, controller.CaptureEngine.LastRecordMonitorIndex);
+    }
+
+    [Fact]
     public async Task DisabledQuickSend_OpensScreenFaceMirrorInsteadOfRecording()
     {
         var presenter = new FakeQuickSendPresenter();
@@ -169,12 +180,15 @@ public sealed class QuickSendStateTests
 
         public bool RecordWasCalled { get; private set; }
 
+        public int? LastRecordMonitorIndex { get; private set; }
+
         public Task<ScreenFaceCaptureResult> RecordAsync(
             TimeSpan duration,
             int monitorIndex,
             CancellationToken cancellationToken)
         {
             RecordWasCalled = true;
+            LastRecordMonitorIndex = monitorIndex;
             return Task.FromResult(Result);
         }
 
@@ -196,7 +210,7 @@ public sealed class QuickSendStateTests
         Hud
     }
 
-    private sealed class FakeQuickSendPresenter : IQuickSendPresenter
+    private sealed class FakeQuickSendPresenter(int monitorIndex = MonitorTargetResolver.DefaultMonitorIndex) : IQuickSendPresenter
     {
         public QuickSendPresenterAction LastAction { get; private set; }
 
@@ -205,7 +219,7 @@ public sealed class QuickSendStateTests
         public IQuickSendHudSession ShowHud(QuickSendHudContext context)
         {
             LastAction = QuickSendPresenterAction.Hud;
-            return new FakeQuickSendHudSession();
+            return new FakeQuickSendHudSession(monitorIndex);
         }
 
         public void OpenScreenFaceMirror(ScreenFaceMirrorContext context)
@@ -225,8 +239,10 @@ public sealed class QuickSendStateTests
         }
     }
 
-    private sealed class FakeQuickSendHudSession : IQuickSendHudSession
+    private sealed class FakeQuickSendHudSession(int monitorIndex) : IQuickSendHudSession
     {
+        public int MonitorIndex { get; } = monitorIndex;
+
         public void SetRecording()
         {
         }

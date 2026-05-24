@@ -160,6 +160,8 @@ public interface IQuickSendPresenter
 
 public interface IQuickSendHudSession
 {
+    int MonitorIndex { get; }
+
     void SetRecording();
 
     void SetUploading();
@@ -244,7 +246,7 @@ public sealed class QuickSendController
         {
             await delayAsync(HudLeadInDuration, cancellationToken).ConfigureAwait(false);
             hud.SetRecording();
-            var recording = await captureEngine.RecordAsync(RecordingDuration, monitorIndex: 0, cancellationToken)
+            var recording = await captureEngine.RecordAsync(RecordingDuration, hud.MonitorIndex, cancellationToken)
                 .ConfigureAwait(false);
             recordedPath = recording.FilePath;
             hud.SetUploading();
@@ -519,6 +521,7 @@ public sealed partial class QuickSendHudWindow : Window, IQuickSendHudSession
     private readonly QuickSendHudViewModel viewModel;
     private readonly CancellationTokenSource cancellation;
     private AppWindow? appWindow;
+    private IntPtr windowHandle;
     private bool shouldCloseAfterFade;
     private bool uploadStarted;
 
@@ -537,6 +540,8 @@ public sealed partial class QuickSendHudWindow : Window, IQuickSendHudSession
     }
 
     public event EventHandler? RetryRequested;
+
+    public int MonitorIndex => MonitorTargetResolver.ResolveIndexForWindow(windowHandle);
 
     public void SetRecording() => viewModel.SetRecording();
 
@@ -629,6 +634,7 @@ public sealed partial class QuickSendHudWindow : Window, IQuickSendHudSession
     private void ConfigureWindow()
     {
         var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+        windowHandle = hwnd;
         var windowId = Win32Interop.GetWindowIdFromWindow(hwnd);
         appWindow = AppWindow.GetFromWindowId(windowId);
         appWindow.Resize(new Windows.Graphics.SizeInt32(260, 116));

@@ -22,7 +22,8 @@ public sealed record ScreenFaceMirrorContext(
     string SenderNickname,
     string PartnerLabel,
     bool AllowsLocalSave,
-    bool SaveSentCopy);
+    bool SaveSentCopy,
+    int MonitorIndex = MonitorTargetResolver.DefaultMonitorIndex);
 
 public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
 {
@@ -41,6 +42,7 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
     private Uri? screenPreviewUri;
     private string? screenPreviewPath;
     private MirrorPosition mirrorPosition = new(0.5, 0.5);
+    private int monitorIndex;
     private bool isCloseRequested;
     private bool isFadeOutRequested;
 
@@ -65,6 +67,7 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
         this.archive = archive;
         targetSelector = new MirrorTargetSelector(context.Rooms, context.PartnerLabel);
         partnerLabel = targetSelector.Label;
+        monitorIndex = context.MonitorIndex;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -135,6 +138,8 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
 
     public IReadOnlyList<MirrorTargetOption> TargetOptions => targetSelector.Options;
 
+    public int MonitorIndex => monitorIndex;
+
     public Uri? ScreenPreviewUri
     {
         get => screenPreviewUri;
@@ -190,6 +195,17 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
 
     public bool SelectTargetOption(MirrorTargetOption option) => CanRecord && UpdateTarget(targetSelector.SelectOption(option));
 
+    public void UpdateCaptureMonitor(int index)
+    {
+        if (monitorIndex == index)
+        {
+            return;
+        }
+
+        monitorIndex = index;
+        OnPropertyChanged(nameof(MonitorIndex));
+    }
+
     public void UpdateMirrorPosition(double centerX, double centerY, double displayWidth, double displayHeight)
     {
         if (displayWidth <= 0 || displayHeight <= 0)
@@ -207,7 +223,7 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
     {
         try
         {
-            var preview = await captureEngine.CapturePreviewAsync(monitorIndex: 0, cancellationToken);
+            var preview = await captureEngine.CapturePreviewAsync(monitorIndex, cancellationToken);
             DisposePreview();
             screenPreviewPath = preview.FilePath;
             ScreenPreviewUri = new Uri(preview.FilePath);
@@ -248,7 +264,7 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
         {
             State = MirrorState.Recording;
             StatusMessage = "Recording screen and face...";
-            var recording = await captureEngine.RecordAsync(RecordingDuration, monitorIndex: 0, cancellationToken);
+            var recording = await captureEngine.RecordAsync(RecordingDuration, monitorIndex, cancellationToken);
             recordedPath = recording.FilePath;
 
             State = MirrorState.Uploading;
@@ -384,6 +400,7 @@ public sealed partial class ScreenFaceMirrorWindow : Window
     private CancellationTokenSource? previewLoopCancellation;
     private Task? previewLoopTask;
     private AppWindow? appWindow;
+    private IntPtr windowHandle;
     private bool shouldCloseAfterFade;
 
     public ScreenFaceMirrorWindow(ScreenFaceMirrorViewModel viewModel)
@@ -531,6 +548,7 @@ public sealed partial class ScreenFaceMirrorWindow : Window
     private void ConfigureWindow()
     {
         var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+        windowHandle = hwnd;
         var windowId = Win32Interop.GetWindowIdFromWindow(hwnd);
         appWindow = AppWindow.GetFromWindowId(windowId);
         appWindow.Resize(new Windows.Graphics.SizeInt32(390, 300));
@@ -562,6 +580,7 @@ public sealed partial class ScreenFaceMirrorWindow : Window
             position.Y + size.Height / 2d - workArea.Y,
             workArea.Width,
             workArea.Height);
+        viewModel.UpdateCaptureMonitor(MonitorTargetResolver.ResolveIndexForWindow(windowHandle));
     }
 
     private async Task StartPreviewAsync()

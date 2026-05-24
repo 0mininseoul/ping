@@ -52,6 +52,29 @@ public sealed class ScreenFaceMirrorViewModelTests
         Assert.Equal("Design", model.PartnerLabel);
     }
 
+    [Fact]
+    public async Task Capture_UsesConfiguredMonitorIndex()
+    {
+        SendVideoInput? sentInput = null;
+        var engine = new FakeScreenFaceCaptureEngine();
+        var model = new ScreenFaceMirrorViewModel(
+            MultiRoomContext() with { MonitorIndex = 2 },
+            engine,
+            (input, _) =>
+            {
+                sentInput = input;
+                return Task.CompletedTask;
+            });
+
+        await model.LoadPreviewAsync();
+        model.UpdateCaptureMonitor(3);
+        await model.HandleEnterAsync();
+
+        Assert.Equal(2, engine.LastPreviewMonitorIndex);
+        Assert.Equal(3, engine.LastRecordMonitorIndex);
+        Assert.NotNull(sentInput);
+    }
+
     private static ScreenFaceMirrorContext MultiRoomContext() =>
         new(
             Rooms:
@@ -89,11 +112,16 @@ public sealed class ScreenFaceMirrorViewModelTests
 
     private sealed class FakeScreenFaceCaptureEngine : IScreenFaceCaptureEngine
     {
+        public int? LastRecordMonitorIndex { get; private set; }
+
+        public int? LastPreviewMonitorIndex { get; private set; }
+
         public Task<ScreenFaceCaptureResult> RecordAsync(
             TimeSpan duration,
             int monitorIndex,
             CancellationToken cancellationToken)
         {
+            LastRecordMonitorIndex = monitorIndex;
             var uniquePath = Path.Combine(
                 Path.GetTempPath(),
                 "PingScreenFaceMirrorTests",
@@ -102,10 +130,13 @@ public sealed class ScreenFaceMirrorViewModelTests
             return Task.FromResult(new ScreenFaceCaptureResult(uniquePath, 16.0 / 9.0));
         }
 
-        public Task<ScreenFacePreviewResult> CapturePreviewAsync(int monitorIndex, CancellationToken cancellationToken) =>
-            Task.FromResult(new ScreenFacePreviewResult(
+        public Task<ScreenFacePreviewResult> CapturePreviewAsync(int monitorIndex, CancellationToken cancellationToken)
+        {
+            LastPreviewMonitorIndex = monitorIndex;
+            return Task.FromResult(new ScreenFacePreviewResult(
                 Path.Combine(Path.GetTempPath(), "preview.bmp"),
                 16.0 / 9.0));
+        }
 
         public Task<ScreenCaptureSelfTestResult> SelfTestAsync() =>
             Task.FromResult(new ScreenCaptureSelfTestResult(true, PingCaptureErrorCode.Success, "ok"));
