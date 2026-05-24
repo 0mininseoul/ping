@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
@@ -12,6 +13,7 @@ namespace Ping.Windows.App.History;
 
 public sealed partial class HistoryWindow : Window
 {
+    private const int VirtualKeyShift = 0x10;
     private readonly HistoryViewModel viewModel;
     private readonly Func<VideoMessage, CancellationToken, Task<string>> downloadVideoAsync;
     private readonly MessageService messageService;
@@ -142,11 +144,18 @@ public sealed partial class HistoryWindow : Window
 
     private async void SendChatButton_Click(object sender, RoutedEventArgs args)
     {
-        if (await RunAsync(() => viewModel.SendChatAsync(ChatBox.Text, selectedChatImagePath)))
+        await SendChatFromComposerAsync();
+    }
+
+    private async void ChatBox_KeyDown(object sender, KeyRoutedEventArgs args)
+    {
+        if (args.Key != Windows.System.VirtualKey.Enter || IsShiftDown())
         {
-            ChatBox.Text = string.Empty;
-            ClearSelectedImage();
+            return;
         }
+
+        args.Handled = true;
+        await SendChatFromComposerAsync();
     }
 
     private void ReplyVideoButton_Click(object sender, RoutedEventArgs args)
@@ -228,6 +237,15 @@ public sealed partial class HistoryWindow : Window
     {
         selectedChatImagePath = null;
         SelectedImageText.Text = string.Empty;
+    }
+
+    private async Task SendChatFromComposerAsync()
+    {
+        if (await RunAsync(() => viewModel.SendChatAsync(ChatBox.Text, selectedChatImagePath)))
+        {
+            ChatBox.Text = string.Empty;
+            ClearSelectedImage();
+        }
     }
 
     private async Task RefreshAndSyncSelectionAsync()
@@ -316,4 +334,10 @@ public sealed partial class HistoryWindow : Window
             return false;
         }
     }
+
+    private static bool IsShiftDown() =>
+        (GetKeyState(VirtualKeyShift) & 0x8000) != 0;
+
+    [DllImport("user32.dll")]
+    private static extern short GetKeyState(int virtualKey);
 }

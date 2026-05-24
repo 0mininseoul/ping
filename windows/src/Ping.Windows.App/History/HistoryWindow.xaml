@@ -350,6 +350,11 @@
                         </StackPanel>
                         <TextBox
                             x:Name="ChatBox"
+                            MinHeight="34"
+                            MaxHeight="74"
+                            AcceptsReturn="True"
+                            KeyDown="ChatBox_KeyDown"
+                            TextWrapping="Wrap"
                             PlaceholderText="Message this room" />
                         <Button
                             HorizontalAlignment="Right"

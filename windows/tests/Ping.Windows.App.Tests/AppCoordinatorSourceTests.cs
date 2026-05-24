@@ -56,6 +56,33 @@ public sealed class AppCoordinatorSourceTests
         Assert.Contains("OpenHistoryWindow(roomId, chatId)", source, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void HistoryComposerSupportsEnterSendAndShiftEnterNewline()
+    {
+        var root = RepoRoot();
+        var xaml = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "History",
+            "HistoryWindow.xaml"));
+        var code = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "History",
+            "HistoryWindow.xaml.cs"));
+
+        Assert.Contains("x:Name=\"ChatBox\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("AcceptsReturn=\"True\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("KeyDown=\"ChatBox_KeyDown\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("SendChatFromComposerAsync", code, StringComparison.Ordinal);
+        Assert.Contains("IsShiftDown()", code, StringComparison.Ordinal);
+        Assert.Contains("args.Handled = true;", code, StringComparison.Ordinal);
+    }
+
     private static string RepoRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
