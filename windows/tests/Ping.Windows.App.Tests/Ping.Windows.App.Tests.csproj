@@ -26,7 +26,9 @@
     <Compile Include="..\..\src\Ping.Windows.App\Capture\ScreenFaceMirrorViewModel.cs" Link="Capture\ScreenFaceMirrorViewModel.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Notifications\NotificationController.cs" Link="Notifications\NotificationController.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Playback\PlaybackViewModel.cs" Link="Playback\PlaybackViewModel.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Setup\ClipboardWriter.cs" Link="Setup\ClipboardWriter.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Setup\HotkeySettingRow.cs" Link="Setup\HotkeySettingRow.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Setup\RoomManagerViewModel.cs" Link="Setup\RoomManagerViewModel.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Setup\SettingsWindowViewModel.cs" Link="Setup\SettingsWindowViewModel.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Setup\StartupTaskController.cs" Link="Setup\StartupTaskController.cs" />
   </ItemGroup>

@@ -133,6 +133,19 @@ public sealed class RoomContractTests
         Assert.True(reaction.MyReacted);
     }
 
+    [Fact]
+    public void PingInviteLink_MatchesMacUrlAndTokenParsing()
+    {
+        Assert.Equal(
+            "https://ping0min.vercel.app/invite/abc12345",
+            PingInviteLink.ShareTextFor("abc12345", "https://ping0min.vercel.app"));
+        Assert.Equal("abc12345", PingInviteLink.TokenFrom("https://ping0min.vercel.app/invite/abc12345"));
+        Assert.Equal("abc12345", PingInviteLink.TokenFrom("ping://invite/abc12345"));
+        Assert.Equal("abc12345", PingInviteLink.TokenFrom("https://example.com/join?token=abc12345"));
+        Assert.Equal("abc12345", PingInviteLink.TokenFrom("abc12345"));
+        Assert.Null(PingInviteLink.TokenFrom("not valid"));
+    }
+
     private sealed class RecordingSocialRpcClient : ISupabaseRpcClient
     {
         public List<(string Function, object Body)> Calls { get; } = [];

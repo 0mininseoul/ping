@@ -139,7 +139,7 @@
                             </StackPanel>
                             <TextBox
                                 x:Name="InviteLinkTokenBox"
-                                PlaceholderText="Invite token" />
+                                PlaceholderText="Invite link or token" />
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <Button
                                     Click="CreateInviteLinkButton_Click"

@@ -16,6 +16,8 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
     private readonly RoomService roomService;
     private readonly InvitationService invitationService;
     private readonly string nickname;
+    private readonly IClipboardWriter clipboardWriter;
+    private readonly Func<string, string> inviteLinkFormatter;
     private string statusMessage = "Rooms";
     private Room? selectedRoom;
     private Room? selectedSearchResult;
@@ -24,11 +26,15 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
     public RoomManagerViewModel(
         RoomService roomService,
         InvitationService invitationService,
-        string nickname)
+        string nickname,
+        IClipboardWriter? clipboardWriter = null,
+        Func<string, string>? inviteLinkFormatter = null)
     {
         this.roomService = roomService;
         this.invitationService = invitationService;
         this.nickname = nickname;
+        this.clipboardWriter = clipboardWriter ?? new ClipboardWriter();
+        this.inviteLinkFormatter = inviteLinkFormatter ?? PingInviteLink.ShareTextFor;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -213,18 +219,24 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
         }
 
         var link = await invitationService.CreateInviteLinkAsync(roomId, cancellationToken);
-        StatusMessage = "Invite link token copied into the field.";
-        return link.Token;
+        var shareText = inviteLinkFormatter(link.Token);
+        var didCopy = await clipboardWriter.TrySetTextAsync(shareText, cancellationToken);
+        StatusMessage = didCopy
+            ? "Invite link copied to clipboard."
+            : "Invite link created in the field.";
+        return shareText;
     }
 
     public async Task AcceptInviteLinkAsync(string token, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(token))
+        var inviteToken = PingInviteLink.TokenFrom(token);
+        if (inviteToken is null)
         {
+            StatusMessage = "Paste a valid invite link or token.";
             return;
         }
 
-        var room = await invitationService.AcceptInviteLinkAsync(token.Trim(), nickname, cancellationToken);
+        var room = await invitationService.AcceptInviteLinkAsync(inviteToken, nickname, cancellationToken);
         await ReloadRoomsAsync(cancellationToken);
         SelectedRoom = Rooms.FirstOrDefault(candidate => candidate.Id == room.Id) ?? room;
         StatusMessage = $"Joined {room.Name}.";
