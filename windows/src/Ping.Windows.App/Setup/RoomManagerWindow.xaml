@@ -137,6 +137,40 @@
                                     Click="InviteUserButton_Click"
                                     Content="Invite" />
                             </StackPanel>
+                            <Grid ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox
+                                    x:Name="UserSearchBox"
+                                    PlaceholderText="Search user nickname" />
+                                <Button
+                                    Grid.Column="1"
+                                    Click="SearchUsersButton_Click"
+                                    Content="Search users" />
+                            </Grid>
+                            <ListView
+                                x:Name="UserSearchResultsList"
+                                Height="96"
+                                ItemsSource="{Binding UserSearchResults}"
+                                SelectionChanged="HandleUserSearchSelectionChanged">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Padding="4" Spacing="2">
+                                            <TextBlock FontWeight="SemiBold" Text="{Binding Nickname}" />
+                                            <TextBlock
+                                                FontSize="11"
+                                                Foreground="{StaticResource PingMutedBrush}"
+                                                Text="{Binding Id}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+                            <Button
+                                HorizontalAlignment="Right"
+                                Click="InviteSelectedUserButton_Click"
+                                Content="Invite selected user" />
                             <TextBox
                                 x:Name="InviteLinkTokenBox"
                                 PlaceholderText="Invite link or token" />

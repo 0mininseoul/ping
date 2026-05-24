@@ -302,7 +302,9 @@ public sealed class AppCoordinator : IDisposable
         roomManagerWindow = new RoomManagerWindow(new RoomManagerViewModel(
             roomService,
             invitationService,
-            CurrentNickname));
+            CurrentNickname,
+            userService: userService,
+            currentUidProvider: () => currentUid));
         roomManagerWindow.Closed += (_, _) =>
         {
             roomManagerWindow = null;

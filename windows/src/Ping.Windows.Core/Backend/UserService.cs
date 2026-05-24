@@ -29,6 +29,19 @@ public sealed class UserService(ISupabaseRpcClient client)
         return users.FirstOrDefault();
     }
 
+    public Task<IReadOnlyList<PingUser>> SearchByNicknamePrefixAsync(
+        string prefix,
+        CancellationToken cancellationToken = default)
+    {
+        var normalized = SearchableText.Normalize(prefix);
+        return string.IsNullOrWhiteSpace(normalized)
+            ? Task.FromResult<IReadOnlyList<PingUser>>([])
+            : client.RpcArrayAsync<PingUser>(
+                "ping_search_profiles",
+                new SearchProfilesRpcBody(normalized),
+                cancellationToken);
+    }
+
     public Task UpdateLastUsedRoomAsync(string roomId, CancellationToken cancellationToken = default) =>
         client.RpcVoidAsync(
             "ping_update_last_used_room",
@@ -42,6 +55,9 @@ public sealed record UpsertProfileRpcBody(
 
 public sealed record GetProfileRpcBody(
     [property: JsonPropertyName("target_uid")] string TargetUid);
+
+public sealed record SearchProfilesRpcBody(
+    [property: JsonPropertyName("search_prefix")] string SearchPrefix);
 
 public sealed record UpdateLastUsedRoomRpcBody(
     [property: JsonPropertyName("room_uuid")] string RoomUuid);

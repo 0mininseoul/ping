@@ -421,10 +421,12 @@ public sealed class BackendContractTests
 
         var savedProfile = await service.UpsertAsync("  Youngmin  Park  ");
         var profile = await service.GetAsync("sender-uid");
+        var searchResults = await service.SearchByNicknamePrefixAsync("  YoUngMin ");
         await service.UpdateLastUsedRoomAsync("room-id");
 
         Assert.Equal("Youngmin Park", savedProfile?.Nickname);
         Assert.Equal("room-id", profile?.LastUsedRoomId);
+        Assert.Single(searchResults);
         Assert.Equal("ping_upsert_profile", rpc.Calls[0].Function);
         Assert.Equal(
             """
@@ -437,12 +439,18 @@ public sealed class BackendContractTests
             {"target_uid":"sender-uid"}
             """,
             JsonSerializer.Serialize(rpc.Calls[1].Body, JsonOptions.Supabase));
-        Assert.Equal("ping_update_last_used_room", rpc.Calls[2].Function);
+        Assert.Equal("ping_search_profiles", rpc.Calls[2].Function);
+        Assert.Equal(
+            """
+            {"search_prefix":"youngmin"}
+            """,
+            JsonSerializer.Serialize(rpc.Calls[2].Body, JsonOptions.Supabase));
+        Assert.Equal("ping_update_last_used_room", rpc.Calls[3].Function);
         Assert.Equal(
             """
             {"room_uuid":"room-id"}
             """,
-            JsonSerializer.Serialize(rpc.Calls[2].Body, JsonOptions.Supabase));
+            JsonSerializer.Serialize(rpc.Calls[3].Body, JsonOptions.Supabase));
     }
 
     [Fact]

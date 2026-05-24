@@ -15,12 +15,15 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
 {
     private readonly RoomService roomService;
     private readonly InvitationService invitationService;
+    private readonly UserService? userService;
     private readonly string nickname;
     private readonly IClipboardWriter clipboardWriter;
     private readonly Func<string, string> inviteLinkFormatter;
+    private readonly Func<string?> currentUidProvider;
     private string statusMessage = "Rooms";
     private Room? selectedRoom;
     private Room? selectedSearchResult;
+    private PingUser? selectedUserSearchResult;
     private Invitation? selectedInvitation;
 
     public RoomManagerViewModel(
@@ -28,13 +31,17 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
         InvitationService invitationService,
         string nickname,
         IClipboardWriter? clipboardWriter = null,
-        Func<string, string>? inviteLinkFormatter = null)
+        Func<string, string>? inviteLinkFormatter = null,
+        UserService? userService = null,
+        Func<string?>? currentUidProvider = null)
     {
         this.roomService = roomService;
         this.invitationService = invitationService;
+        this.userService = userService;
         this.nickname = nickname;
         this.clipboardWriter = clipboardWriter ?? new ClipboardWriter();
         this.inviteLinkFormatter = inviteLinkFormatter ?? (token => PingInviteLink.ShareTextFor(token));
+        this.currentUidProvider = currentUidProvider ?? (() => null);
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -42,6 +49,8 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
     public ObservableCollection<Room> Rooms { get; } = [];
 
     public ObservableCollection<Room> SearchResults { get; } = [];
+
+    public ObservableCollection<PingUser> UserSearchResults { get; } = [];
 
     public ObservableCollection<Invitation> Invitations { get; } = [];
 
@@ -93,6 +102,16 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
         set
         {
             selectedInvitation = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public PingUser? SelectedUserSearchResult
+    {
+        get => selectedUserSearchResult;
+        set
+        {
+            selectedUserSearchResult = value;
             OnPropertyChanged();
         }
     }
@@ -185,6 +204,42 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
         await ReloadRoomsAsync(cancellationToken);
         SelectedRoom = Rooms.FirstOrDefault(candidate => candidate.Id == room.Id) ?? room;
         StatusMessage = "Invitation sent in a new room.";
+    }
+
+    public async Task SearchUsersAsync(string prefix, CancellationToken cancellationToken = default)
+    {
+        UserSearchResults.Clear();
+        SelectedUserSearchResult = null;
+
+        if (userService is null)
+        {
+            StatusMessage = "User search is unavailable.";
+            return;
+        }
+
+        var currentUid = currentUidProvider();
+        foreach (var user in await userService.SearchByNicknamePrefixAsync(prefix, cancellationToken))
+        {
+            if (!string.Equals(user.Id, currentUid, StringComparison.Ordinal))
+            {
+                UserSearchResults.Add(user);
+            }
+        }
+
+        StatusMessage = UserSearchResults.Count == 0
+            ? "No matching users."
+            : "Select a user to invite.";
+    }
+
+    public async Task InviteSelectedUserAsync(string fallbackRoomName, CancellationToken cancellationToken = default)
+    {
+        if (SelectedUserSearchResult?.Id is not { Length: > 0 } userId)
+        {
+            StatusMessage = "Select a user to invite.";
+            return;
+        }
+
+        await InviteUserAsync(userId, fallbackRoomName, cancellationToken);
     }
 
     public async Task AcceptSelectedInvitationAsync(CancellationToken cancellationToken = default)
@@ -302,6 +357,11 @@ public sealed partial class RoomManagerWindow : Window
         viewModel.SelectedSearchResult = SearchResultsList.SelectedItem as Room;
     }
 
+    private void HandleUserSearchSelectionChanged(object sender, SelectionChangedEventArgs args)
+    {
+        viewModel.SelectedUserSearchResult = UserSearchResultsList.SelectedItem as PingUser;
+    }
+
     private void HandleInvitationSelectionChanged(object sender, SelectionChangedEventArgs args)
     {
         viewModel.SelectedInvitation = InvitationsList.SelectedItem as Invitation;
@@ -324,6 +384,12 @@ public sealed partial class RoomManagerWindow : Window
 
     private async void InviteUserButton_Click(object sender, RoutedEventArgs args) =>
         await RunAsync(() => viewModel.InviteUserAsync(InviteUserIdBox.Text, NewRoomNameBox.Text));
+
+    private async void SearchUsersButton_Click(object sender, RoutedEventArgs args) =>
+        await RunAsync(() => viewModel.SearchUsersAsync(UserSearchBox.Text));
+
+    private async void InviteSelectedUserButton_Click(object sender, RoutedEventArgs args) =>
+        await RunAsync(() => viewModel.InviteSelectedUserAsync(NewRoomNameBox.Text));
 
     private async void AcceptInvitationButton_Click(object sender, RoutedEventArgs args) =>
         await RunAsync(() => viewModel.AcceptSelectedInvitationAsync());

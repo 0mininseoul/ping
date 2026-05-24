@@ -116,6 +116,7 @@ Manual checks after install:
 - History shows video and chat in one room timeline, supports direct video Play/double-click playback, text/image chat, reply previews, sender chat delete, received video hide, sender video delete, and quick emoji reactions.
 - Unread room chat from another user shows one Windows notification per room, and clicking it opens History.
 - Settings can edit and save the Supabase profile nickname used for room actions and sent message labels.
+- Rooms can search users by profile nickname and invite the selected user, matching the Mac room setup flow.
 - Settings toggles for quick send, Windows startup, sent-copy saving, received-video saving, recipient local-save permission, and 30-day local archive deletion persist.
 - Settings > Storage shows the local archive path under `Documents\Ping`, opens it in Explorer, and creates `sent`/`received` folders before opening.
 - Create invite link writes the Mac-compatible `/invite/<token>` URL into the field and to the Windows clipboard.
