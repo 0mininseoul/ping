@@ -1,9 +1,12 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using Ping.Windows.Core.Models;
+
+#if WINDOWS
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media.Imaging;
-using Ping.Windows.Core.Models;
+#endif
 
 namespace Ping.Windows.App.History;
 
@@ -36,7 +39,11 @@ public sealed class VideoHistoryItem
 
 public sealed class ChatHistoryItem : INotifyPropertyChanged
 {
+#if WINDOWS
     private BitmapImage? imageSource;
+#else
+    private Uri? imageSource;
+#endif
     private string attachmentStatus;
 
     public ChatHistoryItem(
@@ -68,11 +75,19 @@ public sealed class ChatHistoryItem : INotifyPropertyChanged
 
     public bool HasImageAttachment => !string.IsNullOrWhiteSpace(Message.MediaPath);
 
+#if WINDOWS
     public Visibility AttachmentVisibility => HasImageAttachment ? Visibility.Visible : Visibility.Collapsed;
 
     public Visibility ImageVisibility => imageSource is null ? Visibility.Collapsed : Visibility.Visible;
 
     public BitmapImage? ImageSource
+#else
+    public bool AttachmentVisibility => HasImageAttachment;
+
+    public bool ImageVisibility => imageSource is not null;
+
+    public Uri? ImageSource
+#endif
     {
         get => imageSource;
         private set
@@ -95,7 +110,11 @@ public sealed class ChatHistoryItem : INotifyPropertyChanged
 
     public void SetImagePath(string localPath)
     {
+#if WINDOWS
         ImageSource = new BitmapImage(new Uri(Path.GetFullPath(localPath)));
+#else
+        ImageSource = new Uri(Path.GetFullPath(localPath));
+#endif
         AttachmentStatus = string.IsNullOrWhiteSpace(MediaFileName) ? "Image" : MediaFileName;
     }
 
