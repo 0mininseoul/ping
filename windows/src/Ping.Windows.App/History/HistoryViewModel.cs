@@ -150,6 +150,7 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         }
 
         await LoadChatImagesAsync(cancellationToken);
+        await MarkSelectedRoomReadAsync(roomId, cancellationToken);
         StatusMessage = $"{Videos.Count} videos, {Chats.Count} chats, {Reactions.Count} reactions.";
     }
 
@@ -234,6 +235,17 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
             {
                 row.SetAttachmentError();
             }
+        }
+    }
+
+    private async Task MarkSelectedRoomReadAsync(string roomId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await chatService.MarkRoomReadAsync(roomId, cancellationToken);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException)
+        {
         }
     }
 
