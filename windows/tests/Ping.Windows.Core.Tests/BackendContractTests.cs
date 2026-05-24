@@ -64,6 +64,23 @@ public sealed class BackendContractTests
         Assert.Equal(expected, JsonSerializer.Deserialize<MessageStatus>(payload, JsonOptions.Supabase));
     }
 
+    [Fact]
+    public void SupabaseConfigurationAcceptsWindowsSetupJsonAliases()
+    {
+        var config = JsonSerializer.Deserialize<SupabaseConfiguration>(
+            """
+            {
+              "url": "https://example.supabase.co",
+              "anonKey": "anon-key"
+            }
+            """,
+            JsonOptions.Supabase)?.Normalize();
+
+        Assert.NotNull(config);
+        Assert.Equal("https://example.supabase.co/", config.Url.ToString());
+        Assert.Equal("anon-key", config.AnonKey);
+    }
+
     [Theory]
     [InlineData("\"open\"", RoomStatus.Open)]
     [InlineData("\"full\"", RoomStatus.Full)]
@@ -197,6 +214,59 @@ public sealed class BackendContractTests
 
         Assert.Equal([0x00, 0x01, 0x02], await File.ReadAllBytesAsync(localPath));
         Assert.Single(handler.Requests);
+    }
+
+    [Fact]
+    public async Task StorageServiceUploadsAndDownloadsChatImagesWithMacContract()
+    {
+        using var files = new SupabaseTestFiles();
+        await files.SaveSessionAsync(new SupabaseSession(
+            AccessToken: "access-token",
+            RefreshToken: "refresh-token",
+            ExpiresAt: DateTimeOffset.UtcNow.AddHours(1),
+            UserId: "user-id"));
+        var localImagePath = Path.Combine(files.DirectoryPath, "message.png");
+        await File.WriteAllBytesAsync(localImagePath, [0x89, 0x50, 0x4E, 0x47]);
+        var requestIndex = 0;
+        var handler = new RecordingHttpMessageHandler(request =>
+        {
+            requestIndex++;
+            Assert.Equal("anon-key", request.Headers.GetValues("apikey").Single());
+            Assert.Equal("Bearer", request.Headers.Authorization?.Scheme);
+            Assert.Equal("access-token", request.Headers.Authorization?.Parameter);
+
+            if (requestIndex == 1)
+            {
+                Assert.Equal(HttpMethod.Post, request.Method);
+                Assert.Equal(
+                    "https://example.supabase.co/storage/v1/object/ping-media/sender-uid/chat-images/message-id.png",
+                    request.RequestUri?.ToString());
+                Assert.Equal("true", request.Headers.GetValues("x-upsert").Single());
+                Assert.Equal("image/png", request.Content?.Headers.ContentType?.MediaType);
+                Assert.Equal([0x89, 0x50, 0x4E, 0x47], request.Content?.ReadAsByteArrayAsync().GetAwaiter().GetResult());
+                return JsonResponse("{}");
+            }
+
+            Assert.Equal(HttpMethod.Get, request.Method);
+            Assert.Equal(
+                "https://example.supabase.co/storage/v1/object/ping-media/sender-uid/chat-images/message-id.png",
+                request.RequestUri?.ToString());
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new ByteArrayContent([0x01, 0x02, 0x03])
+            };
+        });
+        using var client = files.CreateClient(handler);
+        var service = new StorageService(client);
+
+        var upload = await service.UploadChatImageAsync(localImagePath, "sender-uid", "message-id");
+        var downloaded = await service.DownloadChatMediaAsync(upload.Path, "png");
+
+        Assert.Equal("sender-uid/chat-images/message-id.png", upload.Path);
+        Assert.Equal("image/png", upload.MimeType);
+        Assert.Equal("message.png", upload.FileName);
+        Assert.Equal([0x01, 0x02, 0x03], await File.ReadAllBytesAsync(downloaded));
+        Assert.Equal(2, handler.Requests.Count);
     }
 
     [Fact]
@@ -383,6 +453,12 @@ public sealed class BackendContractTests
             () => service.UploadVideoAsync(emptyMp4, "sender/uid", "video-id", ["receiver"], DateTimeOffset.UtcNow));
         await Assert.ThrowsAsync<ArgumentException>(
             () => service.DownloadVideoAsync("sender-uid/video-id.mov"));
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.UploadChatImageAsync(emptyMp4, "sender-uid", "message-id"));
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => service.UploadChatImageAsync(textFile, "sender-uid", "message-id"));
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => service.DownloadChatMediaAsync("../sender/chat-images/message.png", "png"));
     }
 
     private sealed class RecordingRpcClient : ISupabaseRpcClient

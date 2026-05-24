@@ -4,12 +4,6 @@ using System.Runtime.CompilerServices;
 using Ping.Windows.Core.Backend;
 using Ping.Windows.Core.Models;
 
-#if WINDOWS
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
-using Ping.Windows.App.Playback;
-#endif
-
 namespace Ping.Windows.App.History;
 
 public sealed class HistoryViewModel : INotifyPropertyChanged
@@ -18,29 +12,36 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
     private readonly MessageService messageService;
     private readonly ChatMessageService chatService;
     private readonly ReactionService reactionService;
+    private readonly StorageService storageService;
+    private readonly Func<string?> currentUidProvider;
+    private static readonly string[] QuickReactions = ["❤️", "👍", "👎", "😂", "‼️", "❓"];
     private Room? selectedRoom;
-    private VideoMessage? selectedVideo;
+    private VideoHistoryItem? selectedVideo;
     private string statusMessage = "History";
 
     public HistoryViewModel(
         RoomService roomService,
         MessageService messageService,
         ChatMessageService chatService,
-        ReactionService reactionService)
+        ReactionService reactionService,
+        StorageService storageService,
+        Func<string?> currentUidProvider)
     {
         this.roomService = roomService;
         this.messageService = messageService;
         this.chatService = chatService;
         this.reactionService = reactionService;
+        this.storageService = storageService;
+        this.currentUidProvider = currentUidProvider;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public ObservableCollection<Room> Rooms { get; } = [];
 
-    public ObservableCollection<VideoMessage> Videos { get; } = [];
+    public ObservableCollection<VideoHistoryItem> Videos { get; } = [];
 
-    public ObservableCollection<ChatMessage> Chats { get; } = [];
+    public ObservableCollection<ChatHistoryItem> Chats { get; } = [];
 
     public ObservableCollection<MessageReaction> Reactions { get; } = [];
 
@@ -60,7 +61,7 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         }
     }
 
-    public VideoMessage? SelectedVideo
+    public VideoHistoryItem? SelectedVideo
     {
         get => selectedVideo;
         set
@@ -111,39 +112,91 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         }
 
         var videos = await messageService.RoomMessagesAsync(roomId, cancellationToken: cancellationToken);
-        foreach (var video in videos)
-        {
-            Videos.Add(video);
-        }
-
         var chats = await chatService.RoomChatMessagesAsync(roomId, cancellationToken: cancellationToken);
-        foreach (var chat in chats)
-        {
-            Chats.Add(chat);
-        }
 
         var reactions = await reactionService.ReactionsAsync(
             chats.Where(chat => chat.Id is not null).Select(chat => chat.Id!).ToArray(),
             videos.Where(video => video.Id is not null).Select(video => video.Id!).ToArray(),
             cancellationToken);
+        var reactionMap = ReactionMap(reactions);
+
+        foreach (var video in videos)
+        {
+            Videos.Add(new VideoHistoryItem(video, QuickReactions, ReactionsFor(reactionMap, ReactionTargetKind.Video, video.Id)));
+        }
+
+        foreach (var chat in chats)
+        {
+            Chats.Add(new ChatHistoryItem(chat, QuickReactions, ReactionsFor(reactionMap, ReactionTargetKind.Chat, chat.Id)));
+        }
+
         foreach (var reaction in reactions)
         {
             Reactions.Add(reaction);
         }
 
+        await LoadChatImagesAsync(cancellationToken);
         StatusMessage = $"{Videos.Count} videos, {Chats.Count} chats, {Reactions.Count} reactions.";
     }
 
-    public async Task SendChatAsync(string body, CancellationToken cancellationToken = default)
+    public async Task SendChatAsync(string body, string? localImagePath = null, CancellationToken cancellationToken = default)
     {
-        if (SelectedRoom?.Id is not { } roomId || string.IsNullOrWhiteSpace(body))
+        if (SelectedRoom?.Id is not { } roomId)
         {
             return;
         }
 
-        await chatService.SendChatAsync(roomId, body.Trim(), cancellationToken: cancellationToken);
+        var trimmed = body.Trim();
+        var hasImage = !string.IsNullOrWhiteSpace(localImagePath);
+        if (!hasImage && string.IsNullOrWhiteSpace(trimmed))
+        {
+            return;
+        }
+
+        ChatMediaPayload? media = null;
+        string? messageId = null;
+        if (hasImage)
+        {
+            var uid = currentUidProvider();
+            if (string.IsNullOrWhiteSpace(uid))
+            {
+                throw new InvalidOperationException("Supabase session is not ready.");
+            }
+
+            messageId = Guid.NewGuid().ToString();
+            var upload = await storageService.UploadChatImageAsync(localImagePath!, uid, messageId, cancellationToken);
+            media = new ChatMediaPayload(
+                upload.Path,
+                upload.MimeType,
+                upload.Width,
+                upload.Height,
+                upload.FileName);
+        }
+
+        await chatService.SendChatAsync(
+            roomId,
+            trimmed,
+            messageId: messageId,
+            media: media,
+            cancellationToken: cancellationToken);
         await LoadSelectedRoomAsync(cancellationToken);
-        StatusMessage = "Chat sent.";
+        StatusMessage = hasImage ? "Image sent." : "Chat sent.";
+    }
+
+    public async Task ToggleReactionAsync(
+        ReactionTargetKind targetKind,
+        string? targetId,
+        string emoji,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(targetId) || string.IsNullOrWhiteSpace(emoji))
+        {
+            return;
+        }
+
+        var added = await reactionService.ToggleAsync(targetKind, targetId, emoji, cancellationToken);
+        await LoadSelectedRoomAsync(cancellationToken);
+        StatusMessage = added ? "Reaction added." : "Reaction removed.";
     }
 
     public void ReportError(Exception exception)
@@ -151,90 +204,87 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         StatusMessage = exception.Message;
     }
 
+    private async Task LoadChatImagesAsync(CancellationToken cancellationToken)
+    {
+        foreach (var row in Chats.Where(row => row.HasImageAttachment))
+        {
+            try
+            {
+                var path = await storageService.DownloadChatMediaAsync(
+                    row.Message.MediaPath!,
+                    MediaFileExtension(row.Message),
+                    cancellationToken);
+                row.SetImagePath(path);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or HttpRequestException)
+            {
+                row.SetAttachmentError();
+            }
+        }
+    }
+
+    private static Dictionary<string, List<ReactionAggregate>> ReactionMap(IEnumerable<MessageReaction> reactions)
+    {
+        var map = new Dictionary<string, List<ReactionAggregate>>(StringComparer.Ordinal);
+        foreach (var reaction in reactions)
+        {
+            var key = ReactionKey(reaction.TargetKind, reaction.TargetId);
+            if (!map.TryGetValue(key, out var values))
+            {
+                values = [];
+                map[key] = values;
+            }
+
+            values.Add(new ReactionAggregate(
+                reaction.TargetKind,
+                reaction.TargetId,
+                reaction.Emoji,
+                reaction.TotalCount,
+                reaction.MyReacted));
+        }
+
+        return map;
+    }
+
+    private static IReadOnlyList<ReactionAggregate> ReactionsFor(
+        IReadOnlyDictionary<string, List<ReactionAggregate>> reactionMap,
+        ReactionTargetKind kind,
+        string? targetId) =>
+        targetId is null
+            ? []
+            : reactionMap.TryGetValue(ReactionKey(kind, targetId), out var reactions)
+                ? reactions.OrderByDescending(reaction => reaction.Count).ThenBy(reaction => reaction.Emoji, StringComparer.Ordinal).ToArray()
+                : [];
+
+    private static string ReactionKey(ReactionTargetKind kind, string targetId) =>
+        $"{kind.ToWireValue()}:{targetId}";
+
+    private static string MediaFileExtension(ChatMessage message)
+    {
+        var fileNameExtension = (Path.GetExtension(message.MediaFileName ?? string.Empty) ?? string.Empty).TrimStart('.');
+        if (!string.IsNullOrWhiteSpace(fileNameExtension))
+        {
+            return fileNameExtension;
+        }
+
+        var pathExtension = (Path.GetExtension(message.MediaPath ?? string.Empty) ?? string.Empty).TrimStart('.');
+        if (!string.IsNullOrWhiteSpace(pathExtension))
+        {
+            return pathExtension;
+        }
+
+        return message.MediaMimeType switch
+        {
+            "image/jpeg" => "jpg",
+            "image/png" => "png",
+            "image/heic" => "heic",
+            "image/heif" => "heif",
+            "image/gif" => "gif",
+            "image/webp" => "webp",
+            _ => "img"
+        };
+    }
+
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }
-
-#if WINDOWS
-public sealed partial class HistoryWindow : Window
-{
-    private readonly HistoryViewModel viewModel;
-    private readonly Func<VideoMessage, CancellationToken, Task<string>> downloadVideoAsync;
-    private readonly MessageService messageService;
-    private readonly List<PlaybackWindow> playbackWindows = [];
-
-    public HistoryWindow(
-        HistoryViewModel viewModel,
-        Func<VideoMessage, CancellationToken, Task<string>> downloadVideoAsync,
-        MessageService messageService)
-    {
-        this.viewModel = viewModel;
-        this.downloadVideoAsync = downloadVideoAsync;
-        this.messageService = messageService;
-        InitializeComponent();
-        Root.DataContext = viewModel;
-        Root.Loaded += HandleLoaded;
-    }
-
-    private async void HandleLoaded(object sender, RoutedEventArgs args)
-    {
-        await RunAsync(() => viewModel.LoadAsync());
-    }
-
-    private async void RoomsList_SelectionChanged(object sender, SelectionChangedEventArgs args)
-    {
-        viewModel.SelectedRoom = RoomsList.SelectedItem as Room;
-        await RunAsync(() => viewModel.LoadSelectedRoomAsync());
-    }
-
-    private void VideosList_SelectionChanged(object sender, SelectionChangedEventArgs args)
-    {
-        viewModel.SelectedVideo = VideosList.SelectedItem as VideoMessage;
-    }
-
-    private async void PlayVideoButton_Click(object sender, RoutedEventArgs args)
-    {
-        if (viewModel.SelectedVideo is not { } video)
-        {
-            return;
-        }
-
-        await RunAsync(async () =>
-        {
-            var localPath = await downloadVideoAsync(video, CancellationToken.None);
-            var playback = new PlaybackWindow(new PlaybackViewModel(
-                video,
-                localPath,
-                token => video.Id is null ? Task.CompletedTask : messageService.MarkSeenAsync(video.Id, token)));
-            playback.Closed += (_, _) => playbackWindows.Remove(playback);
-            playbackWindows.Add(playback);
-            playback.Activate();
-        });
-    }
-
-    private async void RefreshButton_Click(object sender, RoutedEventArgs args) =>
-        await RunAsync(() => viewModel.LoadSelectedRoomAsync());
-
-    private async void SendChatButton_Click(object sender, RoutedEventArgs args)
-    {
-        if (await RunAsync(() => viewModel.SendChatAsync(ChatBox.Text)))
-        {
-            ChatBox.Text = string.Empty;
-        }
-    }
-
-    private async Task<bool> RunAsync(Func<Task> work)
-    {
-        try
-        {
-            await work();
-            return true;
-        }
-        catch (Exception ex)
-        {
-            viewModel.ReportError(ex);
-            return false;
-        }
-    }
-}
-#endif

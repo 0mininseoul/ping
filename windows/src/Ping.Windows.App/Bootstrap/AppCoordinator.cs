@@ -299,7 +299,13 @@ public sealed class AppCoordinator : IDisposable
         }
 
         historyWindow = new HistoryWindow(
-            new HistoryViewModel(roomService, messageService, chatService, reactionService),
+            new HistoryViewModel(
+                roomService,
+                messageService,
+                chatService,
+                reactionService,
+                storageService,
+                () => currentUid),
             DownloadVideoForPlaybackAsync,
             messageService);
         historyWindow.Closed += (_, _) => historyWindow = null;

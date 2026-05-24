@@ -354,6 +354,12 @@ public sealed record SupabaseConfiguration
     [JsonPropertyName("supabaseAnonKey")]
     public string? SupabaseAnonKeyCamel { get; init; }
 
+    [JsonPropertyName("url")]
+    public string? SupabaseUrlShort { get; init; }
+
+    [JsonPropertyName("anonKey")]
+    public string? SupabaseAnonKeyShort { get; init; }
+
     [JsonIgnore]
     public Uri Url { get; private init; } = null!;
 
@@ -371,8 +377,8 @@ public sealed record SupabaseConfiguration
 
     public SupabaseConfiguration Normalize()
     {
-        var urlText = SupabaseUrl ?? SupabaseUrlCamel;
-        var anonKey = SupabaseAnonKey ?? SupabaseAnonKeyCamel;
+        var urlText = SupabaseUrl ?? SupabaseUrlCamel ?? SupabaseUrlShort;
+        var anonKey = SupabaseAnonKey ?? SupabaseAnonKeyCamel ?? SupabaseAnonKeyShort;
         if (!Uri.TryCreate(urlText, UriKind.Absolute, out var url) || string.IsNullOrWhiteSpace(anonKey))
         {
             throw new InvalidOperationException("Supabase.json must contain SUPABASE_URL and SUPABASE_ANON_KEY.");

@@ -94,6 +94,7 @@ Smoke-check release artifacts:
 ```
 
 Manual hardware smoke is still required for camera, microphone, screen capture, app notifications, global hotkeys, and Mac/Windows cross-send.
+History smoke should also cover room text chat, `ping-media` image attachments, and reaction toggles across Windows and macOS.
 
 The WinUI app is under `src/Ping.Windows.App`, shared product logic belongs in `src/Ping.Windows.Core`, native Windows capture work belongs in `src/Ping.Windows.NativeCapture`, and tests belong under `tests`.
 

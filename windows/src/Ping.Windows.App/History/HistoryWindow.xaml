@@ -111,6 +111,38 @@
                                         FontSize="11"
                                         Foreground="{StaticResource PingMutedBrush}"
                                         Text="{Binding VideoId}" />
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <ItemsControl ItemsSource="{Binding Reactions}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Horizontal" Spacing="4" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Button
+                                                        Padding="6,2"
+                                                        Click="ReactionButton_Click"
+                                                        Content="{Binding Display}" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <ItemsControl ItemsSource="{Binding QuickReactions}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Horizontal" Spacing="4" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Button
+                                                        Padding="6,2"
+                                                        Click="ReactionButton_Click"
+                                                        Content="{Binding Emoji}" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
                                 </StackPanel>
                                 <TextBlock
                                     Grid.Column="1"
@@ -145,10 +177,61 @@
                         ItemsSource="{Binding Chats}">
                         <ListView.ItemTemplate>
                             <DataTemplate>
-                                <StackPanel Padding="4" Spacing="2">
+                                <StackPanel Padding="4" Spacing="5">
                                     <TextBlock FontWeight="SemiBold" Text="{Binding SenderNickname}" />
+                                    <Border
+                                        Padding="8"
+                                        Background="#1B1D20"
+                                        BorderBrush="{StaticResource PingIdleBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Visibility="{Binding AttachmentVisibility}">
+                                        <StackPanel Spacing="5">
+                                            <Image
+                                                MaxHeight="96"
+                                                HorizontalAlignment="Left"
+                                                Source="{Binding ImageSource}"
+                                                Stretch="Uniform"
+                                                Visibility="{Binding ImageVisibility}" />
+                                            <TextBlock
+                                                FontSize="11"
+                                                Foreground="{StaticResource PingMutedBrush}"
+                                                Text="{Binding AttachmentStatus}" />
+                                        </StackPanel>
+                                    </Border>
                                     <TextBlock Foreground="{StaticResource PingMutedBrush}" Text="{Binding Body}" TextWrapping="WrapWholeWords" />
-                                    <TextBlock FontSize="11" Foreground="{StaticResource PingMutedBrush}" Text="{Binding MediaFileName}" />
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <ItemsControl ItemsSource="{Binding Reactions}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Horizontal" Spacing="4" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Button
+                                                        Padding="6,2"
+                                                        Click="ReactionButton_Click"
+                                                        Content="{Binding Display}" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <ItemsControl ItemsSource="{Binding QuickReactions}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Horizontal" Spacing="4" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Button
+                                                        Padding="6,2"
+                                                        Click="ReactionButton_Click"
+                                                        Content="{Binding Emoji}" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
                                 </StackPanel>
                             </DataTemplate>
                         </ListView.ItemTemplate>
@@ -208,6 +291,19 @@
                     <StackPanel
                         Grid.Column="1"
                         Spacing="8">
+                        <TextBlock
+                            x:Name="SelectedImageText"
+                            FontSize="11"
+                            Foreground="{StaticResource PingMutedBrush}"
+                            TextWrapping="NoWrap" />
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Button
+                                Click="AttachImageButton_Click"
+                                Content="Attach image" />
+                            <Button
+                                Click="ClearImageButton_Click"
+                                Content="Clear" />
+                        </StackPanel>
                         <TextBox
                             x:Name="ChatBox"
                             PlaceholderText="Message this room" />
