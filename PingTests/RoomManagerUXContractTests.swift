@@ -222,7 +222,7 @@ final class RoomManagerUXContractTests: XCTestCase {
         XCTAssertTrue(source.contains("private var playerSize: CGSize"))
         XCTAssertTrue(source.contains(".frame(width: playerSize.width, height: playerSize.height)"))
         XCTAssertTrue(source.contains("CGSize(width: 128, height: 128)"))
-        XCTAssertTrue(source.contains("let width: CGFloat = 340"))
+        XCTAssertTrue(source.contains("let width: CGFloat = 420"))
         XCTAssertTrue(source.contains("max(0.5, min(3.0"))
         XCTAssertFalse(source.contains(".frame(maxWidth: message.captureMode == .faceOnly ? 180 : 360)"))
     }
@@ -255,6 +255,21 @@ final class RoomManagerUXContractTests: XCTestCase {
         XCTAssertFalse(historySource.contains(".overlayPreferenceValue("))
         XCTAssertTrue(rowSource.contains("usesExternalScreenFaceExpansion"))
         XCTAssertFalse(rowSource.contains(".anchorPreference("))
+    }
+
+    func testScreenFaceExpansionScrollsExpandedMessageIntoView() throws {
+        let source = try readSourceFile("Ping/UI/History/RoomTimelineView.swift")
+        let scrollReader = try sourceSlice(
+            in: source,
+            from: "ScrollViewReader { scrollProxy in",
+            to: "ChatComposerView("
+        )
+
+        XCTAssertTrue(scrollReader.contains(".onChange(of: viewModel.expandedMessageId)"))
+        XCTAssertTrue(scrollReader.contains("guard let expandedMessageId else { return }"))
+        XCTAssertTrue(scrollReader.contains("let expandedTimelineItemId = \"video:\" + expandedMessageId"))
+        XCTAssertTrue(scrollReader.contains("await Task.yield()"))
+        XCTAssertTrue(scrollReader.contains("scrollProxy.scrollTo(expandedTimelineItemId, anchor: .bottom)"))
     }
 
     func testVideoExpansionUsesNonBouncyEaseOutAnimation() throws {

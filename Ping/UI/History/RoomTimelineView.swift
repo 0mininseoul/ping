@@ -51,6 +51,16 @@ struct RoomTimelineView: View {
                         withAnimation(.easeOut) { scrollProxy.scrollTo(lastId, anchor: .bottom) }
                     }
                 }
+                .onChange(of: viewModel.expandedMessageId) { expandedMessageId in
+                    guard let expandedMessageId else { return }
+                    let expandedTimelineItemId = "video:" + expandedMessageId
+                    Task { @MainActor in
+                        await Task.yield()
+                        withAnimation(videoExpansionAnimation) {
+                            scrollProxy.scrollTo(expandedTimelineItemId, anchor: .bottom)
+                        }
+                    }
+                }
                 .onAppear {
                     if let lastId = viewModel.groups.last?.items.last?.id {
                         scrollProxy.scrollTo(lastId, anchor: .bottom)

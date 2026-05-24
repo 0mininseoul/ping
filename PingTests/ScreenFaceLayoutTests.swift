@@ -36,7 +36,7 @@ final class ScreenFaceLayoutTests: XCTestCase {
         XCTAssertFalse(recorderSource.contains("72.0 / longSide"))
         XCTAssertFalse(recorderSource.contains("12.0 / longSide"))
 
-        XCTAssertTrue(inlinePlayerSource.contains("let width: CGFloat = 340"))
+        XCTAssertTrue(inlinePlayerSource.contains("let width: CGFloat = 420"))
     }
 
     private func readSourceFile(_ fileName: String) throws -> String {
