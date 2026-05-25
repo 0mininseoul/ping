@@ -125,6 +125,11 @@
                                                 Content="Reply" />
                                             <Button
                                                 Padding="6,2"
+                                                Click="SaveVideoButton_Click"
+                                                Content="Save"
+                                                Visibility="{Binding Video.SaveVisibility}" />
+                                            <Button
+                                                Padding="6,2"
                                                 Click="DeleteVideoButton_Click"
                                                 Content="Delete" />
                                         </StackPanel>

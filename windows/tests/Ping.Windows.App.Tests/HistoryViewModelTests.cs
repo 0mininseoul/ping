@@ -199,6 +199,60 @@ public sealed class HistoryViewModelTests
     }
 
     [Fact]
+    public async Task SaveVideoAsync_RejectsUnallowedReceivedRows()
+    {
+        var rpc = new RecordingHistoryRpcClient();
+        var viewModel = ViewModel(rpc);
+        var item = new VideoHistoryItem(
+            VideoMessage("video-message-1", "room-1", BaseTime) with
+            {
+                AllowsLocalSave = false
+            },
+            [],
+            [],
+            currentUid: "receiver");
+        var saveCalled = false;
+
+        await viewModel.SaveVideoAsync(
+            item,
+            (_, _) =>
+            {
+                saveCalled = true;
+                return Task.CompletedTask;
+            });
+
+        Assert.False(saveCalled);
+        Assert.Contains("not allowed", viewModel.StatusMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task SaveVideoAsync_SavesOwnOrAllowedRows()
+    {
+        var rpc = new RecordingHistoryRpcClient();
+        var viewModel = ViewModel(rpc);
+        var item = new VideoHistoryItem(
+            VideoMessage("video-message-1", "room-1", BaseTime) with
+            {
+                AllowsLocalSave = true
+            },
+            [],
+            [],
+            currentUid: "receiver");
+        VideoMessage? savedMessage = null;
+
+        await viewModel.SaveVideoAsync(
+            item,
+            (message, _) =>
+            {
+                savedMessage = message;
+                return Task.CompletedTask;
+            });
+
+        Assert.Equal("video-message-1", savedMessage?.Id);
+        Assert.Equal("Video saved.", viewModel.StatusMessage);
+    }
+
+    [Fact]
     public async Task HistoryAutoRefreshCoordinator_DoesNotOverlapRefreshes()
     {
         var calls = 0;

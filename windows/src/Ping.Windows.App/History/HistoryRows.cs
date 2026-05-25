@@ -57,6 +57,7 @@ public sealed class VideoHistoryItem
             ? []
             : quickReactions.Select(emoji => new ReactionChoice(ReactionTargetKind.Video, message.Id, emoji)).ToArray();
         IsMine = string.Equals(message.SenderUid, currentUid, StringComparison.Ordinal);
+        CanSave = message.CanBeSavedLocally(currentUid);
     }
 
     public VideoMessage Message { get; }
@@ -72,6 +73,14 @@ public sealed class VideoHistoryItem
     public CaptureMode CaptureMode => Message.CaptureMode;
 
     public bool IsMine { get; }
+
+    public bool CanSave { get; }
+
+#if WINDOWS
+    public Visibility SaveVisibility => CanSave ? Visibility.Visible : Visibility.Collapsed;
+#else
+    public bool SaveVisibility => CanSave;
+#endif
 }
 
 public sealed class ChatHistoryItem : INotifyPropertyChanged

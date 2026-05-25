@@ -412,6 +412,24 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         StatusMessage = "Video removed.";
     }
 
+    public async Task SaveVideoAsync(
+        VideoHistoryItem item,
+        Func<VideoMessage, CancellationToken, Task> saveAsync,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        ArgumentNullException.ThrowIfNull(saveAsync);
+
+        if (!item.CanSave)
+        {
+            StatusMessage = "Local save is not allowed for this video.";
+            return;
+        }
+
+        await saveAsync(item.Message, cancellationToken);
+        StatusMessage = "Video saved.";
+    }
+
     public void ReportError(Exception exception)
     {
         StatusMessage = exception.Message;

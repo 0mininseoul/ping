@@ -354,6 +354,7 @@ public sealed class AppCoordinator : IDisposable
                 storageService,
                 () => currentUid),
             DownloadVideoForPlaybackAsync,
+            SaveHistoryVideoAsync,
             messageService,
             preferredRoomId,
             preferredChatId);
@@ -974,6 +975,52 @@ public sealed class AppCoordinator : IDisposable
     private bool ShouldSaveReceivedCopy(VideoMessage message) =>
         quickSendSettings.Preferences.SaveReceivedCopy
         && message.CanBeSavedLocally(currentUid);
+
+    private async Task SaveHistoryVideoAsync(
+        VideoMessage message,
+        CancellationToken cancellationToken)
+    {
+        if (!message.CanBeSavedLocally(currentUid))
+        {
+            throw new InvalidOperationException("Local save is not allowed for this video.");
+        }
+
+        var kind = string.Equals(message.SenderUid, currentUid, StringComparison.Ordinal)
+            ? LocalArchiveKind.Sent
+            : LocalArchiveKind.Received;
+        var label = ArchiveLabelFor(message, kind);
+        if (localArchive.ExistingCopyPath(kind, label, message.CreatedAt) is not null)
+        {
+            return;
+        }
+
+        var localVideoPath = await storageService.DownloadVideoAsync(message.VideoUrl, cancellationToken);
+        if (localArchive.ExistingCopyPath(kind, label, message.CreatedAt) is not null)
+        {
+            return;
+        }
+
+        _ = await localArchive.SaveSentCopyAsync(
+            localVideoPath,
+            kind,
+            label,
+            message.CreatedAt,
+            cancellationToken);
+    }
+
+    private string ArchiveLabelFor(VideoMessage message, LocalArchiveKind kind)
+    {
+        if (kind == LocalArchiveKind.Sent
+            && rooms.FirstOrDefault(room => string.Equals(room.Id, message.RoomId, StringComparison.Ordinal))
+                is { } room
+            && room.MemberNicknames.TryGetValue(message.ReceiverUid, out var receiverNickname)
+            && !string.IsNullOrWhiteSpace(receiverNickname))
+        {
+            return receiverNickname;
+        }
+
+        return message.SenderNickname;
+    }
 
     private Task RunOnUiThreadAsync(Action action)
     {

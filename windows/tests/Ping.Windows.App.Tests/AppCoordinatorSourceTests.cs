@@ -85,6 +85,49 @@ public sealed class AppCoordinatorSourceTests
     }
 
     [Fact]
+    public void HistoryVideoRowsExposeMacStyleSaveActionWhenAllowed()
+    {
+        var root = RepoRoot();
+        var rows = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "History",
+            "HistoryRows.cs"));
+        var xaml = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "History",
+            "HistoryWindow.xaml"));
+        var code = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "History",
+            "HistoryWindow.xaml.cs"));
+        var coordinator = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Bootstrap",
+            "AppCoordinator.cs"));
+
+        Assert.Contains("CanSave", rows, StringComparison.Ordinal);
+        Assert.Contains("message.CanBeSavedLocally(currentUid)", rows, StringComparison.Ordinal);
+        Assert.Contains("Click=\"SaveVideoButton_Click\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Visibility=\"{Binding Video.SaveVisibility}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("viewModel.SaveVideoAsync(item, saveVideoAsync)", code, StringComparison.Ordinal);
+        Assert.Contains("SaveHistoryVideoAsync", coordinator, StringComparison.Ordinal);
+        Assert.Contains("message.CanBeSavedLocally(currentUid)", coordinator, StringComparison.Ordinal);
+        Assert.Contains("localArchive.SaveSentCopyAsync", coordinator, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void MirrorWindowsSubscribeClosedCleanupHandlers()
     {
         var root = RepoRoot();

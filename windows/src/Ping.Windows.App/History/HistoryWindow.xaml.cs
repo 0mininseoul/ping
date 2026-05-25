@@ -16,6 +16,7 @@ public sealed partial class HistoryWindow : Window
     private const int VirtualKeyShift = 0x10;
     private readonly HistoryViewModel viewModel;
     private readonly Func<VideoMessage, CancellationToken, Task<string>> downloadVideoAsync;
+    private readonly Func<VideoMessage, CancellationToken, Task> saveVideoAsync;
     private readonly MessageService messageService;
     private readonly HistoryAutoRefreshCoordinator autoRefresh;
     private readonly List<PlaybackWindow> playbackWindows = [];
@@ -27,12 +28,14 @@ public sealed partial class HistoryWindow : Window
     public HistoryWindow(
         HistoryViewModel viewModel,
         Func<VideoMessage, CancellationToken, Task<string>> downloadVideoAsync,
+        Func<VideoMessage, CancellationToken, Task> saveVideoAsync,
         MessageService messageService,
         string? initialRoomId = null,
         string? initialChatId = null)
     {
         this.viewModel = viewModel;
         this.downloadVideoAsync = downloadVideoAsync;
+        this.saveVideoAsync = saveVideoAsync;
         this.messageService = messageService;
         this.initialRoomId = initialRoomId;
         this.initialChatId = initialChatId;
@@ -163,6 +166,14 @@ public sealed partial class HistoryWindow : Window
         if (VideoItem(sender) is { } item)
         {
             viewModel.BeginReplyToVideo(item);
+        }
+    }
+
+    private async void SaveVideoButton_Click(object sender, RoutedEventArgs args)
+    {
+        if (VideoItem(sender) is { } item)
+        {
+            await RunAsync(() => viewModel.SaveVideoAsync(item, saveVideoAsync));
         }
     }
 
