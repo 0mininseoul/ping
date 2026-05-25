@@ -16,10 +16,10 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
     private readonly RoomService roomService;
     private readonly InvitationService invitationService;
     private readonly UserService? userService;
-    private readonly string nickname;
     private readonly IClipboardWriter clipboardWriter;
     private readonly Func<string, string> inviteLinkFormatter;
     private readonly Func<string?> currentUidProvider;
+    private string nickname;
     private string statusMessage = "Rooms";
     private Room? selectedRoom;
     private Room? selectedSearchResult;
@@ -38,7 +38,7 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
         this.roomService = roomService;
         this.invitationService = invitationService;
         this.userService = userService;
-        this.nickname = nickname;
+        this.nickname = NormalizeNickname(nickname);
         this.clipboardWriter = clipboardWriter ?? new ClipboardWriter();
         this.inviteLinkFormatter = inviteLinkFormatter ?? (token => PingInviteLink.ShareTextFor(token));
         this.currentUidProvider = currentUidProvider ?? (() => null);
@@ -122,6 +122,15 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
         SelectedRoom is null
             ? "Create, join, or select a room."
             : string.Join(", ", SelectedRoom.MemberNicknames.Values.OrderBy(value => value, StringComparer.OrdinalIgnoreCase));
+
+    public void ApplyProfileNickname(string updatedNickname)
+    {
+        var normalized = NormalizeNickname(updatedNickname);
+        if (!string.IsNullOrWhiteSpace(normalized))
+        {
+            nickname = normalized;
+        }
+    }
 
     public async Task LoadAsync(CancellationToken cancellationToken = default)
     {
@@ -331,6 +340,9 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
             : Invitations.FirstOrDefault(invitation => invitation.Id == previousSelectedId) ?? Invitations.FirstOrDefault();
     }
 
+    private static string NormalizeNickname(string value) =>
+        string.Join(" ", (value ?? string.Empty).Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries));
+
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }
@@ -346,6 +358,11 @@ public sealed partial class RoomManagerWindow : Window
         InitializeComponent();
         Root.DataContext = viewModel;
         Root.Loaded += HandleLoaded;
+    }
+
+    public void RefreshProfileNickname(string nickname)
+    {
+        viewModel.ApplyProfileNickname(nickname);
     }
 
     private async void HandleLoaded(object sender, RoutedEventArgs args)

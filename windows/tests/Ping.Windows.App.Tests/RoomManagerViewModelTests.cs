@@ -63,6 +63,30 @@ public sealed class RoomManagerViewModelTests
     }
 
     [Fact]
+    public async Task ApplyProfileNicknameUsesLatestNicknameForFutureRoomActions()
+    {
+        var rpc = new RecordingRoomRpcClient();
+        var viewModel = new RoomManagerViewModel(
+            new RoomService(rpc),
+            new InvitationService(rpc),
+            "Old Name")
+        {
+            SelectedRoom = Room()
+        };
+
+        viewModel.ApplyProfileNickname("  New   Name  ");
+        await viewModel.InviteUserAsync("receiver", "Fallback");
+        await viewModel.AcceptInviteLinkAsync("https://ping0min.vercel.app/invite/token-123");
+
+        Assert.Contains(rpc.Calls, call =>
+            call.Function == "ping_send_invitation"
+            && JsonSerializer.Serialize(call.Body, JsonOptions.Supabase).Contains("\"from_nickname\":\"New Name\"", StringComparison.Ordinal));
+        Assert.Contains(rpc.Calls, call =>
+            call.Function == "ping_accept_invite_link"
+            && JsonSerializer.Serialize(call.Body, JsonOptions.Supabase).Contains("\"nickname_text\":\"New Name\"", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task SearchRoomsClearsStaleSelectionWhenNoResults()
     {
         var rpc = new RecordingRoomRpcClient

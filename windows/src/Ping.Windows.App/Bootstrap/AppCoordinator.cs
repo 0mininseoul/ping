@@ -308,6 +308,7 @@ public sealed class AppCoordinator : IDisposable
     {
         if (roomManagerWindow is not null)
         {
+            roomManagerWindow.RefreshProfileNickname(CurrentNickname);
             roomManagerWindow.Activate();
             return;
         }
@@ -1073,6 +1074,7 @@ public sealed class AppCoordinator : IDisposable
             {
                 currentNickname = profile.Nickname;
                 settingsWindow?.RefreshProfileNickname(CurrentNickname);
+                roomManagerWindow?.RefreshProfileNickname(CurrentNickname);
             }
 
             remoteDefaultRoomId = profile?.LastUsedRoomId;
@@ -1140,6 +1142,7 @@ public sealed class AppCoordinator : IDisposable
         currentNickname = string.IsNullOrWhiteSpace(profile?.Nickname)
             ? nickname
             : profile.Nickname;
+        roomManagerWindow?.RefreshProfileNickname(CurrentNickname);
         return CurrentNickname;
     }
 
