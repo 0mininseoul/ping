@@ -1,4 +1,5 @@
 using System.Security;
+using System.Text.Json;
 using Ping.Windows.Core.Backend;
 using Ping.Windows.Core.Models;
 
@@ -186,7 +187,33 @@ public sealed record IncomingChatNotification(ChatMessage Message, string RoomNa
 
 public sealed class NotifiedMessageRegistry
 {
+    private const int MaximumPersistedIds = 300;
     private readonly HashSet<string> notifiedIds = new(StringComparer.Ordinal);
+    private readonly List<string> orderedIds = [];
+    private readonly string? persistencePath;
+
+    public NotifiedMessageRegistry()
+        : this(DefaultPersistencePath())
+    {
+    }
+
+    public NotifiedMessageRegistry(string persistencePath)
+    {
+        this.persistencePath = persistencePath;
+        LoadPersistedIds();
+    }
+
+    private NotifiedMessageRegistry(string? persistencePath, bool loadPersistedIds)
+    {
+        this.persistencePath = persistencePath;
+        if (loadPersistedIds)
+        {
+            LoadPersistedIds();
+        }
+    }
+
+    public static NotifiedMessageRegistry InMemory() =>
+        new(persistencePath: null, loadPersistedIds: false);
 
     public bool TryMarkNotified(VideoMessage message)
     {
@@ -197,7 +224,15 @@ public sealed class NotifiedMessageRegistry
 
         lock (notifiedIds)
         {
-            return notifiedIds.Add(id);
+            if (!notifiedIds.Add(id))
+            {
+                return false;
+            }
+
+            orderedIds.Add(id);
+            TrimToRecentWindow();
+            PersistIds();
+            return true;
         }
     }
 
@@ -214,7 +249,71 @@ public sealed class NotifiedMessageRegistry
         lock (notifiedIds)
         {
             notifiedIds.Remove(messageId);
+            orderedIds.RemoveAll(id => string.Equals(id, messageId, StringComparison.Ordinal));
+            PersistIds();
         }
+    }
+
+    private void LoadPersistedIds()
+    {
+        if (persistencePath is null || !File.Exists(persistencePath))
+        {
+            return;
+        }
+
+        try
+        {
+            var ids = JsonSerializer.Deserialize<IReadOnlyList<string>>(File.ReadAllText(persistencePath))
+                ?? [];
+            foreach (var id in ids.Where(id => !string.IsNullOrWhiteSpace(id)).TakeLast(MaximumPersistedIds))
+            {
+                if (notifiedIds.Add(id))
+                {
+                    orderedIds.Add(id);
+                }
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+        {
+        }
+    }
+
+    private void PersistIds()
+    {
+        if (persistencePath is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var directory = Path.GetDirectoryName(persistencePath);
+            if (!string.IsNullOrWhiteSpace(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            File.WriteAllText(persistencePath, JsonSerializer.Serialize(orderedIds));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+        }
+    }
+
+    private void TrimToRecentWindow()
+    {
+        while (orderedIds.Count > MaximumPersistedIds)
+        {
+            var removedId = orderedIds[0];
+            orderedIds.RemoveAt(0);
+            notifiedIds.Remove(removedId);
+        }
+    }
+
+    private static string DefaultPersistencePath()
+    {
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        return Path.Combine(localAppData, "Ping", "NotifiedMessageIds.json");
     }
 }
 

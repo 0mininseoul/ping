@@ -39,7 +39,7 @@ public sealed class IncomingMessageDedupTests
     [Fact]
     public void NotifiedRegistry_DeduplicatesForAppSession()
     {
-        var registry = new NotifiedMessageRegistry();
+        var registry = NotifiedMessageRegistry.InMemory();
         var message = Message("message-1", DateTimeOffset.UtcNow);
 
         Assert.True(registry.TryMarkNotified(message));
@@ -50,7 +50,7 @@ public sealed class IncomingMessageDedupTests
     [Fact]
     public void NotifiedRegistry_CanForgetAfterNotificationFailure()
     {
-        var registry = new NotifiedMessageRegistry();
+        var registry = NotifiedMessageRegistry.InMemory();
         var message = Message("message-1", DateTimeOffset.UtcNow);
 
         Assert.True(registry.TryMarkNotified(message));
@@ -61,9 +61,51 @@ public sealed class IncomingMessageDedupTests
     }
 
     [Fact]
+    public void NotifiedRegistry_PersistsMessageIdsAcrossAppRestarts()
+    {
+        var path = Path.Combine(
+            Path.GetTempPath(),
+            "PingWindowsNotificationRegistryTests",
+            Guid.NewGuid().ToString("N"),
+            "NotifiedMessageIds.json");
+        var message = Message("message-1", DateTimeOffset.UtcNow);
+
+        var firstRun = new NotifiedMessageRegistry(path);
+        Assert.True(firstRun.TryMarkNotified(message));
+
+        var secondRun = new NotifiedMessageRegistry(path);
+
+        Assert.True(secondRun.Contains("message-1"));
+        Assert.False(secondRun.TryMarkNotified(message));
+    }
+
+    [Fact]
+    public void NotifiedRegistry_TrimsPersistedMessageIdsToRecentWindow()
+    {
+        var path = Path.Combine(
+            Path.GetTempPath(),
+            "PingWindowsNotificationRegistryTests",
+            Guid.NewGuid().ToString("N"),
+            "NotifiedMessageIds.json");
+        var registry = new NotifiedMessageRegistry(path);
+
+        for (var index = 0; index < 305; index++)
+        {
+            Assert.True(registry.TryMarkNotified(Message($"message-{index}", DateTimeOffset.UtcNow)));
+        }
+
+        var reloaded = new NotifiedMessageRegistry(path);
+
+        Assert.False(reloaded.Contains("message-0"));
+        Assert.True(reloaded.Contains("message-304"));
+    }
+
+    [Fact]
     public void NotificationController_DeduplicatesShownMessagesInPortableTests()
     {
-        using var controller = new NotificationController((_, _) => Task.CompletedTask);
+        using var controller = new NotificationController(
+            (_, _) => Task.CompletedTask,
+            registry: NotifiedMessageRegistry.InMemory());
         var message = Message("message-1", DateTimeOffset.UtcNow);
 
         Assert.True(controller.TryShowIncoming(message));
