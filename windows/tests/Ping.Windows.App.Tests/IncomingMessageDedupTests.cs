@@ -37,6 +37,44 @@ public sealed class IncomingMessageDedupTests
     }
 
     [Fact]
+    public async Task RunAsync_RetriesMessageWhenCallbackFailsBeforeMarkingYielded()
+    {
+        var message = Message("message-1", DateTimeOffset.UtcNow);
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        var delayCount = 0;
+        var callbackAttempts = 0;
+        var poller = new IncomingMessagePoller(
+            _ => Task.FromResult<IReadOnlyList<VideoMessage>>([message]),
+            interval: TimeSpan.Zero,
+            delayAsync: (_, _) =>
+            {
+                delayCount++;
+                if (delayCount >= 3)
+                {
+                    cancellation.Cancel();
+                }
+
+                return Task.CompletedTask;
+            });
+
+        await poller.RunAsync(
+            (_, _) =>
+            {
+                callbackAttempts++;
+                if (callbackAttempts == 1)
+                {
+                    throw new InvalidOperationException("notification failed");
+                }
+
+                cancellation.Cancel();
+                return Task.CompletedTask;
+            },
+            cancellation.Token);
+
+        Assert.Equal(2, callbackAttempts);
+    }
+
+    [Fact]
     public void NotifiedRegistry_DeduplicatesForAppSession()
     {
         var registry = NotifiedMessageRegistry.InMemory();

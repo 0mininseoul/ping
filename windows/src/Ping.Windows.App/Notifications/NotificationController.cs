@@ -47,9 +47,16 @@ public sealed class IncomingMessagePoller
         {
             try
             {
-                foreach (var message in await PollOnceAsync(yieldedIds, cancellationToken).ConfigureAwait(false))
+                var messages = await loadMessagesAsync(cancellationToken).ConfigureAwait(false);
+                foreach (var message in messages.OrderBy(message => message.CreatedAt ?? DateTimeOffset.MaxValue))
                 {
+                    if (message.Id is not { Length: > 0 } id || yieldedIds.Contains(id))
+                    {
+                        continue;
+                    }
+
                     await onMessageAsync(message, cancellationToken).ConfigureAwait(false);
+                    yieldedIds.Add(id);
                 }
             }
             catch (OperationCanceledException)
