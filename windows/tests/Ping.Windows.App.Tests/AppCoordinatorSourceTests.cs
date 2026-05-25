@@ -403,6 +403,23 @@ public sealed class AppCoordinatorSourceTests
     }
 
     [Fact]
+    public void WindowsAppProjectPackagesNativeCaptureDll()
+    {
+        var project = File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Ping.Windows.App.csproj"));
+
+        Assert.Contains("CopyNativeCaptureDllToOutput", project, StringComparison.Ordinal);
+        Assert.Contains("AddNativeCaptureDllToAppxPackage", project, StringComparison.Ordinal);
+        Assert.Contains("BeforeTargets=\"_ComputeAppxPackagePayload\"", project, StringComparison.Ordinal);
+        Assert.Contains("AppxPackagePayload", project, StringComparison.Ordinal);
+        Assert.Contains("Ping.Windows.NativeCapture.dll", project, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void OnboardingWindowRendersSecondaryActions()
     {
         var root = RepoRoot();

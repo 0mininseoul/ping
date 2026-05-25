@@ -28,4 +28,26 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+  <Target Name="CopyNativeCaptureDllToOutput" AfterTargets="Build">
+    <PropertyGroup>
+      <NativeCaptureDllPath>$(MSBuildThisFileDirectory)..\..\$(Platform)\$(Configuration)\Ping.Windows.NativeCapture.dll</NativeCaptureDllPath>
+    </PropertyGroup>
+    <Error
+      Condition="!Exists('$(NativeCaptureDllPath)')"
+      Text="Native capture DLL was not built: $(NativeCaptureDllPath)" />
+    <Copy
+      SourceFiles="$(NativeCaptureDllPath)"
+      DestinationFolder="$(OutDir)"
+      SkipUnchangedFiles="true" />
+  </Target>
+  <Target
+    Name="AddNativeCaptureDllToAppxPackage"
+    DependsOnTargets="CopyNativeCaptureDllToOutput"
+    BeforeTargets="_ComputeAppxPackagePayload">
+    <ItemGroup>
+      <AppxPackagePayload Include="$(OutDir)Ping.Windows.NativeCapture.dll">
+        <TargetPath>Ping.Windows.NativeCapture.dll</TargetPath>
+      </AppxPackagePayload>
+    </ItemGroup>
+  </Target>
 </Project>
