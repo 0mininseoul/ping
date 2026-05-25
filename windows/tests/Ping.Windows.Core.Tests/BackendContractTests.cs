@@ -495,6 +495,50 @@ public sealed class BackendContractTests
         Assert.Equal(1, body.YRatio);
     }
 
+    [Theory]
+    [InlineData(0, 16.0 / 9.0)]
+    [InlineData(-1, 16.0 / 9.0)]
+    [InlineData(double.NaN, 16.0 / 9.0)]
+    [InlineData(double.PositiveInfinity, 16.0 / 9.0)]
+    [InlineData(12, 8)]
+    public async Task MessageServiceNormalizesScreenFaceAspectRatioBeforeCreateMessageRpc(
+        double aspectRatio,
+        double expectedAspectRatio)
+    {
+        var rpc = new RecordingRpcClient();
+        var storage = new StubStorageService("sender-uid/shared-video-id.mp4");
+        var service = new MessageService(rpc, storage);
+        var input = new SendVideoInput(
+            Rooms:
+            [
+                new Room(
+                    Id: "room-id",
+                    Name: "Room",
+                    SearchableName: "room",
+                    OwnerUid: "sender-uid",
+                    MemberUids: ["sender-uid", "receiver-uid"],
+                    MemberNicknames: new Dictionary<string, string>
+                    {
+                        ["sender-uid"] = "Youngmin",
+                        ["receiver-uid"] = "Receiver"
+                    },
+                    Status: RoomStatus.Open)
+            ],
+            LocalVideoPath: "/tmp/ping.mp4",
+            MirrorPosition: new MirrorPosition(0.5, 0.5),
+            SenderUid: "sender-uid",
+            SenderNickname: "Youngmin",
+            CaptureMode: CaptureMode.ScreenFace,
+            AspectRatio: aspectRatio,
+            AllowsLocalSave: false,
+            SharedVideoId: "shared-video-id");
+
+        await service.SendAsync(input);
+
+        var body = Assert.IsType<CreateMessageRpcBody>(rpc.Calls.Single().Body);
+        Assert.Equal(expectedAspectRatio, body.AspectRatioValue, precision: 6);
+    }
+
     [Fact]
     public async Task MessageServiceUsesMacOSIncomingPlaybackRpcBodies()
     {

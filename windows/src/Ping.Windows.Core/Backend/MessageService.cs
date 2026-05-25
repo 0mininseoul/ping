@@ -80,6 +80,7 @@ public sealed class MessageService(ISupabaseRpcClient client, IStorageService st
             cancellationToken).ConfigureAwait(false);
 
         var mirrorPosition = NormalizeMirrorPosition(input.MirrorPosition);
+        var aspectRatio = NormalizeAspectRatio(input.CaptureMode, input.AspectRatio);
         var createdMessageCount = 0;
         try
         {
@@ -98,7 +99,7 @@ public sealed class MessageService(ISupabaseRpcClient client, IStorageService st
                             XRatio: mirrorPosition.XRatio,
                             YRatio: mirrorPosition.YRatio,
                             CaptureModeText: input.CaptureMode.ToWireValue(),
-                            AspectRatioValue: input.AspectRatio,
+                            AspectRatioValue: aspectRatio,
                             AllowsLocalSaveValue: input.AllowsLocalSave),
                         cancellationToken).ConfigureAwait(false);
                     createdMessageCount += 1;
@@ -126,6 +127,17 @@ public sealed class MessageService(ISupabaseRpcClient client, IStorageService st
 
     private static double NormalizeRatio(double value) =>
         double.IsFinite(value) ? Math.Clamp(value, 0, 1) : 0.5;
+
+    private static double NormalizeAspectRatio(CaptureMode captureMode, double aspectRatio)
+    {
+        var fallback = captureMode == CaptureMode.ScreenFace ? 16.0 / 9.0 : 1.0;
+        if (!double.IsFinite(aspectRatio) || aspectRatio <= 0)
+        {
+            return fallback;
+        }
+
+        return Math.Clamp(aspectRatio, 0.000001, 8);
+    }
 
     private async Task DeleteUploadedVideoQuietlyAsync(string videoStoragePath)
     {
