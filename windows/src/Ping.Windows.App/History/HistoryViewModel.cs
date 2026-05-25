@@ -16,7 +16,7 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
     private readonly MessageService messageService;
     private readonly ChatMessageService chatService;
     private readonly ReactionService reactionService;
-    private readonly StorageService storageService;
+    private readonly IChatMediaStorageService storageService;
     private readonly Func<string?> currentUidProvider;
     private static readonly string[] QuickReactions = ["❤️", "👍", "👎", "😂", "‼️", "❓"];
     private Room? selectedRoom;
@@ -30,7 +30,7 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         MessageService messageService,
         ChatMessageService chatService,
         ReactionService reactionService,
-        StorageService storageService,
+        IChatMediaStorageService storageService,
         Func<string?> currentUidProvider)
     {
         this.roomService = roomService;
@@ -299,17 +299,42 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
                 upload.FileName);
         }
 
-        await chatService.SendChatAsync(
-            roomId,
-            trimmed,
-            replyToChatId: reply?.ChatId,
-            replyToVideoId: reply?.VideoId,
-            messageId: messageId,
-            media: media,
-            cancellationToken: cancellationToken);
+        try
+        {
+            await chatService.SendChatAsync(
+                roomId,
+                trimmed,
+                replyToChatId: reply?.ChatId,
+                replyToVideoId: reply?.VideoId,
+                messageId: messageId,
+                media: media,
+                cancellationToken: cancellationToken);
+        }
+        catch
+        {
+            if (media is not null)
+            {
+                await DeleteUploadedChatMediaQuietlyAsync(media.Path);
+            }
+
+            throw;
+        }
+
         ReplyTarget = null;
         await LoadSelectedRoomAsync(cancellationToken);
         StatusMessage = hasImage ? "Image sent." : "Chat sent.";
+    }
+
+    private async Task DeleteUploadedChatMediaQuietlyAsync(string remotePath)
+    {
+        try
+        {
+            await storageService.DeleteChatMediaAsync(remotePath, CancellationToken.None);
+        }
+        catch (Exception)
+        {
+            // Preserve the original send failure; media cleanup is best-effort.
+        }
     }
 
     public async Task ToggleReactionAsync(

@@ -11,7 +11,23 @@ public interface IStorageService
         CancellationToken cancellationToken = default);
 }
 
-public sealed class StorageService(SupabaseClient client) : IStorageService
+public interface IChatMediaStorageService
+{
+    Task<ChatImageUpload> UploadChatImageAsync(
+        string localImagePath,
+        string senderUid,
+        string messageId,
+        CancellationToken cancellationToken = default);
+
+    Task<string> DownloadChatMediaAsync(
+        string remotePath,
+        string fileExtension,
+        CancellationToken cancellationToken = default);
+
+    Task DeleteChatMediaAsync(string remotePath, CancellationToken cancellationToken = default);
+}
+
+public sealed class StorageService(SupabaseClient client) : IStorageService, IChatMediaStorageService
 {
     private const string Bucket = "ping-videos";
     private const string MediaBucket = "ping-media";
@@ -78,21 +94,18 @@ public sealed class StorageService(SupabaseClient client) : IStorageService
         string fileExtension,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(remotePath)
-            || !remotePath.Contains("/chat-images/", StringComparison.Ordinal)
-            || Path.IsPathRooted(remotePath)
-            || remotePath.Contains('\\', StringComparison.Ordinal)
-            || remotePath.Contains("..", StringComparison.Ordinal)
-            || remotePath.Split('/', StringSplitOptions.RemoveEmptyEntries).Length < 3)
-        {
-            throw new ArgumentException("Chat media path must be a private ping-media chat image object path.", nameof(remotePath));
-        }
-
+        ValidateChatMediaPath(remotePath);
         var safeExtension = NormalizeSafeExtension(fileExtension);
         Directory.CreateDirectory(MediaCacheDirectory);
         var localPath = Path.Combine(MediaCacheDirectory, $"ping-media-{Guid.NewGuid():N}.{safeExtension}");
         await client.DownloadObjectAsync(MediaBucket, remotePath, localPath, cancellationToken).ConfigureAwait(false);
         return localPath;
+    }
+
+    public async Task DeleteChatMediaAsync(string remotePath, CancellationToken cancellationToken = default)
+    {
+        ValidateChatMediaPath(remotePath);
+        await client.DeleteObjectAsync(MediaBucket, remotePath, cancellationToken).ConfigureAwait(false);
     }
 
     private static void ValidateUploadInput(string localVideoPath, string senderUid, string videoId)
@@ -130,6 +143,19 @@ public sealed class StorageService(SupabaseClient client) : IStorageService
             || value.Contains("..", StringComparison.Ordinal))
         {
             throw new ArgumentException(message, parameterName);
+        }
+    }
+
+    private static void ValidateChatMediaPath(string remotePath)
+    {
+        if (string.IsNullOrWhiteSpace(remotePath)
+            || !remotePath.Contains("/chat-images/", StringComparison.Ordinal)
+            || Path.IsPathRooted(remotePath)
+            || remotePath.Contains('\\', StringComparison.Ordinal)
+            || remotePath.Contains("..", StringComparison.Ordinal)
+            || remotePath.Split('/', StringSplitOptions.RemoveEmptyEntries).Length < 3)
+        {
+            throw new ArgumentException("Chat media path must be a private ping-media chat image object path.", nameof(remotePath));
         }
     }
 

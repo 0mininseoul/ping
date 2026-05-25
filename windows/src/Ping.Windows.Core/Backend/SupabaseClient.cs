@@ -120,6 +120,20 @@ public sealed class SupabaseClient : ISupabaseRpcClient, IDisposable
         await File.WriteAllBytesAsync(localPath, data, cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task DeleteObjectAsync(
+        string bucket,
+        string path,
+        CancellationToken cancellationToken = default)
+    {
+        var config = await LoadConfigurationAsync(cancellationToken).ConfigureAwait(false);
+        var token = await AccessTokenAsync(cancellationToken).ConfigureAwait(false);
+        using var request = new HttpRequestMessage(HttpMethod.Delete, ObjectUrl(config.StorageUrl, bucket, path));
+        request.Headers.Add("apikey", config.AnonKey);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        _ = await SendAsync(request, cancellationToken).ConfigureAwait(false);
+    }
+
     private async Task<byte[]> RpcDataAsync(string function, object? body, CancellationToken cancellationToken)
     {
         var config = await LoadConfigurationAsync(cancellationToken).ConfigureAwait(false);

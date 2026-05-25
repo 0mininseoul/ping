@@ -217,6 +217,33 @@ public sealed class BackendContractTests
     }
 
     [Fact]
+    public async Task DeleteObjectUsesPrivateStorageObjectDeleteRoute()
+    {
+        using var files = new SupabaseTestFiles();
+        await files.SaveSessionAsync(new SupabaseSession(
+            AccessToken: "access-token",
+            RefreshToken: "refresh-token",
+            ExpiresAt: DateTimeOffset.UtcNow.AddHours(1),
+            UserId: "user-id"));
+        var handler = new RecordingHttpMessageHandler(request =>
+        {
+            Assert.Equal(HttpMethod.Delete, request.Method);
+            Assert.Equal(
+                "https://example.supabase.co/storage/v1/object/ping-media/sender-uid/chat-images/message-id.png",
+                request.RequestUri?.AbsoluteUri);
+            Assert.Equal("anon-key", request.Headers.GetValues("apikey").Single());
+            Assert.Equal("Bearer", request.Headers.Authorization?.Scheme);
+            Assert.Equal("access-token", request.Headers.Authorization?.Parameter);
+            return JsonResponse("""{"message":"Successfully deleted"}""");
+        });
+        using var client = files.CreateClient(handler);
+
+        await client.DeleteObjectAsync("ping-media", "sender-uid/chat-images/message-id.png");
+
+        Assert.Single(handler.Requests);
+    }
+
+    [Fact]
     public async Task StorageServiceUploadsAndDownloadsChatImagesWithMacContract()
     {
         using var files = new SupabaseTestFiles();
@@ -267,6 +294,31 @@ public sealed class BackendContractTests
         Assert.Equal("message.png", upload.FileName);
         Assert.Equal([0x01, 0x02, 0x03], await File.ReadAllBytesAsync(downloaded));
         Assert.Equal(2, handler.Requests.Count);
+    }
+
+    [Fact]
+    public async Task StorageServiceDeletesChatMediaFromPrivateMediaBucket()
+    {
+        using var files = new SupabaseTestFiles();
+        await files.SaveSessionAsync(new SupabaseSession(
+            AccessToken: "access-token",
+            RefreshToken: "refresh-token",
+            ExpiresAt: DateTimeOffset.UtcNow.AddHours(1),
+            UserId: "user-id"));
+        var handler = new RecordingHttpMessageHandler(request =>
+        {
+            Assert.Equal(HttpMethod.Delete, request.Method);
+            Assert.Equal(
+                "https://example.supabase.co/storage/v1/object/ping-media/sender-uid/chat-images/message-id.png",
+                request.RequestUri?.ToString());
+            return JsonResponse("""{"message":"Successfully deleted"}""");
+        });
+        using var client = files.CreateClient(handler);
+        var service = new StorageService(client);
+
+        await service.DeleteChatMediaAsync("sender-uid/chat-images/message-id.png");
+
+        Assert.Single(handler.Requests);
     }
 
     [Fact]
@@ -495,6 +547,8 @@ public sealed class BackendContractTests
             () => service.UploadChatImageAsync(emptyMp4, "sender-uid", "message..id"));
         await Assert.ThrowsAsync<ArgumentException>(
             () => service.DownloadChatMediaAsync("../sender/chat-images/message.png", "png"));
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => service.DeleteChatMediaAsync("../sender/chat-images/message.png"));
     }
 
     private sealed class RecordingRpcClient : ISupabaseRpcClient

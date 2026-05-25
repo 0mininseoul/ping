@@ -148,6 +148,29 @@ public sealed class HistoryViewModelTests
     }
 
     [Fact]
+    public async Task SendChatAsync_DeletesUploadedImageWhenRpcFails()
+    {
+        var rpc = new RecordingHistoryRpcClient
+        {
+            SendChatException = new InvalidOperationException("send failed")
+        };
+        var storage = new RecordingChatMediaStorage();
+        var viewModel = ViewModel(rpc, storage, () => "receiver");
+        await viewModel.LoadAsync("room-2");
+        viewModel.BeginReplyToChat(viewModel.Chats.Single());
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => viewModel.SendChatAsync("image body", "/tmp/local-image.png"));
+
+        Assert.Equal("send failed", exception.Message);
+        var uploaded = Assert.Single(storage.Uploaded);
+        Assert.Equal(uploaded.Path, Assert.Single(storage.DeletedPaths));
+        Assert.NotNull(viewModel.ReplyTarget);
+        Assert.Single(rpc.SentChatBodies);
+        Assert.DoesNotContain("sent", viewModel.StatusMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task DeleteChatAsync_OnlyDeletesOwnRows()
     {
         var rpc = new RecordingHistoryRpcClient();
@@ -236,14 +259,17 @@ public sealed class HistoryViewModelTests
         Assert.Equal(0, Volatile.Read(ref refreshCalls));
     }
 
-    private static HistoryViewModel ViewModel(RecordingHistoryRpcClient rpc) =>
+    private static HistoryViewModel ViewModel(
+        RecordingHistoryRpcClient rpc,
+        IChatMediaStorageService? storage = null,
+        Func<string?>? currentUidProvider = null) =>
         new(
             new RoomService(rpc),
             new MessageService(rpc, new ThrowingStorageService()),
             new ChatMessageService(rpc),
             new ReactionService(rpc),
-            new StorageService(new SupabaseClient()),
-            () => "receiver");
+            storage ?? new RecordingChatMediaStorage(),
+            currentUidProvider ?? (() => "receiver"));
 
     private static VideoMessage VideoMessage(string id, string roomId, DateTimeOffset createdAt) =>
         new()
@@ -293,6 +319,8 @@ public sealed class HistoryViewModelTests
 
         public List<string> HiddenVideoIds { get; } = [];
 
+        public Exception? SendChatException { get; init; }
+
         public Task<IReadOnlyList<T>> RpcArrayAsync<T>(
             string function,
             object? body = null,
@@ -334,6 +362,11 @@ public sealed class HistoryViewModelTests
             if (function == "ping_send_chat")
             {
                 SentChatBodies.Add(body ?? new { });
+                if (SendChatException is not null)
+                {
+                    return Task.FromException<T>(SendChatException);
+                }
+
                 return Task.FromResult((T)(object)"new-chat-id");
             }
 
@@ -438,6 +471,48 @@ public sealed class HistoryViewModelTests
             _ = expiresAt;
             _ = cancellationToken;
             throw new NotSupportedException();
+        }
+    }
+
+    private sealed class RecordingChatMediaStorage : IChatMediaStorageService
+    {
+        public List<ChatImageUpload> Uploaded { get; } = [];
+
+        public List<string> DeletedPaths { get; } = [];
+
+        public Task<ChatImageUpload> UploadChatImageAsync(
+            string localImagePath,
+            string senderUid,
+            string messageId,
+            CancellationToken cancellationToken = default)
+        {
+            _ = cancellationToken;
+            var upload = new ChatImageUpload(
+                $"{senderUid}/chat-images/{messageId}.png",
+                "image/png",
+                Width: null,
+                Height: null,
+                FileName: Path.GetFileName(localImagePath));
+            Uploaded.Add(upload);
+            return Task.FromResult(upload);
+        }
+
+        public Task<string> DownloadChatMediaAsync(
+            string remotePath,
+            string fileExtension,
+            CancellationToken cancellationToken = default)
+        {
+            _ = remotePath;
+            _ = fileExtension;
+            _ = cancellationToken;
+            throw new NotSupportedException();
+        }
+
+        public Task DeleteChatMediaAsync(string remotePath, CancellationToken cancellationToken = default)
+        {
+            _ = cancellationToken;
+            DeletedPaths.Add(remotePath);
+            return Task.CompletedTask;
         }
     }
 }
