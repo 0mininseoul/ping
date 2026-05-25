@@ -878,14 +878,22 @@ public sealed class AppCoordinator : IDisposable
     private Task HandleIncomingMessageAsync(VideoMessage message, CancellationToken cancellationToken)
     {
         _ = cancellationToken;
-        notificationController.TryShowIncoming(message);
+        if (notificationController.ShowIncoming(message) == NotificationShowResult.Unavailable)
+        {
+            throw new InvalidOperationException("Incoming notification is unavailable.");
+        }
+
         return Task.CompletedTask;
     }
 
     private Task HandleIncomingChatAsync(IncomingChatNotification notification, CancellationToken cancellationToken)
     {
         _ = cancellationToken;
-        notificationController.TryShowIncomingChat(notification);
+        if (notificationController.ShowIncomingChat(notification) == NotificationShowResult.Unavailable)
+        {
+            throw new InvalidOperationException("Incoming chat notification is unavailable.");
+        }
+
         return Task.CompletedTask;
     }
 

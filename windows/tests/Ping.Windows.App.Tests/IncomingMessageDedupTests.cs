@@ -151,6 +151,68 @@ public sealed class IncomingMessageDedupTests
     }
 
     [Fact]
+    public async Task RunAsync_RetriesMessageWhenNotificationShowIsUnavailable()
+    {
+        var message = Message("message-1", DateTimeOffset.UtcNow);
+        var showAttempts = 0;
+        using var controller = new NotificationController(
+            (_, _) => Task.CompletedTask,
+            registry: NotifiedMessageRegistry.InMemory(),
+            showNotificationXml: _ =>
+            {
+                showAttempts++;
+                if (showAttempts == 1)
+                {
+                    throw new InvalidOperationException("toast failed");
+                }
+            });
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        var delayCount = 0;
+        var poller = new IncomingMessagePoller(
+            _ => Task.FromResult<IReadOnlyList<VideoMessage>>([message]),
+            interval: TimeSpan.Zero,
+            delayAsync: (_, _) =>
+            {
+                delayCount++;
+                if (delayCount >= 3)
+                {
+                    cancellation.Cancel();
+                }
+
+                return Task.CompletedTask;
+            });
+
+        await poller.RunAsync(
+            (incoming, _) =>
+            {
+                if (controller.ShowIncoming(incoming) == NotificationShowResult.Unavailable)
+                {
+                    throw new InvalidOperationException("notification unavailable");
+                }
+
+                cancellation.Cancel();
+                return Task.CompletedTask;
+            },
+            cancellation.Token);
+
+        Assert.Equal(2, showAttempts);
+    }
+
+    [Fact]
+    public void NotificationController_ForgetsMessageWhenToastShowFails()
+    {
+        var registry = NotifiedMessageRegistry.InMemory();
+        using var controller = new NotificationController(
+            (_, _) => Task.CompletedTask,
+            registry: registry,
+            showNotificationXml: _ => throw new InvalidOperationException("toast failed"));
+        var message = Message("message-1", DateTimeOffset.UtcNow);
+
+        Assert.Equal(NotificationShowResult.Unavailable, controller.ShowIncoming(message));
+        Assert.False(registry.Contains("message-1"));
+    }
+
+    [Fact]
     public async Task IncomingChatPoller_NotifiesLatestUnreadChatPerRoom()
     {
         var rpc = new RecordingChatRpcClient();
@@ -236,6 +298,20 @@ public sealed class IncomingMessageDedupTests
 
         Assert.True(controller.TryShowIncomingChat(notification));
         Assert.False(controller.TryShowIncomingChat(notification));
+    }
+
+    [Fact]
+    public void NotificationController_ForgetsChatWhenToastShowFails()
+    {
+        var registry = NotifiedChatRegistry.InMemory();
+        using var controller = new NotificationController(
+            (_, _) => Task.CompletedTask,
+            chatRegistry: registry,
+            showNotificationXml: _ => throw new InvalidOperationException("toast failed"));
+        var notification = new IncomingChatNotification(Chat("chat-1", "room-1", "sender", "hello", DateTimeOffset.UtcNow), "Main", 1);
+
+        Assert.Equal(NotificationShowResult.Unavailable, controller.ShowIncomingChat(notification));
+        Assert.False(registry.Contains("chat-1"));
     }
 
     [Fact]

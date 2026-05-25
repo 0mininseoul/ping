@@ -342,11 +342,19 @@ public sealed class NotifiedMessageRegistry
     }
 }
 
+public enum NotificationShowResult
+{
+    Shown,
+    Duplicate,
+    Unavailable
+}
+
 public sealed class NotificationController : IDisposable
 {
     private readonly Func<string, CancellationToken, Task> openMessageAsync;
     private readonly NotifiedMessageRegistry registry;
     private readonly NotifiedChatRegistry chatRegistry;
+    private readonly Action<string>? showNotificationXml;
     private bool disposed;
 #if WINDOWS
     private readonly Func<string, string, CancellationToken, Task>? openChatAsync;
@@ -357,7 +365,8 @@ public sealed class NotificationController : IDisposable
         Func<string, CancellationToken, Task> openMessageAsync,
         Func<string, string, CancellationToken, Task>? openChatAsync = null,
         NotifiedMessageRegistry? registry = null,
-        NotifiedChatRegistry? chatRegistry = null)
+        NotifiedChatRegistry? chatRegistry = null,
+        Action<string>? showNotificationXml = null)
     {
         this.openMessageAsync = openMessageAsync;
 #if WINDOWS
@@ -365,6 +374,7 @@ public sealed class NotificationController : IDisposable
 #endif
         this.registry = registry ?? new NotifiedMessageRegistry();
         this.chatRegistry = chatRegistry ?? new NotifiedChatRegistry();
+        this.showNotificationXml = showNotificationXml;
     }
 
     public void Start()
@@ -408,25 +418,23 @@ public sealed class NotificationController : IDisposable
 #endif
     }
 
-    public bool TryShowIncoming(VideoMessage message)
+    public NotificationShowResult ShowIncoming(VideoMessage message)
     {
 #if WINDOWS
-        if (!isRegistered)
+        if (!isRegistered && showNotificationXml is null)
         {
-            return false;
+            return NotificationShowResult.Unavailable;
         }
 #endif
 
         if (!registry.TryMarkNotified(message))
         {
-            return false;
+            return NotificationShowResult.Duplicate;
         }
 
-#if WINDOWS
         try
         {
-            var notification = new AppNotification(NotificationXml(message));
-            AppNotificationManager.Default.Show(notification);
+            ShowNotificationXml(NotificationXml(message));
         }
         catch (Exception)
         {
@@ -435,31 +443,32 @@ public sealed class NotificationController : IDisposable
                 registry.Forget(id);
             }
 
-            return false;
+            return NotificationShowResult.Unavailable;
         }
-#endif
-        return true;
+
+        return NotificationShowResult.Shown;
     }
 
-    public bool TryShowIncomingChat(IncomingChatNotification notification)
+    public bool TryShowIncoming(VideoMessage message) =>
+        ShowIncoming(message) == NotificationShowResult.Shown;
+
+    public NotificationShowResult ShowIncomingChat(IncomingChatNotification notification)
     {
 #if WINDOWS
-        if (!isRegistered)
+        if (!isRegistered && showNotificationXml is null)
         {
-            return false;
+            return NotificationShowResult.Unavailable;
         }
 #endif
 
         if (!chatRegistry.TryMarkNotified(notification.Message))
         {
-            return false;
+            return NotificationShowResult.Duplicate;
         }
 
-#if WINDOWS
         try
         {
-            var toast = new AppNotification(NotificationXml(notification));
-            AppNotificationManager.Default.Show(toast);
+            ShowNotificationXml(NotificationXml(notification));
         }
         catch (Exception)
         {
@@ -468,11 +477,14 @@ public sealed class NotificationController : IDisposable
                 chatRegistry.Forget(id);
             }
 
-            return false;
+            return NotificationShowResult.Unavailable;
         }
-#endif
-        return true;
+
+        return NotificationShowResult.Shown;
     }
+
+    public bool TryShowIncomingChat(IncomingChatNotification notification) =>
+        ShowIncomingChat(notification) == NotificationShowResult.Shown;
 
     public void Dispose()
     {
@@ -515,6 +527,19 @@ public sealed class NotificationController : IDisposable
     private static NotificationActivationArguments ParseActivationArguments(AppNotificationActivatedEventArgs args)
         => NotificationActivationArguments.From(args);
 #endif
+
+    private void ShowNotificationXml(string xml)
+    {
+        if (showNotificationXml is not null)
+        {
+            showNotificationXml(xml);
+            return;
+        }
+
+#if WINDOWS
+        AppNotificationManager.Default.Show(new AppNotification(xml));
+#endif
+    }
 
     private static string NotificationXml(VideoMessage message)
     {
