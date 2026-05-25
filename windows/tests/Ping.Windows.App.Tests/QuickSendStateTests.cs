@@ -1,4 +1,5 @@
 using Ping.Windows.App.Capture;
+using Ping.Windows.App.Onboarding;
 using Ping.Windows.Core.Backend;
 using Ping.Windows.Core.LocalState;
 using Ping.Windows.Core.Models;
@@ -36,6 +37,25 @@ public sealed class QuickSendStateTests
         Assert.Equal(QuickSendOutcome.PermissionBlocked, outcome);
         Assert.Equal(QuickSendPresenterAction.PermissionBlocked, presenter.LastAction);
         Assert.Equal(QuickSendPermissionKind.ScreenCapture, presenter.BlockedPermission);
+        Assert.False(controller.CaptureEngine.RecordWasCalled);
+    }
+
+    [Fact]
+    public async Task UnsupportedWindows_BlocksQuickSendBeforePermissionMessages()
+    {
+        var presenter = new FakeQuickSendPresenter();
+        var controller = CreateController(presenter: presenter);
+        var context = ContextWith(preconditions: QuickSendPreconditions.Ready() with
+        {
+            WindowsStatus = WindowsSupportStatus.UnsupportedOldWindows11
+        });
+
+        var outcome = await controller.ExecuteAsync(context);
+
+        Assert.Equal(QuickSendOutcome.PermissionBlocked, outcome);
+        Assert.Equal(QuickSendPresenterAction.PermissionBlocked, presenter.LastAction);
+        Assert.Equal(QuickSendPermissionKind.WindowsVersion, presenter.BlockedPermission);
+        Assert.Contains("Windows 11 24H2", presenter.BlockedMessage, StringComparison.Ordinal);
         Assert.False(controller.CaptureEngine.RecordWasCalled);
     }
 
@@ -345,6 +365,8 @@ public sealed class QuickSendStateTests
 
         public QuickSendPermissionKind? BlockedPermission { get; private set; }
 
+        public string? BlockedMessage { get; private set; }
+
         public ScreenFaceMirrorContext? OpenedMirrorContext { get; private set; }
 
         public IQuickSendHudSession ShowHud(QuickSendHudContext context)
@@ -361,6 +383,7 @@ public sealed class QuickSendStateTests
 
         public void ShowRoomBlocked(string message)
         {
+            BlockedMessage = message;
             LastAction = QuickSendPresenterAction.RoomBlocked;
         }
 
@@ -368,6 +391,7 @@ public sealed class QuickSendStateTests
         {
             LastAction = QuickSendPresenterAction.PermissionBlocked;
             BlockedPermission = permission;
+            BlockedMessage = message;
         }
     }
 

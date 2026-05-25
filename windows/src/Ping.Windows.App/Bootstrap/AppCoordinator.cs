@@ -736,13 +736,14 @@ public sealed class AppCoordinator : IDisposable
 
     private async Task<QuickSendPreconditions> LoadQuickSendPreconditionsAsync(CancellationToken cancellationToken)
     {
-        var isSupportedWindows = WindowsVersionProbe.CurrentStatus() == WindowsSupportStatus.Supported;
-        if (!isSupportedWindows)
+        var windowsStatus = WindowsVersionProbe.CurrentStatus();
+        if (windowsStatus != WindowsSupportStatus.Supported)
         {
             return new QuickSendPreconditions(
                 IsCameraAvailable: false,
                 IsMicrophoneAvailable: false,
-                IsScreenCaptureAvailable: false);
+                IsScreenCaptureAvailable: false,
+                WindowsStatus: windowsStatus);
         }
 
         var camera = await permissionProbe.CheckCameraAsync(cancellationToken);
@@ -751,7 +752,8 @@ public sealed class AppCoordinator : IDisposable
         return new QuickSendPreconditions(
             IsCameraAvailable: camera.Status == OnboardingProbeStatus.Available,
             IsMicrophoneAvailable: microphone.Status == OnboardingProbeStatus.Available,
-            IsScreenCaptureAvailable: screenCapture.Status == OnboardingProbeStatus.Available);
+            IsScreenCaptureAvailable: screenCapture.Status == OnboardingProbeStatus.Available,
+            WindowsStatus: windowsStatus);
     }
 
     private Room? ResolvePreferredDefaultRoom(IReadOnlyCollection<Room> sendableRooms)
@@ -1172,10 +1174,20 @@ public sealed class AppCoordinator : IDisposable
         public void ShowPermissionBlocked(QuickSendPermissionKind permission, string message)
         {
             owner.OpenOnboardingWindow();
+            var isWindowsBlocked = permission == QuickSendPermissionKind.WindowsVersion;
             owner.ShowBlockedState(
-                "Screen+Face permissions",
-                $"{owner.HotkeyLabel(HotkeyCommand.QuickScreenFacePing)} reached Ping, but {permission} is blocked. The onboarding checks are open.",
+                isWindowsBlocked ? "Windows version" : "Screen+Face permissions",
+                $"{owner.HotkeyLabel(HotkeyCommand.QuickScreenFacePing)} reached Ping, but {BlockedDetail(permission)}. The onboarding checks are open.",
                 message);
         }
+
+        private static string BlockedDetail(QuickSendPermissionKind permission) => permission switch
+        {
+            QuickSendPermissionKind.WindowsVersion => "this Windows version is not supported",
+            QuickSendPermissionKind.ScreenCapture => "screen capture permission is blocked",
+            QuickSendPermissionKind.Camera => "camera permission is blocked",
+            QuickSendPermissionKind.Microphone => "microphone permission is blocked",
+            _ => "a required permission is blocked"
+        };
     }
 }

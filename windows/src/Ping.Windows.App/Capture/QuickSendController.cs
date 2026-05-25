@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using Ping.Windows.App.Onboarding;
 using Ping.Windows.Core.Backend;
 using Ping.Windows.Core.LocalState;
 using Ping.Windows.Core.Models;
@@ -28,6 +29,7 @@ public enum QuickSendOutcome
 
 public enum QuickSendPermissionKind
 {
+    WindowsVersion,
     Camera,
     Microphone,
     ScreenCapture
@@ -131,7 +133,8 @@ public sealed class ScreenFaceQuickSendSettingsStore
 public sealed record QuickSendPreconditions(
     bool IsCameraAvailable,
     bool IsMicrophoneAvailable,
-    bool IsScreenCaptureAvailable)
+    bool IsScreenCaptureAvailable,
+    WindowsSupportStatus WindowsStatus = WindowsSupportStatus.Supported)
 {
     public static QuickSendPreconditions Ready() =>
         new(
@@ -243,7 +246,7 @@ public sealed class QuickSendController
         {
             presenter.ShowPermissionBlocked(
                 blockedPermission.Value,
-                PermissionBlockedMessage(blockedPermission.Value));
+                PermissionBlockedMessage(blockedPermission.Value, context.Preconditions));
             return QuickSendOutcome.PermissionBlocked;
         }
 
@@ -408,6 +411,11 @@ public sealed class QuickSendController
 
     private static QuickSendPermissionKind? BlockedPermission(QuickSendPreconditions preconditions)
     {
+        if (preconditions.WindowsStatus != WindowsSupportStatus.Supported)
+        {
+            return QuickSendPermissionKind.WindowsVersion;
+        }
+
         if (!preconditions.IsScreenCaptureAvailable)
         {
             return QuickSendPermissionKind.ScreenCapture;
@@ -426,8 +434,16 @@ public sealed class QuickSendController
         return null;
     }
 
-    private static string PermissionBlockedMessage(QuickSendPermissionKind permission) => permission switch
+    private static string PermissionBlockedMessage(
+        QuickSendPermissionKind permission,
+        QuickSendPreconditions preconditions) => permission switch
     {
+        QuickSendPermissionKind.WindowsVersion => preconditions.WindowsStatus switch
+        {
+            WindowsSupportStatus.UnsupportedWindows10 => "Windows 10 is not a supported target for Ping Windows.",
+            WindowsSupportStatus.UnsupportedOldWindows11 => "Windows 11 24H2 or newer is required for screen+face quick send.",
+            _ => "Windows 11 24H2 or newer is required for screen+face quick send."
+        },
         QuickSendPermissionKind.ScreenCapture => "Screen capture permission is required for screen+face quick send.",
         QuickSendPermissionKind.Camera => "Camera permission is required for screen+face quick send.",
         QuickSendPermissionKind.Microphone => "Microphone permission is required for screen+face quick send.",
