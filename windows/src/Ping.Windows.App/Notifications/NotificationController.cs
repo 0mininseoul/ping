@@ -721,13 +721,17 @@ public sealed record NotificationActivationArguments(
                 continue;
             }
 
-            var key = Uri.UnescapeDataString(parts[0]);
-            if (values.ContainsKey(key))
+            if (!TryUnescapeComponent(parts[0], out var key) || values.ContainsKey(key))
             {
                 continue;
             }
 
-            values[key] = Uri.UnescapeDataString(parts[1]);
+            if (!TryUnescapeComponent(parts[1], out var value))
+            {
+                continue;
+            }
+
+            values[key] = value;
         }
 
         values.TryGetValue("action", out var action);
@@ -735,5 +739,39 @@ public sealed record NotificationActivationArguments(
         values.TryGetValue("chat_id", out var chatId);
         values.TryGetValue("room_id", out var roomId);
         return new(action, messageId, chatId, roomId);
+    }
+
+    private static bool TryUnescapeComponent(string value, out string unescaped)
+    {
+        unescaped = string.Empty;
+        if (!HasValidPercentEscapes(value))
+        {
+            return false;
+        }
+
+        unescaped = Uri.UnescapeDataString(value);
+        return true;
+    }
+
+    private static bool HasValidPercentEscapes(string value)
+    {
+        for (var index = 0; index < value.Length; index++)
+        {
+            if (value[index] != '%')
+            {
+                continue;
+            }
+
+            if (index + 2 >= value.Length
+                || !Uri.IsHexDigit(value[index + 1])
+                || !Uri.IsHexDigit(value[index + 2]))
+            {
+                return false;
+            }
+
+            index += 2;
+        }
+
+        return true;
     }
 }

@@ -215,6 +215,17 @@ public sealed class IncomingMessageDedupTests
     }
 
     [Fact]
+    public void ActivationArguments_IgnoresMalformedEscapesWithoutThrowing()
+    {
+        var parsed = NotificationActivationArguments.Parse("action=play&message_id=bad%ZZ&room_id=room%201");
+
+        Assert.Equal("play", parsed.Action);
+        Assert.Null(parsed.MessageId);
+        Assert.Equal("room 1", parsed.RoomId);
+        Assert.True(parsed.HasValues);
+    }
+
+    [Fact]
     public void ActivationArguments_ReadsWindowsAppSdkDictionary()
     {
         var parsed = NotificationActivationArguments.From(new Dictionary<string, string>
