@@ -276,7 +276,7 @@ public sealed class AppCoordinatorSourceTests
             "windows",
             "src",
             "Ping.Windows.App",
-            "Program.cs"));
+            "Program.cs")).Replace("\r\n", "\n", StringComparison.Ordinal);
         var app = File.ReadAllText(Path.Combine(
             root,
             "windows",
