@@ -33,6 +33,32 @@ public sealed class PlaybackViewModelTests
     }
 
     [Fact]
+    public async Task PlaybackEnded_RetriesMarkSeenAfterTransientFailure()
+    {
+        var markSeenCount = 0;
+        var viewModel = new PlaybackViewModel(
+            Message(CaptureMode.FaceOnly, aspectRatio: 1),
+            "clip.mp4",
+            _ =>
+            {
+                markSeenCount++;
+                if (markSeenCount == 1)
+                {
+                    throw new HttpRequestException("network");
+                }
+
+                return Task.CompletedTask;
+            });
+
+        await viewModel.HandlePlaybackEndedAsync();
+        viewModel.HandleEnter();
+        await viewModel.HandlePlaybackEndedAsync();
+        await viewModel.HandlePlaybackEndedAsync();
+
+        Assert.Equal(2, markSeenCount);
+    }
+
+    [Fact]
     public async Task EnterAfterPlaybackEndedRequestsReplayAndCancelsDismissal()
     {
         var viewModel = new PlaybackViewModel(

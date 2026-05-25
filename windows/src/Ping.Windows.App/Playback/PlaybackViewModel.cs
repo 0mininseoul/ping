@@ -93,8 +93,8 @@ public sealed class PlaybackViewModel : INotifyPropertyChanged
         {
             if (!didMarkSeen && Message.Id is not null)
             {
-                didMarkSeen = true;
                 await markSeenAsync(cancellationToken);
+                didMarkSeen = true;
             }
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
