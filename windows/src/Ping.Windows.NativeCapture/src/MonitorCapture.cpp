@@ -210,7 +210,7 @@ namespace Ping::Windows::NativeCapture
                 if (frame)
                 {
                     auto surface = frame.Surface();
-                    auto access = surface.as<IDirect3DDxgiInterfaceAccess>();
+                    auto access = surface.as<::Windows::Graphics::DirectX::Direct3D11::IDirect3DDxgiInterfaceAccess>();
                     HRESULT textureResult = access->GetInterface(
                         __uuidof(ID3D11Texture2D),
                         reinterpret_cast<void**>(capturedTexture.ReleaseAndGetAddressOf()));
@@ -387,7 +387,7 @@ namespace Ping::Windows::NativeCapture
                 }
 
                 auto surface = frame.Surface();
-                auto access = surface.as<IDirect3DDxgiInterfaceAccess>();
+                auto access = surface.as<::Windows::Graphics::DirectX::Direct3D11::IDirect3DDxgiInterfaceAccess>();
                 ComPtr<ID3D11Texture2D> capturedTexture;
                 HRESULT textureResult = access->GetInterface(
                     __uuidof(ID3D11Texture2D),

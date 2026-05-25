@@ -64,6 +64,7 @@ public sealed class NativeCaptureEngineTests
         Assert.Contains("using namespace winrt::Windows::Graphics::Capture;", source, StringComparison.Ordinal);
         Assert.Contains("using namespace winrt::Windows::Graphics::DirectX;", source, StringComparison.Ordinal);
         Assert.Contains("using namespace winrt::Windows::Graphics::DirectX::Direct3D11;", source, StringComparison.Ordinal);
+        Assert.Contains("surface.as<::Windows::Graphics::DirectX::Direct3D11::IDirect3DDxgiInterfaceAccess>()", source, StringComparison.Ordinal);
         Assert.DoesNotContain("using namespace Windows::Graphics", source, StringComparison.Ordinal);
     }
 
