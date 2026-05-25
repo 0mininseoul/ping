@@ -275,6 +275,25 @@ public sealed class OnboardingStateTests
     }
 
     [Fact]
+    public async Task PermissionProbe_skips_capture_runtime_checks_on_unsupported_windows()
+    {
+        var probe = new PermissionProbe(
+            Path.Combine(Path.GetTempPath(), "missing-supabase.json"),
+            screenCaptureSelfTest: new ThrowingScreenCaptureSelfTest(),
+            windowsStatusProvider: () => WindowsSupportStatus.UnsupportedOldWindows11);
+
+        var state = await probe.ProbeAsync();
+
+        Assert.Equal(WindowsSupportStatus.UnsupportedOldWindows11, state.WindowsStatus);
+        Assert.Equal(OnboardingProbeStatus.Unchecked, state.Camera.Status);
+        Assert.Equal(OnboardingProbeStatus.Unchecked, state.Microphone.Status);
+        Assert.Equal(OnboardingProbeStatus.Unchecked, state.ScreenCapture.Status);
+        Assert.Contains("unsupported", state.Camera.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("unsupported", state.Microphone.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("unsupported", state.ScreenCapture.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task PermissionProbe_blocks_notifications_when_process_is_elevated()
     {
         var probe = new PermissionProbe(
@@ -444,5 +463,14 @@ public sealed class OnboardingStateTests
     private sealed class FixedElevationProbe(bool isElevated) : IElevationProbe
     {
         public bool IsElevated { get; } = isElevated;
+    }
+
+    private sealed class ThrowingScreenCaptureSelfTest : INativeScreenCaptureSelfTest
+    {
+        public Task<OnboardingProbeState> CapturePrimaryMonitorFrameAsync(CancellationToken cancellationToken = default)
+        {
+            _ = cancellationToken;
+            throw new InvalidOperationException("Screen self-test should not run on unsupported Windows.");
+        }
     }
 }

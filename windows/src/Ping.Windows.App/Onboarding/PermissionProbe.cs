@@ -32,6 +32,7 @@ public sealed class PermissionProbe
     private readonly IElevationProbe elevationProbe;
     private readonly Func<IReadOnlyDictionary<HotkeyCommand, HotkeyBinding>> hotkeyBindingsProvider;
     private readonly Func<IReadOnlyList<HotkeyRegistrationResult>>? activeHotkeyRegistrationsProvider;
+    private readonly Func<WindowsSupportStatus> windowsStatusProvider;
 
     public PermissionProbe(
         string? supabaseConfigPath = null,
@@ -40,7 +41,8 @@ public sealed class PermissionProbe
         IStartupTaskController? startupTaskController = null,
         IElevationProbe? elevationProbe = null,
         Func<IReadOnlyDictionary<HotkeyCommand, HotkeyBinding>>? hotkeyBindingsProvider = null,
-        Func<IReadOnlyList<HotkeyRegistrationResult>>? activeHotkeyRegistrationsProvider = null)
+        Func<IReadOnlyList<HotkeyRegistrationResult>>? activeHotkeyRegistrationsProvider = null,
+        Func<WindowsSupportStatus>? windowsStatusProvider = null)
     {
         this.supabaseConfigPath = supabaseConfigPath ?? DefaultSupabaseConfigPath();
         this.screenCaptureSelfTest = screenCaptureSelfTest ?? new NativeScreenCaptureSelfTest();
@@ -49,19 +51,33 @@ public sealed class PermissionProbe
         this.elevationProbe = elevationProbe ?? new WindowsElevationProbe();
         this.hotkeyBindingsProvider = hotkeyBindingsProvider ?? HotkeyBinding.Defaults;
         this.activeHotkeyRegistrationsProvider = activeHotkeyRegistrationsProvider;
+        this.windowsStatusProvider = windowsStatusProvider ?? WindowsVersionProbe.CurrentStatus;
     }
 
-    public async Task<OnboardingEnvironmentState> ProbeAsync(CancellationToken cancellationToken = default) =>
-        new(
-            WindowsVersionProbe.CurrentStatus(),
+    public async Task<OnboardingEnvironmentState> ProbeAsync(CancellationToken cancellationToken = default)
+    {
+        var windowsStatus = windowsStatusProvider();
+        var camera = windowsStatus == WindowsSupportStatus.Supported
+            ? await CheckCameraAsync(cancellationToken).ConfigureAwait(false)
+            : OnboardingProbeState.Unchecked("Camera was not checked because Windows is unsupported.");
+        var microphone = windowsStatus == WindowsSupportStatus.Supported
+            ? await CheckMicrophoneAsync(cancellationToken).ConfigureAwait(false)
+            : OnboardingProbeState.Unchecked("Microphone was not checked because Windows is unsupported.");
+        var screenCapture = windowsStatus == WindowsSupportStatus.Supported
+            ? await CheckScreenCaptureAsync(cancellationToken).ConfigureAwait(false)
+            : OnboardingProbeState.Unchecked("Screen capture was not checked because Windows is unsupported.");
+
+        return new(
+            windowsStatus,
             IsSupabaseConfigured(),
             IsElevated(),
-            await CheckCameraAsync(cancellationToken).ConfigureAwait(false),
-            await CheckMicrophoneAsync(cancellationToken).ConfigureAwait(false),
-            await CheckScreenCaptureAsync(cancellationToken).ConfigureAwait(false),
+            camera,
+            microphone,
+            screenCapture,
             await CheckNotificationsAsync(cancellationToken).ConfigureAwait(false),
             CheckDefaultHotkeys(),
             await CheckStartupAsync(cancellationToken).ConfigureAwait(false));
+    }
 
     public bool IsElevated() => elevationProbe.IsElevated;
 
