@@ -171,6 +171,32 @@ public sealed class QuickSendStateTests
     }
 
     [Fact]
+    public async Task CanceledAfterRecordingBeforeUpload_DoesNotSend()
+    {
+        var tempPath = Path.Combine(Path.GetTempPath(), "PingWindowsTests", $"{Guid.NewGuid():N}.mp4");
+        Directory.CreateDirectory(Path.GetDirectoryName(tempPath)!);
+        await File.WriteAllBytesAsync(tempPath, [0x00, 0x01]);
+        using var cancellation = new CancellationTokenSource();
+        SendVideoInput? sent = null;
+        var engine = new FakeScreenFaceCaptureEngine(
+            new ScreenFaceCaptureResult(tempPath, 16.0 / 9.0),
+            _ => cancellation.Cancel());
+        var controller = CreateController(
+            engine: engine,
+            sendAsync: (input, _) =>
+            {
+                sent = input;
+                return Task.CompletedTask;
+            });
+
+        var outcome = await controller.ExecuteAsync(ContextWith(), cancellation.Token);
+
+        Assert.Equal(QuickSendOutcome.Canceled, outcome);
+        Assert.Null(sent);
+        Assert.False(File.Exists(tempPath));
+    }
+
+    [Fact]
     public async Task FailedQuickSend_DoesNotSaveSentCopyBeforeUploadSucceeds()
     {
         var archive = new LocalArchive(Path.Combine(
@@ -256,18 +282,26 @@ public sealed class QuickSendStateTests
     {
         public Task<QuickSendOutcome> ExecuteAsync(QuickSendContext context) =>
             Controller.ExecuteAsync(context);
+
+        public Task<QuickSendOutcome> ExecuteAsync(QuickSendContext context, CancellationToken cancellationToken) =>
+            Controller.ExecuteAsync(context, cancellationToken);
     }
 
     private sealed class FakeScreenFaceCaptureEngine : IScreenFaceCaptureEngine
     {
+        private readonly Action<CancellationToken>? beforeRecordReturns;
+
         public FakeScreenFaceCaptureEngine()
             : this(new ScreenFaceCaptureResult("screen-face.mp4", 16.0 / 9.0))
         {
         }
 
-        public FakeScreenFaceCaptureEngine(ScreenFaceCaptureResult result)
+        public FakeScreenFaceCaptureEngine(
+            ScreenFaceCaptureResult result,
+            Action<CancellationToken>? beforeRecordReturns = null)
         {
             Result = result;
+            this.beforeRecordReturns = beforeRecordReturns;
         }
 
         public ScreenFaceCaptureResult Result { get; }
@@ -283,6 +317,7 @@ public sealed class QuickSendStateTests
         {
             RecordWasCalled = true;
             LastRecordMonitorIndex = monitorIndex;
+            beforeRecordReturns?.Invoke(cancellationToken);
             return Task.FromResult(Result);
         }
 

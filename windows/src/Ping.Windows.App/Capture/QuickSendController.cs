@@ -265,6 +265,7 @@ public sealed class QuickSendController
             countdownCancellation = null;
             countdownTask = null;
             recordedPath = recording.FilePath;
+            cancellationToken.ThrowIfCancellationRequested();
             hud.SetUploading();
 
             uploadStarted = true;
