@@ -282,11 +282,9 @@ public sealed partial class PlaybackWindow : Window
         SenderChip.Visibility = viewModel.IsScreenFace ? Visibility.Visible : Visibility.Collapsed;
         PlayerSurface.Clip = viewModel.IsScreenFace
             ? null
-            : new EllipseGeometry
+            : new RectangleGeometry
             {
-                Center = new global::Windows.Foundation.Point(size.Width / 2d, size.Height / 2d),
-                RadiusX = size.Width / 2d,
-                RadiusY = size.Height / 2d
+                Rect = new global::Windows.Foundation.Rect(0, 0, size.Width, size.Height)
             };
         appWindow.Resize(size);
         appWindow.TitleBar.ExtendsContentIntoTitleBar = true;

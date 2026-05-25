@@ -297,6 +297,8 @@ public sealed class AppCoordinatorSourceTests
         Assert.Contains("finally\n            {\n                SetEvent(redirectEventHandle);", program, StringComparison.Ordinal);
         Assert.Contains("pendingActivations.Add(args)", program, StringComparison.Ordinal);
         Assert.Contains("Application.Start", program, StringComparison.Ordinal);
+        Assert.Contains("new App();", program, StringComparison.Ordinal);
+        Assert.DoesNotContain("_ = new App();", program, StringComparison.Ordinal);
         Assert.Contains("Program.Activated += HandleRedirectedActivation;", app, StringComparison.Ordinal);
         Assert.Contains("foreach (var activation in Program.TakePendingActivations())", app, StringComparison.Ordinal);
         Assert.Contains("pendingActivationArguments.Enqueue(args)", app, StringComparison.Ordinal);
@@ -435,6 +437,23 @@ public sealed class AppCoordinatorSourceTests
 
         Assert.Contains("permissionProbe.IsElevated()", source, StringComparison.Ordinal);
         Assert.Contains("isElevated:", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PlaybackWindowUsesWinUiCompatibleClipGeometry()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Playback",
+            "PlaybackViewModel.cs"));
+
+        Assert.Contains("new CornerRadius(size.Width / 2d)", source, StringComparison.Ordinal);
+        Assert.Contains("new RectangleGeometry", source, StringComparison.Ordinal);
+        Assert.Contains("new global::Windows.Foundation.Rect", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("new EllipseGeometry", source, StringComparison.Ordinal);
     }
 
     [Fact]
