@@ -79,30 +79,55 @@ public sealed class MessageService(ISupabaseRpcClient client, IStorageService st
             expiresAt,
             cancellationToken).ConfigureAwait(false);
 
-        foreach (var room in sendableRooms)
+        var createdMessageCount = 0;
+        try
         {
-            foreach (var receiverUid in room.MemberUids.Where(uid => uid != input.SenderUid))
+            foreach (var room in sendableRooms)
             {
-                _ = await client.RpcValueAsync<string>(
-                    "ping_create_message",
-                    new CreateMessageRpcBody(
-                        RoomUuid: room.Id!,
-                        ReceiverUid: receiverUid,
-                        SenderNicknameText: input.SenderNickname,
-                        VideoIdText: sharedVideoId,
-                        VideoUrlText: videoStoragePath,
-                        XRatio: input.MirrorPosition.XRatio,
-                        YRatio: input.MirrorPosition.YRatio,
-                        CaptureModeText: input.CaptureMode.ToWireValue(),
-                        AspectRatioValue: input.AspectRatio,
-                        AllowsLocalSaveValue: input.AllowsLocalSave),
-                    cancellationToken).ConfigureAwait(false);
+                foreach (var receiverUid in room.MemberUids.Where(uid => uid != input.SenderUid))
+                {
+                    _ = await client.RpcValueAsync<string>(
+                        "ping_create_message",
+                        new CreateMessageRpcBody(
+                            RoomUuid: room.Id!,
+                            ReceiverUid: receiverUid,
+                            SenderNicknameText: input.SenderNickname,
+                            VideoIdText: sharedVideoId,
+                            VideoUrlText: videoStoragePath,
+                            XRatio: input.MirrorPosition.XRatio,
+                            YRatio: input.MirrorPosition.YRatio,
+                            CaptureModeText: input.CaptureMode.ToWireValue(),
+                            AspectRatioValue: input.AspectRatio,
+                            AllowsLocalSaveValue: input.AllowsLocalSave),
+                        cancellationToken).ConfigureAwait(false);
+                    createdMessageCount += 1;
+                }
             }
+        }
+        catch
+        {
+            if (createdMessageCount == 0)
+            {
+                await DeleteUploadedVideoQuietlyAsync(videoStoragePath).ConfigureAwait(false);
+            }
+
+            throw;
         }
     }
 
     private static DateTimeOffset MessageSortKey(VideoMessage message) =>
         message.CreatedAt ?? DateTimeOffset.MaxValue;
+
+    private async Task DeleteUploadedVideoQuietlyAsync(string videoStoragePath)
+    {
+        try
+        {
+            await storage.DeleteVideoAsync(videoStoragePath, CancellationToken.None).ConfigureAwait(false);
+        }
+        catch (Exception)
+        {
+        }
+    }
 }
 
 public sealed record SendVideoInput(

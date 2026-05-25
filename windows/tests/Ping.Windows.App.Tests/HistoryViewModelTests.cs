@@ -526,6 +526,13 @@ public sealed class HistoryViewModelTests
             _ = cancellationToken;
             throw new NotSupportedException();
         }
+
+        public Task DeleteVideoAsync(string remotePath, CancellationToken cancellationToken = default)
+        {
+            _ = remotePath;
+            _ = cancellationToken;
+            throw new NotSupportedException();
+        }
     }
 
     private sealed class RecordingChatMediaStorage : IChatMediaStorageService

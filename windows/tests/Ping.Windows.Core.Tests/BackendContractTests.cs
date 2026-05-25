@@ -417,6 +417,47 @@ public sealed class BackendContractTests
     }
 
     [Fact]
+    public async Task MessageServiceDeletesUploadedVideoWhenFirstMessageCreateFails()
+    {
+        var rpc = new RecordingRpcClient
+        {
+            ValueException = new InvalidOperationException("create failed")
+        };
+        var storage = new StubStorageService("sender-uid/shared-video-id.mp4");
+        var service = new MessageService(rpc, storage);
+        var input = new SendVideoInput(
+            Rooms:
+            [
+                new Room(
+                    Id: "room-id",
+                    Name: "Room",
+                    SearchableName: "room",
+                    OwnerUid: "sender-uid",
+                    MemberUids: ["sender-uid", "receiver-uid"],
+                    MemberNicknames: new Dictionary<string, string>
+                    {
+                        ["sender-uid"] = "Youngmin",
+                        ["receiver-uid"] = "Receiver"
+                    },
+                    Status: RoomStatus.Open)
+            ],
+            LocalVideoPath: "/tmp/ping.mp4",
+            MirrorPosition: new MirrorPosition(0.5, 0.5),
+            SenderUid: "sender-uid",
+            SenderNickname: "Youngmin",
+            CaptureMode: CaptureMode.ScreenFace,
+            AspectRatio: 1.7777778,
+            AllowsLocalSave: false,
+            SharedVideoId: "shared-video-id");
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.SendAsync(input));
+
+        Assert.Equal("create failed", exception.Message);
+        Assert.Equal(["sender-uid/shared-video-id.mp4"], storage.DeletedVideoPaths);
+    }
+
+    [Fact]
     public async Task MessageServiceUsesMacOSIncomingPlaybackRpcBodies()
     {
         var rpc = new RecordingIncomingRpcClient();
@@ -555,6 +596,8 @@ public sealed class BackendContractTests
     {
         public List<(string Function, object Body)> Calls { get; } = [];
 
+        public Exception? ValueException { get; init; }
+
         public Task<IReadOnlyList<T>> RpcArrayAsync<T>(string function, object? body = null, CancellationToken cancellationToken = default)
         {
             throw new NotSupportedException();
@@ -563,6 +606,11 @@ public sealed class BackendContractTests
         public Task<T> RpcValueAsync<T>(string function, object? body = null, CancellationToken cancellationToken = default)
         {
             Calls.Add((function, body ?? new { }));
+            if (ValueException is not null)
+            {
+                return Task.FromException<T>(ValueException);
+            }
+
             object value = "message-id";
             return Task.FromResult((T)value);
         }
@@ -655,6 +703,8 @@ public sealed class BackendContractTests
 
     private sealed class StubStorageService(string storagePath) : IStorageService
     {
+        public List<string> DeletedVideoPaths { get; } = [];
+
         public Task<string> UploadVideoAsync(
             string localVideoPath,
             string senderUid,
@@ -668,6 +718,13 @@ public sealed class BackendContractTests
             Assert.Equal("shared-video-id", videoId);
             Assert.Equal(new[] { "receiver-uid" }, authorizedReceiverUids);
             return Task.FromResult(storagePath);
+        }
+
+        public Task DeleteVideoAsync(string remotePath, CancellationToken cancellationToken = default)
+        {
+            _ = cancellationToken;
+            DeletedVideoPaths.Add(remotePath);
+            return Task.CompletedTask;
         }
     }
 

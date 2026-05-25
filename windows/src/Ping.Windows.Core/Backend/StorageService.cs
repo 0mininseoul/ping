@@ -9,6 +9,8 @@ public interface IStorageService
         IReadOnlyCollection<string> authorizedReceiverUids,
         DateTimeOffset expiresAt,
         CancellationToken cancellationToken = default);
+
+    Task DeleteVideoAsync(string remotePath, CancellationToken cancellationToken = default);
 }
 
 public interface IChatMediaStorageService
@@ -54,20 +56,19 @@ public sealed class StorageService(SupabaseClient client) : IStorageService, ICh
 
     public async Task<string> DownloadVideoAsync(string remotePath, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(remotePath)
-            || !remotePath.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase)
-            || Path.IsPathRooted(remotePath)
-            || remotePath.Split('/', StringSplitOptions.RemoveEmptyEntries).Length < 2
-            || remotePath.Contains("..", StringComparison.Ordinal))
-        {
-            throw new ArgumentException("Video storage path must be a private ping-videos object path.", nameof(remotePath));
-        }
+        ValidateVideoPath(remotePath);
 
         Directory.CreateDirectory(PlaybackCacheDirectory);
         var fileName = string.Join("-", remotePath.Split('/', StringSplitOptions.RemoveEmptyEntries));
         var localPath = Path.Combine(PlaybackCacheDirectory, fileName);
         await client.DownloadObjectAsync(Bucket, remotePath, localPath, cancellationToken).ConfigureAwait(false);
         return localPath;
+    }
+
+    public async Task DeleteVideoAsync(string remotePath, CancellationToken cancellationToken = default)
+    {
+        ValidateVideoPath(remotePath);
+        await client.DeleteObjectAsync(Bucket, remotePath, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<ChatImageUpload> UploadChatImageAsync(
@@ -132,6 +133,19 @@ public sealed class StorageService(SupabaseClient client) : IStorageService, ICh
         if (file.Length > MaxVideoBytes)
         {
             throw new InvalidOperationException("Video upload file exceeds the 50 MB limit.");
+        }
+    }
+
+    private static void ValidateVideoPath(string remotePath)
+    {
+        if (string.IsNullOrWhiteSpace(remotePath)
+            || !remotePath.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase)
+            || Path.IsPathRooted(remotePath)
+            || remotePath.Split('/', StringSplitOptions.RemoveEmptyEntries).Length < 2
+            || remotePath.Contains('\\', StringComparison.Ordinal)
+            || remotePath.Contains("..", StringComparison.Ordinal))
+        {
+            throw new ArgumentException("Video storage path must be a private ping-videos object path.", nameof(remotePath));
         }
     }
 
