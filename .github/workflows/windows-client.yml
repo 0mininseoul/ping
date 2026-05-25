@@ -1,7 +1,20 @@
 name: Windows Client
 
+permissions:
+  contents: write
+
 on:
   workflow_dispatch:
+    inputs:
+      publish_release:
+        description: "Publish the signed sideload bundle to a GitHub Release"
+        required: false
+        type: boolean
+        default: false
+      release_tag:
+        description: "Release tag to create/update when publish_release is true"
+        required: false
+        type: string
   pull_request:
     paths:
       - "windows/**"
@@ -48,6 +61,38 @@ jobs:
           dotnet --info
           msbuild -version
 
+      - name: Import sideload signing certificate
+        shell: pwsh
+        env:
+          PING_WINDOWS_CERT_BASE64: ${{ secrets.PING_WINDOWS_CERT_BASE64 }}
+          PING_WINDOWS_CERT_PASSWORD: ${{ secrets.PING_WINDOWS_CERT_PASSWORD }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          if ([string]::IsNullOrWhiteSpace($env:PING_WINDOWS_CERT_BASE64)) {
+            Write-Warning "PING_WINDOWS_CERT_BASE64 is not configured. This run will produce unsigned validation packages."
+            "PING_WINDOWS_SIGNED=false" >> $env:GITHUB_ENV
+            exit 0
+          }
+
+          if ([string]::IsNullOrWhiteSpace($env:PING_WINDOWS_CERT_PASSWORD)) {
+            throw "PING_WINDOWS_CERT_PASSWORD must be configured when PING_WINDOWS_CERT_BASE64 is set."
+          }
+
+          $certDir = Join-Path $env:RUNNER_TEMP "ping-windows-cert"
+          New-Item -ItemType Directory -Force -Path $certDir | Out-Null
+          $pfxPath = Join-Path $certDir "Ping-Windows-Sideload.pfx"
+          [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:PING_WINDOWS_CERT_BASE64))
+          $securePassword = ConvertTo-SecureString $env:PING_WINDOWS_CERT_PASSWORD -AsPlainText -Force
+          $importedCertificate = @(Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation "Cert:\CurrentUser\My" -Password $securePassword)[0]
+          if (-not $importedCertificate.HasPrivateKey) {
+            throw "Imported Windows sideload certificate does not include a private key."
+          }
+          Import-Certificate -FilePath ".\windows\certs\Ping-Windows-Sideload.cer" -CertStoreLocation "Cert:\CurrentUser\TrustedPeople" | Out-Null
+          "PING_WINDOWS_CERT_PATH=$pfxPath" >> $env:GITHUB_ENV
+          "PING_WINDOWS_CERT_PASSWORD=$env:PING_WINDOWS_CERT_PASSWORD" >> $env:GITHUB_ENV
+          "PING_WINDOWS_CERT_THUMBPRINT=$($importedCertificate.Thumbprint)" >> $env:GITHUB_ENV
+          "PING_WINDOWS_SIGNED=true" >> $env:GITHUB_ENV
+
       - name: Restore managed tests
         shell: pwsh
         run: |
@@ -64,7 +109,13 @@ jobs:
         shell: pwsh
         run: |
           & .\windows\scripts\build-release.ps1 -Platform x64,ARM64 -SkipTests
-          & .\windows\scripts\smoke-release.ps1 -Platform x64,ARM64 -AllowUnsigned
+          if ($env:PING_WINDOWS_SIGNED -eq "true") {
+            & .\windows\scripts\smoke-release.ps1 -Platform x64,ARM64
+            & .\windows\scripts\package-sideload-release.ps1 -Platform x64,ARM64
+          } else {
+            & .\windows\scripts\smoke-release.ps1 -Platform x64,ARM64 -AllowUnsigned
+            & .\windows\scripts\package-sideload-release.ps1 -Platform x64,ARM64 -AllowUnsigned
+          }
 
       - name: Upload MSIX packages
         uses: actions/upload-artifact@v4
@@ -73,3 +124,55 @@ jobs:
           path: windows/dist/*.msix
           if-no-files-found: error
           retention-days: 14
+
+      - name: Upload sideload bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: ping-windows-sideload
+          path: |
+            windows/dist/Ping-Windows-v*-sideload/**
+            windows/dist/Ping-Windows-v*-sideload.zip
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publish GitHub Release assets
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_release }}
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ($env:PING_WINDOWS_SIGNED -ne "true") {
+            throw "Refusing to publish unsigned Windows sideload packages. Configure PING_WINDOWS_CERT_BASE64 and PING_WINDOWS_CERT_PASSWORD."
+          }
+
+          $projectYml = Get-Content -Raw -LiteralPath "project.yml"
+          $match = [regex]::Match($projectYml, 'MARKETING_VERSION:\s*"([^"]+)"')
+          if (-not $match.Success) {
+            throw "Could not read MARKETING_VERSION from project.yml."
+          }
+
+          $version = $match.Groups[1].Value
+          $tag = "${{ inputs.release_tag }}"
+          if ([string]::IsNullOrWhiteSpace($tag)) {
+            $tag = "windows-v$version-sideload"
+          }
+
+          $releaseDir = "windows/dist/Ping-Windows-v$version-sideload"
+          $releaseZip = "windows/dist/Ping-Windows-v$version-sideload.zip"
+          if (-not (Test-Path -LiteralPath $releaseZip)) {
+            throw "Missing sideload release zip: $releaseZip"
+          }
+
+          gh release view $tag 2>$null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $tag --target $env:GITHUB_SHA --title "Ping Windows v$version sideload" --notes "Zero-cost Windows sideload package. Users must trust Ping-Windows-Sideload.cer before installing."
+          }
+
+          gh release upload $tag `
+            $releaseZip `
+            "$releaseDir/Ping-Windows-v$version-x64.msix" `
+            "$releaseDir/Ping-Windows-v$version-arm64.msix" `
+            "$releaseDir/Ping-Windows-Sideload.cer" `
+            "$releaseDir/install-ping-windows.ps1" `
+            "$releaseDir/SHA256SUMS.txt" `
+            --clobber

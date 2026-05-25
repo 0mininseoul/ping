@@ -86,7 +86,25 @@ windows\dist\Ping-Windows-v0.3.28-x64.msix
 windows\dist\Ping-Windows-v0.3.28-arm64.msix
 ```
 
-For external distribution, sign the MSIX with a trusted certificate by passing `-PackageCertificateThumbprint` or setting `PING_WINDOWS_CERT_THUMBPRINT`. Unsigned packages are only for CI/build validation and will not install cleanly on user machines without developer/test-signing workarounds.
+For zero-cost distribution, Ping uses a self-signed MSIX sideload package:
+
+```powershell
+.\scripts\create-sideload-certificate.ps1
+.\scripts\build-release.ps1
+.\scripts\package-sideload-release.ps1
+```
+
+CI reads `PING_WINDOWS_CERT_BASE64` and `PING_WINDOWS_CERT_PASSWORD` from GitHub Secrets, imports the PFX into the current user's certificate store, and signs by certificate thumbprint. When those secrets exist, the workflow signs the MSIX packages, copies the public `windows\certs\Ping-Windows-Sideload.cer`, and writes `windows\dist\Ping-Windows-v0.3.28-sideload.zip`.
+
+Users install the free sideload bundle from an elevated PowerShell prompt:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\install-ping-windows.ps1
+```
+
+The installer imports `Ping-Windows-Sideload.cer` into `Cert:\LocalMachine\TrustedPeople`, picks x64 or arm64 from `ProcessArchitecture`, installs the MSIX, and launches Ping. This is the best no-cost route, but it is still sideloading: users must explicitly trust the Ping certificate. Microsoft Store, Azure Artifact Signing, or an OV code-signing certificate are required for broad public-trust installation.
+
+Unsigned packages are only for CI/build validation and will not install cleanly on user machines without developer/test-signing workarounds.
 
 Smoke-check release artifacts:
 

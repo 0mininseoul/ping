@@ -42,4 +42,7 @@ windows/artifacts/
 windows/dist/
 windows/**/bin/
 windows/**/obj/
+windows/certs/private/
+windows/certs/*.pfx
+windows/certs/*.p12
 default.profraw

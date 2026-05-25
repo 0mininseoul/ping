@@ -59,6 +59,30 @@ function Resolve-MSBuild {
     throw "MSBuild was not found. Install Visual Studio with .NET desktop, C++ desktop, and Windows App SDK tooling."
 }
 
+function Resolve-SignTool {
+    $command = Get-Command signtool.exe -ErrorAction SilentlyContinue
+    if ($command) {
+        return $command.Source
+    }
+
+    $kitBinRoot = Join-Path ${env:ProgramFiles(x86)} "Windows Kits\10\bin"
+    if (Test-Path -LiteralPath $kitBinRoot) {
+        foreach ($directory in Get-ChildItem -LiteralPath $kitBinRoot -Directory | Sort-Object Name -Descending) {
+            $x64 = Join-Path $directory.FullName "x64\signtool.exe"
+            if (Test-Path -LiteralPath $x64) {
+                return $x64
+            }
+
+            $x86 = Join-Path $directory.FullName "x86\signtool.exe"
+            if (Test-Path -LiteralPath $x86) {
+                return $x86
+            }
+        }
+    }
+
+    throw "signtool.exe was not found. Install the Windows SDK signing tools."
+}
+
 function Get-PackageArchitectureLabel([string]$TargetPlatform) {
     if ($TargetPlatform -eq "ARM64") {
         return "arm64"
@@ -76,23 +100,50 @@ function Get-PackageArchitectureManifestValue([string]$TargetPlatform) {
 }
 
 function Add-SigningProperties([System.Collections.Generic.List[string]]$Arguments) {
-    if (-not [string]::IsNullOrWhiteSpace($PackageCertificateThumbprint)) {
-        $Arguments.Add("/p:AppxPackageSigningEnabled=true")
-        $Arguments.Add("/p:PackageCertificateThumbprint=$PackageCertificateThumbprint")
+    $Arguments.Add("/p:AppxPackageSigningEnabled=false")
+    if (-not (Test-HasSigningCertificate)) {
+        Write-Warning "No signing certificate was provided. Packages will be unsigned and are only useful for CI/build validation."
+    }
+}
+
+function Test-HasSigningCertificate {
+    return -not [string]::IsNullOrWhiteSpace($PackageCertificateThumbprint) -or
+        -not [string]::IsNullOrWhiteSpace($PackageCertificateKeyFile)
+}
+
+function Sign-Package([string]$PackagePath) {
+    if (-not (Test-HasSigningCertificate)) {
         return
     }
+
+    $signTool = Resolve-SignTool
+    $arguments = [System.Collections.Generic.List[string]]::new()
+    $arguments.Add("sign")
+    $arguments.Add("/fd")
+    $arguments.Add("SHA256")
 
     if (-not [string]::IsNullOrWhiteSpace($PackageCertificateKeyFile)) {
-        $Arguments.Add("/p:AppxPackageSigningEnabled=true")
-        $Arguments.Add("/p:PackageCertificateKeyFile=$PackageCertificateKeyFile")
-        if (-not [string]::IsNullOrWhiteSpace($PackageCertificatePassword)) {
-            $Arguments.Add("/p:PackageCertificatePassword=$PackageCertificatePassword")
+        if (-not (Test-Path -LiteralPath $PackageCertificateKeyFile)) {
+            throw "Signing certificate key file was not found: $PackageCertificateKeyFile"
         }
-        return
+
+        $arguments.Add("/f")
+        $arguments.Add($PackageCertificateKeyFile)
+        if (-not [string]::IsNullOrWhiteSpace($PackageCertificatePassword)) {
+            $arguments.Add("/p")
+            $arguments.Add($PackageCertificatePassword)
+        }
+    } else {
+        $arguments.Add("/sha1")
+        $arguments.Add($PackageCertificateThumbprint)
     }
 
-    Write-Warning "No signing certificate was provided. Packages will be unsigned and are only useful for CI/build validation."
-    $Arguments.Add("/p:AppxPackageSigningEnabled=false")
+    $arguments.Add($PackagePath)
+    Write-Host "Signing $(Split-Path -Leaf $PackagePath) with signtool.exe..."
+    & $signTool @arguments
+    if ($LASTEXITCODE -ne 0) {
+        throw "signtool.exe failed for $PackagePath with exit code $LASTEXITCODE."
+    }
 }
 
 function Assert-PackageContainsNativeCaptureDll($Archive, [string]$PackagePath) {
@@ -163,12 +214,16 @@ foreach ($targetPlatform in $Platform) {
         throw "MSBuild completed but no .msix package was found for $targetPlatform."
     }
 
+    $destination = Join-Path $distRoot "Ping-Windows-v$version-$architectureLabel.msix"
+    Copy-Item -LiteralPath $package.FullName -Destination $destination -Force
+    Sign-Package $destination
+
     Add-Type -AssemblyName System.IO.Compression.FileSystem
-    $archive = [System.IO.Compression.ZipFile]::OpenRead($package.FullName)
+    $archive = [System.IO.Compression.ZipFile]::OpenRead($destination)
     try {
         $manifestEntry = $archive.Entries | Where-Object { $_.FullName -eq "AppxManifest.xml" } | Select-Object -First 1
         if (-not $manifestEntry) {
-            throw "Package $($package.FullName) does not contain AppxManifest.xml."
+                throw "Package $destination does not contain AppxManifest.xml."
         }
 
         $stream = $manifestEntry.Open()
@@ -198,13 +253,10 @@ foreach ($targetPlatform in $Platform) {
             throw "Package architecture $($identity.ProcessorArchitecture) does not match $architectureManifestValue."
         }
 
-        Assert-PackageContainsNativeCaptureDll $archive $package.FullName
+        Assert-PackageContainsNativeCaptureDll $archive $destination
     }
     finally {
         $archive.Dispose()
     }
-
-    $destination = Join-Path $distRoot "Ping-Windows-v$version-$architectureLabel.msix"
-    Copy-Item -LiteralPath $package.FullName -Destination $destination -Force
     Write-Host "Wrote $destination"
 }
