@@ -40,7 +40,7 @@ public sealed class StartupTaskController : IStartupTaskController
 #if WINDOWS
         try
         {
-            var task = await Windows.ApplicationModel.StartupTask.GetAsync(TaskId);
+            var task = await global::Windows.ApplicationModel.StartupTask.GetAsync(TaskId);
             cancellationToken.ThrowIfCancellationRequested();
             return ToStatus(task.State);
         }
@@ -68,7 +68,7 @@ public sealed class StartupTaskController : IStartupTaskController
 #if WINDOWS
         try
         {
-            var task = await Windows.ApplicationModel.StartupTask.GetAsync(TaskId);
+            var task = await global::Windows.ApplicationModel.StartupTask.GetAsync(TaskId);
             cancellationToken.ThrowIfCancellationRequested();
             if (isEnabled)
             {
@@ -98,22 +98,22 @@ public sealed class StartupTaskController : IStartupTaskController
             "Startup registration is available only in packaged Windows builds.");
 
 #if WINDOWS
-    private static PingStartupTaskStatus ToStatus(Windows.ApplicationModel.StartupTaskState state) =>
+    private static PingStartupTaskStatus ToStatus(global::Windows.ApplicationModel.StartupTaskState state) =>
         state switch
         {
-            Windows.ApplicationModel.StartupTaskState.Disabled => new(
+            global::Windows.ApplicationModel.StartupTaskState.Disabled => new(
                 PingStartupTaskState.Disabled,
                 "Ping will not start with Windows."),
-            Windows.ApplicationModel.StartupTaskState.DisabledByUser => new(
+            global::Windows.ApplicationModel.StartupTaskState.DisabledByUser => new(
                 PingStartupTaskState.DisabledByUser,
                 "Startup was disabled in Windows Settings."),
-            Windows.ApplicationModel.StartupTaskState.Enabled => new(
+            global::Windows.ApplicationModel.StartupTaskState.Enabled => new(
                 PingStartupTaskState.Enabled,
                 "Ping starts with Windows."),
-            Windows.ApplicationModel.StartupTaskState.DisabledByPolicy => new(
+            global::Windows.ApplicationModel.StartupTaskState.DisabledByPolicy => new(
                 PingStartupTaskState.DisabledByPolicy,
                 "Startup is disabled by system policy."),
-            Windows.ApplicationModel.StartupTaskState.EnabledByPolicy => new(
+            global::Windows.ApplicationModel.StartupTaskState.EnabledByPolicy => new(
                 PingStartupTaskState.EnabledByPolicy,
                 "Startup is enabled by system policy."),
             _ => new PingStartupTaskStatus(

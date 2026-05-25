@@ -152,7 +152,7 @@ public sealed partial class HistoryWindow : Window
 
     private async void ChatBox_KeyDown(object sender, KeyRoutedEventArgs args)
     {
-        if (args.Key != Windows.System.VirtualKey.Enter || IsShiftDown())
+        if (args.Key != global::Windows.System.VirtualKey.Enter || IsShiftDown())
         {
             return;
         }

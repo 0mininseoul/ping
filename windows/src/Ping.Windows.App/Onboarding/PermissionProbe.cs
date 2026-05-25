@@ -103,9 +103,9 @@ public sealed class PermissionProbe
     public async Task<OnboardingProbeState> CheckCameraAsync(CancellationToken cancellationToken = default)
     {
 #if NET8_0_WINDOWS || NET9_0_WINDOWS || NET10_0_WINDOWS
-        var capability = Windows.Security.Authorization.AppCapabilityAccess.AppCapability.Create("Webcam");
+        var capability = global::Windows.Security.Authorization.AppCapabilityAccess.AppCapability.Create("Webcam");
         var access = capability.CheckAccess();
-        if (access != Windows.Security.Authorization.AppCapabilityAccess.AppCapabilityAccessStatus.Allowed)
+        if (access != global::Windows.Security.Authorization.AppCapabilityAccess.AppCapabilityAccessStatus.Allowed)
         {
             return OnboardingProbeState.Blocked(
                 $"Camera privacy access is {access}.",
@@ -114,10 +114,10 @@ public sealed class PermissionProbe
 
         try
         {
-            using var capture = new Windows.Media.Capture.MediaCapture();
-            await capture.InitializeAsync(new Windows.Media.Capture.MediaCaptureInitializationSettings
+            using var capture = new global::Windows.Media.Capture.MediaCapture();
+            await capture.InitializeAsync(new global::Windows.Media.Capture.MediaCaptureInitializationSettings
             {
-                StreamingCaptureMode = Windows.Media.Capture.StreamingCaptureMode.Video
+                StreamingCaptureMode = global::Windows.Media.Capture.StreamingCaptureMode.Video
             });
             return OnboardingProbeState.Available("Camera is ready.");
         }
@@ -142,9 +142,9 @@ public sealed class PermissionProbe
     public async Task<OnboardingProbeState> CheckMicrophoneAsync(CancellationToken cancellationToken = default)
     {
 #if NET8_0_WINDOWS || NET9_0_WINDOWS || NET10_0_WINDOWS
-        var capability = Windows.Security.Authorization.AppCapabilityAccess.AppCapability.Create("Microphone");
+        var capability = global::Windows.Security.Authorization.AppCapabilityAccess.AppCapability.Create("Microphone");
         var access = capability.CheckAccess();
-        if (access != Windows.Security.Authorization.AppCapabilityAccess.AppCapabilityAccessStatus.Allowed)
+        if (access != global::Windows.Security.Authorization.AppCapabilityAccess.AppCapabilityAccessStatus.Allowed)
         {
             return OnboardingProbeState.Blocked(
                 $"Microphone privacy access is {access}.",
@@ -153,10 +153,10 @@ public sealed class PermissionProbe
 
         try
         {
-            using var capture = new Windows.Media.Capture.MediaCapture();
-            await capture.InitializeAsync(new Windows.Media.Capture.MediaCaptureInitializationSettings
+            using var capture = new global::Windows.Media.Capture.MediaCapture();
+            await capture.InitializeAsync(new global::Windows.Media.Capture.MediaCaptureInitializationSettings
             {
-                StreamingCaptureMode = Windows.Media.Capture.StreamingCaptureMode.Audio
+                StreamingCaptureMode = global::Windows.Media.Capture.StreamingCaptureMode.Audio
             });
             return OnboardingProbeState.Available("Microphone is ready.");
         }
@@ -181,7 +181,7 @@ public sealed class PermissionProbe
     public async Task<OnboardingProbeState> CheckScreenCaptureAsync(CancellationToken cancellationToken = default)
     {
 #if NET8_0_WINDOWS || NET9_0_WINDOWS || NET10_0_WINDOWS
-        if (!Windows.Graphics.Capture.GraphicsCaptureSession.IsSupported())
+        if (!global::Windows.Graphics.Capture.GraphicsCaptureSession.IsSupported())
         {
             return OnboardingProbeState.Unsupported("Graphics Capture is not supported on this device.");
         }

@@ -437,6 +437,40 @@ public sealed class AppCoordinatorSourceTests
         Assert.Contains("isElevated:", source, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void AppSourcesQualifyWinRtNamespacesInsidePingWindowsNamespace()
+    {
+        var root = RepoRoot();
+        var appRoot = Path.Combine(root, "windows", "src", "Ping.Windows.App");
+        var unqualifiedWindowsNamespace = new System.Text.RegularExpressions.Regex(
+            @"(?<!global::)(?<!Microsoft\.)(?<!Ping\.)\bWindows\.(ApplicationModel|Foundation|Graphics|Media|Security|Storage|System)\b",
+            System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+        var violations = new List<string>();
+
+        foreach (var file in Directory.EnumerateFiles(appRoot, "*.cs", SearchOption.AllDirectories))
+        {
+            var relativePath = Path.GetRelativePath(root, file);
+            var lines = File.ReadAllLines(file);
+            for (var index = 0; index < lines.Length; index++)
+            {
+                var line = lines[index];
+                var trimmed = line.TrimStart();
+                if (trimmed.StartsWith("using Windows.", StringComparison.Ordinal)
+                    || trimmed.StartsWith("namespace Ping.Windows", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (unqualifiedWindowsNamespace.IsMatch(line))
+                {
+                    violations.Add($"{relativePath}:{index + 1}: {line.Trim()}");
+                }
+            }
+        }
+
+        Assert.Empty(violations);
+    }
+
     private static string RepoRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

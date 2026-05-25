@@ -13,10 +13,10 @@ public sealed class ClipboardWriter : IClipboardWriter
 #if NET8_0_WINDOWS || NET9_0_WINDOWS || NET10_0_WINDOWS
         try
         {
-            var package = new Windows.ApplicationModel.DataTransfer.DataPackage();
+            var package = new global::Windows.ApplicationModel.DataTransfer.DataPackage();
             package.SetText(text);
-            Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(package);
-            Windows.ApplicationModel.DataTransfer.Clipboard.Flush();
+            global::Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(package);
+            global::Windows.ApplicationModel.DataTransfer.Clipboard.Flush();
             return Task.FromResult(true);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)

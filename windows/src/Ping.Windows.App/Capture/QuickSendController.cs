@@ -678,14 +678,14 @@ public sealed partial class QuickSendHudWindow : Window, IQuickSendHudSession
 
     private void HandleKeyDown(object sender, KeyRoutedEventArgs args)
     {
-        if (args.Key == Windows.System.VirtualKey.Enter && viewModel.CanRetry)
+        if (args.Key == global::Windows.System.VirtualKey.Enter && viewModel.CanRetry)
         {
             args.Handled = true;
             RetryRequested?.Invoke(this, EventArgs.Empty);
             return;
         }
 
-        if (args.Key != Windows.System.VirtualKey.Escape)
+        if (args.Key != global::Windows.System.VirtualKey.Escape)
         {
             return;
         }
@@ -770,7 +770,7 @@ public sealed partial class QuickSendHudWindow : Window, IQuickSendHudSession
         windowHandle = hwnd;
         var windowId = Win32Interop.GetWindowIdFromWindow(hwnd);
         appWindow = AppWindow.GetFromWindowId(windowId);
-        appWindow.Resize(new Windows.Graphics.SizeInt32(260, 116));
+        appWindow.Resize(new global::Windows.Graphics.SizeInt32(260, 116));
         appWindow.TitleBar.ExtendsContentIntoTitleBar = true;
         appWindow.SetPresenter(AppWindowPresenterKind.CompactOverlay);
     }

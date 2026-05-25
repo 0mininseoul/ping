@@ -635,7 +635,7 @@ public sealed partial class ScreenFaceMirrorWindow : Window
             return;
         }
 
-        if (args.Key == Windows.System.VirtualKey.Enter)
+        if (args.Key == global::Windows.System.VirtualKey.Enter)
         {
             args.Handled = true;
             if (viewModel.State != MirrorState.Reviewing)
@@ -652,8 +652,8 @@ public sealed partial class ScreenFaceMirrorWindow : Window
             return;
         }
 
-        if (args.Key == Windows.System.VirtualKey.Back
-            || args.Key == Windows.System.VirtualKey.Delete)
+        if (args.Key == global::Windows.System.VirtualKey.Back
+            || args.Key == global::Windows.System.VirtualKey.Delete)
         {
             args.Handled = true;
             await viewModel.HandleRedoAsync();
@@ -665,36 +665,36 @@ public sealed partial class ScreenFaceMirrorWindow : Window
             return;
         }
 
-        if (args.Key == Windows.System.VirtualKey.Escape)
+        if (args.Key == global::Windows.System.VirtualKey.Escape)
         {
             args.Handled = true;
             viewModel.HandleEscape();
         }
     }
 
-    private bool HandleTargetKey(Windows.System.VirtualKey key)
+    private bool HandleTargetKey(global::Windows.System.VirtualKey key)
     {
         switch (key)
         {
-            case Windows.System.VirtualKey.Tab:
+            case global::Windows.System.VirtualKey.Tab:
                 return viewModel.SelectNextTarget();
-            case Windows.System.VirtualKey.A:
-            case Windows.System.VirtualKey.Number0:
-            case Windows.System.VirtualKey.NumberPad0:
+            case global::Windows.System.VirtualKey.A:
+            case global::Windows.System.VirtualKey.Number0:
+            case global::Windows.System.VirtualKey.NumberPad0:
                 return viewModel.SelectAllTargets();
         }
 
         var keyValue = (int)key;
-        if (keyValue >= (int)Windows.System.VirtualKey.Number1
-            && keyValue <= (int)Windows.System.VirtualKey.Number9)
+        if (keyValue >= (int)global::Windows.System.VirtualKey.Number1
+            && keyValue <= (int)global::Windows.System.VirtualKey.Number9)
         {
-            return viewModel.SelectTargetAtIndex(keyValue - (int)Windows.System.VirtualKey.Number1);
+            return viewModel.SelectTargetAtIndex(keyValue - (int)global::Windows.System.VirtualKey.Number1);
         }
 
-        if (keyValue >= (int)Windows.System.VirtualKey.NumberPad1
-            && keyValue <= (int)Windows.System.VirtualKey.NumberPad9)
+        if (keyValue >= (int)global::Windows.System.VirtualKey.NumberPad1
+            && keyValue <= (int)global::Windows.System.VirtualKey.NumberPad9)
         {
-            return viewModel.SelectTargetAtIndex(keyValue - (int)Windows.System.VirtualKey.NumberPad1);
+            return viewModel.SelectTargetAtIndex(keyValue - (int)global::Windows.System.VirtualKey.NumberPad1);
         }
 
         return false;
@@ -787,7 +787,7 @@ public sealed partial class ScreenFaceMirrorWindow : Window
         windowHandle = hwnd;
         var windowId = Win32Interop.GetWindowIdFromWindow(hwnd);
         appWindow = AppWindow.GetFromWindowId(windowId);
-        appWindow.Resize(new Windows.Graphics.SizeInt32(390, 300));
+        appWindow.Resize(new global::Windows.Graphics.SizeInt32(390, 300));
         appWindow.TitleBar.ExtendsContentIntoTitleBar = true;
         appWindow.SetPresenter(AppWindowPresenterKind.CompactOverlay);
         MoveToMirrorPosition(viewModel.MirrorPosition);
@@ -832,7 +832,7 @@ public sealed partial class ScreenFaceMirrorWindow : Window
         var size = appWindow.Size;
         var left = workArea.X + (int)Math.Round(workArea.Width * position.XRatio) - size.Width / 2;
         var top = workArea.Y + (int)Math.Round(workArea.Height * position.YRatio) - size.Height / 2;
-        appWindow.Move(new Windows.Graphics.PointInt32(
+        appWindow.Move(new global::Windows.Graphics.PointInt32(
             ClampWindowCoordinate(left, workArea.X, workArea.X + workArea.Width - size.Width),
             ClampWindowCoordinate(top, workArea.Y, workArea.Y + workArea.Height - size.Height)));
     }

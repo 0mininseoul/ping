@@ -185,11 +185,11 @@ public sealed partial class PlaybackWindow : Window
     {
         switch (args.Key)
         {
-            case Windows.System.VirtualKey.Enter:
+            case global::Windows.System.VirtualKey.Enter:
                 args.Handled = true;
                 viewModel.HandleEnter();
                 break;
-            case Windows.System.VirtualKey.Escape:
+            case global::Windows.System.VirtualKey.Escape:
                 args.Handled = true;
                 viewModel.HandleEscape();
                 break;
@@ -284,7 +284,7 @@ public sealed partial class PlaybackWindow : Window
             ? null
             : new EllipseGeometry
             {
-                Center = new Windows.Foundation.Point(size.Width / 2d, size.Height / 2d),
+                Center = new global::Windows.Foundation.Point(size.Width / 2d, size.Height / 2d),
                 RadiusX = size.Width / 2d,
                 RadiusY = size.Height / 2d
             };
@@ -294,19 +294,19 @@ public sealed partial class PlaybackWindow : Window
         MoveToMirrorPosition(size);
     }
 
-    private Windows.Graphics.SizeInt32 PlaybackWindowSize()
+    private global::Windows.Graphics.SizeInt32 PlaybackWindowSize()
     {
         if (!viewModel.IsScreenFace)
         {
-            return new Windows.Graphics.SizeInt32(200, 200);
+            return new global::Windows.Graphics.SizeInt32(200, 200);
         }
 
         const int width = 420;
         var height = Math.Max(120, (int)Math.Round(width / viewModel.AspectRatio));
-        return new Windows.Graphics.SizeInt32(width, height);
+        return new global::Windows.Graphics.SizeInt32(width, height);
     }
 
-    private void MoveToMirrorPosition(Windows.Graphics.SizeInt32 size)
+    private void MoveToMirrorPosition(global::Windows.Graphics.SizeInt32 size)
     {
         if (appWindow is null)
         {
@@ -317,7 +317,7 @@ public sealed partial class PlaybackWindow : Window
         var workArea = area.WorkArea;
         var left = workArea.X + (int)Math.Round(workArea.Width * viewModel.Message.MirrorPosition.XRatio) - size.Width / 2;
         var top = workArea.Y + (int)Math.Round(workArea.Height * viewModel.Message.MirrorPosition.YRatio) - size.Height / 2;
-        appWindow.Move(new Windows.Graphics.PointInt32(
+        appWindow.Move(new global::Windows.Graphics.PointInt32(
             Math.Clamp(left, workArea.X, workArea.X + Math.Max(0, workArea.Width - size.Width)),
             Math.Clamp(top, workArea.Y, workArea.Y + Math.Max(0, workArea.Height - size.Height))));
     }
