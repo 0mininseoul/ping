@@ -298,6 +298,23 @@ public sealed class AppCoordinatorSourceTests
     }
 
     [Fact]
+    public void WindowsCiUsesReleaseAndSmokeScriptsForPackaging()
+    {
+        var workflow = File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            ".github",
+            "workflows",
+            "windows-client.yml"));
+
+        Assert.Contains("windows\\scripts\\build-release.ps1", workflow, StringComparison.Ordinal);
+        Assert.Contains("-Platform x64", workflow, StringComparison.Ordinal);
+        Assert.Contains("-SkipTests", workflow, StringComparison.Ordinal);
+        Assert.Contains("windows\\scripts\\smoke-release.ps1", workflow, StringComparison.Ordinal);
+        Assert.Contains("-AllowUnsigned", workflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("/p:GenerateAppxPackageOnBuild=true", workflow, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void OnboardingWindowRendersSecondaryActions()
     {
         var root = RepoRoot();

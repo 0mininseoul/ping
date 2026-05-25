@@ -61,13 +61,6 @@ jobs:
 
       - name: Build packaged app
         shell: pwsh
-        run: >
-          msbuild windows/PingWindows.sln
-          /m
-          /restore
-          /p:Configuration=Release
-          /p:Platform=x64
-          /p:GenerateAppxPackageOnBuild=true
-          /p:UapAppxPackageBuildMode=SideloadOnly
-          /p:AppxBundle=Never
-          /p:AppxPackageSigningEnabled=false
+        run: |
+          & .\windows\scripts\build-release.ps1 -Platform x64 -SkipTests
+          & .\windows\scripts\smoke-release.ps1 -Platform x64 -AllowUnsigned
