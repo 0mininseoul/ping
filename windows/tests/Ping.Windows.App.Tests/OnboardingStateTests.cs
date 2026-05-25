@@ -33,7 +33,7 @@ public sealed class OnboardingStateTests
         var model = new OnboardingViewModel(state);
 
         Assert.True(model.IsScreenFaceQuickSendEnabled);
-        Assert.Equal("Screen+face quick send is ready for Alt+Shift+L.", model.ScreenFaceQuickSendStatusText);
+        Assert.Equal("Ping is ready for Alt+Shift+L and incoming notifications.", model.ScreenFaceQuickSendStatusText);
         Assert.All(model.Rows, row => Assert.Equal(OnboardingRowStatus.Ready, row.Status));
     }
 
@@ -61,6 +61,30 @@ public sealed class OnboardingStateTests
         Assert.Equal("Restart normally", row.PrimaryAction?.Label);
     }
 
+    [Fact]
+    public void Elevated_process_or_blocked_notifications_keep_ping_readiness_disabled()
+    {
+        var elevated = new OnboardingViewModel(OnboardingEnvironmentState.Ready() with
+        {
+            IsElevated = true
+        });
+        var notificationsBlocked = new OnboardingViewModel(OnboardingEnvironmentState.Ready() with
+        {
+            Notifications = OnboardingProbeState.Blocked(
+                "Notifications are blocked.",
+                SettingsLauncher.NotificationsPrivacyUri)
+        });
+
+        Assert.False(elevated.IsScreenFaceQuickSendEnabled);
+        Assert.Equal(
+            "Ping is disabled until normal user mode is ready.",
+            elevated.ScreenFaceQuickSendStatusText);
+        Assert.False(notificationsBlocked.IsScreenFaceQuickSendEnabled);
+        Assert.Equal(
+            "Ping is disabled until notification access is ready.",
+            notificationsBlocked.ScreenFaceQuickSendStatusText);
+    }
+
     [Theory]
     [InlineData(WindowsSupportStatus.UnsupportedWindows10, "Windows 10 is not a supported target for Ping Windows.")]
     [InlineData(WindowsSupportStatus.UnsupportedOldWindows11, "Windows 11 24H2 or newer is required for full support.")]
@@ -78,7 +102,7 @@ public sealed class OnboardingStateTests
         Assert.Equal(expectedMessage, row.Message);
         Assert.Null(row.PrimaryAction);
         Assert.False(model.IsScreenFaceQuickSendEnabled);
-        Assert.Equal("Screen+face quick send is disabled until Windows 11 24H2+ is ready.", model.ScreenFaceQuickSendStatusText);
+        Assert.Equal("Ping is disabled until Windows 11 24H2+ is ready.", model.ScreenFaceQuickSendStatusText);
     }
 
     [Fact]
@@ -95,8 +119,8 @@ public sealed class OnboardingStateTests
 
         Assert.False(cameraBlocked.IsScreenFaceQuickSendEnabled);
         Assert.False(microphoneBlocked.IsScreenFaceQuickSendEnabled);
-        Assert.Equal("Screen+face quick send is disabled until camera access is ready.", cameraBlocked.ScreenFaceQuickSendStatusText);
-        Assert.Equal("Screen+face quick send is disabled until microphone access is ready.", microphoneBlocked.ScreenFaceQuickSendStatusText);
+        Assert.Equal("Ping is disabled until camera access is ready.", cameraBlocked.ScreenFaceQuickSendStatusText);
+        Assert.Equal("Ping is disabled until microphone access is ready.", microphoneBlocked.ScreenFaceQuickSendStatusText);
     }
 
     [Fact]
@@ -159,7 +183,7 @@ public sealed class OnboardingStateTests
         Assert.Equal("Open config folder", row.PrimaryAction?.Label);
         Assert.True(row.CanRetry);
         Assert.False(model.IsScreenFaceQuickSendEnabled);
-        Assert.Equal("Screen+face quick send is disabled until Supabase config is ready.", model.ScreenFaceQuickSendStatusText);
+        Assert.Equal("Ping is disabled until Supabase config is ready.", model.ScreenFaceQuickSendStatusText);
     }
 
     [Fact]

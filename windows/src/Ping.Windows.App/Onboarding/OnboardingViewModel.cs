@@ -188,9 +188,11 @@ public sealed class OnboardingViewModel : INotifyPropertyChanged
         IsScreenFaceQuickSendEnabled =
             state.WindowsStatus == WindowsSupportStatus.Supported
             && state.IsSupabaseConfigured
+            && !state.IsElevated
             && state.Camera.Status == OnboardingProbeStatus.Available
             && state.Microphone.Status == OnboardingProbeStatus.Available
             && state.ScreenCapture.Status == OnboardingProbeStatus.Available
+            && state.Notifications.Status == OnboardingProbeStatus.Available
             && state.Hotkeys.Status == OnboardingProbeStatus.Available;
         ScreenFaceQuickSendStatusText = QuickSendStatusText(state, IsScreenFaceQuickSendEnabled);
     }
@@ -358,11 +360,11 @@ public sealed class OnboardingViewModel : INotifyPropertyChanged
     {
         if (isEnabled)
         {
-            return "Screen+face quick send is ready for Alt+Shift+L.";
+            return "Ping is ready for Alt+Shift+L and incoming notifications.";
         }
 
         var blocker = QuickSendBlocker(state);
-        return $"Screen+face quick send is disabled until {blocker} is ready.";
+        return $"Ping is disabled until {blocker} is ready.";
     }
 
     private static string QuickSendBlocker(OnboardingEnvironmentState state)
@@ -375,6 +377,11 @@ public sealed class OnboardingViewModel : INotifyPropertyChanged
         if (!state.IsSupabaseConfigured)
         {
             return "Supabase config";
+        }
+
+        if (state.IsElevated)
+        {
+            return "normal user mode";
         }
 
         if (state.Camera.Status != OnboardingProbeStatus.Available)
@@ -390,6 +397,11 @@ public sealed class OnboardingViewModel : INotifyPropertyChanged
         if (state.ScreenCapture.Status != OnboardingProbeStatus.Available)
         {
             return "screen capture";
+        }
+
+        if (state.Notifications.Status != OnboardingProbeStatus.Available)
+        {
+            return "notification access";
         }
 
         if (state.Hotkeys.Status != OnboardingProbeStatus.Available)
