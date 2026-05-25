@@ -257,6 +257,24 @@ public sealed class ScreenFaceMirrorViewModelTests
         Assert.Equal(0, closeRequestCount);
     }
 
+    [Fact]
+    public async Task EscapeAfterRecordingBeforeReview_DoesNotKeepReviewedClip()
+    {
+        ScreenFaceMirrorViewModel? model = null;
+        var engine = new CancelingFileWritingScreenFaceCaptureEngine(() => model!.HandleEscape());
+        model = new ScreenFaceMirrorViewModel(
+            MultiRoomContext(),
+            engine,
+            (_, _) => Task.CompletedTask);
+
+        await model.HandleEnterAsync();
+
+        Assert.True(model.IsCloseRequested);
+        Assert.Null(model.ReviewVideoUri);
+        Assert.NotNull(engine.OutputPath);
+        Assert.False(File.Exists(engine.OutputPath));
+    }
+
     private static ScreenFaceMirrorContext MultiRoomContext(bool saveSentCopy = false) =>
         new(
             Rooms:
@@ -406,6 +424,41 @@ public sealed class ScreenFaceMirrorViewModelTests
             var path = Path.Combine(directory, "preview.bmp");
             await File.WriteAllBytesAsync(path, [0x00, 0x01], cancellationToken);
             return new ScreenFacePreviewResult(path, 16.0 / 9.0);
+        }
+
+        public Task<ScreenCaptureSelfTestResult> SelfTestAsync() =>
+            Task.FromResult(new ScreenCaptureSelfTestResult(true, PingCaptureErrorCode.Success, "ok"));
+    }
+
+    private sealed class CancelingFileWritingScreenFaceCaptureEngine(Action beforeReturn) : IScreenFaceCaptureEngine
+    {
+        public string? OutputPath { get; private set; }
+
+        public async Task<ScreenFaceCaptureResult> RecordAsync(
+            TimeSpan duration,
+            int monitorIndex,
+            CancellationToken cancellationToken)
+        {
+            _ = duration;
+            _ = monitorIndex;
+            var directory = Path.Combine(
+                Path.GetTempPath(),
+                "PingScreenFaceCancelTests",
+                Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(directory);
+            OutputPath = Path.Combine(directory, "screen-face.mp4");
+            await File.WriteAllBytesAsync(OutputPath, [0x00, 0x01], cancellationToken);
+            beforeReturn();
+            return new ScreenFaceCaptureResult(OutputPath, 16.0 / 9.0);
+        }
+
+        public Task<ScreenFacePreviewResult> CapturePreviewAsync(int monitorIndex, CancellationToken cancellationToken)
+        {
+            _ = monitorIndex;
+            _ = cancellationToken;
+            return Task.FromResult(new ScreenFacePreviewResult(
+                Path.Combine(Path.GetTempPath(), "preview.bmp"),
+                16.0 / 9.0));
         }
 
         public Task<ScreenCaptureSelfTestResult> SelfTestAsync() =>

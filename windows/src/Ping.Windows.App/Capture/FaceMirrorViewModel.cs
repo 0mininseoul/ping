@@ -296,6 +296,7 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
             countdownCancellation = null;
             countdownTask = null;
             recordedPath = recording.FilePath;
+            cancellationToken.ThrowIfCancellationRequested();
 
             EnterReview(recordedPath);
             recordedPath = null;

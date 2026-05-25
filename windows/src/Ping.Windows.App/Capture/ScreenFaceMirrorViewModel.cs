@@ -332,6 +332,7 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
             countdownCancellation = null;
             countdownTask = null;
             recordedPath = recording.FilePath;
+            cancellationToken.ThrowIfCancellationRequested();
 
             EnterReview(recordedPath, recording.AspectRatio);
             recordedPath = null;
