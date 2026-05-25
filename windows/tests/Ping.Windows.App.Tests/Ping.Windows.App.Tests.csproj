@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Ping.Windows.Core\Ping.Windows.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\..\src\Ping.Windows.App\Onboarding\OnboardingViewModel.cs" Link="Onboarding\OnboardingViewModel.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Onboarding\OnboardingStartupPolicy.cs" Link="Onboarding\OnboardingStartupPolicy.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Onboarding\PermissionProbe.cs" Link="Onboarding\PermissionProbe.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Onboarding\SettingsLauncher.cs" Link="Onboarding\SettingsLauncher.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Onboarding\WindowsVersionProbe.cs" Link="Onboarding\WindowsVersionProbe.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Hotkeys\GlobalHotkeyManager.cs" Link="Hotkeys\GlobalHotkeyManager.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Hotkeys\HotkeyBinding.cs" Link="Hotkeys\HotkeyBinding.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Hotkeys\HotkeyStatusText.cs" Link="Hotkeys\HotkeyStatusText.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Capture\CapturePreflight.cs" Link="Capture\CapturePreflight.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Capture\FaceMirrorViewModel.cs" Link="Capture\FaceMirrorViewModel.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Capture\MirrorPlacementStore.cs" Link="Capture\MirrorPlacementStore.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Capture\MirrorTargetSelector.cs" Link="Capture\MirrorTargetSelector.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Capture\MonitorTargetResolver.cs" Link="Capture\MonitorTargetResolver.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Capture\NativeCaptureEngine.cs" Link="Capture\NativeCaptureEngine.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Capture\QuickSendController.cs" Link="Capture\QuickSendController.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Capture\ScreenFaceMirrorViewModel.cs" Link="Capture\ScreenFaceMirrorViewModel.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\History\HistoryAutoRefreshCoordinator.cs" Link="History\HistoryAutoRefreshCoordinator.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\History\HistoryRows.cs" Link="History\HistoryRows.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\History\HistoryViewModel.cs" Link="History\HistoryViewModel.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Notifications\NotificationController.cs" Link="Notifications\NotificationController.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Playback\PlaybackViewModel.cs" Link="Playback\PlaybackViewModel.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Setup\ClipboardWriter.cs" Link="Setup\ClipboardWriter.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Setup\HotkeySettingRow.cs" Link="Setup\HotkeySettingRow.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Setup\RoomManagerViewModel.cs" Link="Setup\RoomManagerViewModel.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Setup\SettingsWindowViewModel.cs" Link="Setup\SettingsWindowViewModel.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Setup\StartupTaskController.cs" Link="Setup\StartupTaskController.cs" />
+  </ItemGroup>
+</Project>

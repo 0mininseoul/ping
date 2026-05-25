@@ -29,10 +29,32 @@ final class StoragePolicyContractTests: XCTestCase {
         XCTAssertTrue(migration.contains("chat_messages_body_or_media_check"))
     }
 
+    func testChatDeleteRemovesAttachedMediaObjectBeforeDeletingRow() throws {
+        let migration = try readSourceFile("20260524132828_chat_image_attachments.sql")
+        let functionBody = try extract(
+            "create or replace function public.ping_delete_chat",
+            through: "grant execute on function public.ping_delete_chat",
+            from: migration
+        )
+
+        XCTAssertTrue(functionBody.contains("media_path"))
+        XCTAssertTrue(functionBody.contains("delete from storage.objects"))
+        XCTAssertTrue(functionBody.contains("bucket_id = 'ping-media'"))
+        XCTAssertTrue(functionBody.contains("name = media_path_value"))
+        XCTAssertTrue(functionBody.contains("delete from public.chat_messages where id = chat_uuid"))
+    }
+
     private func readSourceFile(_ relativePath: String) throws -> String {
         let fileName = URL(fileURLWithPath: relativePath).lastPathComponent
         let fileURL = try XCTUnwrap(Bundle(for: Self.self).resourceURL?.appendingPathComponent(fileName))
 
         return try String(contentsOf: fileURL, encoding: .utf8)
+    }
+
+    private func extract(_ start: String, through end: String, from contents: String) throws -> String {
+        let startRange = try XCTUnwrap(contents.range(of: start))
+        let tail = contents[startRange.lowerBound...]
+        let endRange = try XCTUnwrap(tail.range(of: end))
+        return String(tail[..<endRange.upperBound])
     }
 }

@@ -1,0 +1,143 @@
+<Window
+    x:Class="Ping.Windows.App.Capture.ScreenFaceMirrorWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Closed="HandleClosed"
+    Title="Ping">
+    <Grid
+        x:Name="Root"
+        Width="390"
+        Height="300"
+        Padding="14"
+        Background="Transparent"
+        IsTabStop="True"
+        KeyDown="HandleKeyDown"
+        RowSpacing="10">
+        <Grid.Resources>
+            <ResourceDictionary>
+                <ResourceDictionary.MergedDictionaries>
+                    <ResourceDictionary Source="ms-appx:///UI/PingDesign.xaml" />
+                    <ResourceDictionary Source="ms-appx:///UI/RainbowBorder.xaml" />
+                </ResourceDictionary.MergedDictionaries>
+            </ResourceDictionary>
+        </Grid.Resources>
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="203" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Border
+            x:Name="MirrorBorder"
+            Width="360"
+            Height="203"
+            HorizontalAlignment="Center"
+            Background="{StaticResource PingSurfaceBrush}"
+            BorderBrush="{StaticResource PingBorderIdleBrush}"
+            BorderThickness="1"
+            CornerRadius="{StaticResource PingCornerRadius}">
+            <Grid>
+                <Rectangle
+                    Fill="#182024"
+                    RadiusX="14"
+                    RadiusY="14" />
+                <Image
+                    Source="{Binding ScreenPreviewUri}"
+                    Stretch="UniformToFill" />
+                <MediaPlayerElement
+                    x:Name="ReviewElement"
+                    AreTransportControlsEnabled="False"
+                    Stretch="UniformToFill"
+                    Visibility="Collapsed" />
+                <StackPanel
+                    x:Name="ScreenPreviewPlaceholder"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Spacing="5">
+                    <TextBlock
+                        HorizontalAlignment="Center"
+                        FontSize="14"
+                        FontWeight="SemiBold"
+                        Foreground="{StaticResource PingTextBrush}"
+                        Text="{Binding StateText}" />
+                    <TextBlock
+                        HorizontalAlignment="Center"
+                        FontSize="12"
+                        Foreground="{StaticResource PingMutedTextBrush}"
+                        Text="Screen+Face" />
+                </StackPanel>
+                <Border
+                    x:Name="FacePreviewBubble"
+                    Width="74"
+                    Height="74"
+                    Margin="0,0,12,12"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Bottom"
+                    Background="#3324272A"
+                    BorderBrush="{StaticResource PingBorderIdleBrush}"
+                    BorderThickness="1"
+                    CornerRadius="37">
+                    <Grid>
+                        <MediaPlayerElement
+                            x:Name="FacePreviewElement"
+                            AreTransportControlsEnabled="False"
+                            Stretch="UniformToFill" />
+                        <TextBlock
+                            x:Name="FacePreviewPlaceholder"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            FontSize="11"
+                            Foreground="{StaticResource PingMutedTextBrush}"
+                            Text="Camera" />
+                    </Grid>
+                </Border>
+                <Border
+                    Width="34"
+                    Height="34"
+                    Margin="12"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    Background="#CCFF3B30"
+                    BorderBrush="{StaticResource PingBorderRecordingBrush}"
+                    BorderThickness="1"
+                    CornerRadius="17"
+                    Opacity="{Binding RecordingCountdownOpacity}">
+                    <TextBlock
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        FontSize="15"
+                        FontWeight="SemiBold"
+                        Foreground="{StaticResource PingTextBrush}"
+                        Text="{Binding RecordingCountdownText}" />
+                </Border>
+            </Grid>
+        </Border>
+
+        <Border
+            x:Name="PartnerChip"
+            Grid.Row="1"
+            HorizontalAlignment="Center"
+            Padding="12,5"
+            Background="{StaticResource PingSurfaceBrush}"
+            BorderBrush="{StaticResource PingBorderIdleBrush}"
+            BorderThickness="1"
+            CornerRadius="{StaticResource PingCornerRadius}"
+            IsTapEnabled="True"
+            Tapped="PartnerChip_Tapped">
+            <TextBlock
+                FontSize="12"
+                Foreground="{StaticResource PingTextBrush}"
+                Text="{Binding PartnerLabel}" />
+        </Border>
+
+        <TextBlock
+            Grid.Row="2"
+            HorizontalAlignment="Center"
+            FontSize="12"
+            Foreground="{StaticResource PingMutedTextBrush}"
+            Text="{Binding StatusMessage}"
+            TextAlignment="Center"
+            TextWrapping="WrapWholeWords" />
+    </Grid>
+</Window>

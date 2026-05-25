@@ -1,0 +1,384 @@
+using Ping.Windows.App.Capture;
+using Ping.Windows.App.Hotkeys;
+using Ping.Windows.App.Setup;
+using Xunit;
+
+namespace Ping.Windows.App.Tests;
+
+public sealed class SettingsWindowViewModelTests
+{
+    [Fact]
+    public void StorageTogglesPersistThroughSettingsCallback()
+    {
+        ScreenFaceQuickSendSettings? saved = null;
+        var viewModel = new SettingsWindowViewModel(
+            "Youngmin",
+            HotkeyBinding.Defaults(),
+            ScreenFaceQuickSendSettings.Default,
+            settings => saved = settings,
+            () => { },
+            ensureArchiveFolders: () => { },
+            deleteExpiredArchiveFiles: () => { });
+
+        viewModel.SaveSentCopy = true;
+        viewModel.SaveReceivedCopy = false;
+        viewModel.AllowsLocalSave = true;
+        viewModel.AutoDeleteAfter30Days = true;
+
+        var finalSettings = saved ?? throw new InvalidOperationException("Settings were not saved.");
+        Assert.True(finalSettings.Preferences.SaveSentCopy);
+        Assert.False(finalSettings.Preferences.SaveReceivedCopy);
+        Assert.True(finalSettings.Preferences.AllowsLocalSave);
+        Assert.True(finalSettings.Preferences.AutoDeleteAfter30Days);
+    }
+
+    [Fact]
+    public void OpenRoomsInvokesConfiguredAction()
+    {
+        var opened = false;
+        var viewModel = new SettingsWindowViewModel(
+            "Youngmin",
+            HotkeyBinding.Defaults(),
+            ScreenFaceQuickSendSettings.Default,
+            _ => { },
+            () => opened = true);
+
+        viewModel.OpenRooms();
+
+        Assert.True(opened);
+    }
+
+    [Fact]
+    public async Task SaveNicknameTrimsPersistsAndUpdatesDraft()
+    {
+        string? savedNickname = null;
+        var viewModel = new SettingsWindowViewModel(
+            "Youngmin",
+            HotkeyBinding.Defaults(),
+            ScreenFaceQuickSendSettings.Default,
+            _ => { },
+            () => { },
+            saveNickname: (nickname, _) =>
+            {
+                savedNickname = nickname;
+                return Task.FromResult(nickname);
+            });
+
+        viewModel.NicknameDraft = "  Park\tYoungmin\n  ";
+
+        Assert.True(viewModel.CanSaveNickname);
+
+        await viewModel.SaveNicknameAsync();
+
+        Assert.Equal("Park Youngmin", savedNickname);
+        Assert.Equal("Park Youngmin", viewModel.Nickname);
+        Assert.Equal("Park Youngmin", viewModel.NicknameDraft);
+        Assert.Equal("Saved.", viewModel.NicknameStatus);
+        Assert.False(viewModel.CanSaveNickname);
+    }
+
+    [Fact]
+    public async Task SaveNicknameRequiresNonEmptyValue()
+    {
+        var saveCalled = false;
+        var viewModel = new SettingsWindowViewModel(
+            "Youngmin",
+            HotkeyBinding.Defaults(),
+            ScreenFaceQuickSendSettings.Default,
+            _ => { },
+            () => { },
+            saveNickname: (_, _) =>
+            {
+                saveCalled = true;
+                return Task.FromResult("ignored");
+            });
+
+        viewModel.NicknameDraft = "   ";
+        await viewModel.SaveNicknameAsync();
+
+        Assert.False(saveCalled);
+        Assert.Equal("Nickname is required.", viewModel.NicknameStatus);
+    }
+
+    [Fact]
+    public void ApplyProfileNicknameRefreshesUneditedDraft()
+    {
+        var viewModel = new SettingsWindowViewModel(
+            "Youngmin",
+            HotkeyBinding.Defaults(),
+            ScreenFaceQuickSendSettings.Default,
+            _ => { },
+            () => { });
+
+        viewModel.ApplyProfileNickname("  Remote  Name ");
+
+        Assert.Equal("Remote Name", viewModel.Nickname);
+        Assert.Equal("Remote Name", viewModel.NicknameDraft);
+    }
+
+    [Fact]
+    public void ApplyProfileNicknameDoesNotOverwriteUnsavedDraft()
+    {
+        var viewModel = new SettingsWindowViewModel(
+            "Youngmin",
+            HotkeyBinding.Defaults(),
+            ScreenFaceQuickSendSettings.Default,
+            _ => { },
+            () => { });
+
+        viewModel.NicknameDraft = "Local Edit";
+        viewModel.ApplyProfileNickname("Remote Name");
+
+        Assert.Equal("Remote Name", viewModel.Nickname);
+        Assert.Equal("Local Edit", viewModel.NicknameDraft);
+        Assert.True(viewModel.CanSaveNickname);
+    }
+
+    [Fact]
+    public async Task OpenArchiveFolderEnsuresFoldersAndLaunchesConfiguredPath()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "PingSettingsTests", Guid.NewGuid().ToString("N"));
+        var ensured = false;
+        string? launchedPath = null;
+        var viewModel = new SettingsWindowViewModel(
+            "Youngmin",
+            HotkeyBinding.Defaults(),
+            ScreenFaceQuickSendSettings.Default,
+            _ => { },
+            () => { },
+            archiveRootPath: root,
+            ensureArchiveFolders: () => ensured = true,
+            openArchiveFolder: path =>
+            {
+                launchedPath = path;
+                return Task.FromResult(true);
+            });
+
+        await viewModel.OpenArchiveFolderAsync();
+
+        Assert.Equal(Path.GetFullPath(root), viewModel.ArchiveRootPath);
+        Assert.True(ensured);
+        Assert.Equal(Path.GetFullPath(root), launchedPath);
+        Assert.Equal("Archive folder opened.", viewModel.ArchiveFolderStatus);
+    }
+
+    [Fact]
+    public void EnablingAutoDeletePersistsPreferenceAndRunsCleanup()
+    {
+        ScreenFaceQuickSendSettings? saved = null;
+        var ensuredCount = 0;
+        var cleanupCount = 0;
+        var viewModel = new SettingsWindowViewModel(
+            "Youngmin",
+            HotkeyBinding.Defaults(),
+            ScreenFaceQuickSendSettings.Default,
+            settings => saved = settings,
+            () => { },
+            ensureArchiveFolders: () => ensuredCount += 1,
+            deleteExpiredArchiveFiles: () => cleanupCount += 1);
+
+        viewModel.AutoDeleteAfter30Days = true;
+
+        Assert.True(viewModel.AutoDeleteAfter30Days);
+        Assert.True(saved?.Preferences.AutoDeleteAfter30Days);
+        Assert.Equal(1, ensuredCount);
+        Assert.Equal(1, cleanupCount);
+    }
+
+    [Fact]
+    public void QuickSendSettingsStorePersistsAutoDeletePreference()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "PingSettingsStoreTests", Guid.NewGuid().ToString("N"));
+        var path = Path.Combine(directory, "QuickSendSettings.json");
+        try
+        {
+            var store = new ScreenFaceQuickSendSettingsStore(path);
+            store.Save(new ScreenFaceQuickSendSettings
+            {
+                Preferences = new ScreenFaceQuickSendPreferences(
+                    IsEnabled: true,
+                    AutoDeleteAfter30Days: true)
+            });
+
+            var loaded = store.Load();
+
+            Assert.True(loaded.Preferences.AutoDeleteAfter30Days);
+        }
+        finally
+        {
+            if (Directory.Exists(directory))
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public void SettingsSectionSelectionCanOpenHotkeysDirectly()
+    {
+        var viewModel = new SettingsWindowViewModel(
+            "Youngmin",
+            HotkeyBinding.Defaults(),
+            ScreenFaceQuickSendSettings.Default,
+            _ => { },
+            () => { },
+            initialSection: SettingsSection.Hotkeys);
+
+        Assert.Equal((int)SettingsSection.Hotkeys, viewModel.SelectedTabIndex);
+
+        viewModel.SelectSection(SettingsSection.Storage);
+
+        Assert.Equal((int)SettingsSection.Storage, viewModel.SelectedTabIndex);
+    }
+
+    [Fact]
+    public void ApplyingHotkeyPersistsThroughCallbackAndRefreshesLabels()
+    {
+        var savedCommand = HotkeyCommand.History;
+        var savedBinding = HotkeyBinding.Alt("O");
+        var viewModel = new SettingsWindowViewModel(
+            "Youngmin",
+            HotkeyBinding.Defaults(),
+            ScreenFaceQuickSendSettings.Default,
+            _ => { },
+            () => { },
+            updateHotkey: (command, binding) =>
+            {
+                savedCommand = command;
+                savedBinding = binding;
+                return HotkeyRegistrationResult.Success(command, binding);
+            });
+        var row = Assert.Single(viewModel.HotkeyRows, row => row.Command == HotkeyCommand.FacePing);
+
+        row.IsControl = true;
+        row.IsAlt = true;
+        row.IsShift = false;
+        row.SelectedKey = "F";
+        viewModel.ApplyHotkey(row);
+
+        Assert.Equal(HotkeyCommand.FacePing, savedCommand);
+        Assert.Equal(HotkeyBinding.FromParts(HotkeyModifiers.Control | HotkeyModifiers.Alt, "F"), savedBinding);
+        Assert.Equal("Saved.", row.StatusMessage);
+        Assert.Equal("Face Ping: Ctrl+Alt+F", viewModel.FaceHotkey);
+    }
+
+    [Fact]
+    public void ApplyingConflictingHotkeyDoesNotReplaceLabel()
+    {
+        var viewModel = new SettingsWindowViewModel(
+            "Youngmin",
+            HotkeyBinding.Defaults(),
+            ScreenFaceQuickSendSettings.Default,
+            _ => { },
+            () => { },
+            updateHotkey: (command, binding) => HotkeyRegistrationResult.Conflict(
+                command,
+                binding,
+                "Hotkey is already registered by another app."));
+        var row = Assert.Single(viewModel.HotkeyRows, row => row.Command == HotkeyCommand.FacePing);
+
+        row.IsAlt = true;
+        row.SelectedKey = "F";
+        viewModel.ApplyHotkey(row);
+
+        Assert.Equal("Hotkey is already registered by another app.", row.StatusMessage);
+        Assert.Equal("Face Ping: Alt+P", viewModel.FaceHotkey);
+    }
+
+    [Fact]
+    public void ApplyingQuickSendHotkeyRefreshesQuickSendModeCopy()
+    {
+        var viewModel = new SettingsWindowViewModel(
+            "Youngmin",
+            HotkeyBinding.Defaults(),
+            ScreenFaceQuickSendSettings.Default,
+            _ => { },
+            () => { },
+            updateHotkey: (command, binding) => HotkeyRegistrationResult.Success(command, binding));
+        var row = Assert.Single(viewModel.HotkeyRows, row => row.Command == HotkeyCommand.QuickScreenFacePing);
+
+        row.IsControl = true;
+        row.IsAlt = true;
+        row.IsShift = true;
+        row.SelectedKey = "Q";
+        viewModel.ApplyHotkey(row);
+
+        Assert.Equal("Quick Screen+Face Ping: Ctrl+Alt+Shift+Q", viewModel.QuickSendHotkey);
+        Assert.Equal("Ctrl+Alt+Shift+Q opens mirror", viewModel.QuickSendOffContent);
+        Assert.Equal("Ctrl+Alt+Shift+Q records immediately", viewModel.QuickSendOnContent);
+    }
+
+    [Fact]
+    public void ApplyingHotkeyRequiresModifier()
+    {
+        var viewModel = new SettingsWindowViewModel(
+            "Youngmin",
+            HotkeyBinding.Defaults(),
+            ScreenFaceQuickSendSettings.Default,
+            _ => { },
+            () => { });
+        var row = Assert.Single(viewModel.HotkeyRows, row => row.Command == HotkeyCommand.History);
+
+        row.IsAlt = false;
+        row.IsControl = false;
+        row.IsShift = false;
+        row.IsWindows = false;
+        viewModel.ApplyHotkey(row);
+
+        Assert.Equal("Choose at least one modifier.", row.StatusMessage);
+        Assert.Equal("History: Alt+O", viewModel.HistoryHotkey);
+    }
+
+    [Fact]
+    public async Task StartupToggleUsesStartupTaskController()
+    {
+        var startup = new RecordingStartupTaskController(new PingStartupTaskStatus(
+            PingStartupTaskState.Disabled,
+            "Ping will not start with Windows."));
+        var viewModel = new SettingsWindowViewModel(
+            "Youngmin",
+            HotkeyBinding.Defaults(),
+            ScreenFaceQuickSendSettings.Default,
+            _ => { },
+            () => { },
+            startup);
+
+        await viewModel.RefreshStartupAsync();
+        Assert.False(viewModel.IsStartupEnabled);
+        Assert.True(viewModel.CanToggleStartup);
+
+        viewModel.IsStartupEnabled = true;
+        await startup.LastSetTask;
+
+        Assert.True(viewModel.IsStartupEnabled);
+        Assert.True(startup.LastRequestedState);
+        Assert.Equal("Ping starts with Windows.", viewModel.StartupStatus);
+    }
+
+    private sealed class RecordingStartupTaskController(PingStartupTaskStatus initialStatus) : IStartupTaskController
+    {
+        private readonly TaskCompletionSource<PingStartupTaskStatus> lastSet = new();
+        private PingStartupTaskStatus status = initialStatus;
+
+        public bool LastRequestedState { get; private set; }
+
+        public Task<PingStartupTaskStatus> LastSetTask => lastSet.Task;
+
+        public Task<PingStartupTaskStatus> GetStatusAsync(CancellationToken cancellationToken = default)
+        {
+            _ = cancellationToken;
+            return Task.FromResult(status);
+        }
+
+        public Task<PingStartupTaskStatus> SetEnabledAsync(bool isEnabled, CancellationToken cancellationToken = default)
+        {
+            _ = cancellationToken;
+            LastRequestedState = isEnabled;
+            status = new PingStartupTaskStatus(
+                isEnabled ? PingStartupTaskState.Enabled : PingStartupTaskState.Disabled,
+                isEnabled ? "Ping starts with Windows." : "Ping will not start with Windows.");
+            lastSet.SetResult(status);
+            return Task.FromResult(status);
+        }
+    }
+}

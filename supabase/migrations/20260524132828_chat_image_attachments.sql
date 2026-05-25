@@ -235,6 +235,39 @@ $$;
 
 grant execute on function public.ping_send_chat(uuid, text, uuid, uuid, uuid, text, text, int, int, text) to authenticated;
 
+create or replace function public.ping_delete_chat(chat_uuid uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    me uuid := auth.uid();
+    owner uuid;
+    media_path_value text;
+begin
+    if me is null then raise exception 'auth required'; end if;
+
+    select sender_uid, media_path
+      into owner, media_path_value
+      from public.chat_messages
+     where id = chat_uuid;
+
+    if owner is null then return; end if;
+    if owner <> me then raise exception 'only sender can delete'; end if;
+
+    if media_path_value is not null then
+        delete from storage.objects
+        where bucket_id = 'ping-media'
+          and name = media_path_value;
+    end if;
+
+    delete from public.chat_messages where id = chat_uuid;
+end;
+$$;
+
+grant execute on function public.ping_delete_chat(uuid) to authenticated;
+
 create or replace function public.ping_cleanup_expired_data()
 returns void
 language plpgsql

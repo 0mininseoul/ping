@@ -1,6 +1,6 @@
 # Ping
 
-3초 영상 메시지 macOS 13 Ventura 이상 메뉴바 앱. Option+P 또는 Option+L 한 번으로 친구에게 보낸다.
+3초 영상 메시지 앱. macOS 13 Ventura 이상에서는 메뉴바 앱으로 동작하고, Windows 클라이언트는 Windows 11 24H2 이상에서 같은 Supabase 룸과 메시지 계약을 공유한다.
 
 ## Supabase 설정
 
@@ -32,11 +32,24 @@ Supabase Dashboard의 Authentication 설정에서 Anonymous sign-ins가 켜져 �
 
 ## 설치
 
+### macOS
+
 1. `Ping-v0.3.28.dmg`를 더블클릭해 마운트한다.
 2. `Ping.app`을 Applications 폴더로 드래그한다.
 3. 첫 실행은 우클릭 후 "열기"를 선택한다.
 4. 카메라, 마이크, 알림 권한을 허용한다.
 5. 닉네임을 입력한 뒤 룸을 만들거나 상대를 검색해 초대한다.
+
+### Windows
+
+Windows 앱은 `windows/` 아래 별도 네이티브 클라이언트다.
+
+1. Windows 11 24H2 이상에서 `Ping-Windows-v0.3.28-x64.msix` 또는 `Ping-Windows-v0.3.28-arm64.msix`를 설치한다.
+2. 외부 배포는 서명된 MSIX가 필요하다. 서명이 준비되지 않은 내부 빌드는 Windows 설치/SmartScreen 경고가 정상이다.
+3. `%LOCALAPPDATA%\Ping\Supabase.json`에 Supabase URL과 anon key를 저장한다.
+4. 온보딩에서 카메라, 마이크, 화면 캡처, 알림, 단축키, 시작프로그램 상태를 확인한다.
+
+자세한 Windows 빌드/설치/QA 절차는 `docs/WINDOWS_APP_SETUP.md`와 `windows/README.md`를 따른다.
 
 ## 기존 룸과 익명 계정 보존
 
@@ -47,16 +60,21 @@ Ping은 이메일 로그인 없이 Supabase Anonymous Auth 세션을 로컬에 �
 - Option+P: 얼굴만 거울을 띄운다.
 - Option+L: 화면+얼굴 거울을 띄운다.
 - Option+O: 내 룸/히스토리 창을 연다.
+- Windows 기본 대응: Alt+P, Alt+L, Alt+O.
+- Windows 빠른 전송: Alt+Shift+L로 기본 룸에 화면+얼굴 메시지를 즉시 3초 녹화/전송한다.
+- Windows 단축키 충돌 시 Settings > Hotkeys에서 Ctrl/Alt/Shift/Win 조합과 키를 바꿀 수 있다.
 - Enter: 녹화 시작. 리뷰 화면에서 다시 누르면 전송.
 - Backspace: 리뷰 화면에서 다시 찍기.
 - Esc: 취소 또는 닫기.
 - Tab / 1~9: 파트너 전환.
 - 0 또는 A: 전체 파트너에게 동시 발송.
-- 내 룸 > 초대링크 복사: 앱을 아직 설치하지 않은 상대에게 초대 링크를 보낸다.
+- 내 룸 > 초대링크 생성: Mac과 같은 `/invite/<token>` URL을 필드와 클립보드에 복사해 상대에게 보낸다.
 
 ## 자동 업데이트
 
-Ping은 Sparkle로 업데이트를 확인한다. 새 버전이 공개되면 알림과 표준 업데이트 다이얼로그가 뜨고, 사용자가 승인하면 바로 다운로드/설치/재시작 흐름으로 진행된다. 같은 버전은 반복 알림하지 않고, 더 최신 버전이 나오면 최신 버전 알림 하나로 교체한다.
+macOS 앱은 Sparkle로 업데이트를 확인한다. 새 버전이 공개되면 알림과 표준 업데이트 다이얼로그가 뜨고, 사용자가 승인하면 바로 다운로드/설치/재시작 흐름으로 진행된다. 같은 버전은 반복 알림하지 않고, 더 최신 버전이 나오면 최신 버전 알림 하나로 교체한다.
+
+Windows 앱은 Sparkle을 사용하지 않는다. Windows 배포는 서명된 MSIX를 기준으로 하고, 업데이트는 App Installer 피드나 Microsoft Store 채널에서 처리한다.
 
 ## v0.3.28 수정
 
@@ -131,3 +149,5 @@ Ping은 Sparkle로 업데이트를 확인한다. 새 버전이 공개되면 알�
 
 - macOS 13 Ventura 이상
 - Apple Silicon Mac 권장
+- Windows 11 24H2 이상
+- Windows App SDK 2.1.3, .NET 10, Visual Studio C++ desktop toolchain은 Windows 클라이언트 빌드에 필요

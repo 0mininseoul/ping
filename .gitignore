@@ -38,4 +38,8 @@ supabase/.temp/
 *.dmg
 !web/public/downloads/*.dmg
 dist/
+windows/artifacts/
+windows/dist/
+windows/**/bin/
+windows/**/obj/
 default.profraw

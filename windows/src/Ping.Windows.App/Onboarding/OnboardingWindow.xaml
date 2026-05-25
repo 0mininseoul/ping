@@ -1,0 +1,102 @@
+<Window
+    x:Class="Ping.Windows.App.Onboarding.OnboardingWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:onboarding="using:Ping.Windows.App.Onboarding">
+    <Grid
+        x:Name="Root"
+        Width="560"
+        Padding="24"
+        Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
+        Loaded="Root_Loaded"
+        RowSpacing="16">
+        <Grid.Resources>
+            <onboarding:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+        </Grid.Resources>
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Spacing="4">
+            <TextBlock
+                FontSize="24"
+                FontWeight="SemiBold"
+                Text="Set up Ping" />
+            <TextBlock
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                Text="Check Windows, capture, notifications, hotkeys, and startup." />
+        </StackPanel>
+
+        <ListView
+            Grid.Row="1"
+            IsItemClickEnabled="False"
+            ItemsSource="{Binding Rows}"
+            SelectionMode="None">
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <Grid
+                        MinHeight="72"
+                        Padding="0,10"
+                        ColumnSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="140" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="132" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Spacing="2">
+                            <TextBlock
+                                FontWeight="SemiBold"
+                                Text="{Binding Title}" />
+                            <TextBlock
+                                FontSize="12"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Text="{Binding Status}" />
+                        </StackPanel>
+
+                        <TextBlock
+                            Grid.Column="1"
+                            VerticalAlignment="Center"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Text="{Binding Message}"
+                            TextWrapping="WrapWholeWords" />
+
+                        <StackPanel
+                            Grid.Column="2"
+                            VerticalAlignment="Center"
+                            Spacing="6">
+                            <Button
+                                HorizontalAlignment="Stretch"
+                                Content="Retry"
+                                Click="RetryButton_Click"
+                                IsEnabled="{Binding CanRetry}" />
+
+                            <Button
+                                HorizontalAlignment="Stretch"
+                                Click="PrimaryActionButton_Click"
+                                Content="{Binding PrimaryActionLabel}"
+                                IsEnabled="{Binding HasPrimaryAction}"
+                                Visibility="{Binding HasPrimaryAction, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                            <Button
+                                HorizontalAlignment="Stretch"
+                                Click="SecondaryActionButton_Click"
+                                Content="{Binding SecondaryActionLabel}"
+                                IsEnabled="{Binding HasSecondaryAction}"
+                                Visibility="{Binding HasSecondaryAction, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        </StackPanel>
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+
+        <TextBlock
+            Grid.Row="2"
+            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+            Text="{Binding ScreenFaceQuickSendStatusText}"
+            TextWrapping="WrapWholeWords" />
+    </Grid>
+</Window>
