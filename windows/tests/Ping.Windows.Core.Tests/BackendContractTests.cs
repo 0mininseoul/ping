@@ -629,6 +629,27 @@ public sealed class BackendContractTests
     }
 
     [Fact]
+    public async Task UserServiceNormalizesPastedWhitespaceForProfileAndSearch()
+    {
+        var rpc = new RecordingProfileRpcClient();
+        var service = new UserService(rpc);
+
+        await service.UpsertAsync(" Youngmin\tPark\n ");
+        await service.SearchByNicknamePrefixAsync(" YoUNG\tP\n ");
+
+        Assert.Equal(
+            """
+            {"nickname_text":"Youngmin Park","searchable_nickname_text":"youngmin park"}
+            """,
+            JsonSerializer.Serialize(rpc.Calls[0].Body, JsonOptions.Supabase));
+        Assert.Equal(
+            """
+            {"search_prefix":"young p"}
+            """,
+            JsonSerializer.Serialize(rpc.Calls[1].Body, JsonOptions.Supabase));
+    }
+
+    [Fact]
     public async Task CleanupServiceCallsSharedCleanupRpc()
     {
         var rpc = new RecordingRpcClient();

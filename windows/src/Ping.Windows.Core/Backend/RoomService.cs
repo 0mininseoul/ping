@@ -52,21 +52,14 @@ public sealed class RoomService(ISupabaseRpcClient client)
 public static class SearchableText
 {
     public static string Normalize(string value) =>
-        string.Join(
-            " ",
-            (value ?? string.Empty)
-                .Trim()
-                .ToLowerInvariant()
-                .Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        DisplayText.NormalizeWhitespace(value).ToLowerInvariant();
 }
 
 public static class RoomName
 {
     public static string Normalize(string value)
     {
-        var normalized = string.Join(
-            " ",
-            (value ?? string.Empty).Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        var normalized = DisplayText.NormalizeWhitespace(value);
         if (normalized.Length is < 1 or > 48)
         {
             throw new ArgumentException("Room name must be 1-48 characters after trimming.", nameof(value));

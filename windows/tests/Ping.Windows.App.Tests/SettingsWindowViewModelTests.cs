@@ -64,7 +64,7 @@ public sealed class SettingsWindowViewModelTests
                 return Task.FromResult(nickname);
             });
 
-        viewModel.NicknameDraft = "  Park   Youngmin  ";
+        viewModel.NicknameDraft = "  Park\tYoungmin\n  ";
 
         Assert.True(viewModel.CanSaveNickname);
 

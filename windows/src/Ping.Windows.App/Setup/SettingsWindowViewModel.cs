@@ -5,6 +5,7 @@ using Ping.Windows.App.Capture;
 using Ping.Windows.App.Hotkeys;
 using Ping.Windows.App.Onboarding;
 using Ping.Windows.Core.LocalState;
+using Ping.Windows.Core.Models;
 
 #if WINDOWS
 using Microsoft.UI.Xaml;
@@ -546,7 +547,7 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
         $"{HotkeyStatusText.BindingLabel(hotkeys, HotkeyCommand.QuickScreenFacePing)} {action}";
 
     private static string NormalizeNickname(string value) =>
-        string.Join(" ", (value ?? string.Empty).Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        DisplayText.NormalizeWhitespace(value);
 
     private void RefreshHotkeyLabels()
     {

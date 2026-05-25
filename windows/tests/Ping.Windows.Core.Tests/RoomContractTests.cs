@@ -39,6 +39,27 @@ public sealed class RoomContractTests
     }
 
     [Fact]
+    public async Task RoomService_NormalizesPastedWhitespaceForRoomNamesAndSearchPrefixes()
+    {
+        var rpc = new RecordingSocialRpcClient();
+        var service = new RoomService(rpc);
+
+        await service.CreateRoomAsync(" Main\tRoom\nName ", "Youngmin");
+        await service.SearchOpenRoomsAsync("  Main\tROOM\n ");
+        await service.RenameRoomAsync("room-id", " Renamed\tRoom\n ");
+
+        Assert.Equal(
+            """{"room_name":"Main Room Name","searchable_room_name":"main room name","owner_nickname":"Youngmin"}""",
+            JsonSerializer.Serialize(rpc.Calls[0].Body, JsonOptions.Supabase));
+        Assert.Equal(
+            """{"search_prefix":"main room"}""",
+            JsonSerializer.Serialize(rpc.Calls[1].Body, JsonOptions.Supabase));
+        Assert.Equal(
+            """{"room_uuid":"room-id","new_name":"Renamed Room","new_searchable_name":"renamed room"}""",
+            JsonSerializer.Serialize(rpc.Calls[2].Body, JsonOptions.Supabase));
+    }
+
+    [Fact]
     public async Task InvitationService_UsesMacOSInvitationRpcBodies()
     {
         var rpc = new RecordingSocialRpcClient();

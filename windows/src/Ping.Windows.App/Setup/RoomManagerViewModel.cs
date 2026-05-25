@@ -341,7 +341,7 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
     }
 
     private static string NormalizeNickname(string value) =>
-        string.Join(" ", (value ?? string.Empty).Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        DisplayText.NormalizeWhitespace(value);
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));

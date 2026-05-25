@@ -74,7 +74,7 @@ public sealed class RoomManagerViewModelTests
             SelectedRoom = Room()
         };
 
-        viewModel.ApplyProfileNickname("  New   Name  ");
+        viewModel.ApplyProfileNickname("  New\tName\n  ");
         await viewModel.InviteUserAsync("receiver", "Fallback");
         await viewModel.AcceptInviteLinkAsync("https://ping0min.vercel.app/invite/token-123");
 

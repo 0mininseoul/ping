@@ -7,7 +7,7 @@ public sealed class UserService(ISupabaseRpcClient client)
 {
     public async Task<PingUser?> UpsertAsync(string nickname, CancellationToken cancellationToken = default)
     {
-        var normalized = string.Join(" ", (nickname ?? string.Empty).Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        var normalized = DisplayText.NormalizeWhitespace(nickname);
         if (string.IsNullOrWhiteSpace(normalized))
         {
             throw new ArgumentException("Nickname is required.", nameof(nickname));
