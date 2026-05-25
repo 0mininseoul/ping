@@ -408,6 +408,7 @@ public sealed class AppCoordinator : IDisposable
         if (OnboardingStartupPolicy.ShouldOpen(
             WindowsVersionProbe.CurrentStatus(),
             permissionProbe.IsSupabaseConfigured(),
+            isElevated: permissionProbe.IsElevated(),
             registrations))
         {
             OpenOnboardingWindow();

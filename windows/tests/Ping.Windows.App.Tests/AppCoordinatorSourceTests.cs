@@ -394,6 +394,21 @@ public sealed class AppCoordinatorSourceTests
         Assert.Contains("Visibility.Collapsed", converter, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void StartupOnboardingPolicyIncludesElevatedProcessState()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Bootstrap",
+            "AppCoordinator.cs"));
+
+        Assert.Contains("permissionProbe.IsElevated()", source, StringComparison.Ordinal);
+        Assert.Contains("isElevated:", source, StringComparison.Ordinal);
+    }
+
     private static string RepoRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

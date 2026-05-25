@@ -192,18 +192,27 @@ public sealed class OnboardingStateTests
         Assert.True(OnboardingStartupPolicy.ShouldOpen(
             WindowsSupportStatus.Supported,
             isSupabaseConfigured: false,
+            isElevated: false,
             [HotkeyRegistrationResult.Success(HotkeyCommand.FacePing, HotkeyBinding.Alt("P"))]));
         Assert.True(OnboardingStartupPolicy.ShouldOpen(
             WindowsSupportStatus.Supported,
             isSupabaseConfigured: true,
+            isElevated: false,
             [HotkeyRegistrationResult.Conflict(HotkeyCommand.FacePing, HotkeyBinding.Alt("P"), "used")]));
+        Assert.True(OnboardingStartupPolicy.ShouldOpen(
+            WindowsSupportStatus.Supported,
+            isSupabaseConfigured: true,
+            isElevated: true,
+            [HotkeyRegistrationResult.Success(HotkeyCommand.FacePing, HotkeyBinding.Alt("P"))]));
         Assert.True(OnboardingStartupPolicy.ShouldOpen(
             WindowsSupportStatus.UnsupportedOldWindows11,
             isSupabaseConfigured: true,
+            isElevated: false,
             [HotkeyRegistrationResult.Success(HotkeyCommand.FacePing, HotkeyBinding.Alt("P"))]));
         Assert.False(OnboardingStartupPolicy.ShouldOpen(
             WindowsSupportStatus.Supported,
             isSupabaseConfigured: true,
+            isElevated: false,
             [HotkeyRegistrationResult.Success(HotkeyCommand.FacePing, HotkeyBinding.Alt("P"))]));
     }
 

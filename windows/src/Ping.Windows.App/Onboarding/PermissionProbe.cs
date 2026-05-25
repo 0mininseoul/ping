@@ -55,13 +55,15 @@ public sealed class PermissionProbe
         new(
             WindowsVersionProbe.CurrentStatus(),
             IsSupabaseConfigured(),
-            elevationProbe.IsElevated,
+            IsElevated(),
             await CheckCameraAsync(cancellationToken).ConfigureAwait(false),
             await CheckMicrophoneAsync(cancellationToken).ConfigureAwait(false),
             await CheckScreenCaptureAsync(cancellationToken).ConfigureAwait(false),
             await CheckNotificationsAsync(cancellationToken).ConfigureAwait(false),
             CheckDefaultHotkeys(),
             await CheckStartupAsync(cancellationToken).ConfigureAwait(false));
+
+    public bool IsElevated() => elevationProbe.IsElevated;
 
     public bool IsSupabaseConfigured()
     {
@@ -185,7 +187,7 @@ public sealed class PermissionProbe
     public Task<OnboardingProbeState> CheckNotificationsAsync(CancellationToken cancellationToken = default)
     {
         _ = cancellationToken;
-        if (elevationProbe.IsElevated)
+        if (IsElevated())
         {
             return Task.FromResult(OnboardingProbeState.Blocked(
                 "Windows app notifications are unavailable while Ping runs as administrator.",

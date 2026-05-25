@@ -7,6 +7,7 @@ public static class OnboardingStartupPolicy
     public static bool ShouldOpen(
         WindowsSupportStatus windowsStatus,
         bool isSupabaseConfigured,
+        bool isElevated,
         IReadOnlyList<HotkeyRegistrationResult> hotkeyRegistrations)
     {
         if (windowsStatus != WindowsSupportStatus.Supported)
@@ -15,6 +16,11 @@ public static class OnboardingStartupPolicy
         }
 
         if (!isSupabaseConfigured)
+        {
+            return true;
+        }
+
+        if (isElevated)
         {
             return true;
         }
