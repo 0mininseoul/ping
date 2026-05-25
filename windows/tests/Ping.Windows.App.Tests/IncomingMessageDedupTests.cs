@@ -185,6 +185,48 @@ public sealed class IncomingMessageDedupTests
     }
 
     [Fact]
+    public async Task IncomingChatPoller_RetriesChatWhenCallbackFailsBeforeMarkingYielded()
+    {
+        var rpc = new RecordingChatRpcClient();
+        var chatService = new ChatMessageService(rpc);
+        var roomService = new RoomService(rpc);
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        var delayCount = 0;
+        var callbackAttempts = 0;
+        var poller = new IncomingChatPoller(
+            chatService,
+            roomService,
+            () => "receiver",
+            interval: TimeSpan.Zero,
+            delayAsync: (_, _) =>
+            {
+                delayCount++;
+                if (delayCount >= 3)
+                {
+                    cancellation.Cancel();
+                }
+
+                return Task.CompletedTask;
+            });
+
+        await poller.RunAsync(
+            (_, _) =>
+            {
+                callbackAttempts++;
+                if (callbackAttempts == 1)
+                {
+                    throw new InvalidOperationException("chat notification failed");
+                }
+
+                cancellation.Cancel();
+                return Task.CompletedTask;
+            },
+            cancellation.Token);
+
+        Assert.Equal(2, callbackAttempts);
+    }
+
+    [Fact]
     public void NotificationController_DeduplicatesShownChatsInPortableTests()
     {
         using var controller = new NotificationController(

@@ -124,9 +124,14 @@ public sealed class IncomingChatPoller
         {
             try
             {
-                foreach (var notification in await PollOnceAsync(yieldedChatIds, cancellationToken).ConfigureAwait(false))
+                foreach (var notification in await PollOnceAsync(yieldedChatIds, markYielded: false, cancellationToken)
+                             .ConfigureAwait(false))
                 {
                     await onChatAsync(notification, cancellationToken).ConfigureAwait(false);
+                    if (notification.Message.Id is { Length: > 0 } chatId)
+                    {
+                        yieldedChatIds.Add(chatId);
+                    }
                 }
             }
             catch (OperationCanceledException)
@@ -143,7 +148,13 @@ public sealed class IncomingChatPoller
 
     public async Task<IReadOnlyList<IncomingChatNotification>> PollOnceAsync(
         ISet<string> yieldedChatIds,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        await PollOnceAsync(yieldedChatIds, markYielded: true, cancellationToken).ConfigureAwait(false);
+
+    private async Task<IReadOnlyList<IncomingChatNotification>> PollOnceAsync(
+        ISet<string> yieldedChatIds,
+        bool markYielded,
+        CancellationToken cancellationToken)
     {
         var currentUid = currentUidProvider();
         if (string.IsNullOrWhiteSpace(currentUid))
@@ -182,7 +193,11 @@ public sealed class IncomingChatPoller
                 continue;
             }
 
-            yieldedChatIds.Add(chatId);
+            if (markYielded)
+            {
+                yieldedChatIds.Add(chatId);
+            }
+
             notifications.Add(new IncomingChatNotification(latestUnread, room.Name, unreadCount));
         }
 
