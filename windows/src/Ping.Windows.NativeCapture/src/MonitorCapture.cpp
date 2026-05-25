@@ -147,9 +147,9 @@ namespace Ping::Windows::NativeCapture
         }
 
         using namespace winrt;
-        using namespace Windows::Graphics::Capture;
-        using namespace Windows::Graphics::DirectX;
-        using namespace Windows::Graphics::DirectX::Direct3D11;
+        using namespace winrt::Windows::Graphics::Capture;
+        using namespace winrt::Windows::Graphics::DirectX;
+        using namespace winrt::Windows::Graphics::DirectX::Direct3D11;
 
         try
         {
@@ -307,9 +307,9 @@ namespace Ping::Windows::NativeCapture
         }
 
         using namespace winrt;
-        using namespace Windows::Graphics::Capture;
-        using namespace Windows::Graphics::DirectX;
-        using namespace Windows::Graphics::DirectX::Direct3D11;
+        using namespace winrt::Windows::Graphics::Capture;
+        using namespace winrt::Windows::Graphics::DirectX;
+        using namespace winrt::Windows::Graphics::DirectX::Direct3D11;
 
         try
         {

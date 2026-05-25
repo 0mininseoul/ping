@@ -50,6 +50,23 @@ public sealed class NativeCaptureEngineTests
         Assert.Contains("/FS", project, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void MonitorCapture_UsesFullyQualifiedWinRtWindowsNamespaces()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            "windows",
+            "src",
+            "Ping.Windows.NativeCapture",
+            "src",
+            "MonitorCapture.cpp"));
+
+        Assert.Contains("using namespace winrt::Windows::Graphics::Capture;", source, StringComparison.Ordinal);
+        Assert.Contains("using namespace winrt::Windows::Graphics::DirectX;", source, StringComparison.Ordinal);
+        Assert.Contains("using namespace winrt::Windows::Graphics::DirectX::Direct3D11;", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("using namespace Windows::Graphics", source, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData(PingCaptureErrorCode.Success, true)]
     [InlineData(PingCaptureErrorCode.UnsupportedOs, false)]

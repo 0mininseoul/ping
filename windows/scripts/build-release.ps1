@@ -136,7 +136,7 @@ foreach ($targetPlatform in $Platform) {
     $arguments = [System.Collections.Generic.List[string]]::new()
     $arguments.Add($solution)
     $arguments.Add("/restore")
-    $arguments.Add("/m")
+    $arguments.Add("/m:1")
     $arguments.Add("/p:Configuration=$Configuration")
     $arguments.Add("/p:Platform=$targetPlatform")
     $arguments.Add("/p:GenerateAppxPackageOnBuild=true")

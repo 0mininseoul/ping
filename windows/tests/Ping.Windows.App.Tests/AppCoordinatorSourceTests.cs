@@ -373,6 +373,19 @@ public sealed class AppCoordinatorSourceTests
     }
 
     [Fact]
+    public void WindowsReleaseBuildAvoidsParallelNativeProjectCollisions()
+    {
+        var script = File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            "windows",
+            "scripts",
+            "build-release.ps1"));
+
+        Assert.Contains("$arguments.Add(\"/m:1\")", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("$arguments.Add(\"/m\")", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void OnboardingWindowRendersSecondaryActions()
     {
         var root = RepoRoot();
