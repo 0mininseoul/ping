@@ -79,6 +79,7 @@ public sealed class MessageService(ISupabaseRpcClient client, IStorageService st
             expiresAt,
             cancellationToken).ConfigureAwait(false);
 
+        var mirrorPosition = NormalizeMirrorPosition(input.MirrorPosition);
         var createdMessageCount = 0;
         try
         {
@@ -94,8 +95,8 @@ public sealed class MessageService(ISupabaseRpcClient client, IStorageService st
                             SenderNicknameText: input.SenderNickname,
                             VideoIdText: sharedVideoId,
                             VideoUrlText: videoStoragePath,
-                            XRatio: input.MirrorPosition.XRatio,
-                            YRatio: input.MirrorPosition.YRatio,
+                            XRatio: mirrorPosition.XRatio,
+                            YRatio: mirrorPosition.YRatio,
                             CaptureModeText: input.CaptureMode.ToWireValue(),
                             AspectRatioValue: input.AspectRatio,
                             AllowsLocalSaveValue: input.AllowsLocalSave),
@@ -117,6 +118,14 @@ public sealed class MessageService(ISupabaseRpcClient client, IStorageService st
 
     private static DateTimeOffset MessageSortKey(VideoMessage message) =>
         message.CreatedAt ?? DateTimeOffset.MaxValue;
+
+    private static MirrorPosition NormalizeMirrorPosition(MirrorPosition position) =>
+        new(
+            NormalizeRatio(position.XRatio),
+            NormalizeRatio(position.YRatio));
+
+    private static double NormalizeRatio(double value) =>
+        double.IsFinite(value) ? Math.Clamp(value, 0, 1) : 0.5;
 
     private async Task DeleteUploadedVideoQuietlyAsync(string videoStoragePath)
     {
