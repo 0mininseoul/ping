@@ -132,6 +132,21 @@ public sealed class IncomingMessageDedupTests
     }
 
     [Fact]
+    public async Task IncomingChatPoller_FetchesEnoughRowsWhenOwnMessageIsLatest()
+    {
+        var rpc = new OwnMessageBeforeUnreadChatRpcClient();
+        var chatService = new ChatMessageService(rpc);
+        var roomService = new RoomService(rpc);
+        var poller = new IncomingChatPoller(chatService, roomService, () => "receiver");
+
+        var notifications = await poller.PollOnceAsync(new HashSet<string>(StringComparer.Ordinal));
+
+        var notification = Assert.Single(notifications);
+        Assert.Equal("chat-unread", notification.Message.Id);
+        Assert.True(rpc.LastRequestedChatLimit > 1);
+    }
+
+    [Fact]
     public void NotificationController_DeduplicatesShownChatsInPortableTests()
     {
         using var controller = new NotificationController(
@@ -313,6 +328,68 @@ public sealed class IncomingMessageDedupTests
         public Task RpcVoidAsync(string function, object? body = null, CancellationToken cancellationToken = default)
         {
             throw new NotSupportedException();
+        }
+    }
+
+    private sealed class OwnMessageBeforeUnreadChatRpcClient : ISupabaseRpcClient
+    {
+        public int LastRequestedChatLimit { get; private set; }
+
+        public Task<IReadOnlyList<T>> RpcArrayAsync<T>(string function, object? body = null, CancellationToken cancellationToken = default)
+        {
+            object result = function switch
+            {
+                "ping_unread_chat_counts" => new[]
+                {
+                    new UnreadChatCount("room-1", 1)
+                },
+                "ping_my_rooms" => new[]
+                {
+                    new Room(
+                        Id: "room-1",
+                        Name: "Main",
+                        SearchableName: "main",
+                        OwnerUid: "sender",
+                        MemberUids: ["sender", "receiver"],
+                        MemberNicknames: new Dictionary<string, string>
+                        {
+                            ["sender"] = "Sender",
+                            ["receiver"] = "Receiver"
+                        },
+                        Status: RoomStatus.Open)
+                },
+                "ping_room_chat_messages" => LimitedChatMessages(body),
+                _ => Array.Empty<object>()
+            };
+            return Task.FromResult((IReadOnlyList<T>)result);
+        }
+
+        public Task<T> RpcValueAsync<T>(string function, object? body = null, CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task RpcVoidAsync(string function, object? body = null, CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+
+        private IReadOnlyList<ChatMessage> LimitedChatMessages(object? body)
+        {
+            LastRequestedChatLimit = PageLimit(body);
+            return new[]
+                {
+                    Chat("own-latest", "room-1", "receiver", "mine", DateTimeOffset.UtcNow.AddSeconds(2)),
+                    Chat("chat-unread", "room-1", "sender", "hello", DateTimeOffset.UtcNow.AddSeconds(1))
+                }
+                .Take(LastRequestedChatLimit)
+                .ToArray();
+        }
+
+        private static int PageLimit(object? body)
+        {
+            var json = System.Text.Json.JsonSerializer.SerializeToElement(body, JsonOptions.Supabase);
+            return json.GetProperty("page_limit").GetInt32();
         }
     }
 }

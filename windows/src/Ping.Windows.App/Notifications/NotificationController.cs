@@ -163,7 +163,7 @@ public sealed class IncomingChatPoller
                 continue;
             }
 
-            var pageLimit = Math.Clamp(unreadCount, 1, 20);
+            var pageLimit = ChatNotificationPageLimit(unreadCount);
             var messages = await chatService.RoomChatMessagesAsync(roomId, limit: pageLimit, cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
             var latestUnread = messages
@@ -181,6 +181,9 @@ public sealed class IncomingChatPoller
 
         return notifications;
     }
+
+    private static int ChatNotificationPageLimit(int unreadCount) =>
+        Math.Clamp(unreadCount + 10, 10, 50);
 }
 
 public sealed record IncomingChatNotification(ChatMessage Message, string RoomName, int UnreadCount);
