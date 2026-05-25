@@ -153,9 +153,8 @@ foreach ($targetPlatform in $Platform) {
 
     $package = Get-ChildItem -Path $packageOutputRoot -Recurse -Filter "*.msix" |
         Where-Object {
-            $name = $_.BaseName
-            $name -like "YoungminPark.PingWindows_*" -and
-            $name -like "*_$architectureManifestValue*"
+            $_.Name -like "*_$architectureManifestValue.msix" -and
+            $_.FullName -notmatch '[\\/]Dependencies[\\/]'
         } |
         Sort-Object FullName |
         Select-Object -First 1

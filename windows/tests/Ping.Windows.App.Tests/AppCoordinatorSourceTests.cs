@@ -388,6 +388,21 @@ public sealed class AppCoordinatorSourceTests
     }
 
     [Fact]
+    public void WindowsReleaseBuildAcceptsSdkGeneratedPackageNames()
+    {
+        var script = File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            "windows",
+            "scripts",
+            "build-release.ps1"));
+
+        Assert.Contains("$_.Name", script, StringComparison.Ordinal);
+        Assert.Contains("*_$architectureManifestValue.msix", script, StringComparison.Ordinal);
+        Assert.Contains("Dependencies", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("YoungminPark.PingWindows_*", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void OnboardingWindowRendersSecondaryActions()
     {
         var root = RepoRoot();
