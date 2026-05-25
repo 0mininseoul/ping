@@ -1,7 +1,8 @@
 <Window
     x:Class="Ping.Windows.App.Onboarding.OnboardingWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:onboarding="using:Ping.Windows.App.Onboarding">
     <Grid
         x:Name="Root"
         Width="560"
@@ -9,6 +10,10 @@
         Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
         Loaded="Root_Loaded"
         RowSpacing="16">
+        <Grid.Resources>
+            <onboarding:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+        </Grid.Resources>
+
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -73,13 +78,15 @@
                                 HorizontalAlignment="Stretch"
                                 Click="PrimaryActionButton_Click"
                                 Content="{Binding PrimaryActionLabel}"
-                                IsEnabled="{Binding HasPrimaryAction}" />
+                                IsEnabled="{Binding HasPrimaryAction}"
+                                Visibility="{Binding HasPrimaryAction, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
                             <Button
                                 HorizontalAlignment="Stretch"
                                 Click="SecondaryActionButton_Click"
                                 Content="{Binding SecondaryActionLabel}"
-                                IsEnabled="{Binding HasSecondaryAction}" />
+                                IsEnabled="{Binding HasSecondaryAction}"
+                                Visibility="{Binding HasSecondaryAction, Converter={StaticResource BooleanToVisibilityConverter}}" />
                         </StackPanel>
                     </Grid>
                 </DataTemplate>

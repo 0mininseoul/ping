@@ -299,11 +299,23 @@ public sealed class AppCoordinatorSourceTests
             "Ping.Windows.App",
             "Onboarding",
             "OnboardingWindow.xaml.cs"));
+        var converter = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Onboarding",
+            "BooleanToVisibilityConverter.cs"));
 
         Assert.Contains("SecondaryActionButton_Click", xaml, StringComparison.Ordinal);
         Assert.Contains("SecondaryActionLabel", xaml, StringComparison.Ordinal);
         Assert.Contains("HasSecondaryAction", xaml, StringComparison.Ordinal);
+        Assert.Contains("BooleanToVisibilityConverter", xaml, StringComparison.Ordinal);
+        Assert.Contains("Visibility=\"{Binding HasPrimaryAction, Converter={StaticResource BooleanToVisibilityConverter}}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Visibility=\"{Binding HasSecondaryAction, Converter={StaticResource BooleanToVisibilityConverter}}\"", xaml, StringComparison.Ordinal);
         Assert.Contains("SecondaryActionButton_Click", code, StringComparison.Ordinal);
+        Assert.Contains("Visibility.Visible", converter, StringComparison.Ordinal);
+        Assert.Contains("Visibility.Collapsed", converter, StringComparison.Ordinal);
     }
 
     private static string RepoRoot()
