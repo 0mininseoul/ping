@@ -36,6 +36,20 @@ public sealed class NativeCaptureEngineTests
         Assert.DoesNotContain("CaptureFramesPerSecond = 15", source, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void NativeCaptureProject_DisablesWindowsMinMaxMacrosAndSerializesPdbWrites()
+    {
+        var project = File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            "windows",
+            "src",
+            "Ping.Windows.NativeCapture",
+            "Ping.Windows.NativeCapture.vcxproj"));
+
+        Assert.Contains("NOMINMAX", project, StringComparison.Ordinal);
+        Assert.Contains("/FS", project, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData(PingCaptureErrorCode.Success, true)]
     [InlineData(PingCaptureErrorCode.UnsupportedOs, false)]
