@@ -358,6 +358,21 @@ public sealed class AppCoordinatorSourceTests
     }
 
     [Fact]
+    public void WindowsCiPublishesMsixArtifactsForReleaseValidation()
+    {
+        var workflow = File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            ".github",
+            "workflows",
+            "windows-client.yml"));
+
+        Assert.Contains("workflow_dispatch:", workflow, StringComparison.Ordinal);
+        Assert.Contains("-Platform x64,ARM64", workflow, StringComparison.Ordinal);
+        Assert.Contains("actions/upload-artifact", workflow, StringComparison.Ordinal);
+        Assert.Contains("windows/dist/*.msix", workflow, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void OnboardingWindowRendersSecondaryActions()
     {
         var root = RepoRoot();

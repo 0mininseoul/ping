@@ -1,6 +1,7 @@
 name: Windows Client
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - "windows/**"
@@ -62,5 +63,13 @@ jobs:
       - name: Build packaged app
         shell: pwsh
         run: |
-          & .\windows\scripts\build-release.ps1 -Platform x64 -SkipTests
-          & .\windows\scripts\smoke-release.ps1 -Platform x64 -AllowUnsigned
+          & .\windows\scripts\build-release.ps1 -Platform x64,ARM64 -SkipTests
+          & .\windows\scripts\smoke-release.ps1 -Platform x64,ARM64 -AllowUnsigned
+
+      - name: Upload MSIX packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: ping-windows-msix
+          path: windows/dist/*.msix
+          if-no-files-found: error
+          retention-days: 14
