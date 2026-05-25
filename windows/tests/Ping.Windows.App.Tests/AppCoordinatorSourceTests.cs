@@ -1,3 +1,4 @@
+using System.Security.Cryptography.X509Certificates;
 using System.Xml.Linq;
 using Xunit;
 
@@ -375,6 +376,120 @@ public sealed class AppCoordinatorSourceTests
     }
 
     [Fact]
+    public void WindowsFreeSideloadScriptsUseCertificateTrustAndArchitectureInstall()
+    {
+        var root = RepoRoot();
+        var createCertificate = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "scripts",
+            "create-sideload-certificate.ps1"));
+        var install = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "scripts",
+            "install-ping-windows.ps1"));
+        var package = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "scripts",
+            "package-sideload-release.ps1"));
+
+        Assert.Contains("CN=Youngmin Park", createCertificate, StringComparison.Ordinal);
+        Assert.Contains("New-SelfSignedCertificate", createCertificate, StringComparison.Ordinal);
+        Assert.Contains("Export-PfxCertificate", createCertificate, StringComparison.Ordinal);
+        Assert.Contains("PING_WINDOWS_CERT_BASE64", createCertificate, StringComparison.Ordinal);
+        Assert.Contains(@"Cert:\LocalMachine\TrustedPeople", install, StringComparison.Ordinal);
+        Assert.Contains("Import-Certificate", install, StringComparison.Ordinal);
+        Assert.Contains("Add-AppxPackage", install, StringComparison.Ordinal);
+        Assert.Contains("ProcessArchitecture", install, StringComparison.Ordinal);
+        Assert.Contains("Ping-Windows-v$Version-x64.msix", install, StringComparison.Ordinal);
+        Assert.Contains("Ping-Windows-v$Version-arm64.msix", install, StringComparison.Ordinal);
+        Assert.Contains("Get-AuthenticodeSignature", package, StringComparison.Ordinal);
+        Assert.Contains("SHA256SUMS.txt", package, StringComparison.Ordinal);
+        Assert.Contains("install-ping-windows.ps1", package, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WindowsReleaseSmokeAcceptsExpectedSelfSignedSignerWithoutAllowUnsigned()
+    {
+        var script = File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            "windows",
+            "scripts",
+            "smoke-release.ps1"));
+
+        Assert.Contains("Ping-Windows-Sideload.cer", script, StringComparison.Ordinal);
+        Assert.Contains("Assert-TrustedPackageSignature", script, StringComparison.Ordinal);
+        Assert.Contains("Test-SignatureMatchesTrustedCertificate", script, StringComparison.Ordinal);
+        Assert.Contains("SignerCertificate.Thumbprint", script, StringComparison.Ordinal);
+        Assert.Contains("Status -eq \"Valid\"", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("signature.Status -ne \"Valid\" -and -not $AllowUnsigned", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WindowsSideloadPackagerAcceptsExpectedSelfSignedSignerWithoutAllowUnsigned()
+    {
+        var script = File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            "windows",
+            "scripts",
+            "package-sideload-release.ps1"));
+
+        Assert.Contains("Test-SignatureMatchesTrustedCertificate", script, StringComparison.Ordinal);
+        Assert.Contains("SignerCertificate.Thumbprint", script, StringComparison.Ordinal);
+        Assert.Contains("Status -eq \"Valid\"", script, StringComparison.Ordinal);
+        Assert.Contains("matches the committed Ping sideload certificate", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("Package is not signed with a trusted certificate", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WindowsSideloadPackagerUsesWildcardPathWhenCompressingReleaseBundle()
+    {
+        var script = File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            "windows",
+            "scripts",
+            "package-sideload-release.ps1"));
+
+        Assert.Contains("Compress-Archive -Path", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("Compress-Archive -LiteralPath (Join-Path $releaseRoot \"*\")", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WindowsFreeSideloadWorkflowImportsSigningSecretAndPublishesBundle()
+    {
+        var workflow = File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            ".github",
+            "workflows",
+            "windows-client.yml"));
+
+        Assert.Contains("PING_WINDOWS_CERT_BASE64", workflow, StringComparison.Ordinal);
+        Assert.Contains("PING_WINDOWS_CERT_PASSWORD", workflow, StringComparison.Ordinal);
+        Assert.Contains("PING_WINDOWS_CERT_THUMBPRINT", workflow, StringComparison.Ordinal);
+        Assert.Contains("HasPrivateKey", workflow, StringComparison.Ordinal);
+        Assert.Contains("PING_WINDOWS_SIGNED=true", workflow, StringComparison.Ordinal);
+        Assert.Contains("package-sideload-release.ps1", workflow, StringComparison.Ordinal);
+        Assert.Contains("ping-windows-sideload", workflow, StringComparison.Ordinal);
+        Assert.Contains("publish_release", workflow, StringComparison.Ordinal);
+        Assert.Contains("gh release upload", workflow, StringComparison.Ordinal);
+        Assert.Contains("contents: write", workflow, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WindowsFreeSideloadPublicCertificateIsCommittedWithoutPrivateKey()
+    {
+        var root = RepoRoot();
+        var certificatePath = Path.Combine(root, "windows", "certs", "Ping-Windows-Sideload.cer");
+        var certificate = X509CertificateLoader.LoadCertificateFromFile(certificatePath);
+
+        Assert.Equal("CN=Youngmin Park", certificate.Subject);
+        Assert.False(certificate.HasPrivateKey);
+        Assert.False(File.Exists(Path.Combine(root, "windows", "certs", "Ping-Windows-Sideload.pfx")));
+    }
+
+    [Fact]
     public void WindowsReleaseBuildAvoidsParallelNativeProjectCollisions()
     {
         var script = File.ReadAllText(Path.Combine(
@@ -385,6 +500,25 @@ public sealed class AppCoordinatorSourceTests
 
         Assert.Contains("$arguments.Add(\"/m:1\")", script, StringComparison.Ordinal);
         Assert.DoesNotContain("$arguments.Add(\"/m\")", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WindowsReleaseBuildSignsAfterMsixPackagingWithSignTool()
+    {
+        var script = File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            "windows",
+            "scripts",
+            "build-release.ps1"));
+
+        Assert.Contains("Resolve-SignTool", script, StringComparison.Ordinal);
+        Assert.Contains("Sign-Package", script, StringComparison.Ordinal);
+        Assert.Contains("signtool.exe", script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("$Arguments.Add(\"/p:AppxPackageSigningEnabled=false\")", script, StringComparison.Ordinal);
+        Assert.Contains("/fd", script, StringComparison.Ordinal);
+        Assert.Contains("/f", script, StringComparison.Ordinal);
+        Assert.Contains("/sha1", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("$Arguments.Add(\"/p:AppxPackageSigningEnabled=true\")", script, StringComparison.Ordinal);
     }
 
     [Fact]

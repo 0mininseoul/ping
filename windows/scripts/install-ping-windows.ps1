@@ -1,0 +1,136 @@
+[CmdletBinding()]
+param(
+    [string]$Version,
+    [ValidateSet("x64", "arm64")]
+    [string]$Architecture,
+    [string]$PackageDirectory = $PSScriptRoot,
+    [string]$CertificatePath = (Join-Path $PSScriptRoot "Ping-Windows-Sideload.cer"),
+    [switch]$NoLaunch
+)
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+
+$packageName = "YoungminPark.PingWindows"
+
+function Test-Administrator {
+    $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+    $principal = [Security.Principal.WindowsPrincipal]::new($identity)
+    return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
+function Quote-Argument([string]$Value) {
+    return '"' + ($Value -replace '"', '\"') + '"'
+}
+
+function Restart-Elevated {
+    $hostPath = (Get-Process -Id $PID).Path
+    if ([string]::IsNullOrWhiteSpace($hostPath)) {
+        $hostPath = "powershell.exe"
+    }
+
+    $arguments = [System.Collections.Generic.List[string]]::new()
+    $arguments.Add("-NoProfile")
+    $arguments.Add("-ExecutionPolicy")
+    $arguments.Add("Bypass")
+    $arguments.Add("-File")
+    $arguments.Add((Quote-Argument $PSCommandPath))
+    if (-not [string]::IsNullOrWhiteSpace($Version)) {
+        $arguments.Add("-Version")
+        $arguments.Add((Quote-Argument $Version))
+    }
+    if (-not [string]::IsNullOrWhiteSpace($Architecture)) {
+        $arguments.Add("-Architecture")
+        $arguments.Add($Architecture)
+    }
+    $arguments.Add("-PackageDirectory")
+    $arguments.Add((Quote-Argument $PackageDirectory))
+    $arguments.Add("-CertificatePath")
+    $arguments.Add((Quote-Argument $CertificatePath))
+    if ($NoLaunch) {
+        $arguments.Add("-NoLaunch")
+    }
+
+    Start-Process -FilePath $hostPath -Verb RunAs -ArgumentList $arguments
+}
+
+function Resolve-Architecture {
+    if (-not [string]::IsNullOrWhiteSpace($Architecture)) {
+        return $Architecture
+    }
+
+    if ([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture -eq [System.Runtime.InteropServices.Architecture]::Arm64) {
+        return "arm64"
+    }
+
+    return "x64"
+}
+
+function Resolve-Version([string]$TargetArchitecture) {
+    if (-not [string]::IsNullOrWhiteSpace($Version)) {
+        return $Version
+    }
+
+    $candidate = Get-ChildItem -LiteralPath $PackageDirectory -Filter "Ping-Windows-v*-$TargetArchitecture.msix" |
+        Sort-Object Name -Descending |
+        Select-Object -First 1
+    if (-not $candidate) {
+        throw "Could not find a Ping Windows MSIX for $TargetArchitecture in $PackageDirectory."
+    }
+
+    if ($candidate.Name -notmatch '^Ping-Windows-v(?<version>.+)-[^-]+\.msix$') {
+        throw "Could not infer version from $($candidate.Name)."
+    }
+
+    return $Matches.version
+}
+
+if (-not (Test-Administrator)) {
+    Write-Host "Ping needs one administrator prompt to trust the sideload certificate."
+    Restart-Elevated
+    return
+}
+
+if (-not (Test-Path -LiteralPath $PackageDirectory)) {
+    throw "Package directory does not exist: $PackageDirectory"
+}
+
+if (-not (Test-Path -LiteralPath $CertificatePath)) {
+    throw "Missing sideload certificate: $CertificatePath"
+}
+
+$targetArchitecture = Resolve-Architecture
+$Version = Resolve-Version $targetArchitecture
+$packageFileName = switch ($targetArchitecture) {
+    "x64" { "Ping-Windows-v$Version-x64.msix" }
+    "arm64" { "Ping-Windows-v$Version-arm64.msix" }
+}
+$packagePath = Join-Path $PackageDirectory $packageFileName
+
+if (-not (Test-Path -LiteralPath $packagePath)) {
+    throw "Missing MSIX package: $packagePath"
+}
+
+Write-Host "Trusting Ping sideload certificate..."
+Import-Certificate -CertStoreLocation "Cert:\LocalMachine\TrustedPeople" -FilePath $CertificatePath | Out-Null
+
+$signature = Get-AuthenticodeSignature -LiteralPath $packagePath
+if ($signature.Status -ne "Valid") {
+    throw "The MSIX signature is $($signature.Status), not Valid. Make sure this package was signed with Ping-Windows-Sideload.cer."
+}
+
+Write-Host "Installing $packageFileName..."
+Add-AppxPackage -LiteralPath $packagePath -ForceUpdateFromAnyVersion
+
+$installed = Get-AppxPackage -Name $packageName |
+    Sort-Object InstallDate -Descending |
+    Select-Object -First 1
+if (-not $installed) {
+    throw "Ping package did not appear in Get-AppxPackage after installation."
+}
+
+if (-not $NoLaunch) {
+    Start-Process "shell:AppsFolder\$($installed.PackageFamilyName)!App"
+}
+
+Write-Host "Ping for Windows is installed."

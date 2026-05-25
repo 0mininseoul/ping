@@ -4,6 +4,7 @@ param(
     [ValidateSet("x64", "ARM64")]
     [string[]]$Platform = @("x64", "ARM64"),
     [switch]$Install,
+    [string]$TrustedCertificatePath = (Join-Path $PSScriptRoot "..\certs\Ping-Windows-Sideload.cer"),
     [switch]$AllowUnsigned
 )
 
@@ -99,6 +100,41 @@ function Assert-PingPackageIdentity([string]$PackagePath, [string]$ExpectedVersi
     }
 }
 
+function Test-SignatureMatchesTrustedCertificate($Signature, [string]$ExpectedCertificatePath) {
+    if (-not $Signature.SignerCertificate) {
+        return $false
+    }
+
+    if (-not (Test-Path -LiteralPath $ExpectedCertificatePath)) {
+        return $false
+    }
+
+    $expectedCertificate = [Security.Cryptography.X509Certificates.X509Certificate2]::new($ExpectedCertificatePath)
+    return $Signature.SignerCertificate.Thumbprint -eq $expectedCertificate.Thumbprint
+}
+
+function Assert-TrustedPackageSignature([string]$PackagePath, [string]$ExpectedCertificatePath) {
+    $package = Get-Item -LiteralPath $PackagePath
+    $signature = Get-AuthenticodeSignature -LiteralPath $PackagePath
+    Write-Host "$($package.Name): $($package.Length) bytes, signature $($signature.Status)"
+
+    if ($signature.Status -eq "Valid") {
+        return
+    }
+
+    if (Test-SignatureMatchesTrustedCertificate $signature $ExpectedCertificatePath) {
+        Write-Warning "Package signature status is $($signature.Status), but the signer matches the committed Ping sideload certificate: $PackagePath"
+        return
+    }
+
+    if ($AllowUnsigned) {
+        Write-Warning "Keeping unsigned package because -AllowUnsigned was provided: $PackagePath"
+        return
+    }
+
+    throw "Package is not signed with the committed Ping sideload certificate. Re-run with -AllowUnsigned only for local CI/build validation."
+}
+
 if ([string]::IsNullOrWhiteSpace($Version)) {
     $Version = Get-PingMarketingVersion
 }
@@ -122,12 +158,7 @@ foreach ($targetPlatform in $Platform) {
     }
 
     Assert-PingPackageIdentity $packagePath $Version $architectureManifestValue
-
-    $signature = Get-AuthenticodeSignature -LiteralPath $packagePath
-    Write-Host "$($package.Name): $($package.Length) bytes, signature $($signature.Status)"
-    if ($signature.Status -ne "Valid" -and -not $AllowUnsigned) {
-        throw "Package is not signed with a trusted certificate. Re-run with -AllowUnsigned only for local CI/build validation."
-    }
+    Assert-TrustedPackageSignature $packagePath $TrustedCertificatePath
 }
 
 if ($Install) {

@@ -44,10 +44,12 @@ Supabase Dashboard의 Authentication 설정에서 Anonymous sign-ins가 켜져 �
 
 Windows 앱은 `windows/` 아래 별도 네이티브 클라이언트다.
 
-1. Windows 11 24H2 이상에서 `Ping-Windows-v0.3.28-x64.msix` 또는 `Ping-Windows-v0.3.28-arm64.msix`를 설치한다.
-2. 외부 배포는 서명된 MSIX가 필요하다. 서명이 준비되지 않은 내부 빌드는 Windows 설치/SmartScreen 경고가 정상이다.
-3. `%LOCALAPPDATA%\Ping\Supabase.json`에 Supabase URL과 anon key를 저장한다.
-4. 온보딩에서 카메라, 마이크, 화면 캡처, 알림, 단축키, 시작프로그램 상태를 확인한다.
+1. 무료 배포는 GitHub Release의 `Ping-Windows-v0.3.28-sideload.zip`을 내려받아 압축을 푼다.
+2. 관리자 PowerShell에서 `powershell -ExecutionPolicy Bypass -File .\install-ping-windows.ps1`를 실행한다.
+3. 설치 스크립트가 공개 인증서 `Ping-Windows-Sideload.cer`를 Windows `Trusted People` 저장소에 등록한 뒤 PC 아키텍처에 맞는 MSIX를 설치한다.
+4. 이 방식은 비용 없는 sideload 배포다. Microsoft Store나 공개 코드서명 인증서처럼 완전한 원클릭 신뢰 UX는 제공하지 않는다.
+5. `%LOCALAPPDATA%\Ping\Supabase.json`에 Supabase URL과 anon key를 저장한다.
+6. 온보딩에서 카메라, 마이크, 화면 캡처, 알림, 단축키, 시작프로그램 상태를 확인한다.
 
 자세한 Windows 빌드/설치/QA 절차는 `docs/WINDOWS_APP_SETUP.md`와 `windows/README.md`를 따른다.
 
@@ -74,7 +76,7 @@ Ping은 이메일 로그인 없이 Supabase Anonymous Auth 세션을 로컬에 �
 
 macOS 앱은 Sparkle로 업데이트를 확인한다. 새 버전이 공개되면 알림과 표준 업데이트 다이얼로그가 뜨고, 사용자가 승인하면 바로 다운로드/설치/재시작 흐름으로 진행된다. 같은 버전은 반복 알림하지 않고, 더 최신 버전이 나오면 최신 버전 알림 하나로 교체한다.
 
-Windows 앱은 Sparkle을 사용하지 않는다. Windows 배포는 서명된 MSIX를 기준으로 하고, 업데이트는 App Installer 피드나 Microsoft Store 채널에서 처리한다.
+Windows 앱은 Sparkle을 사용하지 않는다. 비용 없는 배포는 self-signed MSIX sideload zip을 GitHub Release에 올리는 방식이며, 사용자는 최초 설치 시 Ping 공개 인증서를 신뢰해야 한다. Microsoft Store, Azure Artifact Signing, OV 코드서명 인증서는 더 매끄러운 신뢰 UX를 제공하지만 비용 또는 외부 계정 검증이 필요하다.
 
 ## v0.3.28 수정
 
