@@ -138,12 +138,19 @@ public sealed class StorageService(SupabaseClient client) : IStorageService, ICh
 
     private static void ValidateVideoPath(string remotePath)
     {
+        var segments = StoragePathSegments(remotePath);
         if (string.IsNullOrWhiteSpace(remotePath)
-            || !remotePath.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase)
             || Path.IsPathRooted(remotePath)
-            || remotePath.Split('/', StringSplitOptions.RemoveEmptyEntries).Length < 2
             || remotePath.Contains('\\', StringComparison.Ordinal)
             || remotePath.Contains("..", StringComparison.Ordinal))
+        {
+            throw new ArgumentException("Video storage path must be a private ping-videos object path.", nameof(remotePath));
+        }
+
+        if (segments.Length != 2
+            || string.IsNullOrWhiteSpace(segments[0])
+            || string.IsNullOrWhiteSpace(segments[1])
+            || !segments[1].EndsWith(".mp4", StringComparison.OrdinalIgnoreCase))
         {
             throw new ArgumentException("Video storage path must be a private ping-videos object path.", nameof(remotePath));
         }
@@ -162,16 +169,27 @@ public sealed class StorageService(SupabaseClient client) : IStorageService, ICh
 
     private static void ValidateChatMediaPath(string remotePath)
     {
+        var segments = StoragePathSegments(remotePath);
         if (string.IsNullOrWhiteSpace(remotePath)
-            || !remotePath.Contains("/chat-images/", StringComparison.Ordinal)
             || Path.IsPathRooted(remotePath)
             || remotePath.Contains('\\', StringComparison.Ordinal)
-            || remotePath.Contains("..", StringComparison.Ordinal)
-            || remotePath.Split('/', StringSplitOptions.RemoveEmptyEntries).Length < 3)
+            || remotePath.Contains("..", StringComparison.Ordinal))
+        {
+            throw new ArgumentException("Chat media path must be a private ping-media chat image object path.", nameof(remotePath));
+        }
+
+        if (segments.Length != 3
+            || string.IsNullOrWhiteSpace(segments[0])
+            || !string.Equals(segments[1], "chat-images", StringComparison.Ordinal)
+            || string.IsNullOrWhiteSpace(segments[2])
+            || string.IsNullOrWhiteSpace(Path.GetExtension(segments[2])))
         {
             throw new ArgumentException("Chat media path must be a private ping-media chat image object path.", nameof(remotePath));
         }
     }
+
+    private static string[] StoragePathSegments(string remotePath) =>
+        remotePath.Split('/');
 
     private static (string MimeType, string FileExtension) ValidateChatImageInput(string localImagePath)
     {

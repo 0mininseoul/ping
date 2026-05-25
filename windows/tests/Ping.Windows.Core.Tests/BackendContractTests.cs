@@ -662,6 +662,10 @@ public sealed class BackendContractTests
             () => service.UploadVideoAsync(emptyMp4, "sender-uid", "video..id", ["receiver"], DateTimeOffset.UtcNow));
         await Assert.ThrowsAsync<ArgumentException>(
             () => service.DownloadVideoAsync("sender-uid/video-id.mov"));
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => service.DownloadVideoAsync("sender-uid/nested/video-id.mp4"));
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => service.DeleteVideoAsync("sender-uid/nested/video-id.mp4"));
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.UploadChatImageAsync(emptyMp4, "sender-uid", "message-id"));
         await Assert.ThrowsAsync<ArgumentException>(
@@ -671,7 +675,13 @@ public sealed class BackendContractTests
         await Assert.ThrowsAsync<ArgumentException>(
             () => service.DownloadChatMediaAsync("../sender/chat-images/message.png", "png"));
         await Assert.ThrowsAsync<ArgumentException>(
+            () => service.DownloadChatMediaAsync("sender-uid/other/chat-images/message.png", "png"));
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => service.DownloadChatMediaAsync("sender-uid/chat-images/message.png/extra", "png"));
+        await Assert.ThrowsAsync<ArgumentException>(
             () => service.DeleteChatMediaAsync("../sender/chat-images/message.png"));
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => service.DeleteChatMediaAsync("sender-uid/other/chat-images/message.png"));
     }
 
     private sealed class RecordingRpcClient : ISupabaseRpcClient
