@@ -5,6 +5,10 @@ on:
     paths:
       - "windows/**"
       - ".github/workflows/windows-client.yml"
+      - "project.yml"
+      - "README.md"
+      - "PING_PROJECT_SPECIFICATION.md"
+      - "docs/WINDOWS_APP_SETUP.md"
   push:
     branches:
       - main
@@ -12,6 +16,10 @@ on:
     paths:
       - "windows/**"
       - ".github/workflows/windows-client.yml"
+      - "project.yml"
+      - "README.md"
+      - "PING_PROJECT_SPECIFICATION.md"
+      - "docs/WINDOWS_APP_SETUP.md"
 
 jobs:
   build:

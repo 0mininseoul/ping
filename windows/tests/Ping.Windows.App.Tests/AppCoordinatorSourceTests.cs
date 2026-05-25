@@ -282,6 +282,22 @@ public sealed class AppCoordinatorSourceTests
     }
 
     [Fact]
+    public void WindowsCiRunsWhenSharedReleaseMetadataChanges()
+    {
+        var workflow = File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            ".github",
+            "workflows",
+            "windows-client.yml"));
+
+        Assert.Contains("\"windows/**\"", workflow, StringComparison.Ordinal);
+        Assert.Contains("\"project.yml\"", workflow, StringComparison.Ordinal);
+        Assert.Contains("\"README.md\"", workflow, StringComparison.Ordinal);
+        Assert.Contains("\"PING_PROJECT_SPECIFICATION.md\"", workflow, StringComparison.Ordinal);
+        Assert.Contains("\"docs/WINDOWS_APP_SETUP.md\"", workflow, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void OnboardingWindowRendersSecondaryActions()
     {
         var root = RepoRoot();
