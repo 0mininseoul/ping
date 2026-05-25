@@ -134,11 +134,53 @@ public sealed class IncomingMessageDedupTests
     [Fact]
     public void NotificationController_DeduplicatesShownChatsInPortableTests()
     {
-        using var controller = new NotificationController((_, _) => Task.CompletedTask);
+        using var controller = new NotificationController(
+            (_, _) => Task.CompletedTask,
+            chatRegistry: NotifiedChatRegistry.InMemory());
         var notification = new IncomingChatNotification(Chat("chat-1", "room-1", "sender", "hello", DateTimeOffset.UtcNow), "Main", 1);
 
         Assert.True(controller.TryShowIncomingChat(notification));
         Assert.False(controller.TryShowIncomingChat(notification));
+    }
+
+    [Fact]
+    public void NotifiedChatRegistry_PersistsChatIdsAcrossAppRestarts()
+    {
+        var path = Path.Combine(
+            Path.GetTempPath(),
+            "PingWindowsNotificationRegistryTests",
+            Guid.NewGuid().ToString("N"),
+            "NotifiedChatIds.json");
+        var chat = Chat("chat-1", "room-1", "sender", "hello", DateTimeOffset.UtcNow);
+
+        var firstRun = new NotifiedChatRegistry(path);
+        Assert.True(firstRun.TryMarkNotified(chat));
+
+        var secondRun = new NotifiedChatRegistry(path);
+
+        Assert.True(secondRun.Contains("chat-1"));
+        Assert.False(secondRun.TryMarkNotified(chat));
+    }
+
+    [Fact]
+    public void NotifiedChatRegistry_TrimsPersistedChatIdsToRecentWindow()
+    {
+        var path = Path.Combine(
+            Path.GetTempPath(),
+            "PingWindowsNotificationRegistryTests",
+            Guid.NewGuid().ToString("N"),
+            "NotifiedChatIds.json");
+        var registry = new NotifiedChatRegistry(path);
+
+        for (var index = 0; index < 505; index++)
+        {
+            Assert.True(registry.TryMarkNotified(Chat($"chat-{index}", "room-1", "sender", "hello", DateTimeOffset.UtcNow)));
+        }
+
+        var reloaded = new NotifiedChatRegistry(path);
+
+        Assert.False(reloaded.Contains("chat-0"));
+        Assert.True(reloaded.Contains("chat-504"));
     }
 
     [Fact]
