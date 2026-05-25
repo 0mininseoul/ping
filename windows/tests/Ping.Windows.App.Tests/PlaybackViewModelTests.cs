@@ -105,6 +105,21 @@ public sealed class PlaybackViewModelTests
     }
 
     [Theory]
+    [InlineData(0.01, 0.5)]
+    [InlineData(8, 3)]
+    public void ScreenFace_ExtremeAspectRatioClampsToCompactPlaybackBounds(
+        double aspectRatio,
+        double expectedAspectRatio)
+    {
+        var viewModel = new PlaybackViewModel(
+            Message(CaptureMode.ScreenFace, aspectRatio),
+            "clip.mp4",
+            _ => Task.CompletedTask);
+
+        Assert.Equal(expectedAspectRatio, viewModel.AspectRatio);
+    }
+
+    [Theory]
     [InlineData(0)]
     [InlineData(-1)]
     [InlineData(double.NaN)]

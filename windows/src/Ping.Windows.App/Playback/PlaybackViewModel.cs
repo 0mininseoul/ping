@@ -15,6 +15,10 @@ namespace Ping.Windows.App.Playback;
 public sealed class PlaybackViewModel : INotifyPropertyChanged
 {
     public static readonly TimeSpan PausedTimeout = TimeSpan.FromSeconds(10);
+    private const double FaceOnlyAspectRatio = 1;
+    private const double ScreenFaceFallbackAspectRatio = 16.0 / 9.0;
+    private const double MinimumScreenFacePlaybackAspectRatio = 0.5;
+    private const double MaximumScreenFacePlaybackAspectRatio = 3.0;
 
     private readonly Func<CancellationToken, Task> markSeenAsync;
     private bool didMarkSeen;
@@ -49,9 +53,19 @@ public sealed class PlaybackViewModel : INotifyPropertyChanged
     {
         get
         {
-            var fallback = IsScreenFace ? 16.0 / 9.0 : 1;
+            var fallback = IsScreenFace ? ScreenFaceFallbackAspectRatio : FaceOnlyAspectRatio;
             var ratio = Message.AspectRatio ?? fallback;
-            return double.IsNaN(ratio) || double.IsInfinity(ratio) || ratio <= 0 ? fallback : ratio;
+            if (!double.IsFinite(ratio) || ratio <= 0)
+            {
+                return fallback;
+            }
+
+            return IsScreenFace
+                ? Math.Clamp(
+                    ratio,
+                    MinimumScreenFacePlaybackAspectRatio,
+                    MaximumScreenFacePlaybackAspectRatio)
+                : ratio;
         }
     }
 
