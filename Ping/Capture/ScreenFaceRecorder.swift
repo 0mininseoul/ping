@@ -41,6 +41,13 @@ final class ScreenFaceRecorder: NSObject {
 
         let writerInput = AVAssetWriterInput(mediaType: .video, outputSettings: videoSettings)
         writerInput.expectsMediaDataInRealTime = true
+        let audioInput = AVAssetWriterInput(mediaType: .audio, outputSettings: [
+            AVFormatIDKey: kAudioFormatMPEG4AAC,
+            AVNumberOfChannelsKey: 1,
+            AVSampleRateKey: 44_100,
+            AVEncoderBitRateKey: 96_000
+        ])
+        audioInput.expectsMediaDataInRealTime = true
 
         let adaptor = AVAssetWriterInputPixelBufferAdaptor(
             assetWriterInput: writerInput,
@@ -52,8 +59,57 @@ final class ScreenFaceRecorder: NSObject {
         )
 
         writer.add(writerInput)
+        if writer.canAdd(audioInput) {
+            writer.add(audioInput)
+        } else {
+            throw NSError(
+                domain: "ScreenFaceRecorder",
+                code: -2,
+                userInfo: [NSLocalizedDescriptionKey: "마이크 오디오 트랙을 준비할 수 없습니다."]
+            )
+        }
+
+        let audioOutput = AVCaptureAudioDataOutput()
+        let audioQueue = DispatchQueue(label: "ping.screen-face.audio")
+        let audioSampleWriter = AudioSampleWriter(input: audioInput)
+        let hasAudioInput = cameraSession.inputs.contains { input in
+            input.ports.contains { $0.mediaType == .audio }
+        }
+        guard hasAudioInput else {
+            throw NSError(
+                domain: "ScreenFaceRecorder",
+                code: -3,
+                userInfo: [NSLocalizedDescriptionKey: "마이크 입력이 준비되지 않았습니다."]
+            )
+        }
+        guard cameraSession.canAddOutput(audioOutput) else {
+            throw NSError(
+                domain: "ScreenFaceRecorder",
+                code: -4,
+                userInfo: [NSLocalizedDescriptionKey: "마이크 입력을 녹음 세션에 연결할 수 없습니다."]
+            )
+        }
+
+        var isAudioOutputAdded = false
+        func stopAudioCapture() {
+            guard isAudioOutputAdded else { return }
+            audioSampleWriter.finish()
+            audioOutput.setSampleBufferDelegate(nil, queue: nil)
+            cameraSession.beginConfiguration()
+            cameraSession.removeOutput(audioOutput)
+            cameraSession.commitConfiguration()
+            isAudioOutputAdded = false
+        }
+
+        cameraSession.beginConfiguration()
+        cameraSession.addOutput(audioOutput)
+        cameraSession.commitConfiguration()
+        isAudioOutputAdded = true
+
         writer.startWriting()
         writer.startSession(atSourceTime: .zero)
+        audioOutput.setSampleBufferDelegate(audioSampleWriter, queue: audioQueue)
+        defer { stopAudioCapture() }
 
         let ciContext = CIContext()
         let start = Date()
@@ -99,7 +155,9 @@ final class ScreenFaceRecorder: NSObject {
             try? await Task.sleep(for: .seconds(frameInterval))
         }
 
+        stopAudioCapture()
         writerInput.markAsFinished()
+        audioInput.markAsFinished()
         await writer.finishWriting()
 
         if writer.status != .completed {
@@ -108,5 +166,102 @@ final class ScreenFaceRecorder: NSObject {
 
         let aspect = Double(outW) / Double(outH)
         return Output(url: outputURL, aspectRatio: aspect)
+    }
+
+    private final class AudioSampleWriter: NSObject, AVCaptureAudioDataOutputSampleBufferDelegate {
+        private let input: AVAssetWriterInput
+        private let lock = NSLock()
+        private var firstPresentationTime: CMTime?
+        private var isFinished = false
+
+        init(input: AVAssetWriterInput) {
+            self.input = input
+        }
+
+        func finish() {
+            lock.lock()
+            isFinished = true
+            lock.unlock()
+        }
+
+        func captureOutput(
+            _ output: AVCaptureOutput,
+            didOutput sampleBuffer: CMSampleBuffer,
+            from connection: AVCaptureConnection
+        ) {
+            appendAudioSampleBuffer(sampleBuffer)
+        }
+
+        private func appendAudioSampleBuffer(_ sampleBuffer: CMSampleBuffer) {
+            lock.lock()
+            defer { lock.unlock() }
+
+            guard !isFinished,
+                  input.isReadyForMoreMediaData else {
+                return
+            }
+
+            let presentationTime = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+            if firstPresentationTime == nil {
+                firstPresentationTime = presentationTime
+            }
+            guard let baseTime = firstPresentationTime else { return }
+
+            var timingCount = 0
+            CMSampleBufferGetSampleTimingInfoArray(
+                sampleBuffer,
+                entryCount: 0,
+                arrayToFill: nil,
+                entriesNeededOut: &timingCount
+            )
+            guard timingCount > 0 else { return }
+
+            var timing = Array(
+                repeating: CMSampleTimingInfo(
+                    duration: .invalid,
+                    presentationTimeStamp: .invalid,
+                    decodeTimeStamp: .invalid
+                ),
+                count: timingCount
+            )
+            CMSampleBufferGetSampleTimingInfoArray(
+                sampleBuffer,
+                entryCount: timingCount,
+                arrayToFill: &timing,
+                entriesNeededOut: &timingCount
+            )
+
+            for index in timing.indices {
+                if timing[index].presentationTimeStamp.isValid {
+                    timing[index].presentationTimeStamp = CMTimeSubtract(
+                        timing[index].presentationTimeStamp,
+                        baseTime
+                    )
+                }
+                if timing[index].decodeTimeStamp.isValid {
+                    timing[index].decodeTimeStamp = CMTimeSubtract(
+                        timing[index].decodeTimeStamp,
+                        baseTime
+                    )
+                }
+            }
+
+            var retimedSampleBuffer: CMSampleBuffer?
+            let status = timing.withUnsafeBufferPointer { buffer in
+                CMSampleBufferCreateCopyWithNewTiming(
+                    allocator: kCFAllocatorDefault,
+                    sampleBuffer: sampleBuffer,
+                    sampleTimingEntryCount: timing.count,
+                    sampleTimingArray: buffer.baseAddress,
+                    sampleBufferOut: &retimedSampleBuffer
+                )
+            }
+
+            guard status == noErr,
+                  let retimedSampleBuffer else {
+                return
+            }
+            input.append(retimedSampleBuffer)
+        }
     }
 }

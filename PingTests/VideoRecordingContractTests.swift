@@ -11,6 +11,17 @@ final class VideoRecordingContractTests: XCTestCase {
         XCTAssertTrue(cropperSource.contains("renderSize = CGSize(width: side, height: side)"))
     }
 
+    func testScreenFaceRecorderWritesMicrophoneAudioTrack() throws {
+        let recorderSource = try readSourceFile("Ping/Capture/ScreenFaceRecorder.swift")
+
+        XCTAssertTrue(recorderSource.contains("AVCaptureAudioDataOutput"))
+        XCTAssertTrue(recorderSource.contains("AVAssetWriterInput(mediaType: .audio"))
+        XCTAssertTrue(recorderSource.contains("appendAudioSampleBuffer"))
+        XCTAssertTrue(recorderSource.contains("audioOutput.setSampleBufferDelegate"))
+        XCTAssertTrue(recorderSource.contains("cameraSession.addOutput(audioOutput)"))
+        XCTAssertTrue(recorderSource.contains("cameraSession.removeOutput(audioOutput)"))
+    }
+
     private func readSourceFile(_ relativePath: String) throws -> String {
         let fileName = URL(fileURLWithPath: relativePath).lastPathComponent
         let fileURL = try XCTUnwrap(Bundle(for: Self.self).resourceURL?.appendingPathComponent(fileName))

@@ -7,6 +7,7 @@ struct ChatImageAttachmentView: View {
 
     @State private var image: NSImage?
     @State private var didFail = false
+    @State private var isPreviewPresented = false
 
     private let maxWidth: CGFloat = 240
     private let maxHeight: CGFloat = 260
@@ -38,6 +39,16 @@ struct ChatImageAttachmentView: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .strokeBorder(Color.white.opacity(0.12), lineWidth: 0.5)
         )
+        .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .onTapGesture {
+            guard image != nil else { return }
+            isPreviewPresented = true
+        }
+        .popover(isPresented: $isPreviewPresented) {
+            if let image {
+                ChatImagePreviewPopover(image: image, fileName: message.mediaFileName)
+            }
+        }
         .task(id: message.mediaPath) {
             await loadImage()
         }
@@ -93,5 +104,54 @@ struct ChatImageAttachmentView: View {
         } catch {
             didFail = true
         }
+    }
+}
+
+private struct ChatImagePreviewPopover: View {
+    let image: NSImage
+    let fileName: String?
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 12) {
+                Text(displayName)
+                    .font(.callout.weight(.semibold))
+                    .lineLimit(1)
+
+                Spacer()
+
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 16, weight: .semibold))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .help("닫기")
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+
+            Divider()
+
+            Image(nsImage: image)
+                .resizable()
+                .scaledToFit()
+                .frame(maxWidth: 780, maxHeight: 620)
+                .padding(14)
+        }
+        .frame(minWidth: 360, minHeight: 260)
+        .background(.regularMaterial)
+    }
+
+    private var displayName: String {
+        guard let fileName,
+              !fileName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return "사진"
+        }
+        return fileName
     }
 }
