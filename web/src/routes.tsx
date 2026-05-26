@@ -4,8 +4,7 @@ import InviteView from "./components/invite/InviteView";
 
 export const APP_VERSION = "v0.3.28";
 export const MAC_DOWNLOAD_URL = "/downloads/Ping-v0.3.28.dmg";
-export const WINDOWS_DOWNLOAD_URL =
-  "https://github.com/0mininseoul/ping/releases/download/windows-v0.3.28-sideload/PingSetup-v0.3.28.exe";
+export const WINDOWS_DOWNLOAD_URL = "/downloads/windows/PingSetup-v0.3.28.exe";
 
 function matchInvite(pathname: string): string | null {
   const m = pathname.match(/^\/invite\/([^/]+)\/?$/);

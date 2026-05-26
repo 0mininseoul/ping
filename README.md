@@ -44,10 +44,10 @@ Supabase Dashboard의 Authentication 설정에서 Anonymous sign-ins가 켜져 �
 
 Windows 앱은 `windows/` 아래 별도 네이티브 클라이언트다.
 
-1. GitHub Release 또는 랜딩페이지에서 `PingSetup-v0.3.28.exe`를 내려받아 실행한다.
+1. 랜딩페이지에서 `PingSetup-v0.3.28.exe`를 내려받아 실행한다.
 2. Windows SmartScreen 경고가 보이면 `추가 정보` → `실행`을 선택한다. 무료 자체서명 배포라 정상적인 경고다.
 3. UAC 관리자 권한을 승인한다.
-4. 설치 프로그램이 공개 인증서 `Ping-Windows-Sideload.cer`를 Windows `Trusted People` 저장소에 등록한 뒤 PC 아키텍처에 맞는 MSIX를 설치하고 Ping을 실행한다.
+4. 설치 프로그램이 공개 인증서 `Ping-Windows-Sideload.cer`를 Windows `Trusted People` 저장소에 등록한 뒤 PC 아키텍처에 맞는 MSIX를 공개 다운로드 서버에서 받아 설치하고 Ping을 실행한다.
 5. `%LOCALAPPDATA%\Ping\Supabase.json`에 Supabase URL과 anon key를 저장한다.
 6. 온보딩에서 카메라, 마이크, 화면 캡처, 알림, 단축키, 시작프로그램 상태를 확인한다.
 
@@ -78,7 +78,7 @@ Ping은 이메일 로그인 없이 Supabase Anonymous Auth 세션을 로컬에 �
 
 macOS 앱은 Sparkle로 업데이트를 확인한다. 새 버전이 공개되면 알림과 표준 업데이트 다이얼로그가 뜨고, 사용자가 승인하면 바로 다운로드/설치/재시작 흐름으로 진행된다. 같은 버전은 반복 알림하지 않고, 더 최신 버전이 나오면 최신 버전 알림 하나로 교체한다.
 
-Windows 앱은 Sparkle을 사용하지 않는다. 비용 없는 배포는 self-signed MSIX를 단일 `PingSetup-v0.3.28.exe` 부트스트랩 설치파일로 감싼 GitHub Release 방식이며, 최초 설치 시 installer가 Ping 공개 인증서를 등록한다. Microsoft Store, Azure Artifact Signing, OV 코드서명 인증서는 더 매끄러운 신뢰 UX를 제공하지만 비용 또는 외부 계정 검증이 필요하다.
+Windows 앱은 Sparkle을 사용하지 않는다. 비용 없는 배포는 self-signed MSIX를 작은 `PingSetup-v0.3.28.exe` 웹 설치파일로 감싸고, 설치 중 PC 아키텍처에 맞는 MSIX를 `https://ping0min.vercel.app/downloads/windows/`에서 받는 방식이다. 최초 설치 시 installer가 Ping 공개 인증서를 등록한다. Microsoft Store, Azure Artifact Signing, OV 코드서명 인증서는 더 매끄러운 신뢰 UX를 제공하지만 비용 또는 외부 계정 검증이 필요하다.
 
 ## v0.3.28 수정
 
