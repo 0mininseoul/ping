@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import LandingPage from "./pages/LandingPage";
 import InviteView from "./components/invite/InviteView";
 
-export const APP_VERSION = "v0.3.29";
+export const MAC_APP_VERSION = "v0.3.29";
+export const WINDOWS_APP_VERSION = "v0.3.28";
 export const MAC_DOWNLOAD_URL = "/downloads/Ping-v0.3.29.dmg";
 export const WINDOWS_DOWNLOAD_URL = "/downloads/windows/PingSetup-v0.3.28.exe";
 
@@ -29,7 +30,8 @@ export default function Routes() {
         token={token}
         macDownloadUrl={MAC_DOWNLOAD_URL}
         windowsDownloadUrl={WINDOWS_DOWNLOAD_URL}
-        version={APP_VERSION}
+        macVersion={MAC_APP_VERSION}
+        windowsVersion={WINDOWS_APP_VERSION}
       />
     );
   }
@@ -38,7 +40,8 @@ export default function Routes() {
     <LandingPage
       macDownloadUrl={MAC_DOWNLOAD_URL}
       windowsDownloadUrl={WINDOWS_DOWNLOAD_URL}
-      version={APP_VERSION}
+      macVersion={MAC_APP_VERSION}
+      windowsVersion={WINDOWS_APP_VERSION}
     />
   );
 }

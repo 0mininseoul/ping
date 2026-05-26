@@ -7,13 +7,15 @@ import { Button } from "@/components/ui/button";
 interface FinalCTAProps {
   macDownloadUrl: string;
   windowsDownloadUrl: string;
-  version: string;
+  macVersion: string;
+  windowsVersion: string;
 }
 
 export default function FinalCTA({
   macDownloadUrl,
   windowsDownloadUrl,
-  version,
+  macVersion,
+  windowsVersion,
 }: FinalCTAProps) {
   return (
     <section id="download" className="border-t border-border py-28 md:py-32">
@@ -30,7 +32,7 @@ export default function FinalCTA({
             <div className="relative grid items-center gap-10 md:grid-cols-[1.1fr_0.9fr] md:gap-14">
               <div>
                 <Badge variant="accent" className="mb-5">
-                  Ping {version}
+                  macOS {macVersion} · Windows {windowsVersion}
                 </Badge>
                 <h2 className="text-balance text-[clamp(2.2rem,5vw,4rem)] leading-[1.05]">
                   3초면 충분합니다.
@@ -45,7 +47,7 @@ export default function FinalCTA({
                 <ClickSpark>
                   <a
                     href={macDownloadUrl}
-                    aria-label={`Ping ${version} macOS DMG 다운로드`}
+                    aria-label={`Ping ${macVersion} macOS DMG 다운로드`}
                   >
                     <Button
                       variant="primary"
@@ -60,7 +62,7 @@ export default function FinalCTA({
                 <ClickSpark>
                   <a
                     href={windowsDownloadUrl}
-                    aria-label={`Ping ${version} Windows EXE 다운로드`}
+                    aria-label={`Ping ${windowsVersion} Windows EXE 다운로드`}
                   >
                     <Button
                       variant="secondary"

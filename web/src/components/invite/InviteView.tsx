@@ -12,14 +12,16 @@ interface InviteViewProps {
   token: string;
   macDownloadUrl: string;
   windowsDownloadUrl: string;
-  version: string;
+  macVersion: string;
+  windowsVersion: string;
 }
 
 export default function InviteView({
   token,
   macDownloadUrl,
   windowsDownloadUrl,
-  version,
+  macVersion,
+  windowsVersion,
 }: InviteViewProps) {
   const deepLink = `ping://invite/${encodeURIComponent(token)}`;
   return (
@@ -77,7 +79,7 @@ export default function InviteView({
               </ClickSpark>
               <a
                 href={macDownloadUrl}
-                aria-label={`Ping ${version} macOS 다운로드`}
+                aria-label={`Ping ${macVersion} macOS 다운로드`}
               >
                 <Button variant="secondary" size="lg">
                   <Download aria-hidden className="h-4 w-4" />
@@ -86,7 +88,7 @@ export default function InviteView({
               </a>
               <a
                 href={windowsDownloadUrl}
-                aria-label={`Ping ${version} Windows 다운로드`}
+                aria-label={`Ping ${windowsVersion} Windows 다운로드`}
               >
                 <Button variant="secondary" size="lg">
                   <Download aria-hidden className="h-4 w-4" />
@@ -117,7 +119,7 @@ export default function InviteView({
         <footer className="mt-auto border-t border-border pt-6 text-xs text-subtle">
           <div className="flex items-center justify-between">
             <span>
-              Ping <span className="font-mono">{version}</span>
+              Ping <span className="font-mono">macOS {macVersion} · Windows {windowsVersion}</span>
             </span>
             <span>macOS 13 Ventura+ · Windows 11 24H2+</span>
           </div>

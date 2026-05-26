@@ -8,8 +8,10 @@ final class ReleaseVersionContractTests: XCTestCase {
 
         XCTAssertTrue(project.contains("MARKETING_VERSION: \"0.3.29\""))
         XCTAssertTrue(project.contains("CURRENT_PROJECT_VERSION: \"41\""))
-        XCTAssertTrue(routes.contains("APP_VERSION = \"v0.3.29\""))
+        XCTAssertTrue(routes.contains("MAC_APP_VERSION = \"v0.3.29\""))
+        XCTAssertTrue(routes.contains("WINDOWS_APP_VERSION = \"v0.3.28\""))
         XCTAssertTrue(routes.contains("MAC_DOWNLOAD_URL = \"/downloads/Ping-v0.3.29.dmg\""))
+        XCTAssertTrue(routes.contains("WINDOWS_DOWNLOAD_URL = \"/downloads/windows/PingSetup-v0.3.28.exe\""))
         XCTAssertTrue(readme.contains("Ping-v0.3.29.dmg"))
     }
 
