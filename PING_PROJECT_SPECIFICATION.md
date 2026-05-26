@@ -57,7 +57,7 @@ macOS 26 이상에서는 `.pingGlassEffect()` wrapper가 SwiftUI 네이티브 `.
 - 트레이 상주 앱: Win32 `Shell_NotifyIcon` 기반 notification area icon.
 - 알림: Windows App SDK app notifications. Elevated/admin 실행에서는 알림이 지원되지 않으므로 일반 권한 재실행을 안내한다.
 - 히스토리: 열린 룸은 Supabase chat/video RPC를 짧은 주기로 polling해 macOS Realtime 히스토리와 유사하게 채팅, 첨부 이미지, 답장, 반응 변경을 반영하며, 채팅 알림 클릭 시 해당 룸의 알림 대상 채팅 row를 선택한다. 채팅 입력은 Enter 전송, Shift+Enter 줄바꿈을 사용한다.
-- 패키징: Windows App SDK packaged full-trust MSIX. Windows는 Sparkle을 사용하지 않고 MSIX/App Installer 또는 Store 업데이트 채널을 사용한다.
+- 패키징: Windows App SDK packaged full-trust MSIX. 비용 없는 직접 배포는 signed MSIX를 `PingSetup-v0.3.28.exe` 부트스트랩 설치파일로 감싼 GitHub Release를 기본 UX로 사용하고, sideload zip은 fallback/debug 경로로 유지한다. Windows는 Sparkle을 사용하지 않고 MSIX/App Installer 또는 Store 업데이트 채널을 사용한다.
 
 ### 권한
 

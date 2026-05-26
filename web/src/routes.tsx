@@ -3,7 +3,9 @@ import LandingPage from "./pages/LandingPage";
 import InviteView from "./components/invite/InviteView";
 
 export const APP_VERSION = "v0.3.28";
-export const DOWNLOAD_URL = "/downloads/Ping-v0.3.28.dmg";
+export const MAC_DOWNLOAD_URL = "/downloads/Ping-v0.3.28.dmg";
+export const WINDOWS_DOWNLOAD_URL =
+  "https://github.com/0mininseoul/ping/releases/download/windows-v0.3.28-sideload/PingSetup-v0.3.28.exe";
 
 function matchInvite(pathname: string): string | null {
   const m = pathname.match(/^\/invite\/([^/]+)\/?$/);
@@ -26,11 +28,18 @@ export default function Routes() {
     return (
       <InviteView
         token={token}
-        downloadUrl={DOWNLOAD_URL}
+        macDownloadUrl={MAC_DOWNLOAD_URL}
+        windowsDownloadUrl={WINDOWS_DOWNLOAD_URL}
         version={APP_VERSION}
       />
     );
   }
 
-  return <LandingPage downloadUrl={DOWNLOAD_URL} version={APP_VERSION} />;
+  return (
+    <LandingPage
+      macDownloadUrl={MAC_DOWNLOAD_URL}
+      windowsDownloadUrl={WINDOWS_DOWNLOAD_URL}
+      version={APP_VERSION}
+    />
+  );
 }

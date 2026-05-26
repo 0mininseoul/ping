@@ -5,11 +5,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 interface FinalCTAProps {
-  downloadUrl: string;
+  macDownloadUrl: string;
+  windowsDownloadUrl: string;
   version: string;
 }
 
-export default function FinalCTA({ downloadUrl, version }: FinalCTAProps) {
+export default function FinalCTA({
+  macDownloadUrl,
+  windowsDownloadUrl,
+  version,
+}: FinalCTAProps) {
   return (
     <section id="download" className="border-t border-border py-28 md:py-32">
       <div className="container-app">
@@ -31,16 +36,16 @@ export default function FinalCTA({ downloadUrl, version }: FinalCTAProps) {
                   3초면 충분합니다.
                 </h2>
                 <p className="mt-5 max-w-md text-muted">
-                  Mac에 Ping을 설치하고, Option+P 또는 Option+L로 작은 신호를
-                  보내보세요.
+                  Mac 또는 Windows에 Ping을 설치하고, 키보드 단축키로 작은
+                  신호를 보내보세요.
                 </p>
               </div>
 
               <div className="flex flex-col items-stretch gap-3 md:items-end">
                 <ClickSpark>
                   <a
-                    href={downloadUrl}
-                    aria-label={`Ping ${version} DMG 다운로드`}
+                    href={macDownloadUrl}
+                    aria-label={`Ping ${version} macOS DMG 다운로드`}
                   >
                     <Button
                       variant="primary"
@@ -48,12 +53,28 @@ export default function FinalCTA({ downloadUrl, version }: FinalCTAProps) {
                       className="w-full !shadow-[0_10px_22px_rgba(47,170,110,0.16)] md:w-auto"
                     >
                       <MonitorDown aria-hidden className="h-[18px] w-[18px]" />
-                      Ping {version} 다운로드
+                      Download for macOS
+                    </Button>
+                  </a>
+                </ClickSpark>
+                <ClickSpark>
+                  <a
+                    href={windowsDownloadUrl}
+                    aria-label={`Ping ${version} Windows EXE 다운로드`}
+                  >
+                    <Button
+                      variant="secondary"
+                      size="lg"
+                      className="w-full md:w-auto"
+                    >
+                      <MonitorDown aria-hidden className="h-[18px] w-[18px]" />
+                      Download for Windows
                     </Button>
                   </a>
                 </ClickSpark>
                 <p className="text-xs text-subtle md:text-right">
-                  Apple Silicon 권장 · macOS 13 Ventura+ · ~7MB
+                  macOS 13 Ventura+ · Windows 11 24H2+ · Windows EXE는 무료
+                  자체서명 배포라 SmartScreen 경고가 보일 수 있습니다.
                 </p>
               </div>
             </div>

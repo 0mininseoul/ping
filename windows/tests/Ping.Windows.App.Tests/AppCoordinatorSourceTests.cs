@@ -457,6 +457,75 @@ public sealed class AppCoordinatorSourceTests
     }
 
     [Fact]
+    public void WindowsExeInstallerWrapsSignedMsixPayloadsForNoCostDistribution()
+    {
+        var root = RepoRoot();
+        var inno = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "installer",
+            "PingSetup.iss"));
+        var buildScript = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "scripts",
+            "build-installer.ps1"));
+
+        Assert.Contains("OutputBaseFilename=PingSetup-v{#AppVersion}", inno, StringComparison.Ordinal);
+        Assert.Contains("PrivilegesRequired=admin", inno, StringComparison.Ordinal);
+        Assert.Contains("install-ping-windows.ps1", inno, StringComparison.Ordinal);
+        Assert.Contains("Ping-Windows-v{#AppVersion}-x64.msix", inno, StringComparison.Ordinal);
+        Assert.Contains("Ping-Windows-v{#AppVersion}-arm64.msix", inno, StringComparison.Ordinal);
+        Assert.Contains("Ping-Windows-Sideload.cer", inno, StringComparison.Ordinal);
+        Assert.Contains("PowerShell", inno, StringComparison.Ordinal);
+        Assert.Contains("Resolve-InnoSetupCompiler", buildScript, StringComparison.Ordinal);
+        Assert.Contains("ISCC.exe", buildScript, StringComparison.Ordinal);
+        Assert.Contains("PingSetup-v$Version.exe", buildScript, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WindowsWorkflowPublishesExeInstallerAsPrimaryReleaseAsset()
+    {
+        var workflow = File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            ".github",
+            "workflows",
+            "windows-client.yml"));
+
+        Assert.Contains("choco install innosetup", workflow, StringComparison.Ordinal);
+        Assert.Contains("build-installer.ps1", workflow, StringComparison.Ordinal);
+        Assert.Contains("ping-windows-installer", workflow, StringComparison.Ordinal);
+        Assert.Contains("PingSetup-v*.exe", workflow, StringComparison.Ordinal);
+        Assert.Contains("PingSetup-v$version.exe", workflow, StringComparison.Ordinal);
+        Assert.Contains("gh release edit", workflow, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void LandingPageOffersSeparateMacAndWindowsDownloads()
+    {
+        var root = RepoRoot();
+        var routes = File.ReadAllText(Path.Combine(root, "web", "src", "routes.tsx"));
+        var landing = File.ReadAllText(Path.Combine(root, "web", "src", "pages", "LandingPage.tsx"));
+        var hero = File.ReadAllText(Path.Combine(root, "web", "src", "components", "sections", "Hero.tsx"));
+        var final = File.ReadAllText(Path.Combine(root, "web", "src", "components", "sections", "FinalCTA.tsx"));
+        var nav = File.ReadAllText(Path.Combine(root, "web", "src", "components", "sections", "SiteNav.tsx"));
+        var index = File.ReadAllText(Path.Combine(root, "web", "index.html"));
+
+        Assert.Contains("MAC_DOWNLOAD_URL", routes, StringComparison.Ordinal);
+        Assert.Contains("WINDOWS_DOWNLOAD_URL", routes, StringComparison.Ordinal);
+        Assert.Contains("PingSetup-v0.3.28.exe", routes, StringComparison.Ordinal);
+        Assert.Contains("macDownloadUrl", landing, StringComparison.Ordinal);
+        Assert.Contains("windowsDownloadUrl", landing, StringComparison.Ordinal);
+        Assert.Contains("Download for macOS", hero, StringComparison.Ordinal);
+        Assert.Contains("Download for Windows", hero, StringComparison.Ordinal);
+        Assert.Contains("Download for macOS", final, StringComparison.Ordinal);
+        Assert.Contains("Download for Windows", final, StringComparison.Ordinal);
+        Assert.Contains("Windows 11 24H2+", final, StringComparison.Ordinal);
+        Assert.Contains("windowsDownloadUrl", nav, StringComparison.Ordinal);
+        Assert.DoesNotContain("macOS 전용", index, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void WindowsFreeSideloadWorkflowImportsSigningSecretAndPublishesBundle()
     {
         var workflow = File.ReadAllText(Path.Combine(

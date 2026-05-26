@@ -2,10 +2,10 @@ import { Cpu, HardDrive, MonitorCog, ShieldCheck } from "lucide-react";
 import ScrollFloat from "@/components/bits/ScrollFloat";
 
 const specs = [
-  { icon: <Cpu className="h-4 w-4" />, label: "Apple Silicon Mac 권장" },
-  { icon: <MonitorCog className="h-4 w-4" />, label: "macOS 13 Ventura+" },
-  { icon: <HardDrive className="h-4 w-4" />, label: "~7MB · DMG 설치" },
-  { icon: <ShieldCheck className="h-4 w-4" />, label: "메뉴바에서만 동작" },
+  { icon: <Cpu className="h-4 w-4" />, label: "Mac / Windows" },
+  { icon: <MonitorCog className="h-4 w-4" />, label: "macOS 13+ · Windows 11 24H2+" },
+  { icon: <HardDrive className="h-4 w-4" />, label: "DMG / EXE 설치" },
+  { icon: <ShieldCheck className="h-4 w-4" />, label: "트레이와 메뉴바 상주" },
 ];
 
 export default function SpecStrip() {
