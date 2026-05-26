@@ -12,19 +12,20 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $windowsRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
-$repoRoot = Resolve-Path (Join-Path $windowsRoot "..")
+$appProjectRoot = Join-Path $windowsRoot "src\Ping.Windows.App"
 $distRoot = Join-Path $windowsRoot "dist"
 $expectedIdentityName = "YoungminPark.PingWindows"
 
-function Get-PingMarketingVersion {
-    $projectYml = Join-Path $repoRoot "project.yml"
-    $contents = Get-Content -Raw -LiteralPath $projectYml
-    $match = [regex]::Match($contents, 'MARKETING_VERSION:\s*"([^"]+)"')
+function Get-PingWindowsPackageVersion {
+    $manifestPath = Join-Path $appProjectRoot "Package.appxmanifest"
+    [xml]$manifest = Get-Content -Raw -LiteralPath $manifestPath
+    $identityVersion = [string]$manifest.Package.Identity.Version
+    $match = [regex]::Match($identityVersion, '^(?<version>\d+\.\d+\.\d+)\.0$')
     if (-not $match.Success) {
-        throw "Could not read MARKETING_VERSION from project.yml."
+        throw "Package.appxmanifest Identity.Version must use major.minor.patch.0 format. Found $identityVersion."
     }
 
-    return $match.Groups[1].Value
+    return $match.Groups["version"].Value
 }
 
 function Get-PackageArchitectureLabel([string]$TargetPlatform) {
@@ -136,7 +137,7 @@ function Assert-TrustedPackageSignature([string]$PackagePath, [string]$ExpectedC
 }
 
 if ([string]::IsNullOrWhiteSpace($Version)) {
-    $Version = Get-PingMarketingVersion
+    $Version = Get-PingWindowsPackageVersion
 }
 
 $configPath = Join-Path $env:LOCALAPPDATA "Ping\Supabase.json"

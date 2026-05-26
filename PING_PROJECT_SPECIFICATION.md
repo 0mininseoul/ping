@@ -27,8 +27,8 @@
 - Supabase bundle config 예시: `Resources/Supabase.example.plist`
 - Xcode project source: `project.yml`
 - Windows solution source: `windows/PingWindows.sln`
-- App version: `project.yml`의 `MARKETING_VERSION`
-- Windows package version: `windows/src/Ping.Windows.App/Package.appxmanifest`의 `Identity.Version`은 `MARKETING_VERSION.0` 형식으로 맞춘다.
+- macOS App version: `project.yml`의 `MARKETING_VERSION`
+- Windows package version: `windows/src/Ping.Windows.App/Package.appxmanifest`의 `Identity.Version`. macOS Sparkle 릴리즈와 Windows MSIX 릴리즈는 서로 다른 배포 채널이므로 같은 버전일 필요가 없다.
 
 ## 시스템 요구사항
 

@@ -174,13 +174,14 @@ jobs:
             throw "Refusing to publish unsigned Windows sideload packages. Configure PING_WINDOWS_CERT_BASE64 and PING_WINDOWS_CERT_PASSWORD."
           }
 
-          $projectYml = Get-Content -Raw -LiteralPath "project.yml"
-          $match = [regex]::Match($projectYml, 'MARKETING_VERSION:\s*"([^"]+)"')
+          [xml]$manifest = Get-Content -Raw -LiteralPath "windows/src/Ping.Windows.App/Package.appxmanifest"
+          $identityVersion = [string]$manifest.Package.Identity.Version
+          $match = [regex]::Match($identityVersion, '^(?<version>\d+\.\d+\.\d+)\.0$')
           if (-not $match.Success) {
-            throw "Could not read MARKETING_VERSION from project.yml."
+            throw "Package.appxmanifest Identity.Version must use major.minor.patch.0 format. Found $identityVersion."
           }
 
-          $version = $match.Groups[1].Value
+          $version = $match.Groups["version"].Value
           $tag = "${{ inputs.release_tag }}"
           if ([string]::IsNullOrWhiteSpace($tag)) {
             $tag = "windows-v$version-sideload"

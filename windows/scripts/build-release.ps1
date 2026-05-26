@@ -13,32 +13,22 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $windowsRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
-$repoRoot = Resolve-Path (Join-Path $windowsRoot "..")
 $solution = Join-Path $windowsRoot "PingWindows.sln"
 $appProjectRoot = Join-Path $windowsRoot "src\Ping.Windows.App"
 $distRoot = Join-Path $windowsRoot "dist"
 $coreTestsProject = Join-Path $windowsRoot "tests\Ping.Windows.Core.Tests\Ping.Windows.Core.Tests.csproj"
 $appTestsProject = Join-Path $windowsRoot "tests\Ping.Windows.App.Tests\Ping.Windows.App.Tests.csproj"
 
-function Get-PingMarketingVersion {
-    $projectYml = Join-Path $repoRoot "project.yml"
-    $contents = Get-Content -Raw -LiteralPath $projectYml
-    $match = [regex]::Match($contents, 'MARKETING_VERSION:\s*"([^"]+)"')
-    if (-not $match.Success) {
-        throw "Could not read MARKETING_VERSION from project.yml."
-    }
-
-    return $match.Groups[1].Value
-}
-
-function Assert-PackageManifestVersion([string]$MarketingVersion) {
+function Get-PingWindowsPackageVersion {
     $manifestPath = Join-Path $appProjectRoot "Package.appxmanifest"
     [xml]$manifest = Get-Content -Raw -LiteralPath $manifestPath
-    $expectedVersion = "$MarketingVersion.0"
-    $actualVersion = $manifest.Package.Identity.Version
-    if ($actualVersion -ne $expectedVersion) {
-        throw "Package.appxmanifest version $actualVersion does not match project.yml MARKETING_VERSION $MarketingVersion. Expected $expectedVersion."
+    $identityVersion = [string]$manifest.Package.Identity.Version
+    $match = [regex]::Match($identityVersion, '^(?<version>\d+\.\d+\.\d+)\.0$')
+    if (-not $match.Success) {
+        throw "Package.appxmanifest Identity.Version must use major.minor.patch.0 format. Found $identityVersion."
     }
+
+    return $match.Groups["version"].Value
 }
 
 function Resolve-MSBuild {
@@ -160,8 +150,7 @@ function Assert-PackageContainsNativeCaptureDll($Archive, [string]$PackagePath) 
     }
 }
 
-$version = Get-PingMarketingVersion
-Assert-PackageManifestVersion $version
+$version = Get-PingWindowsPackageVersion
 $msbuild = Resolve-MSBuild
 New-Item -ItemType Directory -Force -Path $distRoot | Out-Null
 

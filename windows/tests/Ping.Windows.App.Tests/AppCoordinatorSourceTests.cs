@@ -504,6 +504,38 @@ public sealed class AppCoordinatorSourceTests
     }
 
     [Fact]
+    public void WindowsReleaseScriptsUsePackageManifestVersionInsteadOfMacMarketingVersion()
+    {
+        var root = RepoRoot();
+        var scriptPaths = new[]
+        {
+            Path.Combine(root, "windows", "scripts", "build-release.ps1"),
+            Path.Combine(root, "windows", "scripts", "smoke-release.ps1"),
+            Path.Combine(root, "windows", "scripts", "package-sideload-release.ps1"),
+            Path.Combine(root, "windows", "scripts", "build-installer.ps1")
+        };
+
+        foreach (var scriptPath in scriptPaths)
+        {
+            var script = File.ReadAllText(scriptPath);
+            Assert.Contains("Package.appxmanifest", script, StringComparison.Ordinal);
+            Assert.Contains("Identity.Version", script, StringComparison.Ordinal);
+            Assert.DoesNotContain("MARKETING_VERSION", script, StringComparison.Ordinal);
+            Assert.DoesNotContain("project.yml", script, StringComparison.Ordinal);
+        }
+
+        var workflow = File.ReadAllText(Path.Combine(
+            root,
+            ".github",
+            "workflows",
+            "windows-client.yml"));
+
+        Assert.Contains("Package.appxmanifest", workflow, StringComparison.Ordinal);
+        Assert.Contains("Identity.Version", workflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("MARKETING_VERSION", workflow, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void LandingPageOffersSeparateMacAndWindowsDownloads()
     {
         var root = RepoRoot();
