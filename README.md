@@ -34,7 +34,7 @@ Supabase Dashboard의 Authentication 설정에서 Anonymous sign-ins가 켜져 �
 
 ### macOS
 
-1. `Ping-v0.3.29.dmg`를 더블클릭해 마운트한다.
+1. `Ping-v0.3.30.dmg`를 더블클릭해 마운트한다.
 2. `Ping.app`을 Applications 폴더로 드래그한다.
 3. 첫 실행은 우클릭 후 "열기"를 선택한다.
 4. 카메라, 마이크, 알림 권한을 허용한다.
@@ -81,6 +81,11 @@ macOS 앱은 Sparkle로 업데이트를 확인한다. 새 버전이 공개되면
 0.3.28 초기 빌드(38/39)에서 업데이트 설치 오류가 반복되면 랜딩페이지의 최신 macOS DMG를 한 번 수동으로 내려받아 `Ping.app`을 Applications 폴더에 덮어쓴다. 이 초기 빌드는 Sparkle installer helper 권한/서명이 잘못 들어간 상태라, 현재 실행 중인 앱만으로는 자동 업데이트 설치가 실패할 수 있다. build 40 이상은 Sparkle helper 권한을 보존하고 sandbox mach-lookup 예외를 포함한다.
 
 Windows 앱은 Sparkle을 사용하지 않는다. 비용 없는 배포는 self-signed MSIX를 작은 `PingSetup-v0.3.28.exe` 웹 설치파일로 감싸고, 설치 중 PC 아키텍처에 맞는 MSIX를 `https://ping0min.vercel.app/downloads/windows/`에서 받는 방식이다. 최초 설치 시 installer가 Ping 공개 인증서를 등록한다. Microsoft Store, Azure Artifact Signing, OV 코드서명 인증서는 더 매끄러운 신뢰 UX를 제공하지만 비용 또는 외부 계정 검증이 필요하다.
+
+## v0.3.30 macOS 수정
+
+- macOS에서 보낸 영상 메시지를 삭제하면 같은 영상 객체를 공유하는 모든 수신자 행을 함께 삭제한다.
+- macOS 화면+얼굴 메시지를 확대해 둔 상태에서 삭제해도 확대 overlay가 남지 않도록 정리한다.
 
 ## v0.3.29 macOS 수정
 
