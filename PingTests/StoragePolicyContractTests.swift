@@ -82,6 +82,20 @@ final class StoragePolicyContractTests: XCTestCase {
         XCTAssertTrue(functionBody.contains("message_not_accessible"))
     }
 
+    func testVideoRemoveMessageDoesNotDirectDeleteStorageObjectsFromSql() throws {
+        let migration = try readSourceFile("20260527000300_delete_video_message_rows_only.sql")
+        let functionBody = try extract(
+            "create or replace function public.ping_remove_video_message",
+            through: "grant execute on function public.ping_remove_video_message",
+            from: migration
+        )
+
+        XCTAssertTrue(functionBody.contains("delete from public.messages"))
+        XCTAssertTrue(functionBody.contains("video_url = video_path"))
+        XCTAssertFalse(functionBody.contains("delete from storage.objects"))
+        XCTAssertTrue(functionBody.contains("Storage API"))
+    }
+
     private func readSourceFile(_ relativePath: String) throws -> String {
         let fileName = URL(fileURLWithPath: relativePath).lastPathComponent
         let fileURL = try XCTUnwrap(Bundle(for: Self.self).resourceURL?.appendingPathComponent(fileName))

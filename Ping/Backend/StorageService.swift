@@ -87,6 +87,14 @@ final class StorageService {
         return tempURL
     }
 
+    func deleteVideo(remotePath: String) async throws {
+        guard !remotePath.isEmpty, remotePath.hasSuffix(".mp4") else {
+            throw PingError.invalidStorageURL
+        }
+
+        try await client.deleteObject(bucket: Self.bucket, path: remotePath)
+    }
+
     func uploadChatImage(
         localURL: URL,
         senderUid: String,

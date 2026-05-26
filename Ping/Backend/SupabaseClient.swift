@@ -180,6 +180,18 @@ final class SupabaseClient: ObservableObject {
         _ = try await send(request)
     }
 
+    func deleteObject(bucket: String, path: String) async throws {
+        let config = try requireConfiguration()
+        let token = try await accessToken()
+        let deleteURL = objectURL(base: config.storageURL.appendingPathComponent("object"), bucket: bucket, path: path)
+        var request = URLRequest(url: deleteURL)
+        request.httpMethod = "DELETE"
+        request.setValue(config.anonKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        _ = try await send(request)
+    }
+
     func downloadObject(bucket: String, path: String, to localURL: URL) async throws {
         let config = try requireConfiguration()
         let token = try await accessToken()

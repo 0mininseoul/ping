@@ -34,7 +34,7 @@ Supabase Dashboard의 Authentication 설정에서 Anonymous sign-ins가 켜져 �
 
 ### macOS
 
-1. `Ping-v0.3.31.dmg`를 더블클릭해 마운트한다.
+1. `Ping-v0.3.32.dmg`를 더블클릭해 마운트한다.
 2. `Ping.app`을 Applications 폴더로 드래그한다.
 3. 첫 실행은 우클릭 후 "열기"를 선택한다.
 4. 카메라, 마이크, 알림 권한을 허용한다.
@@ -82,9 +82,14 @@ macOS 앱은 Sparkle로 업데이트를 확인한다. 새 버전이 공개되면
 
 Windows 앱은 Sparkle을 사용하지 않는다. 비용 없는 배포는 self-signed MSIX를 작은 `PingSetup-v0.3.28.exe` 웹 설치파일로 감싸고, 설치 중 PC 아키텍처에 맞는 MSIX를 `https://ping0min.vercel.app/downloads/windows/`에서 받는 방식이다. 최초 설치 시 installer가 Ping 공개 인증서를 등록한다. Microsoft Store, Azure Artifact Signing, OV 코드서명 인증서는 더 매끄러운 신뢰 UX를 제공하지만 비용 또는 외부 계정 검증이 필요하다.
 
+## v0.3.32 macOS 수정
+
+- 영상 메시지 삭제 RPC가 Supabase Storage 테이블을 SQL에서 직접 삭제하려다 403으로 실패하던 문제를 수정했다.
+- 보낸 영상 메시지는 서버 RPC로 룸 히스토리 행을 먼저 삭제하고, 영상 파일은 앱에서 Supabase Storage API로 best-effort 정리한다.
+
 ## v0.3.31 macOS 수정
 
-- 영상 메시지 삭제 여부를 서버의 `auth.uid()` 기준으로 판정한다. 보낸 메시지는 모든 수신자 행과 Storage 영상을 함께 삭제하고, 받은 메시지는 본인에게만 숨긴다.
+- 영상 메시지 삭제 여부를 서버의 `auth.uid()` 기준으로 판정한다. 보낸 메시지는 모든 수신자 행을 삭제하고, 받은 메시지는 본인에게만 숨긴다.
 - 0.3.30에서 로컬 계정 상태가 삭제 분기와 어긋나면 보낸 메시지가 실제 룸 히스토리에 남던 문제를 수정했다.
 
 ## v0.3.30 macOS 수정

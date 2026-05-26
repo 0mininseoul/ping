@@ -82,6 +82,20 @@ final class HistoryViewModelTests: XCTestCase {
         XCTAssertTrue(deleteBody.contains("loadedVideos.removeAll { $0.id == id }"))
     }
 
+    func test_deleteSenderVideoUsesStorageApiAfterServerDeletesRows() throws {
+        let source = try readProjectSource("Ping/UI/History/HistoryViewModel.swift")
+        let deleteBody = try extract(
+            "func delete(message: VideoMessage, currentUid: String?) async",
+            through: "groups = Self.groupTimelineByDay(videos: loadedVideos, chats: loadedChats, calendar: .current)",
+            from: source
+        )
+
+        XCTAssertTrue(deleteBody.contains("case .deletedForEveryone:"))
+        XCTAssertTrue(deleteBody.contains("Task {"))
+        XCTAssertTrue(deleteBody.contains("try await storageService.deleteVideo(remotePath: message.videoUrl)"))
+        XCTAssertFalse(deleteBody.contains("delete from storage.objects"))
+    }
+
     private func makeMsg(id: String, createdAt: Date) -> VideoMessage {
         VideoMessage(
             id: id,

@@ -384,6 +384,13 @@ final class HistoryViewModel: ObservableObject {
             let result = try await messageService.removeMessageForCurrentUser(messageId: id)
             switch result {
             case .deletedForEveryone:
+                Task { @MainActor in
+                    do {
+                        try await storageService.deleteVideo(remotePath: message.videoUrl)
+                    } catch {
+                        NSLog("Video storage cleanup failed: \(error)")
+                    }
+                }
                 loadedVideos.removeAll { $0.videoUrl == message.videoUrl }
             case .hiddenForCurrentUser:
                 loadedVideos.removeAll { $0.id == id }
