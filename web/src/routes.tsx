@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import LandingPage from "./pages/LandingPage";
 import InviteView from "./components/invite/InviteView";
 
-export const APP_VERSION = "v0.3.28";
-export const MAC_DOWNLOAD_URL = "/downloads/Ping-v0.3.28.dmg";
+export const APP_VERSION = "v0.3.29";
+export const MAC_DOWNLOAD_URL = "/downloads/Ping-v0.3.29.dmg";
 export const WINDOWS_DOWNLOAD_URL = "/downloads/windows/PingSetup-v0.3.28.exe";
 
 function matchInvite(pathname: string): string | null {
