@@ -11,8 +11,8 @@ settings:
   base:
     SWIFT_VERSION: "6.0"
     MACOSX_DEPLOYMENT_TARGET: "13.0"
-    MARKETING_VERSION: "0.3.30"
-    CURRENT_PROJECT_VERSION: "42"
+    MARKETING_VERSION: "0.3.31"
+    CURRENT_PROJECT_VERSION: "43"
     PRODUCT_NAME: Ping
     ENABLE_HARDENED_RUNTIME: YES
     CODE_SIGN_STYLE: Manual
@@ -172,6 +172,7 @@ targets:
           cp "$PROJECT_DIR/supabase/migrations/20260526093431_reaction_realtime_metadata.sql" "$DST/20260526093431_reaction_realtime_metadata.sql"
           cp "$PROJECT_DIR/supabase/migrations/20260526120003_reaction_metadata_hardening.sql" "$DST/20260526120003_reaction_metadata_hardening.sql"
           cp "$PROJECT_DIR/supabase/migrations/20260527000100_delete_shared_video_messages.sql" "$DST/20260527000100_delete_shared_video_messages.sql"
+          cp "$PROJECT_DIR/supabase/migrations/20260527000200_delete_or_hide_video_message.sql" "$DST/20260527000200_delete_or_hide_video_message.sql"
           cp "$PROJECT_DIR/project.yml" "$DST/project.yml"
           cp "$PROJECT_DIR/AGENTS.md" "$DST/AGENTS.md"
           cp "$PROJECT_DIR/PING_PROJECT_SPECIFICATION.md" "$DST/PING_PROJECT_SPECIFICATION.md"
@@ -244,6 +245,7 @@ targets:
           - "$(PROJECT_DIR)/supabase/migrations/20260526093431_reaction_realtime_metadata.sql"
           - "$(PROJECT_DIR)/supabase/migrations/20260526120003_reaction_metadata_hardening.sql"
           - "$(PROJECT_DIR)/supabase/migrations/20260527000100_delete_shared_video_messages.sql"
+          - "$(PROJECT_DIR)/supabase/migrations/20260527000200_delete_or_hide_video_message.sql"
           - "$(PROJECT_DIR)/project.yml"
           - "$(PROJECT_DIR)/AGENTS.md"
           - "$(PROJECT_DIR)/PING_PROJECT_SPECIFICATION.md"
@@ -316,6 +318,7 @@ targets:
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/20260526093431_reaction_realtime_metadata.sql"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/20260526120003_reaction_metadata_hardening.sql"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/20260527000100_delete_shared_video_messages.sql"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/20260527000200_delete_or_hide_video_message.sql"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/project.yml"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/AGENTS.md"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/PING_PROJECT_SPECIFICATION.md"

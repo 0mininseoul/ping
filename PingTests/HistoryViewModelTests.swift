@@ -65,6 +65,23 @@ final class HistoryViewModelTests: XCTestCase {
         XCTAssertTrue(deleteBody.contains("loadedVideos.removeAll { $0.videoUrl == message.videoUrl }"))
     }
 
+    func test_deleteVideoUsesServerAuthDecisionInsteadOfClientOwnershipBranch() throws {
+        let source = try readProjectSource("Ping/UI/History/HistoryViewModel.swift")
+        let deleteBody = try extract(
+            "func delete(message: VideoMessage, currentUid: String?) async",
+            through: "groups = Self.groupTimelineByDay(videos: loadedVideos, chats: loadedChats, calendar: .current)",
+            from: source
+        )
+
+        XCTAssertTrue(deleteBody.contains("let result = try await messageService.removeMessageForCurrentUser(messageId: id)"))
+        XCTAssertFalse(deleteBody.contains("let isMine ="))
+        XCTAssertFalse(deleteBody.contains("hideMessageForReceiver"))
+        XCTAssertTrue(deleteBody.contains("case .deletedForEveryone:"))
+        XCTAssertTrue(deleteBody.contains("loadedVideos.removeAll { $0.videoUrl == message.videoUrl }"))
+        XCTAssertTrue(deleteBody.contains("case .hiddenForCurrentUser:"))
+        XCTAssertTrue(deleteBody.contains("loadedVideos.removeAll { $0.id == id }"))
+    }
+
     private func makeMsg(id: String, createdAt: Date) -> VideoMessage {
         VideoMessage(
             id: id,

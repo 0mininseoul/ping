@@ -380,13 +380,14 @@ final class HistoryViewModel: ObservableObject {
 
     func delete(message: VideoMessage, currentUid: String?) async {
         guard let id = message.id else { return }
-        let isMine = message.senderUid == currentUid
         do {
-            if isMine {
-                try await messageService.deleteMessage(messageId: id)
+            let result = try await messageService.removeMessageForCurrentUser(messageId: id)
+            switch result {
+            case .deletedForEveryone:
                 loadedVideos.removeAll { $0.videoUrl == message.videoUrl }
-            } else {
-                try await messageService.hideMessageForReceiver(messageId: id)
+            case .hiddenForCurrentUser:
+                loadedVideos.removeAll { $0.id == id }
+            case .missing:
                 loadedVideos.removeAll { $0.id == id }
             }
             if expandedMessageId == id {
@@ -394,6 +395,7 @@ final class HistoryViewModel: ObservableObject {
             }
             groups = Self.groupTimelineByDay(videos: loadedVideos, chats: loadedChats, calendar: .current)
         } catch {
+            lastErrorMessage = "삭제 실패: \(error.localizedDescription)"
             NSLog("Delete failed: \(error)")
         }
     }

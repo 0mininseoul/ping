@@ -62,6 +62,26 @@ final class StoragePolicyContractTests: XCTestCase {
         XCTAssertFalse(functionBody.contains("delete from public.messages where id = message_uuid"))
     }
 
+    func testVideoDeleteOrHideDecisionRunsOnServerAuthUid() throws {
+        let migration = try readSourceFile("20260527000200_delete_or_hide_video_message.sql")
+        let functionBody = try extract(
+            "create or replace function public.ping_remove_video_message",
+            through: "grant execute on function public.ping_remove_video_message",
+            from: migration
+        )
+
+        XCTAssertTrue(functionBody.contains("returns text"))
+        XCTAssertTrue(functionBody.contains("select sender_uid, receiver_uid, video_url"))
+        XCTAssertTrue(functionBody.contains("if owner_uid = me then"))
+        XCTAssertTrue(functionBody.contains("delete from public.messages"))
+        XCTAssertTrue(functionBody.contains("video_url = video_path"))
+        XCTAssertTrue(functionBody.contains("return 'deleted'"))
+        XCTAssertTrue(functionBody.contains("elsif recipient_uid = me then"))
+        XCTAssertTrue(functionBody.contains("hidden_for_receiver = true"))
+        XCTAssertTrue(functionBody.contains("return 'hidden'"))
+        XCTAssertTrue(functionBody.contains("message_not_accessible"))
+    }
+
     private func readSourceFile(_ relativePath: String) throws -> String {
         let fileName = URL(fileURLWithPath: relativePath).lastPathComponent
         let fileURL = try XCTUnwrap(Bundle(for: Self.self).resourceURL?.appendingPathComponent(fileName))

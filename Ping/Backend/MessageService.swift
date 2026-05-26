@@ -9,6 +9,12 @@ final class MessageService {
     private let storage: StorageService
     private let userService: UserService
 
+    enum VideoRemovalResult: String, Decodable {
+        case deletedForEveryone = "deleted"
+        case hiddenForCurrentUser = "hidden"
+        case missing
+    }
+
     init(
         client: SupabaseClient = .shared,
         storage: StorageService = StorageService(),
@@ -133,6 +139,16 @@ final class MessageService {
 
     func deleteMessage(messageId: String) async throws {
         try await client.rpcVoid("ping_delete_message", body: ["message_uuid": messageId])
+    }
+
+    func removeMessageForCurrentUser(messageId: String) async throws -> VideoRemovalResult {
+        let rawResult: String = try await client.rpcValue("ping_remove_video_message", body: [
+            "message_uuid": messageId
+        ])
+        guard let result = VideoRemovalResult(rawValue: rawResult) else {
+            throw PingError.supabaseRequestFailed(statusCode: 200, message: "Unexpected delete result: \(rawResult)")
+        }
+        return result
     }
 
     func hideMessageForReceiver(messageId: String) async throws {
