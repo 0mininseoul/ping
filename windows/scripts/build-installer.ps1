@@ -3,6 +3,7 @@ param(
     [string]$Version,
     [string]$DistRoot = (Join-Path $PSScriptRoot "..\dist"),
     [string]$PayloadRoot,
+    [string]$PackageBaseUrl = "https://ping0min.vercel.app/downloads/windows",
     [string]$InnoSetupCompilerPath,
     [string]$InnoScriptPath = (Join-Path $PSScriptRoot "..\installer\PingSetup.iss")
 )
@@ -53,8 +54,6 @@ function Resolve-InnoSetupCompiler {
 
 function Assert-InstallerPayload([string]$Root, [string]$TargetVersion) {
     $requiredFiles = @(
-        "Ping-Windows-v$TargetVersion-x64.msix",
-        "Ping-Windows-v$TargetVersion-arm64.msix",
         "Ping-Windows-Sideload.cer",
         "install-ping-windows.ps1"
     )
@@ -97,10 +96,12 @@ Remove-Item -Force -LiteralPath $setupPath -ErrorAction SilentlyContinue
 $previousVersion = $env:PING_VERSION
 $previousPayload = $env:PING_INSTALLER_PAYLOAD_ROOT
 $previousOutput = $env:PING_INSTALLER_OUTPUT_DIR
+$previousPackageBaseUrl = $env:PING_INSTALLER_PACKAGE_BASE_URL
 try {
     $env:PING_VERSION = $Version
     $env:PING_INSTALLER_PAYLOAD_ROOT = $resolvedPayloadRoot
     $env:PING_INSTALLER_OUTPUT_DIR = $resolvedDistRoot
+    $env:PING_INSTALLER_PACKAGE_BASE_URL = $PackageBaseUrl
 
     & $compiler $InnoScriptPath
     if ($LASTEXITCODE -ne 0) {
@@ -111,6 +112,7 @@ finally {
     $env:PING_VERSION = $previousVersion
     $env:PING_INSTALLER_PAYLOAD_ROOT = $previousPayload
     $env:PING_INSTALLER_OUTPUT_DIR = $previousOutput
+    $env:PING_INSTALLER_PACKAGE_BASE_URL = $previousPackageBaseUrl
 }
 
 if (-not (Test-Path -LiteralPath $setupPath)) {

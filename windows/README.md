@@ -86,7 +86,7 @@ windows\dist\Ping-Windows-v0.3.28-x64.msix
 windows\dist\Ping-Windows-v0.3.28-arm64.msix
 ```
 
-For zero-cost distribution, Ping uses a self-signed MSIX sideload package:
+For zero-cost distribution, Ping uses a self-signed MSIX sideload package plus a small web setup EXE:
 
 ```powershell
 .\scripts\create-sideload-certificate.ps1
@@ -95,7 +95,7 @@ For zero-cost distribution, Ping uses a self-signed MSIX sideload package:
 .\scripts\build-installer.ps1
 ```
 
-CI reads `PING_WINDOWS_CERT_BASE64` and `PING_WINDOWS_CERT_PASSWORD` from GitHub Secrets, imports the PFX into the current user's certificate store, and signs by certificate thumbprint. When those secrets exist, the workflow signs the MSIX packages, copies the public `windows\certs\Ping-Windows-Sideload.cer`, writes `windows\dist\Ping-Windows-v0.3.28-sideload.zip`, and builds `windows\dist\PingSetup-v0.3.28.exe`.
+CI reads `PING_WINDOWS_CERT_BASE64` and `PING_WINDOWS_CERT_PASSWORD` from GitHub Secrets, imports the PFX into the current user's certificate store, and signs by certificate thumbprint. When those secrets exist, the workflow signs the MSIX packages, copies the public `windows\certs\Ping-Windows-Sideload.cer`, writes `windows\dist\Ping-Windows-v0.3.28-sideload.zip`, and builds `windows\dist\PingSetup-v0.3.28.exe`. The setup EXE downloads the correct MSIX from `https://ping0min.vercel.app/downloads/windows/` during installation.
 
 General users install the free distribution by running:
 

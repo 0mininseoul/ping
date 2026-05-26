@@ -457,7 +457,7 @@ public sealed class AppCoordinatorSourceTests
     }
 
     [Fact]
-    public void WindowsExeInstallerWrapsSignedMsixPayloadsForNoCostDistribution()
+    public void WindowsExeInstallerDownloadsSignedMsixPayloadsFromPublicWebHost()
     {
         var root = RepoRoot();
         var inno = File.ReadAllText(Path.Combine(
@@ -474,9 +474,11 @@ public sealed class AppCoordinatorSourceTests
         Assert.Contains("OutputBaseFilename=PingSetup-v{#AppVersion}", inno, StringComparison.Ordinal);
         Assert.Contains("PrivilegesRequired=admin", inno, StringComparison.Ordinal);
         Assert.Contains("install-ping-windows.ps1", inno, StringComparison.Ordinal);
-        Assert.Contains("Ping-Windows-v{#AppVersion}-x64.msix", inno, StringComparison.Ordinal);
-        Assert.Contains("Ping-Windows-v{#AppVersion}-arm64.msix", inno, StringComparison.Ordinal);
         Assert.Contains("Ping-Windows-Sideload.cer", inno, StringComparison.Ordinal);
+        Assert.Contains("PackageBaseUrl", inno, StringComparison.Ordinal);
+        Assert.Contains("https://ping0min.vercel.app/downloads/windows", buildScript, StringComparison.Ordinal);
+        Assert.DoesNotContain("Ping-Windows-v{#AppVersion}-x64.msix", inno, StringComparison.Ordinal);
+        Assert.DoesNotContain("Ping-Windows-v{#AppVersion}-arm64.msix", inno, StringComparison.Ordinal);
         Assert.Contains("PowerShell", inno, StringComparison.Ordinal);
         Assert.Contains("Resolve-InnoSetupCompiler", buildScript, StringComparison.Ordinal);
         Assert.Contains("ISCC.exe", buildScript, StringComparison.Ordinal);
@@ -497,6 +499,7 @@ public sealed class AppCoordinatorSourceTests
         Assert.Contains("ping-windows-installer", workflow, StringComparison.Ordinal);
         Assert.Contains("PingSetup-v*.exe", workflow, StringComparison.Ordinal);
         Assert.Contains("PingSetup-v$version.exe", workflow, StringComparison.Ordinal);
+        Assert.Contains("ping-windows-web-downloads", workflow, StringComparison.Ordinal);
         Assert.Contains("gh release edit", workflow, StringComparison.Ordinal);
     }
 
@@ -513,6 +516,7 @@ public sealed class AppCoordinatorSourceTests
 
         Assert.Contains("MAC_DOWNLOAD_URL", routes, StringComparison.Ordinal);
         Assert.Contains("WINDOWS_DOWNLOAD_URL", routes, StringComparison.Ordinal);
+        Assert.Contains("/downloads/windows/PingSetup-v0.3.28.exe", routes, StringComparison.Ordinal);
         Assert.Contains("PingSetup-v0.3.28.exe", routes, StringComparison.Ordinal);
         Assert.Contains("macDownloadUrl", landing, StringComparison.Ordinal);
         Assert.Contains("windowsDownloadUrl", landing, StringComparison.Ordinal);

@@ -4,6 +4,7 @@ param(
     [ValidateSet("x64", "arm64")]
     [string]$Architecture,
     [string]$PackageDirectory = $PSScriptRoot,
+    [string]$PackageBaseUrl,
     [string]$CertificatePath = (Join-Path $PSScriptRoot "Ping-Windows-Sideload.cer"),
     [switch]$NoLaunch
 )
@@ -45,6 +46,10 @@ function Restart-Elevated {
     }
     $arguments.Add("-PackageDirectory")
     $arguments.Add((Quote-Argument $PackageDirectory))
+    if (-not [string]::IsNullOrWhiteSpace($PackageBaseUrl)) {
+        $arguments.Add("-PackageBaseUrl")
+        $arguments.Add((Quote-Argument $PackageBaseUrl))
+    }
     $arguments.Add("-CertificatePath")
     $arguments.Add((Quote-Argument $CertificatePath))
     if ($NoLaunch) {
@@ -71,6 +76,10 @@ function Resolve-Version([string]$TargetArchitecture) {
         return $Version
     }
 
+    if (-not [string]::IsNullOrWhiteSpace($PackageBaseUrl)) {
+        throw "Version is required when installing from PackageBaseUrl."
+    }
+
     $candidate = Get-ChildItem -LiteralPath $PackageDirectory -Filter "Ping-Windows-v*-$TargetArchitecture.msix" |
         Sort-Object Name -Descending |
         Select-Object -First 1
@@ -85,13 +94,32 @@ function Resolve-Version([string]$TargetArchitecture) {
     return $Matches.version
 }
 
+function Join-PackageUrl([string]$BaseUrl, [string]$FileName) {
+    return $BaseUrl.TrimEnd([char[]]"/") + "/" + $FileName
+}
+
+function Download-PackageIfNeeded([string]$PackagePath, [string]$PackageFileName) {
+    if (Test-Path -LiteralPath $PackagePath) {
+        return
+    }
+
+    if ([string]::IsNullOrWhiteSpace($PackageBaseUrl)) {
+        throw "Missing MSIX package: $PackagePath"
+    }
+
+    New-Item -ItemType Directory -Force -Path $PackageDirectory | Out-Null
+    $packageUrl = Join-PackageUrl $PackageBaseUrl $PackageFileName
+    Write-Host "Downloading $PackageFileName..."
+    Invoke-WebRequest -Uri $packageUrl -OutFile $PackagePath -UseBasicParsing
+}
+
 if (-not (Test-Administrator)) {
     Write-Host "Ping needs one administrator prompt to trust the sideload certificate."
     Restart-Elevated
     return
 }
 
-if (-not (Test-Path -LiteralPath $PackageDirectory)) {
+if ([string]::IsNullOrWhiteSpace($PackageBaseUrl) -and -not (Test-Path -LiteralPath $PackageDirectory)) {
     throw "Package directory does not exist: $PackageDirectory"
 }
 
@@ -107,9 +135,7 @@ $packageFileName = switch ($targetArchitecture) {
 }
 $packagePath = Join-Path $PackageDirectory $packageFileName
 
-if (-not (Test-Path -LiteralPath $packagePath)) {
-    throw "Missing MSIX package: $packagePath"
-}
+Download-PackageIfNeeded $packagePath $packageFileName
 
 Write-Host "Trusting Ping sideload certificate..."
 Import-Certificate -CertStoreLocation "Cert:\LocalMachine\TrustedPeople" -FilePath $CertificatePath | Out-Null
