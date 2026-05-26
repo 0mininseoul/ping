@@ -18,6 +18,16 @@ final class ReactionPersistenceContractTests: XCTestCase {
         XCTAssertTrue(migration.contains("alter publication supabase_realtime add table public.message_reactions"))
     }
 
+    func testReactionMetadataTriggerIsPrivateAndRealtimePublicationIsRequired() throws {
+        let migration = try readSourceFile("20260526120003_reaction_metadata_hardening.sql")
+
+        XCTAssertTrue(migration.contains("revoke all on function public.ping_fill_message_reaction_metadata()"))
+        XCTAssertTrue(migration.contains("from public, anon, authenticated"))
+        XCTAssertTrue(migration.contains("alter publication supabase_realtime add table public.message_reactions"))
+        XCTAssertTrue(migration.contains("pg_publication_tables"))
+        XCTAssertTrue(migration.contains("raise exception 'message_reactions must be in supabase_realtime publication'"))
+    }
+
     private func readSourceFile(_ relativePath: String) throws -> String {
         let fileName = URL(fileURLWithPath: relativePath).lastPathComponent
         let fileURL = try XCTUnwrap(Bundle(for: Self.self).resourceURL?.appendingPathComponent(fileName))
