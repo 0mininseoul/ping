@@ -7,22 +7,35 @@ import FinalCTA from "@/components/sections/FinalCTA";
 import SiteFooter from "@/components/sections/SiteFooter";
 
 interface LandingPageProps {
-  downloadUrl: string;
+  macDownloadUrl: string;
+  windowsDownloadUrl: string;
   version: string;
 }
 
 export default function LandingPage({
-  downloadUrl,
+  macDownloadUrl,
+  windowsDownloadUrl,
   version,
 }: LandingPageProps) {
   return (
     <main className="relative min-h-screen">
-      <SiteNav downloadUrl={downloadUrl} />
-      <Hero downloadUrl={downloadUrl} version={version} />
+      <SiteNav
+        macDownloadUrl={macDownloadUrl}
+        windowsDownloadUrl={windowsDownloadUrl}
+      />
+      <Hero
+        macDownloadUrl={macDownloadUrl}
+        windowsDownloadUrl={windowsDownloadUrl}
+        version={version}
+      />
       <DemoStrip />
       <FeaturesGrid />
       <SpecStrip />
-      <FinalCTA downloadUrl={downloadUrl} version={version} />
+      <FinalCTA
+        macDownloadUrl={macDownloadUrl}
+        windowsDownloadUrl={windowsDownloadUrl}
+        version={version}
+      />
       <SiteFooter version={version} />
     </main>
   );

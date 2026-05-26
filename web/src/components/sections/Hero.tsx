@@ -9,11 +9,16 @@ import { Badge } from "@/components/ui/badge";
 import BrandMark from "@/components/ui/brand-mark";
 
 interface HeroProps {
-  downloadUrl: string;
+  macDownloadUrl: string;
+  windowsDownloadUrl: string;
   version: string;
 }
 
-export default function Hero({ downloadUrl, version }: HeroProps) {
+export default function Hero({
+  macDownloadUrl,
+  windowsDownloadUrl,
+  version,
+}: HeroProps) {
   return (
     <section className="relative isolate overflow-hidden pt-32 pb-28 md:pt-44 md:pb-36">
       <Aurora
@@ -55,21 +60,36 @@ export default function Hero({ downloadUrl, version }: HeroProps) {
             </h1>
 
             <p className="mb-9 max-w-[36rem] text-balance text-base leading-relaxed text-muted md:text-lg">
-              Ping은 Option+P로 얼굴 거울을, Option+L로 화면+얼굴 거울을
-              열고, 3초짜리 영상 메시지를 리뷰 후 보내는 작은 Mac 앱입니다.
+              Ping은 얼굴 거울과 화면+얼굴 거울을 열고, 3초짜리 영상
+              메시지를 리뷰 후 보내는 작은 데스크톱 앱입니다. Mac과 Windows
+              사용자가 같은 방에서 주고받을 수 있습니다.
             </p>
 
             <div className="mb-10 flex flex-wrap items-center gap-3">
               <ClickSpark>
-                <a href={downloadUrl} aria-label={`Ping ${version} 다운로드`}>
+                <a
+                  href={macDownloadUrl}
+                  aria-label={`Ping ${version} macOS DMG 다운로드`}
+                >
                   <Button variant="primary" size="lg">
                     <MonitorDown aria-hidden className="h-[18px] w-[18px]" />
-                    Ping {version} 다운로드
+                    Download for macOS
+                  </Button>
+                </a>
+              </ClickSpark>
+              <ClickSpark>
+                <a
+                  href={windowsDownloadUrl}
+                  aria-label={`Ping ${version} Windows EXE 다운로드`}
+                >
+                  <Button variant="secondary" size="lg">
+                    <MonitorDown aria-hidden className="h-[18px] w-[18px]" />
+                    Download for Windows
                   </Button>
                 </a>
               </ClickSpark>
               <a href="#flow">
-                <Button variant="secondary" size="lg">
+                <Button variant="ghost" size="lg">
                   작동 방식 보기
                   <ArrowDown aria-hidden className="h-4 w-4" />
                 </Button>
@@ -82,7 +102,7 @@ export default function Hero({ downloadUrl, version }: HeroProps) {
             >
               <FactItem term="단축키" value="Option + P/L" />
               <FactItem term="길이" value="정확히 3초" />
-              <FactItem term="배포" value="DMG 설치" />
+              <FactItem term="배포" value="DMG / EXE" />
             </dl>
           </div>
 

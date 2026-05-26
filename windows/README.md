@@ -92,17 +92,26 @@ For zero-cost distribution, Ping uses a self-signed MSIX sideload package:
 .\scripts\create-sideload-certificate.ps1
 .\scripts\build-release.ps1
 .\scripts\package-sideload-release.ps1
+.\scripts\build-installer.ps1
 ```
 
-CI reads `PING_WINDOWS_CERT_BASE64` and `PING_WINDOWS_CERT_PASSWORD` from GitHub Secrets, imports the PFX into the current user's certificate store, and signs by certificate thumbprint. When those secrets exist, the workflow signs the MSIX packages, copies the public `windows\certs\Ping-Windows-Sideload.cer`, and writes `windows\dist\Ping-Windows-v0.3.28-sideload.zip`.
+CI reads `PING_WINDOWS_CERT_BASE64` and `PING_WINDOWS_CERT_PASSWORD` from GitHub Secrets, imports the PFX into the current user's certificate store, and signs by certificate thumbprint. When those secrets exist, the workflow signs the MSIX packages, copies the public `windows\certs\Ping-Windows-Sideload.cer`, writes `windows\dist\Ping-Windows-v0.3.28-sideload.zip`, and builds `windows\dist\PingSetup-v0.3.28.exe`.
 
-Users install the free sideload bundle from an elevated PowerShell prompt:
+General users install the free distribution by running:
+
+```text
+PingSetup-v0.3.28.exe
+```
+
+Because this is a no-cost self-hosted installer rather than a public-trust signed EXE, Windows SmartScreen can warn on first run. The user should choose `More info` and `Run anyway` if they trust this Ping release.
+
+The sideload zip remains available as a fallback/debug path:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\install-ping-windows.ps1
 ```
 
-The installer imports `Ping-Windows-Sideload.cer` into `Cert:\LocalMachine\TrustedPeople`, picks x64 or arm64 from `ProcessArchitecture`, installs the MSIX, and launches Ping. This is the best no-cost route, but it is still sideloading: users must explicitly trust the Ping certificate. Microsoft Store, Azure Artifact Signing, or an OV code-signing certificate are required for broad public-trust installation.
+Both installer paths import `Ping-Windows-Sideload.cer` into `Cert:\LocalMachine\TrustedPeople`, pick x64 or arm64 from `ProcessArchitecture`, install the MSIX, and launch Ping. This is the best self-hosted no-cost route, but it is still sideloading under the hood. Microsoft Store, Azure Artifact Signing, or an OV code-signing certificate are required for broad public-trust installation.
 
 Unsigned packages are only for CI/build validation and will not install cleanly on user machines without developer/test-signing workarounds.
 

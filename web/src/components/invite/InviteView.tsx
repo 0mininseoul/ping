@@ -10,13 +10,15 @@ import InviteSteps from "./InviteSteps";
 
 interface InviteViewProps {
   token: string;
-  downloadUrl: string;
+  macDownloadUrl: string;
+  windowsDownloadUrl: string;
   version: string;
 }
 
 export default function InviteView({
   token,
-  downloadUrl,
+  macDownloadUrl,
+  windowsDownloadUrl,
   version,
 }: InviteViewProps) {
   const deepLink = `ping://invite/${encodeURIComponent(token)}`;
@@ -73,10 +75,22 @@ export default function InviteView({
                   </Button>
                 </a>
               </ClickSpark>
-              <a href={downloadUrl} aria-label={`Ping ${version} 다운로드`}>
+              <a
+                href={macDownloadUrl}
+                aria-label={`Ping ${version} macOS 다운로드`}
+              >
                 <Button variant="secondary" size="lg">
                   <Download aria-hidden className="h-4 w-4" />
-                  앱 설치하기
+                  macOS 설치
+                </Button>
+              </a>
+              <a
+                href={windowsDownloadUrl}
+                aria-label={`Ping ${version} Windows 다운로드`}
+              >
+                <Button variant="secondary" size="lg">
+                  <Download aria-hidden className="h-4 w-4" />
+                  Windows 설치
                 </Button>
               </a>
               <a href="#how">
@@ -105,7 +119,7 @@ export default function InviteView({
             <span>
               Ping <span className="font-mono">{version}</span>
             </span>
-            <span>macOS 13 Ventura 이상 · Apple Silicon Mac 권장</span>
+            <span>macOS 13 Ventura+ · Windows 11 24H2+</span>
           </div>
         </footer>
       </div>

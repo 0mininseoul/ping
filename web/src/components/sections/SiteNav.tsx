@@ -5,7 +5,8 @@ import BrandMark from "@/components/ui/brand-mark";
 import { cn } from "@/lib/utils";
 
 interface SiteNavProps {
-  downloadUrl: string;
+  macDownloadUrl: string;
+  windowsDownloadUrl: string;
 }
 
 const links = [
@@ -14,7 +15,10 @@ const links = [
   { href: "#download", label: "다운로드" },
 ];
 
-export default function SiteNav({ downloadUrl }: SiteNavProps) {
+export default function SiteNav({
+  macDownloadUrl,
+  windowsDownloadUrl,
+}: SiteNavProps) {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -58,12 +62,21 @@ export default function SiteNav({ downloadUrl }: SiteNavProps) {
           ))}
         </nav>
 
-        <a href={downloadUrl} aria-label="다운로드">
-          <Button variant="secondary" size="sm">
-            <Download aria-hidden className="h-4 w-4" />
-            다운로드
-          </Button>
-        </a>
+        <div className="flex items-center gap-2">
+          <a href={macDownloadUrl} aria-label="Download for macOS">
+            <Button variant="secondary" size="sm">
+              <Download aria-hidden className="h-4 w-4" />
+              <span className="hidden sm:inline">macOS</span>
+              <span className="sm:hidden">Mac</span>
+            </Button>
+          </a>
+          <a href={windowsDownloadUrl} aria-label="Download for Windows">
+            <Button variant="primary" size="sm">
+              <Download aria-hidden className="h-4 w-4" />
+              Windows
+            </Button>
+          </a>
+        </div>
       </div>
     </header>
   );
