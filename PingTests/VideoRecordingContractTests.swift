@@ -22,10 +22,29 @@ final class VideoRecordingContractTests: XCTestCase {
         XCTAssertTrue(recorderSource.contains("cameraSession.removeOutput(audioOutput)"))
     }
 
+    func testReviewLoopPlaybackKeepsAudioAudible() throws {
+        let source = try readSourceFile("Ping/UI/Mirror/MirrorView.swift")
+        let reviewLoop = try sourceSlice(
+            in: source,
+            from: "struct ReviewLoopPlayerView",
+            to: "struct HintCapsuleView"
+        )
+
+        XCTAssertTrue(reviewLoop.contains("player.isMuted = false"))
+        XCTAssertFalse(reviewLoop.contains("player.isMuted = true"))
+    }
+
     private func readSourceFile(_ relativePath: String) throws -> String {
         let fileName = URL(fileURLWithPath: relativePath).lastPathComponent
         let fileURL = try XCTUnwrap(Bundle(for: Self.self).resourceURL?.appendingPathComponent(fileName))
 
         return try String(contentsOf: fileURL, encoding: .utf8)
+    }
+
+    private func sourceSlice(in source: String, from startMarker: String, to endMarker: String) throws -> String {
+        let start = try XCTUnwrap(source.range(of: startMarker)?.lowerBound)
+        let end = try XCTUnwrap(source.range(of: endMarker, range: start..<source.endIndex)?.lowerBound)
+
+        return String(source[start..<end])
     }
 }

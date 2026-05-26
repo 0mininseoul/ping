@@ -409,7 +409,7 @@ struct ReviewLoopPlayerView: NSViewRepresentable {
         func configure(url: URL) {
             let item = AVPlayerItem(url: url)
             let player = AVPlayer(playerItem: item)
-            player.isMuted = true
+            player.isMuted = false
             self.player = player
 
             let layer = AVPlayerLayer(player: player)
