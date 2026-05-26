@@ -44,6 +44,24 @@ final class StoragePolicyContractTests: XCTestCase {
         XCTAssertTrue(functionBody.contains("delete from public.chat_messages where id = chat_uuid"))
     }
 
+    func testSenderVideoDeleteRemovesAllRowsSharingStorageObject() throws {
+        let migration = try readSourceFile("20260527000100_delete_shared_video_messages.sql")
+        let functionBody = try extract(
+            "create or replace function public.ping_delete_message",
+            through: "grant execute on function public.ping_delete_message",
+            from: migration
+        )
+
+        XCTAssertTrue(functionBody.contains("video_path text"))
+        XCTAssertTrue(functionBody.contains("select sender_uid, video_url"))
+        XCTAssertTrue(functionBody.contains("delete from public.messages"))
+        XCTAssertTrue(functionBody.contains("video_url = video_path"))
+        XCTAssertTrue(functionBody.contains("delete from storage.objects"))
+        XCTAssertTrue(functionBody.contains("bucket_id = 'ping-videos'"))
+        XCTAssertTrue(functionBody.contains("name = video_path"))
+        XCTAssertFalse(functionBody.contains("delete from public.messages where id = message_uuid"))
+    }
+
     private func readSourceFile(_ relativePath: String) throws -> String {
         let fileName = URL(fileURLWithPath: relativePath).lastPathComponent
         let fileURL = try XCTUnwrap(Bundle(for: Self.self).resourceURL?.appendingPathComponent(fileName))

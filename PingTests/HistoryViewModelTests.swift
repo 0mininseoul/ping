@@ -52,6 +52,19 @@ final class HistoryViewModelTests: XCTestCase {
         XCTAssertEqual(groups[0].items.map(\.id), ["video:v1", "chat:c1"])
     }
 
+    func test_deleteVideoClearsExpandedScreenFaceOverlayState() throws {
+        let source = try readProjectSource("Ping/UI/History/HistoryViewModel.swift")
+        let deleteBody = try extract(
+            "func delete(message: VideoMessage, currentUid: String?) async",
+            through: "groups = Self.groupTimelineByDay(videos: loadedVideos, chats: loadedChats, calendar: .current)",
+            from: source
+        )
+
+        XCTAssertTrue(deleteBody.contains("if expandedMessageId == id"))
+        XCTAssertTrue(deleteBody.contains("expandedMessageId = nil"))
+        XCTAssertTrue(deleteBody.contains("loadedVideos.removeAll { $0.videoUrl == message.videoUrl }"))
+    }
+
     private func makeMsg(id: String, createdAt: Date) -> VideoMessage {
         VideoMessage(
             id: id,
@@ -69,5 +82,20 @@ final class HistoryViewModelTests: XCTestCase {
             captureMode: .faceOnly,
             aspectRatio: nil
         )
+    }
+
+    private func readProjectSource(_ relativePath: String) throws -> String {
+        let testsDir = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+        let projectRoot = testsDir.deletingLastPathComponent()
+        let fileURL = projectRoot.appendingPathComponent(relativePath)
+
+        return try String(contentsOf: fileURL, encoding: .utf8)
+    }
+
+    private func extract(_ start: String, through end: String, from contents: String) throws -> String {
+        let startRange = try XCTUnwrap(contents.range(of: start))
+        let tail = contents[startRange.lowerBound...]
+        let endRange = try XCTUnwrap(tail.range(of: end))
+        return String(tail[..<endRange.upperBound])
     }
 }

@@ -384,10 +384,14 @@ final class HistoryViewModel: ObservableObject {
         do {
             if isMine {
                 try await messageService.deleteMessage(messageId: id)
+                loadedVideos.removeAll { $0.videoUrl == message.videoUrl }
             } else {
                 try await messageService.hideMessageForReceiver(messageId: id)
+                loadedVideos.removeAll { $0.id == id }
             }
-            loadedVideos.removeAll { $0.id == id }
+            if expandedMessageId == id {
+                expandedMessageId = nil
+            }
             groups = Self.groupTimelineByDay(videos: loadedVideos, chats: loadedChats, calendar: .current)
         } catch {
             NSLog("Delete failed: \(error)")
