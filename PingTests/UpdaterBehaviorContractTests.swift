@@ -10,6 +10,7 @@ final class UpdaterBehaviorContractTests: XCTestCase {
         XCTAssertTrue(project.contains("SUAutomaticallyUpdate: false"))
         XCTAssertTrue(docs.contains("새 버전 감지 → 표준 Sparkle 다이얼로그"))
         XCTAssertTrue(docs.contains("사용자가 승인하면 다운로드/설치/재시작까지 진행"))
+        XCTAssertTrue(docs.contains("build 40 이상부터 자동 업데이트 설치 경로가 정상화"))
     }
 
     func testBackgroundSparkleUpdatesUseGentleReminderNotification() throws {
