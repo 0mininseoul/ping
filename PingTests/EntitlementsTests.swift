@@ -9,6 +9,14 @@ final class EntitlementsTests: XCTestCase {
         XCTAssertNil(entitlements["com.apple.security.device.microphone"])
     }
 
+    func testSandboxAllowsSparkleInstallerServices() throws {
+        let entitlements = try readPlist("Ping.entitlements")
+        let machLookupNames = try XCTUnwrap(entitlements["com.apple.security.temporary-exception.mach-lookup.global-name"] as? [String])
+
+        XCTAssertTrue(machLookupNames.contains("com.youngminpark.ping.Ping-spks"))
+        XCTAssertTrue(machLookupNames.contains("com.youngminpark.ping.Ping-spki"))
+    }
+
     func testProjectConfigurationUsesAudioInputEntitlement() throws {
         let project = try readSourceFile("project.yml")
 

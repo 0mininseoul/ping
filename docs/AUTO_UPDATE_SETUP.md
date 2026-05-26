@@ -45,6 +45,7 @@ Ping은 [Sparkle 2](https://sparkle-project.org/) 로 사용자 측 자동 업�
 - 같은 업데이트 버전은 한 번만 알리고, 더 최신 버전이 감지되면 기존 업데이트 알림을 최신 버전 알림 하나로 교체한다.
 - 사용자가 승인하면 다운로드/설치/재시작까지 진행된다.
 - Ping이 다운로드 폴더, 디스크 이미지, App Translocation 경로에서 실행 중이면 Sparkle 업데이트를 바로 적용할 수 없다. 이 경우 Ping은 appcast에서 최신 버전을 확인한 뒤 최신 DMG 다운로드를 제안하고, 사용자가 `Ping.app`을 응용 프로그램 폴더로 옮겨 다시 실행하도록 안내한다.
+- 0.3.28 초기 빌드(38/39)는 sandbox mach-lookup 예외와 Sparkle helper 서명이 잘못 들어간 상태라 설치 단계에서 실패할 수 있다. 이 빌드에서 오류가 반복되면 최신 DMG를 한 번 수동으로 설치해야 하며, build 40 이상부터 자동 업데이트 설치 경로가 정상화된다.
 - `SUAutomaticallyUpdate = false` 로 유지해 새 버전마다 사용자 승인 없이 무음 설치하지 않는다.
 - 메뉴바 → "업데이트 확인…" 으로 수동 강제 체크도 가능.
 
@@ -61,6 +62,13 @@ Ping은 [Sparkle 2](https://sparkle-project.org/) 로 사용자 측 자동 업�
 `SUEnableInstallerLauncherService` 옵션과 함께 동작한다.
 `InstallerLauncher.xpc` 가 Sparkle 프레임워크 안에 번들된 채로 앱에 임베드되어,
 샌드박스 밖의 권한이 필요한 설치 작업은 이 XPC 서비스가 대신 수행한다.
+
+Sandboxed 앱이 Sparkle installer helper와 통신하려면 `Ping.entitlements` 에
+`com.apple.security.temporary-exception.mach-lookup.global-name` 예외가 필요하다.
+현재 값은 bundle id 기준 `com.youngminpark.ping.Ping-spks` 와
+`com.youngminpark.ping.Ping-spki` 이다. 릴리즈 스크립트는 Sparkle 내부 helper의
+원래 entitlements를 보존해야 하므로 `Ping.entitlements` 를 nested helper에
+`--deep` 으로 덮어씌우면 안 된다.
 
 ## 7. ad-hoc 서명과 EdDSA
 

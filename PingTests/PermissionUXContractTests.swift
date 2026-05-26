@@ -112,6 +112,16 @@ final class PermissionUXContractTests: XCTestCase {
         XCTAssertTrue(source.contains("--requirements '=designated => identifier \"com.youngminpark.ping.Ping\"'"))
     }
 
+    func testReleaseBuildDoesNotOverwriteSparkleHelperEntitlements() throws {
+        let source = try readSourceFile("build-release.sh")
+
+        XCTAssertFalse(source.contains("codesign --force --deep --sign - \\\n  --options runtime \\\n  --entitlements Ping.entitlements"))
+        XCTAssertTrue(source.contains("--preserve-metadata=entitlements,requirements"))
+        XCTAssertTrue(source.contains("sign_preserving_metadata \"$SPARKLE_FRAMEWORK/Versions/B/XPCServices/Installer.xpc\""))
+        XCTAssertTrue(source.contains("sign_framework \"$SPARKLE_FRAMEWORK\""))
+        XCTAssertTrue(source.contains("--preserve-metadata=entitlements \\\n    \"$code_object\""))
+    }
+
     private func readSourceFile(_ relativePath: String) throws -> String {
         let fileName = URL(fileURLWithPath: relativePath).lastPathComponent
         let fileURL = try XCTUnwrap(Bundle(for: Self.self).resourceURL?.appendingPathComponent(fileName))

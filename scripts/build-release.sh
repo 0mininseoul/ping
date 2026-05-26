@@ -25,10 +25,40 @@ if [ ! -f "$APP/Contents/Resources/Supabase.plist" ]; then
   exit 1
 fi
 
-codesign --force --deep --sign - \
-  --options runtime \
-  --entitlements Ping.entitlements \
-  "$APP"
+sign_preserving_metadata() {
+  local code_object="$1"
+  if [ ! -e "$code_object" ]; then
+    echo "Expected Sparkle code object missing: $code_object" >&2
+    exit 1
+  fi
+
+  codesign --force --sign - \
+    --options runtime \
+    --preserve-metadata=entitlements,requirements \
+    "$code_object"
+}
+
+sign_framework() {
+  local code_object="$1"
+  if [ ! -e "$code_object" ]; then
+    echo "Expected Sparkle framework missing: $code_object" >&2
+    exit 1
+  fi
+
+  codesign --force --sign - \
+    --options runtime \
+    --preserve-metadata=entitlements \
+    "$code_object"
+}
+
+SPARKLE_FRAMEWORK="$APP/Contents/Frameworks/Sparkle.framework"
+if [ -d "$SPARKLE_FRAMEWORK" ]; then
+  sign_preserving_metadata "$SPARKLE_FRAMEWORK/Versions/B/Autoupdate"
+  sign_preserving_metadata "$SPARKLE_FRAMEWORK/Versions/B/Updater.app"
+  sign_preserving_metadata "$SPARKLE_FRAMEWORK/Versions/B/XPCServices/Installer.xpc"
+  sign_preserving_metadata "$SPARKLE_FRAMEWORK/Versions/B/XPCServices/Downloader.xpc"
+  sign_framework "$SPARKLE_FRAMEWORK"
+fi
 
 codesign --force --sign - \
   --options runtime \

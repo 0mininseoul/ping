@@ -78,11 +78,14 @@ Ping은 이메일 로그인 없이 Supabase Anonymous Auth 세션을 로컬에 �
 
 macOS 앱은 Sparkle로 업데이트를 확인한다. 새 버전이 공개되면 알림과 표준 업데이트 다이얼로그가 뜨고, 사용자가 승인하면 바로 다운로드/설치/재시작 흐름으로 진행된다. 같은 버전은 반복 알림하지 않고, 더 최신 버전이 나오면 최신 버전 알림 하나로 교체한다.
 
+0.3.28 초기 빌드(38/39)에서 업데이트 설치 오류가 반복되면 랜딩페이지의 최신 macOS DMG를 한 번 수동으로 내려받아 `Ping.app`을 Applications 폴더에 덮어쓴다. 이 초기 빌드는 Sparkle installer helper 권한/서명이 잘못 들어간 상태라, 현재 실행 중인 앱만으로는 자동 업데이트 설치가 실패할 수 있다. build 40 이상은 Sparkle helper 권한을 보존하고 sandbox mach-lookup 예외를 포함한다.
+
 Windows 앱은 Sparkle을 사용하지 않는다. 비용 없는 배포는 self-signed MSIX를 작은 `PingSetup-v0.3.28.exe` 웹 설치파일로 감싸고, 설치 중 PC 아키텍처에 맞는 MSIX를 `https://ping0min.vercel.app/downloads/windows/`에서 받는 방식이다. 최초 설치 시 installer가 Ping 공개 인증서를 등록한다. Microsoft Store, Azure Artifact Signing, OV 코드서명 인증서는 더 매끄러운 신뢰 UX를 제공하지만 비용 또는 외부 계정 검증이 필요하다.
 
 ## v0.3.28 수정
 
 - Sparkle scheduled update 감지 시 같은 업데이트 버전은 한 번만 알리고, 더 최신 버전이 나오면 기존 업데이트 알림을 최신 버전 알림 하나로 교체한다.
+- Sparkle installer helper와 통신하는 sandbox mach-lookup 예외를 추가하고, 릴리즈 서명 단계가 Sparkle 내부 helper entitlements를 덮어쓰지 않도록 수정했다.
 
 ## v0.3.27 수정
 

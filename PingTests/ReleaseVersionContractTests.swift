@@ -7,7 +7,7 @@ final class ReleaseVersionContractTests: XCTestCase {
         let readme = try readSourceFile("README.md")
 
         XCTAssertTrue(project.contains("MARKETING_VERSION: \"0.3.28\""))
-        XCTAssertTrue(project.contains("CURRENT_PROJECT_VERSION: \"39\""))
+        XCTAssertTrue(project.contains("CURRENT_PROJECT_VERSION: \"40\""))
         XCTAssertTrue(routes.contains("APP_VERSION = \"v0.3.28\""))
         XCTAssertTrue(routes.contains("DOWNLOAD_URL = \"/downloads/Ping-v0.3.28.dmg\""))
         XCTAssertTrue(readme.contains("Ping-v0.3.28.dmg"))
