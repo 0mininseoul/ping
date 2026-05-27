@@ -493,7 +493,7 @@ private struct AboutSettingsView: View {
                         NSWorkspace.shared.open(url)
                     }
                 }) {
-                    Label("문의하기", systemImage: "envelope.fill")
+                    Label("피드백 대환영", systemImage: "envelope.fill")
                 }
                 .buttonStyle(.bordered)
             }
