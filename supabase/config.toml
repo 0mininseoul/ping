@@ -153,7 +153,8 @@ enabled = true
 # in emails.
 site_url = "https://qxjtprxvjmaxlbtljcjw.supabase.co"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
-external_url = "https://qxjtprxvjmaxlbtljcjw.supabase.co/auth/v1"
+# NOTE: `external_url` is not a valid [auth] key in Supabase CLI v2.79+, it breaks config parsing. Removed.
+# external_url = "https://qxjtprxvjmaxlbtljcjw.supabase.co/auth/v1"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
 additional_redirect_urls = []
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
