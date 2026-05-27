@@ -34,9 +34,7 @@ export default function DemoStrip() {
             FLOW
           </p>
           <h2 className="text-balance text-[clamp(2rem,4.4vw,3.6rem)] leading-[1.05]">
-            Option+P/L{" "}
-            <span className="text-muted">→</span> 3초{" "}
-            <span className="text-muted">→</span> 리뷰 후 전송.
+            누르고, 찍고, 보내면 끝.
           </h2>
           <p className="mt-4 max-w-xl text-muted">
             설명보다 빠르게 도착하는 작은 신호. 세 컷이면 충분합니다.

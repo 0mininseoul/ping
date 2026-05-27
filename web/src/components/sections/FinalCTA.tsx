@@ -34,52 +34,54 @@ export default function FinalCTA({
                 <Badge variant="accent" className="mb-5">
                   macOS {macVersion} · Windows {windowsVersion}
                 </Badge>
-                <h2 className="text-balance text-[clamp(2.2rem,5vw,4rem)] leading-[1.05]">
-                  3초면 충분합니다.
+                <h2 className="text-balance text-[clamp(2.2rem,3.75vw,3rem)] leading-[1.05] lg:whitespace-nowrap">
+                  가장 쉽고 빠른 영상 메시지
                 </h2>
-                <p className="mt-5 max-w-md text-muted">
-                  Mac 또는 Windows에 Ping을 설치하고, 키보드 단축키로 작은
-                  신호를 보내보세요.
+                <p className="mt-5 text-muted md:whitespace-nowrap">
+                  Mac·Windows에서 단축키로, 3초면 전송.
                 </p>
               </div>
 
               <div className="flex flex-col items-stretch gap-3 md:items-end">
-                <ClickSpark>
-                  <a
-                    href={macDownloadUrl}
-                    aria-label={`Ping ${macVersion} macOS DMG 다운로드`}
-                  >
-                    <Button
-                      variant="primary"
-                      size="lg"
-                      className="w-full !shadow-[0_10px_22px_rgba(47,170,110,0.16)] md:w-auto"
+                <div className="grid w-full gap-3 md:inline-grid md:w-auto">
+                  <ClickSpark className="w-full">
+                    <a
+                      className="block w-full"
+                      href={macDownloadUrl}
+                      aria-label={`Ping ${macVersion} macOS DMG 다운로드`}
                     >
-                      <MonitorDown aria-hidden className="h-[18px] w-[18px]" />
-                      Download for macOS
-                    </Button>
-                  </a>
-                </ClickSpark>
-                <ClickSpark>
-                  <a
-                    href={windowsDownloadUrl}
-                    aria-label={`Ping ${windowsVersion} Windows EXE 다운로드`}
-                  >
-                    <Button
-                      variant="secondary"
-                      size="lg"
-                      className="w-full md:w-auto"
+                      <Button
+                        variant="primary"
+                        size="lg"
+                        className="w-full !shadow-[0_10px_22px_rgba(47,170,110,0.16)]"
+                      >
+                        <MonitorDown aria-hidden className="h-[18px] w-[18px]" />
+                        Download for macOS
+                      </Button>
+                    </a>
+                  </ClickSpark>
+                  <ClickSpark className="w-full">
+                    <a
+                      className="block w-full"
+                      href={windowsDownloadUrl}
+                      aria-label={`Ping ${windowsVersion} Windows EXE 다운로드`}
                     >
-                      <MonitorDown aria-hidden className="h-[18px] w-[18px]" />
-                      Download for Windows
-                    </Button>
-                  </a>
-                </ClickSpark>
-                <p className="text-xs text-subtle md:text-right">
-                  macOS 13 Ventura+ · Windows 11 24H2+ · Windows EXE는 무료
-                  자체서명 배포라 SmartScreen 경고가 보일 수 있습니다.
-                </p>
+                      <Button
+                        variant="secondary"
+                        size="lg"
+                        className="w-full"
+                      >
+                        <MonitorDown aria-hidden className="h-[18px] w-[18px]" />
+                        Download for Windows
+                      </Button>
+                    </a>
+                  </ClickSpark>
+                </div>
               </div>
             </div>
+            <p className="mt-6 text-[11px] text-subtle md:whitespace-nowrap md:text-right">
+              macOS 13 Ventura+ · Windows 11 24H2+ · Windows EXE는 무료 자체서명 배포라 SmartScreen 경고가 보일 수 있습니다.
+            </p>
           </div>
         </ScrollFloat>
       </div>
