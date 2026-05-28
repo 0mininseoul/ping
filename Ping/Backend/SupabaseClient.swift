@@ -94,7 +94,7 @@ private struct SupabaseAuthResponse: Decodable {
     }
 }
 
-private struct SupabaseSession: Codable {
+struct SupabaseSession: Codable {
     let accessToken: String
     let refreshToken: String
     let expiresAt: Date
