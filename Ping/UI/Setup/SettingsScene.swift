@@ -133,7 +133,7 @@ private struct GeneralSettingsView: View {
                                     .textFieldStyle(.roundedBorder)
                                     .onSubmit(saveNickname)
                                     .disabled(appState.currentUser?.id == nil || isSavingNickname)
-                                    .frame(width: 220)
+                                    .frame(width: 160)
 
                                 Button("저장", action: saveNickname)
                                     .disabled(!canSaveNickname)
