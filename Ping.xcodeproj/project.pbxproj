@@ -37,6 +37,7 @@
 		3D8721EF1C7FF79A43DF7064 /* AppcastUpdateOfferParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F806032469E93F02C3C28D9 /* AppcastUpdateOfferParser.swift */; };
 		3E8747EC3C02819DE0808A7E /* GlassButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8841413A695A3C64F0B3F247 /* GlassButton.swift */; };
 		3F281D7BAAC12DAA86E5E838 /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = 1A17C43CDDC3D0D57F6CA5D4 /* Realtime */; };
+		40DDB292A1679F67000D41D4 /* AccountNotifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96D07ED094D1B1E9297946A0 /* AccountNotifications.swift */; };
 		43072A8619301C054B30BC7C /* OnboardingFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05A1A2EA9F9A191DE3263C29 /* OnboardingFlowTests.swift */; };
 		44DC21E6B318CF6969918DE9 /* CompatibilityContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7BA291155ACBFF85185B36B /* CompatibilityContractTests.swift */; };
 		45CDCD2993C1E53FB62356A1 /* StatusMenuBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CAAECC60F6BE44D405DF213 /* StatusMenuBuilder.swift */; };
@@ -219,6 +220,7 @@
 		90A916C7BE813E0B77E80E22 /* RoomManagerUXContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomManagerUXContractTests.swift; sourceTree = "<group>"; };
 		9214746AA17BA72DEFC057E7 /* AppcastUpdateOfferParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppcastUpdateOfferParserTests.swift; sourceTree = "<group>"; };
 		961E0B236B19718866C9702B /* RoomDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomDetailView.swift; sourceTree = "<group>"; };
+		96D07ED094D1B1E9297946A0 /* AccountNotifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountNotifications.swift; sourceTree = "<group>"; };
 		97150E02C17DE9AEBD26BF13 /* RainbowBorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RainbowBorder.swift; sourceTree = "<group>"; };
 		982866D64B1FD3C9C3E0ACDB /* PingTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PingTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		9AABBC608A3DBBCE53D71796 /* AppInstallLocation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppInstallLocation.swift; sourceTree = "<group>"; };
@@ -315,6 +317,7 @@
 		0653180C07BABDB9FD29A627 /* Core */ = {
 			isa = PBXGroup;
 			children = (
+				96D07ED094D1B1E9297946A0 /* AccountNotifications.swift */,
 				72E17B6A6D89179C56491009 /* AppState.swift */,
 				0194505B84DC32C2BA700F6C /* InviteLink.swift */,
 				DDF74D004DFD2F009A5DA36B /* Models.swift */,
@@ -897,6 +900,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				40DDB292A1679F67000D41D4 /* AccountNotifications.swift in Sources */,
 				4D70AC0A2112C346C5E4B603 /* AccountStore.swift in Sources */,
 				503D2F33E720C8E32DE485AD /* AppDelegate.swift in Sources */,
 				593B51C4CE943EE1FBB2FD87 /* AppInstallLocation.swift in Sources */,

@@ -47,6 +47,47 @@ final class MultiAccountSwitchingContractTests: XCTestCase {
         XCTAssertTrue(source.contains("chat-catchup-"))
     }
 
+    func testAppDelegateUsesPerAccountLedgerAndReload() throws {
+        let source = try readSourceFile("Ping/AppDelegate.swift")
+        XCTAssertTrue(source.contains("private let ledger = NotificationLedger()"))
+        XCTAssertTrue(source.contains("ledger.contains(.video, uid: uid"))
+        XCTAssertTrue(source.contains("ledger.remember(.video, uid: uid"))
+        XCTAssertTrue(source.contains("ledger.contains(.invite, uid: uid"))
+        XCTAssertTrue(source.contains("func reloadForActiveAccount()"))
+        XCTAssertTrue(source.contains("func teardownForAccountChange()"))
+        XCTAssertTrue(source.contains("await chatRealtime.unsubscribeAll()"))
+    }
+
+    func testAppDelegateTriggersChatCatchUp() throws {
+        let source = try readSourceFile("Ping/AppDelegate.swift")
+        XCTAssertTrue(source.contains("func catchUpChatNotifications(uid: String)"))
+        XCTAssertTrue(source.contains("chatMessageService.unreadChatCounts()"))
+        XCTAssertTrue(source.contains("notifyChatCatchUp("))
+        XCTAssertTrue(source.contains("ledger.contains(.chat, uid: uid"))
+    }
+
+    func testAppDelegateHandlesAccountIntents() throws {
+        let source = try readSourceFile("Ping/AppDelegate.swift")
+        XCTAssertTrue(source.contains("Notification.Name.pingSwitchAccount"))
+        XCTAssertTrue(source.contains("Notification.Name.pingAddAccount"))
+        XCTAssertTrue(source.contains("Notification.Name.pingRemoveAccount"))
+        XCTAssertTrue(source.contains("try SupabaseClient.shared.switchTo(userId:"))
+        XCTAssertTrue(source.contains("SupabaseClient.shared.addAccount()"))
+        XCTAssertTrue(source.contains("SupabaseClient.shared.removeAccount(userId:"))
+    }
+
+    func testAppDelegateUpdatesNicknameAndGateOnBootstrap() throws {
+        let source = try readSourceFile("Ping/AppDelegate.swift")
+        XCTAssertTrue(source.contains("SupabaseClient.shared.updateActiveNickname("))
+        XCTAssertTrue(source.contains("MultiAccountGate.updateUnlock(forNickname:"))
+    }
+
+    func testAppDelegateBlocksSwitchWhileSending() throws {
+        let source = try readSourceFile("Ping/AppDelegate.swift")
+        XCTAssertTrue(source.contains("private var isSwitchingAccount"))
+        XCTAssertTrue(source.contains("mirrorViewModel.state != .idle"))
+    }
+
     private func readSourceFile(_ relativePath: String) throws -> String {
         let fileName = URL(fileURLWithPath: relativePath).lastPathComponent
         let fileURL = try XCTUnwrap(Bundle(for: Self.self).resourceURL?.appendingPathComponent(fileName))
