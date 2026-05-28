@@ -88,6 +88,17 @@ final class MultiAccountSwitchingContractTests: XCTestCase {
         XCTAssertTrue(source.contains("mirrorViewModel.state != .idle"))
     }
 
+    func testSettingsAccountSectionIsGatedAndPostsIntents() throws {
+        let source = try readSourceFile("Ping/UI/Setup/SettingsScene.swift")
+        XCTAssertTrue(source.contains("@ObservedObject private var supabase = SupabaseClient.shared"))
+        XCTAssertTrue(source.contains("MultiAccountGate.isUnlocked()"))
+        XCTAssertTrue(source.contains("Notification.Name.pingSwitchAccount"))
+        XCTAssertTrue(source.contains("Notification.Name.pingAddAccount"))
+        XCTAssertTrue(source.contains("Notification.Name.pingRemoveAccount"))
+        // 영구 손실 경고가 존재해야 한다.
+        XCTAssertTrue(source.contains("복구할 수 없습니다"))
+    }
+
     private func readSourceFile(_ relativePath: String) throws -> String {
         let fileName = URL(fileURLWithPath: relativePath).lastPathComponent
         let fileURL = try XCTUnwrap(Bundle(for: Self.self).resourceURL?.appendingPathComponent(fileName))
