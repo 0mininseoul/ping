@@ -131,6 +131,28 @@ final class LocalNotificationCenter: NSObject, UNUserNotificationCenterDelegate 
         }
     }
 
+    /// 전환 시 한 룸의 밀린 채팅을 묶어 1건으로 알린다. 탭하면 기존 채팅 핸들러가 룸을 연다.
+    func notifyChatCatchUp(roomId: String, roomName: String, unreadCount: Int, latestPreview: String) {
+        let content = UNMutableNotificationContent()
+        content.title = "\(roomName) · 새 메시지 \(unreadCount)개"
+        let body = latestPreview.isEmpty ? "사진을 보냈습니다" : latestPreview
+        content.body = body.count > 200 ? String(body.prefix(200)) + "…" : body
+        content.sound = notificationSound()
+        content.userInfo = [
+            "type": "chat",
+            "chat_id": "",
+            "room_id": roomId
+        ]
+        let request = UNNotificationRequest(
+            identifier: "chat-catchup-\(roomId)",
+            content: content,
+            trigger: nil
+        )
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error { NSLog("notifyChatCatchUp failed: \(error)") }
+        }
+    }
+
     func notifyIncomingInvitation(_ invitation: Invitation) {
         let inviteId = invitation.id ?? UUID().uuidString
         let content = UNMutableNotificationContent()

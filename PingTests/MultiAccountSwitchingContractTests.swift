@@ -40,6 +40,13 @@ final class MultiAccountSwitchingContractTests: XCTestCase {
         XCTAssertTrue(source.contains("throw PingError.supabaseSessionExpired"))
     }
 
+    func testLocalNotificationCenterHasChatCatchUpHelper() throws {
+        let source = try readSourceFile("Ping/Notifications/LocalNotificationCenter.swift")
+        XCTAssertTrue(source.contains("func notifyChatCatchUp(roomId: String, roomName: String, unreadCount: Int, latestPreview: String)"))
+        XCTAssertTrue(source.contains("\"type\": \"chat\""))
+        XCTAssertTrue(source.contains("chat-catchup-"))
+    }
+
     private func readSourceFile(_ relativePath: String) throws -> String {
         let fileName = URL(fileURLWithPath: relativePath).lastPathComponent
         let fileURL = try XCTUnwrap(Bundle(for: Self.self).resourceURL?.appendingPathComponent(fileName))
