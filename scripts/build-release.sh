@@ -8,6 +8,20 @@ if [ ! -f "Resources/Supabase.plist" ]; then
   exit 1
 fi
 
+# Real releases must be built from main so the published binary matches the
+# released source. A past release shipped a DMG built from a stale feature
+# branch — the feature was in the committed source but missing from the app.
+# Verification-only builds (PING_VERIFY_ONLY) may run from any branch.
+if [ -z "${PING_VERIFY_ONLY:-}" ]; then
+  CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
+  if [ "$CURRENT_BRANCH" != "main" ]; then
+    echo "Release builds must run on 'main' (currently: $CURRENT_BRANCH)." >&2
+    echo "Merge your feature branches into main and build from there, or set" >&2
+    echo "PING_VERIFY_ONLY=1 for a signing/notarization smoke test." >&2
+    exit 1
+  fi
+fi
+
 # --- Developer ID signing & notarization configuration ---
 # Override either of these via environment if your setup differs.
 #
@@ -177,6 +191,18 @@ if [ -f "$ROUTES" ]; then
     exit 1
   fi
   echo "Stamped $ROUTES -> v$VERSION"
+fi
+
+# Same lockstep for the README install instruction so its DMG reference never
+# lags behind the shipped build (release notes above it stay hand-written).
+README="README.md"
+if [ -f "$README" ]; then
+  sed -i '' -e "s|Ping-v[0-9][0-9.]*\.dmg|Ping-v$VERSION.dmg|g" "$README"
+  if ! grep -qF "Ping-v$VERSION.dmg" "$README"; then
+    echo "Failed to stamp $README with v$VERSION (format may have drifted)." >&2
+    exit 1
+  fi
+  echo "Stamped $README -> v$VERSION"
 fi
 
 # Sparkle: sign the DMG with EdDSA and regenerate the appcast served at /appcast.xml.
