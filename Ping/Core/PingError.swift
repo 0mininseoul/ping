@@ -15,6 +15,7 @@ enum PingError: LocalizedError {
     case imagePayloadTooLarge
     case invalidRoomName
     case roomUnavailable
+    case accountNotFound
 
     var errorDescription: String? {
         switch self {
@@ -46,6 +47,8 @@ enum PingError: LocalizedError {
             return "룸 이름은 1자 이상 16자 이하여야 합니다."
         case .roomUnavailable:
             return "룸에 참여할 수 없습니다."
+        case .accountNotFound:
+            return "선택한 계정을 찾을 수 없습니다."
         }
     }
 }

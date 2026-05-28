@@ -59,6 +59,8 @@ private enum SettingsTab: Hashable {
 
 private struct GeneralSettingsView: View {
     @EnvironmentObject private var appState: AppState
+    @ObservedObject private var supabase = SupabaseClient.shared
+    @State private var accountPendingDeletion: StoredAccount?
 
     @AppStorage(PingPreferenceKeys.notificationSound)
     private var notificationSound = PingNotificationSound.systemDefault.rawValue
@@ -138,9 +140,29 @@ private struct GeneralSettingsView: View {
                             }
                         }
                     }
+
+                    // 게이트는 bootstrap 때 1회 설정되는 단방향 플래그라 Settings가 열려 있는 동안
+                    // 값이 바뀌지 않는다. 따라서 @AppStorage가 아닌 일반 읽기로 충분하다.
+                    if MultiAccountGate.isUnlocked() {
+                        accountSwitcherGroup
+                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .topLeading)
             }
+        }
+        .alert(item: $accountPendingDeletion) { account in
+            Alert(
+                title: Text("계정을 삭제할까요?"),
+                message: Text("이 익명 계정은 복구할 수 없습니다. 이 기기에서 영구히 사라집니다."),
+                primaryButton: .destructive(Text("삭제")) {
+                    NotificationCenter.default.post(
+                        name: Notification.Name.pingRemoveAccount,
+                        object: nil,
+                        userInfo: [AccountIntentKey.userId: account.userId]
+                    )
+                },
+                secondaryButton: .cancel(Text("취소"))
+            )
         }
         .onAppear {
             refreshAutoLaunchStatus()
@@ -152,6 +174,69 @@ private struct GeneralSettingsView: View {
         .onChange(of: appearanceMode) { newValue in
             (PingAppearanceMode(rawValue: newValue) ?? .system).apply()
         }
+    }
+
+    private var accountSwitcherGroup: some View {
+        settingsGroup("계정") {
+            ForEach(supabase.accounts) { account in
+                accountRow(account)
+                if account.userId != supabase.accounts.last?.userId {
+                    Divider().opacity(0.45).padding(.leading, 16)
+                }
+            }
+
+            if !supabase.accounts.isEmpty {
+                Divider().opacity(0.45).padding(.leading, 16)
+            }
+
+            Button {
+                NotificationCenter.default.post(name: Notification.Name.pingAddAccount, object: nil)
+            } label: {
+                Label("계정 추가", systemImage: "plus.circle")
+            }
+            .buttonStyle(.borderless)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private func accountRow(_ account: StoredAccount) -> some View {
+        let isActive = supabase.activeUserId == account.userId
+        let displayName = account.nickname.isEmpty ? "(닉네임 없음)" : account.nickname
+        return HStack(spacing: 12) {
+            Image(systemName: isActive ? "checkmark.circle.fill" : "circle")
+                .foregroundStyle(isActive ? Color.accentColor : Color.secondary)
+
+            Text(displayName)
+                .font(PingFont.label)
+                .lineLimit(1)
+                .truncationMode(.tail)
+
+            Spacer(minLength: 16)
+
+            if !isActive {
+                Button("전환") {
+                    NotificationCenter.default.post(
+                        name: Notification.Name.pingSwitchAccount,
+                        object: nil,
+                        userInfo: [AccountIntentKey.userId: account.userId]
+                    )
+                }
+                .buttonStyle(.borderless)
+            }
+
+            Button(role: .destructive) {
+                accountPendingDeletion = account
+            } label: {
+                Image(systemName: "trash")
+            }
+            .buttonStyle(.borderless)
+            .disabled(supabase.accounts.count <= 1)
+        }
+        .contentShape(Rectangle())
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
     }
 
     private var nicknameHelperText: String {
@@ -273,6 +358,10 @@ private struct GeneralSettingsView: View {
                     appState.currentUser = currentUser
                     nicknameDraft = nickname
                 }
+
+                // 인앱 닉네임 변경도 계정 캐시/게이트에 반영한다(스펙 §6: 닉네임을 영민으로 바꾸면 그 시점에 unlock).
+                SupabaseClient.shared.updateActiveNickname(nickname)
+                MultiAccountGate.updateUnlock(forNickname: nickname)
 
                 nicknameStatus = "저장됨"
             } catch {

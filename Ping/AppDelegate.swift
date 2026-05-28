@@ -25,15 +25,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let storageService = StorageService()
     private let cleanupService = CleanupService()
     private let chatRealtime = ChatRealtimeService()
+    private let chatMessageService = ChatMessageService()
     private let appStartTime = Date()
-    private let notifiedMessageIdsKey = "ping.notifications.notifiedMessageIds"
+    private let ledger = NotificationLedger()
 
     private var notifiedChatMessageIds: Set<String> = []
+    private var isSwitchingAccount = false
     private var cancellables: Set<AnyCancellable> = []
 
     private var roomObserverTask: Task<Void, Never>?
     private var invitationObserverTask: Task<Void, Never>?
     private var incomingMessageTask: Task<Void, Never>?
+    private var chatCatchUpTask: Task<Void, Never>?
     private var bootstrapTask: Task<Void, Never>?
     private var cameraStartTask: Task<Void, Never>?
     private var pendingInviteToken: String?
@@ -54,6 +57,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         LocalArchive.ensureFolders()
         setupStatusBar()
         setupNotifications()
+        setupAccountSwitching()
         setupHotkey()
 
         if !ProcessInfo.processInfo.isRunningUnitTests {
@@ -162,6 +166,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if let existing {
                 try await userService.upsert(uid: uid, nickname: existing.nickname)
                 appState.currentUser = try await userService.get(uid: uid) ?? existing
+                SupabaseClient.shared.updateActiveNickname(existing.nickname)
+                MultiAccountGate.updateUnlock(forNickname: existing.nickname)
                 ClientEventService.shared.log("app_launched")
                 startObservers(uid: uid, opensRoomManagerWhenEmpty: !roomSetupWasDeferred)
                 runCleanup(uid: uid)
@@ -216,15 +222,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     if opensRoomManagerWhenEmpty, rooms.isEmpty, onboardingWindow == nil {
                         showRoomManager()
                     }
+
+                    // 룸 목록이 채워진 뒤 캐치업을 실행해야 묶음 알림에 실제 룸 이름이 들어간다.
+                    catchUpChatNotifications(uid: uid)
                 }
             }
         }
 
         invitationObserverTask = Task { @MainActor in
             for await invitations in invitationService.observeIncoming(uid: uid) {
-                let previousIds = Set(appState.pendingInvitations.compactMap(\.id))
                 for invitation in invitations {
-                    guard let id = invitation.id, !previousIds.contains(id) else { continue }
+                    guard let id = invitation.id, !ledger.contains(.invite, uid: uid, id: id) else { continue }
+                    ledger.remember(.invite, uid: uid, id: id)
                     LocalNotificationCenter.shared.notifyIncomingInvitation(invitation)
                 }
                 appState.pendingInvitations = invitations
@@ -233,11 +242,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         incomingMessageTask = Task { @MainActor in
             for await message in messageService.observeIncoming(uid: uid) {
-                guard let id = message.id, shouldNotify(messageId: id, message: message) else {
+                guard let id = message.id, shouldNotify(messageId: id, uid: uid, message: message) else {
                     continue
                 }
                 prefetchMessageVideo(message)
-                rememberNotifiedMessage(id)
+                ledger.remember(.video, uid: uid, id: id)
                 LocalNotificationCenter.shared.notifyIncomingMessage(
                     senderNickname: message.senderNickname,
                     messageId: id,
@@ -639,6 +648,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 do {
                     try await self.userService.upsert(uid: uid, nickname: completion.nickname)
                     self.appState.currentUser = try await self.userService.get(uid: uid)
+                    SupabaseClient.shared.updateActiveNickname(completion.nickname)
+                    MultiAccountGate.updateUnlock(forNickname: completion.nickname)
 
                     let shouldOpenInviteSearch: Bool
                     switch completion.action {
@@ -886,8 +897,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         LocalNotificationCenter.shared.notifyIncomingChat(msg, roomName: roomName)
     }
 
-    private func shouldNotify(messageId: String, message: VideoMessage) -> Bool {
-        if notifiedMessageIds().contains(messageId) {
+    private func shouldNotify(messageId: String, uid: String, message: VideoMessage) -> Bool {
+        if ledger.contains(.video, uid: uid, id: messageId) {
             return false
         }
 
@@ -895,26 +906,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return false
         }
 
-        guard let createdAt = message.createdAt else { return false }
-        if createdAt >= appStartTime {
-            return true
+        // 새 메시지든 오프라인 캐치업이든 알린다. 재알림은 위의 계정별 ledger가 막는다.
+        return message.createdAt != nil
+    }
+
+    private func catchUpChatNotifications(uid: String) {
+        chatCatchUpTask?.cancel()
+        chatCatchUpTask = Task { @MainActor in
+            do {
+                let counts = try await chatMessageService.unreadChatCounts()
+                for (roomId, unread) in counts where unread > 0 {
+                    if Task.isCancelled { return }
+                    let messages = try await chatMessageService.roomChatMessages(roomId: roomId, limit: 20)
+                    let newOnes = messages.filter { msg in
+                        guard msg.senderUid != uid, let id = msg.id else { return false }
+                        return !ledger.contains(.chat, uid: uid, id: id)
+                    }
+                    guard !newOnes.isEmpty else { continue }
+
+                    for msg in newOnes {
+                        if let id = msg.id { ledger.remember(.chat, uid: uid, id: id) }
+                    }
+
+                    let roomName = appState.rooms.first(where: { $0.id == roomId })?.name ?? "룸"
+                    let latest = newOnes.max { lhs, rhs in
+                        (lhs.createdAt ?? .distantPast) < (rhs.createdAt ?? .distantPast)
+                    }
+                    LocalNotificationCenter.shared.notifyChatCatchUp(
+                        roomId: roomId,
+                        roomName: roomName,
+                        unreadCount: newOnes.count,
+                        latestPreview: latest?.previewText ?? ""
+                    )
+                }
+            } catch {
+                NSLog("Chat catch-up failed: \(error)")
+            }
         }
-
-        // Older uploaded messages are offline catch-up. Repeat notifications are
-        // blocked by the persisted message-id set above.
-        return true
-    }
-
-    private func notifiedMessageIds() -> Set<String> {
-        Set(UserDefaults.standard.stringArray(forKey: notifiedMessageIdsKey) ?? [])
-    }
-
-    private func rememberNotifiedMessage(_ id: String) {
-        var set = notifiedMessageIds()
-        set.insert(id)
-        var ids = Array(set)
-        ids = Array(ids.suffix(300))
-        UserDefaults.standard.set(ids, forKey: notifiedMessageIdsKey)
     }
 
     private func runCleanup(uid: String) {
@@ -924,6 +952,119 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             } catch {
                 NSLog("Cleanup failed: \(error)")
             }
+        }
+    }
+
+    // MARK: - 계정 전환
+
+    private func setupAccountSwitching() {
+        let center = NotificationCenter.default
+        center.addObserver(forName: Notification.Name.pingSwitchAccount, object: nil, queue: .main) { [weak self] note in
+            let userId = note.userInfo?[AccountIntentKey.userId] as? String
+            Task { @MainActor in
+                guard let self, let userId else { return }
+                await self.handleSwitchAccount(userId: userId)
+            }
+        }
+        center.addObserver(forName: Notification.Name.pingAddAccount, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor in await self?.handleAddAccount() }
+        }
+        center.addObserver(forName: Notification.Name.pingRemoveAccount, object: nil, queue: .main) { [weak self] note in
+            let userId = note.userInfo?[AccountIntentKey.userId] as? String
+            Task { @MainActor in
+                guard let self, let userId else { return }
+                await self.handleRemoveAccount(userId: userId)
+            }
+        }
+    }
+
+    /// 전환/추가 전 공통 정리: 옵저버·창·캐시·상태·인메모리 dedup.
+    private func teardownForAccountChange() {
+        bootstrapTask?.cancel(); bootstrapTask = nil
+        roomObserverTask?.cancel(); roomObserverTask = nil
+        invitationObserverTask?.cancel(); invitationObserverTask = nil
+        incomingMessageTask?.cancel(); incomingMessageTask = nil
+        chatCatchUpTask?.cancel(); chatCatchUpTask = nil
+
+        if mirrorWindow != nil { closeMirrorWindow() }
+        roomManagerWindow?.close()
+        roomManagerWindow = nil
+
+        for window in playbackWindows { window.orderOut(nil) }
+        playbackWindows.removeAll()
+        playbackPrefetchTasks.values.forEach { $0.cancel() }
+        playbackPrefetchTasks.removeAll()
+        playbackCache.removeAll()
+
+        notifiedChatMessageIds.removeAll()
+
+        appState.currentUser = nil
+        appState.rooms = []
+        appState.pendingInvitations = []
+        appState.resetTransientState()
+        appState.pendingRoomFocusId = nil
+        appState.lastSelectedRoomId = nil
+        appState.backendStatusMessage = nil
+    }
+
+    private func canSwitchAccountNow() -> Bool {
+        if isSwitchingAccount { return false }
+        if mirrorWindow != nil, mirrorViewModel.state != .idle {
+            showTransientAlert(
+                title: "전송 중에는 계정을 전환할 수 없습니다",
+                message: "영상 전송을 마친 뒤 다시 시도해주세요."
+            )
+            return false
+        }
+        return true
+    }
+
+    private func reloadForActiveAccount() {
+        // 호출자는 진입 전 canSwitchAccountNow()를 보장해야 한다.
+        // switchTo는 isSwitchingAccount를 건드리지 않으므로 여기서의 재확인은 무해하다.
+        guard canSwitchAccountNow() else { return }
+        isSwitchingAccount = true
+        teardownForAccountChange()
+        Task { @MainActor in
+            await chatRealtime.unsubscribeAll()
+            await bootstrapBackend()
+            isSwitchingAccount = false
+        }
+    }
+
+    private func handleSwitchAccount(userId: String) async {
+        guard canSwitchAccountNow() else { return }
+        do {
+            try SupabaseClient.shared.switchTo(userId: userId)
+            reloadForActiveAccount()
+        } catch {
+            showTransientAlert(title: "계정 전환 실패", message: error.localizedDescription)
+        }
+    }
+
+    private func handleAddAccount() async {
+        guard canSwitchAccountNow() else { return }
+        isSwitchingAccount = true
+        do {
+            let uid = try await SupabaseClient.shared.addAccount()
+            teardownForAccountChange()
+            await chatRealtime.unsubscribeAll()
+            showOnboarding(uid: uid)
+        } catch {
+            showTransientAlert(title: "계정을 추가하지 못했습니다", message: error.localizedDescription)
+        }
+        isSwitchingAccount = false
+    }
+
+    private func handleRemoveAccount(userId: String) async {
+        let wasActive = SupabaseClient.shared.activeUserId == userId
+        // 활성 계정 삭제는 세션 교체 + 재로딩을 유발하므로 전송 중이면 막는다.
+        // 비활성 계정 삭제는 세션/옵저버에 영향이 없어 그대로 진행한다.
+        if wasActive, !canSwitchAccountNow() { return }
+        SupabaseClient.shared.removeAccount(userId: userId)
+        if wasActive {
+            // 활성이 바뀌었으면(남은 계정 또는 0개) 재로딩. 0개면 bootstrap이 새 익명 계정을 만든다.
+            reloadForActiveAccount()
         }
     }
 }
