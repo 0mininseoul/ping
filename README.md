@@ -34,7 +34,7 @@ Supabase Dashboard의 Authentication 설정에서 Anonymous sign-ins가 켜져 �
 
 ### macOS
 
-1. `Ping-v0.3.33.dmg`를 더블클릭해 마운트한다.
+1. `Ping-v0.3.34.dmg`를 더블클릭해 마운트한다.
 2. `Ping.app`을 Applications 폴더로 드래그한다.
 3. 더블클릭해 실행한다. Developer ID 서명 + Apple 공증(notarized) 빌드라 Gatekeeper 경고 없이 바로 열린다.
 4. 카메라, 마이크, 알림 권한을 허용한다.
@@ -81,6 +81,12 @@ macOS 앱은 Sparkle로 업데이트를 확인한다. 새 버전이 공개되면
 0.3.28 초기 빌드(38/39)에서 업데이트 설치 오류가 반복되면 랜딩페이지의 최신 macOS DMG를 한 번 수동으로 내려받아 `Ping.app`을 Applications 폴더에 덮어쓴다. 이 초기 빌드는 Sparkle installer helper 권한/서명이 잘못 들어간 상태라, 현재 실행 중인 앱만으로는 자동 업데이트 설치가 실패할 수 있다. build 40 이상은 Sparkle helper 권한을 보존하고 sandbox mach-lookup 예외를 포함한다.
 
 Windows 앱은 Sparkle을 사용하지 않는다. 비용 없는 배포는 self-signed MSIX를 작은 `PingSetup-v0.3.28.exe` 웹 설치파일로 감싸고, 설치 중 PC 아키텍처에 맞는 MSIX를 `https://ping0min.vercel.app/downloads/windows/`에서 받는 방식이다. 최초 설치 시 installer가 Ping 공개 인증서를 등록한다. Microsoft Store, Azure Artifact Signing, OV 코드서명 인증서는 더 매끄러운 신뢰 UX를 제공하지만 비용 또는 외부 계정 검증이 필요하다.
+
+## v0.3.34 macOS 수정
+
+- 오너 전용 인앱 다중 계정 전환 기능을 추가했다. 닉네임을 `영민`으로 설정하면 설정 → 일반에 "계정" 섹션이 나타나, 한 기기에서 여러 익명 계정을 보관·전환하고 전환 시 비활성 동안 밀린 알림(영상·초대·채팅)을 모아 볼 수 있다. 세션은 기기에 로컬 저장되어 타인에게 자격증명이 노출되지 않는다.
+- 0.3.33 빌드가 이 기능 머지 이전 트리에서 만들어져 실제 앱에는 기능이 빠져 있던 문제를 바로잡았다. 릴리스 빌드는 이제 `main`에서만 실행되도록 가드를 두고, 웹 다운로드와 README의 DMG 참조를 빌드 버전으로 자동 스탬핑한다.
+- 설정 닉네임 입력 필드 오른쪽의 "저장" 버튼이 패널 경계에서 잘리던 레이아웃을 수정했다.
 
 ## v0.3.33 macOS 수정
 
