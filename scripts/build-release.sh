@@ -161,6 +161,24 @@ cp "dist/Ping-v$VERSION.dmg" "web/public/downloads/Ping-v$VERSION.dmg"
 echo "Built (signed + notarized + stapled) dist/Ping-v$VERSION.dmg"
 echo "Copied web/public/downloads/Ping-v$VERSION.dmg"
 
+# Keep the website's macOS download in lockstep with this build so the landing
+# page never advertises or serves a stale DMG. ReleaseVersionContractTests
+# enforces this agreement; stamping it here is what keeps releases from
+# half-shipping (appcast bumped, website left behind).
+ROUTES="web/src/routes.tsx"
+if [ -f "$ROUTES" ]; then
+  sed -i '' \
+    -e "s|MAC_APP_VERSION = \"v[0-9][0-9.]*\";|MAC_APP_VERSION = \"v$VERSION\";|" \
+    -e "s|MAC_DOWNLOAD_URL = \"/downloads/Ping-v[0-9][0-9.]*\.dmg\";|MAC_DOWNLOAD_URL = \"/downloads/Ping-v$VERSION.dmg\";|" \
+    "$ROUTES"
+  if ! grep -qF "MAC_APP_VERSION = \"v$VERSION\";" "$ROUTES" \
+     || ! grep -qF "MAC_DOWNLOAD_URL = \"/downloads/Ping-v$VERSION.dmg\";" "$ROUTES"; then
+    echo "Failed to stamp $ROUTES with v$VERSION (format may have drifted)." >&2
+    exit 1
+  fi
+  echo "Stamped $ROUTES -> v$VERSION"
+fi
+
 # Sparkle: sign the DMG with EdDSA and regenerate the appcast served at /appcast.xml.
 # Requires generate_keys to have been run once (see scripts/sparkle-generate-keys.sh).
 # shellcheck disable=SC1091
