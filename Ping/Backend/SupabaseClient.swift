@@ -111,14 +111,32 @@ final class SupabaseClient: ObservableObject {
 
     @Published private(set) var currentUid: String?
     @Published private(set) var isConfigured = false
+    @Published private(set) var accounts: [StoredAccount] = []
+    @Published private(set) var activeUserId: String?
 
     private var configuration: SupabaseConfiguration?
     private var session: SupabaseSession?
     private var authSessionTask: Task<SupabaseSession, Error>?
     private let urlSession: URLSession
+    private let accountStore: AccountStore
 
-    init(urlSession: URLSession = .shared) {
+    init(urlSession: URLSession = .shared, accountStore: AccountStore = .makeDefault()) {
         self.urlSession = urlSession
+        self.accountStore = accountStore
+    }
+
+    private func accountsSnapshot() -> AccountsFile {
+        AccountsFile(accounts: accounts, activeUserId: activeUserId)
+    }
+
+    private func applyAccountsFile(_ file: AccountsFile, swapSession: Bool) {
+        accounts = file.accounts
+        activeUserId = file.activeUserId
+        if swapSession {
+            session = file.activeAccount?.session
+            currentUid = activeUserId
+        }
+        accountStore.save(file)
     }
 
     var configURL: URL {
@@ -137,7 +155,10 @@ final class SupabaseClient: ObservableObject {
         guard !isConfigured else { return }
 
         configuration = try SupabaseConfiguration.load()
-        session = SupabaseSessionStore.load()
+        let file = accountStore.load()
+        accounts = file.accounts
+        activeUserId = file.activeUserId
+        session = file.activeAccount?.session
         currentUid = session?.userId
         isConfigured = true
     }
@@ -146,6 +167,48 @@ final class SupabaseClient: ObservableObject {
         let session = try await authenticatedSession()
         currentUid = session.userId
         return session.userId
+    }
+
+    func addAccount() async throws -> String {
+        try configureIfNeeded()
+        let newSession = try await signInAnonymously()
+        authSessionTask?.cancel()
+        authSessionTask = nil
+        let updated = accountsSnapshot().adding(
+            StoredAccount(session: newSession, nickname: ""),
+            activate: true
+        )
+        applyAccountsFile(updated, swapSession: true)
+        return newSession.userId
+    }
+
+    func switchTo(userId: String) throws {
+        guard let updated = accountsSnapshot().switching(to: userId) else {
+            throw PingError.accountNotFound
+        }
+        authSessionTask?.cancel()
+        authSessionTask = nil
+        applyAccountsFile(updated, swapSession: true)
+    }
+
+    func removeAccount(userId: String) {
+        let wasActive = activeUserId == userId
+        if wasActive {
+            authSessionTask?.cancel()
+            authSessionTask = nil
+        }
+        let updated = accountsSnapshot().removing(userId: userId)
+        applyAccountsFile(updated, swapSession: wasActive)
+    }
+
+    func updateActiveNickname(_ nickname: String) {
+        guard let uid = activeUserId else { return }
+        // nickname-only update; session and activeUserId are unchanged.
+        let snapshot = accountsSnapshot()
+        let updated = snapshot.updatingNickname(nickname, for: uid)
+        guard updated != snapshot else { return }
+        accounts = updated.accounts
+        accountStore.save(updated)
     }
 
     func rpcArray<T: Decodable>(_ function: String, body: [String: Any] = [:]) async throws -> [T] {
@@ -397,13 +460,10 @@ final class SupabaseClient: ObservableObject {
     private func save(session: SupabaseSession) {
         self.session = session
         currentUid = session.userId
-        SupabaseSessionStore.save(session)
-    }
-
-    private func clearSession() {
-        session = nil
-        currentUid = nil
-        SupabaseSessionStore.clear()
+        let updated = accountsSnapshot().upserting(session: session, activateIfFirst: true)
+        accounts = updated.accounts
+        activeUserId = updated.activeUserId
+        accountStore.save(updated)
     }
 
     private func objectURL(base: URL, bucket: String, path: String) -> URL {
