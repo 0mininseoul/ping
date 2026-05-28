@@ -359,6 +359,10 @@ private struct GeneralSettingsView: View {
                     nicknameDraft = nickname
                 }
 
+                // 인앱 닉네임 변경도 계정 캐시/게이트에 반영한다(스펙 §6: 닉네임을 영민으로 바꾸면 그 시점에 unlock).
+                SupabaseClient.shared.updateActiveNickname(nickname)
+                MultiAccountGate.updateUnlock(forNickname: nickname)
+
                 nicknameStatus = "저장됨"
             } catch {
                 nicknameError = "닉네임을 저장하지 못했습니다."

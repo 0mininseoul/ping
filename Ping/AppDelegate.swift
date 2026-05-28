@@ -222,6 +222,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     if opensRoomManagerWhenEmpty, rooms.isEmpty, onboardingWindow == nil {
                         showRoomManager()
                     }
+
+                    // 룸 목록이 채워진 뒤 캐치업을 실행해야 묶음 알림에 실제 룸 이름이 들어간다.
+                    catchUpChatNotifications(uid: uid)
                 }
             }
         }
@@ -251,8 +254,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 )
             }
         }
-
-        catchUpChatNotifications(uid: uid)
     }
 
     private var roomSetupWasDeferred: Bool {
