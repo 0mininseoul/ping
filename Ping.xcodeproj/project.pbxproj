@@ -131,8 +131,10 @@
 		ED2A3EB3872996158DA65761 /* MessageRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FD73952C51CA80616FFA8E6 /* MessageRowView.swift */; };
 		EE1A8480D0A1A17293759871 /* ReactionPersistenceContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5D3DB5C2FE7FCBB66A9C92D /* ReactionPersistenceContractTests.swift */; };
 		EFB2B0047CDF9C0ECEE1B2D6 /* ScreenFaceLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C56300160B566EFB16A4161 /* ScreenFaceLayoutTests.swift */; };
+		F0B715AF4A16126CA7926A1C /* MultiAccountGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F8F7409AE1AFA053895230D /* MultiAccountGate.swift */; };
 		F34AF31AD573EE56678B959E /* RoomTimelineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EE33710D375112C559C3B9B /* RoomTimelineView.swift */; };
 		F70CFEE73AAD78BC1C9074D7 /* NotificationLedger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74C0FE0C7DC03B3C263DCFC0 /* NotificationLedger.swift */; };
+		F7B15D253CEFD4BA923186FB /* MultiAccountGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D77E396E3C1D15BE710498ED /* MultiAccountGateTests.swift */; };
 		F82A4ECB45A5581D811B4F3C /* OnboardingInputContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E1A841BBD8BDD965C164BF8 /* OnboardingInputContractTests.swift */; };
 		F9F01F4FE990F1A34D5E5FCF /* RainbowBorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97150E02C17DE9AEBD26BF13 /* RainbowBorder.swift */; };
 		FF645ABE2A696D7110266F3C /* PairingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F013D14C65D1B797C6EF367 /* PairingViewModel.swift */; };
@@ -213,6 +215,7 @@
 		8841413A695A3C64F0B3F247 /* GlassButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassButton.swift; sourceTree = "<group>"; };
 		8F013D14C65D1B797C6EF367 /* PairingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingViewModel.swift; sourceTree = "<group>"; };
 		8F441B1B93C9D79CB77E24D4 /* PartnerCyclingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PartnerCyclingTests.swift; sourceTree = "<group>"; };
+		8F8F7409AE1AFA053895230D /* MultiAccountGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiAccountGate.swift; sourceTree = "<group>"; };
 		90A916C7BE813E0B77E80E22 /* RoomManagerUXContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomManagerUXContractTests.swift; sourceTree = "<group>"; };
 		9214746AA17BA72DEFC057E7 /* AppcastUpdateOfferParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppcastUpdateOfferParserTests.swift; sourceTree = "<group>"; };
 		961E0B236B19718866C9702B /* RoomDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomDetailView.swift; sourceTree = "<group>"; };
@@ -254,6 +257,7 @@
 		CEBA01FC9DCA088BE83E5C4F /* SmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmokeTests.swift; sourceTree = "<group>"; };
 		CFDFDDA4D6E69A3184DC445F /* GlassChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassChip.swift; sourceTree = "<group>"; };
 		D09E2E7CA36EC901ED5EE3FB /* SupabaseSessionContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseSessionContractTests.swift; sourceTree = "<group>"; };
+		D77E396E3C1D15BE710498ED /* MultiAccountGateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiAccountGateTests.swift; sourceTree = "<group>"; };
 		D8344102772E903458A39D6D /* HistoryWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryWindow.swift; sourceTree = "<group>"; };
 		D8DECA8FDBEC815880806715 /* HistorySidebar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistorySidebar.swift; sourceTree = "<group>"; };
 		DB1A6EF7325EC145996B1CE8 /* ScreenFaceRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenFaceRecorder.swift; sourceTree = "<group>"; };
@@ -314,6 +318,7 @@
 				72E17B6A6D89179C56491009 /* AppState.swift */,
 				0194505B84DC32C2BA700F6C /* InviteLink.swift */,
 				DDF74D004DFD2F009A5DA36B /* Models.swift */,
+				8F8F7409AE1AFA053895230D /* MultiAccountGate.swift */,
 				62D2F7B67DB16ADA6741BD44 /* PingError.swift */,
 				E4C0907AE314021D2DFEC882 /* RoomLimits.swift */,
 				F760D624DE03E352A8514854 /* ScreenCoordinates.swift */,
@@ -505,6 +510,7 @@
 				FE28695E12B3BFE879774504 /* LocalSavePermissionContractTests.swift */,
 				B34FE34A23EC76CE975F980D /* MenuBarIconContractTests.swift */,
 				3F670415508116D43886183A /* MirrorViewModelStateTests.swift */,
+				D77E396E3C1D15BE710498ED /* MultiAccountGateTests.swift */,
 				02B0C288ED1350D3FD113878 /* MultiAccountSwitchingContractTests.swift */,
 				807D0F7ABDF51662C9497EEF /* NotificationLedgerTests.swift */,
 				4F542186B03D30E2C8BE833E /* OnboardingCopyTests.swift */,
@@ -855,6 +861,7 @@
 				6C7E8E8138C42E9ED2D0D8CF /* LocalSavePermissionContractTests.swift in Sources */,
 				82489619708A93D7397D5172 /* MenuBarIconContractTests.swift in Sources */,
 				C5B52473A941591B9CEBDCF0 /* MirrorViewModelStateTests.swift in Sources */,
+				F7B15D253CEFD4BA923186FB /* MultiAccountGateTests.swift in Sources */,
 				1DF73CA186C513531DA2659B /* MultiAccountSwitchingContractTests.swift in Sources */,
 				97A8817FB883D2E00B7B9AA3 /* NotificationLedgerTests.swift in Sources */,
 				4817EF4ACB6DAD760DDDF3E2 /* OnboardingCopyTests.swift in Sources */,
@@ -927,6 +934,7 @@
 				86FC0DE057AA315B2F2E87AB /* MirrorViewModel.swift in Sources */,
 				661E54E16BDF7EF0037D6F5E /* MirrorWindow.swift in Sources */,
 				1F498DA0EBF60E7D1E23D2DC /* Models.swift in Sources */,
+				F0B715AF4A16126CA7926A1C /* MultiAccountGate.swift in Sources */,
 				F70CFEE73AAD78BC1C9074D7 /* NotificationLedger.swift in Sources */,
 				9FA1400BCD0EA12F757DB346 /* OnboardingCopy.swift in Sources */,
 				3A42A12F85CF34A4D5F2F7CD /* OnboardingWindow.swift in Sources */,
