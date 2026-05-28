@@ -120,3 +120,95 @@ struct AccountsFile: Codable, Equatable {
         return copy
     }
 }
+
+/// 다중 계정 영속 계층. Accounts.json을 소유하고, 활성 세션을 레거시
+/// SupabaseSession.json + UserDefaults에 미러해 다운그레이드/토큰 갱신 경로와 호환된다.
+// @unchecked: holds only immutable Sendable-friendly refs; UserDefaults is thread-safe.
+final class AccountStore: @unchecked Sendable {
+    private let directoryURL: URL
+    private let defaults: UserDefaults
+
+    private let accountsFileName = "Accounts.json"
+    private let legacyFileName = "SupabaseSession.json"
+    private let legacyDefaultsKey = "ping.supabase.session"
+
+    init(directoryURL: URL, defaults: UserDefaults = .standard) {
+        self.directoryURL = directoryURL
+        self.defaults = defaults
+    }
+
+    static func makeDefault() -> AccountStore {
+        if let support = try? FileManager.default.url(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: true
+        ) {
+            let directory = support.appendingPathComponent("Ping", isDirectory: true)
+            try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            return AccountStore(directoryURL: directory)
+        }
+        return AccountStore(directoryURL: FileManager.default.temporaryDirectory)
+    }
+
+    func load() -> AccountsFile {
+        if let file = readAccountsFile() {
+            return file
+        }
+        let migrated = AccountsFile.migrating(from: loadLegacySession())
+        if !migrated.accounts.isEmpty {
+            save(migrated)
+        }
+        return migrated
+    }
+
+    func save(_ file: AccountsFile) {
+        writeAccountsFile(file)
+        if let active = file.activeAccount {
+            writeLegacyMirror(active.session)
+        } else {
+            clearLegacyMirror()
+        }
+    }
+
+    // MARK: - Accounts.json
+
+    private var accountsFileURL: URL { directoryURL.appendingPathComponent(accountsFileName) }
+
+    private func readAccountsFile() -> AccountsFile? {
+        guard let data = try? Data(contentsOf: accountsFileURL) else { return nil }
+        return try? JSONDecoder().decode(AccountsFile.self, from: data)
+    }
+
+    private func writeAccountsFile(_ file: AccountsFile) {
+        guard let data = try? JSONEncoder().encode(file) else { return }
+        try? data.write(to: accountsFileURL, options: .atomic)
+    }
+
+    // MARK: - 레거시 미러 (다운그레이드 호환)
+
+    private var legacyFileURL: URL { directoryURL.appendingPathComponent(legacyFileName) }
+
+    private func loadLegacySession() -> SupabaseSession? {
+        if let data = try? Data(contentsOf: legacyFileURL),
+           let session = try? JSONDecoder().decode(SupabaseSession.self, from: data) {
+            return session
+        }
+        if let data = defaults.data(forKey: legacyDefaultsKey),
+           let session = try? JSONDecoder().decode(SupabaseSession.self, from: data) {
+            return session
+        }
+        return nil
+    }
+
+    private func writeLegacyMirror(_ session: SupabaseSession) {
+        guard let data = try? JSONEncoder().encode(session) else { return }
+        try? data.write(to: legacyFileURL, options: .atomic)
+        defaults.set(data, forKey: legacyDefaultsKey)
+    }
+
+    private func clearLegacyMirror() {
+        try? FileManager.default.removeItem(at: legacyFileURL)
+        defaults.removeObject(forKey: legacyDefaultsKey)
+    }
+}
