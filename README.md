@@ -34,9 +34,9 @@ Supabase Dashboard의 Authentication 설정에서 Anonymous sign-ins가 켜져 �
 
 ### macOS
 
-1. `Ping-v0.3.32.dmg`를 더블클릭해 마운트한다.
+1. `Ping-v0.3.33.dmg`를 더블클릭해 마운트한다.
 2. `Ping.app`을 Applications 폴더로 드래그한다.
-3. 첫 실행은 우클릭 후 "열기"를 선택한다.
+3. 더블클릭해 실행한다. Developer ID 서명 + Apple 공증(notarized) 빌드라 Gatekeeper 경고 없이 바로 열린다.
 4. 카메라, 마이크, 알림 권한을 허용한다.
 5. 닉네임을 입력한 뒤 룸을 만들거나 상대를 검색해 초대한다.
 
@@ -81,6 +81,11 @@ macOS 앱은 Sparkle로 업데이트를 확인한다. 새 버전이 공개되면
 0.3.28 초기 빌드(38/39)에서 업데이트 설치 오류가 반복되면 랜딩페이지의 최신 macOS DMG를 한 번 수동으로 내려받아 `Ping.app`을 Applications 폴더에 덮어쓴다. 이 초기 빌드는 Sparkle installer helper 권한/서명이 잘못 들어간 상태라, 현재 실행 중인 앱만으로는 자동 업데이트 설치가 실패할 수 있다. build 40 이상은 Sparkle helper 권한을 보존하고 sandbox mach-lookup 예외를 포함한다.
 
 Windows 앱은 Sparkle을 사용하지 않는다. 비용 없는 배포는 self-signed MSIX를 작은 `PingSetup-v0.3.28.exe` 웹 설치파일로 감싸고, 설치 중 PC 아키텍처에 맞는 MSIX를 `https://ping0min.vercel.app/downloads/windows/`에서 받는 방식이다. 최초 설치 시 installer가 Ping 공개 인증서를 등록한다. Microsoft Store, Azure Artifact Signing, OV 코드서명 인증서는 더 매끄러운 신뢰 UX를 제공하지만 비용 또는 외부 계정 검증이 필요하다.
+
+## v0.3.33 macOS 수정
+
+- Apple Developer Program 가입 후 릴리스 빌드를 ad-hoc 서명에서 **Developer ID Application 서명 + Apple 공증(notarization) + 스테이플**로 전환했다. 이제 DMG를 받아 실행할 때 "확인되지 않은 개발자" 경고 없이 바로 열린다(`spctl` 판정: `accepted / Notarized Developer ID`).
+- Developer ID designated requirement는 팀 + 번들 ID에 앵커링되어 빌드마다 안정적이므로, 이전의 ad-hoc requirement 고정 없이도 업데이트 후 TCC 권한이 유지된다.
 
 ## v0.3.32 macOS 수정
 
