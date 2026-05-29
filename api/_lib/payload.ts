@@ -21,6 +21,7 @@ export interface PingPayload {
 export function buildPingPayload(input: PingPayloadInput): PingPayload {
   return {
     aps: {
+      // body is intentionally Korean-only for the MVP
       alert: { title: input.senderName, body: 'ping 영상 메시지' },
       sound: 'default',
       'mutable-content': 1,

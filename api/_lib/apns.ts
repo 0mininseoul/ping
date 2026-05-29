@@ -39,6 +39,10 @@ export function sendApns(input: SendApnsInput): Promise<SendApnsResult> {
   return new Promise((resolve, reject) => {
     const client = http2.connect(host);
     client.on('error', reject);
+    client.setTimeout(5000, () => {
+      client.close();
+      reject(new Error(`APNs connection timed out for ${input.token}`));
+    });
 
     const req = client.request({
       ':method': 'POST',

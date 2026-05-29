@@ -29,18 +29,19 @@ export async function handlePush(
   const rec = parseMessageRecord(body);
   if (!rec) return { code: 200, body: { ignored: true } };
 
-  const { data: tokens } = await deps.supabase
+  const { data: tokens, error: tokenError } = await deps.supabase
     .from('device_tokens')
     .select('token, environment')
     .eq('uid', rec.receiverUid);
-
+  if (tokenError) return { code: 500, body: { error: 'db_error', detail: tokenError.message } };
   if (!tokens || tokens.length === 0) return { code: 200, body: { sent: 0, removed: 0 } };
 
   const path = `${rec.senderUid}/${rec.videoId}.mp4`;
-  const { data: signed } = await deps.supabase.storage
+  const { data: signed, error: signedError } = await deps.supabase.storage
     .from('ping-videos')
     .createSignedUrl(path, 600);
-  const videoSignedUrl = signed?.signedUrl ?? '';
+  if (signedError || !signed?.signedUrl) return { code: 500, body: { error: 'storage_error' } };
+  const videoSignedUrl = signed.signedUrl;
 
   const jwt = await deps.makeJwt();
   let sent = 0;
@@ -97,10 +98,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     expectedSecret: process.env.PUSH_WEBHOOK_SECRET as string,
   };
 
-  const out = await handlePush(
-    req.body,
-    req.headers['x-webhook-secret'] as string | undefined,
-    deps
-  );
-  res.status(out.code).json(out.body);
+  try {
+    const out = await handlePush(req.body, req.headers['x-webhook-secret'] as string | undefined, deps);
+    res.status(out.code).json(out.body);
+  } catch (err) {
+    console.error('push handler unhandled error', err);
+    res.status(500).json({ error: 'internal_error' });
+  }
 }

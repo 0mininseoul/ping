@@ -1,13 +1,29 @@
 import { describe, it, expect, vi } from 'vitest';
 import { handlePush, type PushDeps } from '../../push';
 
-function fakeSupabase(tokens: Array<{ token: string; environment: string }>) {
+interface FakeOptions {
+  tokenQueryError?: { message: string } | null;
+  signedUrlError?: { message: string } | null;
+  signedUrl?: string | null;
+}
+
+function fakeSupabase(
+  tokens: Array<{ token: string; environment: string }>,
+  opts: FakeOptions = {}
+) {
   const deleted: string[][] = [];
   const supabase = {
     from(_table: string) {
       return {
         select() {
-          return { eq: async () => ({ data: tokens, error: null }) };
+          return {
+            eq: async () => {
+              if (opts.tokenQueryError) {
+                return { data: null, error: opts.tokenQueryError };
+              }
+              return { data: tokens, error: null };
+            },
+          };
         },
         delete() {
           return {
@@ -22,10 +38,16 @@ function fakeSupabase(tokens: Array<{ token: string; environment: string }>) {
     storage: {
       from() {
         return {
-          createSignedUrl: async () => ({
-            data: { signedUrl: 'https://signed.example/clip.mp4' },
-            error: null,
-          }),
+          createSignedUrl: async () => {
+            if (opts.signedUrlError) {
+              return { data: null, error: opts.signedUrlError };
+            }
+            const url = opts.signedUrl !== undefined ? opts.signedUrl : 'https://signed.example/clip.mp4';
+            return {
+              data: url ? { signedUrl: url } : null,
+              error: null,
+            };
+          },
         };
       },
     },
@@ -46,12 +68,16 @@ const insertBody = {
   },
 };
 
-function deps(overrides: Partial<PushDeps>, tokens = [{ token: 't1', environment: 'production' }]): {
+function deps(
+  overrides: Partial<PushDeps>,
+  tokens = [{ token: 't1', environment: 'production' }],
+  opts: FakeOptions = {}
+): {
   d: PushDeps;
   send: ReturnType<typeof vi.fn>;
   deleted: string[][];
 } {
-  const { supabase, deleted } = fakeSupabase(tokens);
+  const { supabase, deleted } = fakeSupabase(tokens, opts);
   const send = vi.fn(async () => ({ status: 200, body: '' }));
   const d: PushDeps = {
     supabase: supabase as unknown as PushDeps['supabase'],
@@ -103,5 +129,35 @@ describe('handlePush', () => {
     const out = await handlePush(insertBody, 's3cret', d);
     expect(out.body).toEqual({ sent: 1, removed: 1 });
     expect(deleted).toEqual([['t2']]);
+  });
+
+  it('returns sent:0 when receiver has no tokens', async () => {
+    const { d, send } = deps({}, []);
+    const out = await handlePush(insertBody, 's3cret', d);
+    expect(out.code).toBe(200);
+    expect(out.body).toEqual({ sent: 0, removed: 0 });
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('returns 500 when the device_tokens query errors', async () => {
+    const { d, send } = deps(
+      {},
+      [],
+      { tokenQueryError: { message: 'db down' } }
+    );
+    const out = await handlePush(insertBody, 's3cret', d);
+    expect(out.code).toBe(500);
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('returns 500 when the signed URL cannot be created', async () => {
+    const { d, send } = deps(
+      {},
+      [{ token: 't1', environment: 'production' }],
+      { signedUrlError: { message: 'not found' } }
+    );
+    const out = await handlePush(insertBody, 's3cret', d);
+    expect(out.code).toBe(500);
+    expect(send).not.toHaveBeenCalled();
   });
 });
