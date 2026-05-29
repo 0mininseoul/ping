@@ -56,6 +56,16 @@ function Restart-Elevated {
     }
     $arguments.Add("-CertificatePath")
     $arguments.Add((Quote-Argument $CertificatePath))
+    if ($CreateDesktopShortcut) {
+        $arguments.Add("-CreateDesktopShortcut")
+    }
+    if ($AddToStartup) {
+        $arguments.Add("-AddToStartup")
+    }
+    if (-not [string]::IsNullOrWhiteSpace($IconPath)) {
+        $arguments.Add("-IconPath")
+        $arguments.Add((Quote-Argument $IconPath))
+    }
     if ($NoLaunch) {
         $arguments.Add("-NoLaunch")
     }
