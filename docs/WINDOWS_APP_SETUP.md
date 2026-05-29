@@ -13,7 +13,13 @@ Ping for Windows is a native WinUI 3 client that shares the same Supabase backen
 
 ## Runtime Supabase Config
 
-Create this file on the Windows machine:
+**일반 사용자는 별도 설정이 필요 없습니다.** 배포되는 MSIX에는 공유 백엔드의
+`Supabase.json`(공개 URL + 공개 anon 키)이 함께 들어 있어 설치 직후 바로 동작합니다.
+CI가 빌드 시 `PING_SUPABASE_URL` / `PING_SUPABASE_ANON_KEY` 시크릿으로 이 파일을
+생성해 패키지에 포함합니다(`SupabaseConfigLocator` 참조).
+
+다른 백엔드를 가리키려는 파워유저/개발자는 아래 위치에 오버라이드 파일을 두면
+동봉본보다 우선 적용됩니다:
 
 ```text
 %LOCALAPPDATA%\Ping\Supabase.json
@@ -25,6 +31,9 @@ Create this file on the Windows machine:
   "anonKey": "YOUR_SUPABASE_ANON_KEY"
 }
 ```
+
+설정 탐색 우선순위: ① `%LOCALAPPDATA%\Ping\Supabase.json`(존재 시) →
+② 앱 설치 폴더 동봉본.
 
 The Windows client stores its anonymous session separately at:
 
@@ -48,7 +57,7 @@ If a hotkey is already used by another app, onboarding/settings show it as confl
 ## Onboarding Checks
 
 1. OS support: show unsupported warning outside Windows 11 24H2+ and disable screen+face quick send when required APIs or Supabase config are unavailable.
-2. Supabase config: verify `%LOCALAPPDATA%\Ping\Supabase.json` exists and contains a valid Supabase URL plus anon key before enabling quick send.
+2. Supabase config: resolve config via `SupabaseConfigLocator` (user override at `%LOCALAPPDATA%\Ping\Supabase.json`, otherwise the config bundled in the installed package). Because release packages bundle the config, this check passes out of the box for general users.
 3. Admin/elevated state: app notifications are not supported for elevated apps, so users should restart Ping normally.
 4. Camera: check packaged webcam capability and initialize MediaCapture.
 5. Microphone: initialize audio capture; v1 does not provide silent-video fallback.
