@@ -44,7 +44,7 @@ public sealed class SupabaseClient : ISupabaseRpcClient, IDisposable
     {
         this.httpClient = httpClient ?? new HttpClient();
         ownsHttpClient = httpClient is null;
-        this.configPath = configPath ?? PingLocalPath("Supabase.json");
+        this.configPath = configPath ?? SupabaseConfigLocator.Resolve();
         this.sessionPath = sessionPath ?? PingLocalPath("SupabaseSession.json");
     }
 

@@ -111,6 +111,29 @@ jobs:
           dotnet test windows/tests/Ping.Windows.Core.Tests/Ping.Windows.Core.Tests.csproj -c Release --no-restore
           dotnet test windows/tests/Ping.Windows.App.Tests/Ping.Windows.App.Tests.csproj -c Release --no-restore
 
+      - name: Write bundled Supabase config
+        shell: pwsh
+        env:
+          PING_SUPABASE_URL: ${{ secrets.PING_SUPABASE_URL }}
+          PING_SUPABASE_ANON_KEY: ${{ secrets.PING_SUPABASE_ANON_KEY }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $url = $env:PING_SUPABASE_URL
+          $anonKey = $env:PING_SUPABASE_ANON_KEY
+          $configPath = "windows/src/Ping.Windows.App/Supabase.json"
+
+          if ([string]::IsNullOrWhiteSpace($url) -or [string]::IsNullOrWhiteSpace($anonKey)) {
+            if ($env:PING_WINDOWS_SIGNED -eq "true") {
+              throw "PING_SUPABASE_URL and PING_SUPABASE_ANON_KEY secrets are required for signed/release builds so the MSIX ships with backend config and works on first launch."
+            }
+            Write-Warning "Supabase secrets are not configured. Building a validation package without bundled backend config."
+            exit 0
+          }
+
+          $config = [ordered]@{ url = $url; anonKey = $anonKey }
+          Set-Content -LiteralPath $configPath -Value ($config | ConvertTo-Json -Compress) -Encoding utf8
+          Write-Host "Wrote bundled Supabase config to $configPath."
+
       - name: Build packaged app
         shell: pwsh
         run: |

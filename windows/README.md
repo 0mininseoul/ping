@@ -52,15 +52,19 @@ dotnet test .\tests\Ping.Windows.App.Tests\Ping.Windows.App.Tests.csproj -c Debu
 
 ## Runtime Configuration
 
-The Windows client reads Supabase config from:
+The Windows client resolves Supabase config via `SupabaseConfigLocator`, in order:
 
-```text
-%LOCALAPPDATA%\Ping\Supabase.json
-```
+1. User override: `%LOCALAPPDATA%\Ping\Supabase.json` (if present)
+2. Bundled default: `Supabase.json` next to the installed executable
 
-Onboarding treats this row as ready only when the file exists and contains a valid Supabase URL plus anon key.
+Release MSIX packages **bundle** `Supabase.json` (shared backend URL + public anon
+key) so a freshly installed Ping works with zero manual setup — mirroring how the
+macOS app bundles `Resources/Supabase.plist`. The bundled file is git-ignored and
+written by CI from the `PING_SUPABASE_URL` / `PING_SUPABASE_ANON_KEY` secrets; see
+`Supabase.example.json` for the format. For local dev (no secret), the build still
+succeeds and the app falls back to the user override.
 
-Example:
+Example (`Supabase.json`):
 
 ```json
 {
@@ -68,8 +72,6 @@ Example:
   "anonKey": "YOUR_SUPABASE_ANON_KEY"
 }
 ```
-
-This is intentionally separate from the macOS `Resources/Supabase.plist`.
 
 ## Release Package
 

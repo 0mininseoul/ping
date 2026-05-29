@@ -32,6 +32,8 @@ firebase-debug.log
 
 # Supabase
 Resources/Supabase.plist
+# Windows: bundled backend config is injected at build time from CI secrets.
+windows/src/Ping.Windows.App/Supabase.json
 supabase/.branches/
 supabase/.temp/
 

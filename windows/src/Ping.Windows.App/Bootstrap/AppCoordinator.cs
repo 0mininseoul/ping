@@ -106,6 +106,7 @@ public sealed class AppCoordinator : IDisposable
             archive: localArchive);
         this.tray = tray ?? new TrayIconController(ExecuteTrayCommand);
         mainWindow.QuickSendToggleChanged += HandleQuickSendToggleChanged;
+        mainWindow.BlockedRetryRequested += HandleBlockedRetryRequested;
     }
 
     public void Start()
@@ -269,13 +270,14 @@ public sealed class AppCoordinator : IDisposable
         mainWindow.ShowShell();
     }
 
-    private void ShowBlockedState(string title, string detail, string reason)
+    private void ShowBlockedState(string title, string detail, string reason, bool canRetry = false)
     {
         mainWindow.ShellTitle.Text = title;
         mainWindow.StateBadge.Text = "Blocked";
         mainWindow.StateTitle.Text = title;
         mainWindow.StateDetail.Text = detail;
         mainWindow.BlockedReason.Text = reason;
+        mainWindow.BlockedRetryButton.Visibility = canRetry ? Visibility.Visible : Visibility.Collapsed;
         mainWindow.StateBorder.BorderBrush = mainWindow.WarningBorderBrush;
         mainWindow.HistoryPanel.Visibility = Visibility.Collapsed;
         mainWindow.BlockedPanel.Visibility = Visibility.Visible;
@@ -1106,15 +1108,32 @@ public sealed class AppCoordinator : IDisposable
             mainWindow.HotkeyState.Text = HotkeyStatusText.RoomSummary(preferencesStore.Load(), sendableCount);
             StartIncomingPolling();
             StartIncomingChatPolling();
+
+            // 차단 화면에서 '다시 시도'로 재연결에 성공한 경우, 차단 상태를 벗어나
+            // 연결된 화면을 보여준다.
+            if (mainWindow.BlockedPanel.Visibility == Visibility.Visible)
+            {
+                ShowHistory(sendableCount == 0
+                    ? "연결됨. 방을 만들거나 참여하면 전송할 수 있어요."
+                    : $"연결됨. 전송 가능한 방 {sendableCount}개.");
+            }
         }
         catch (Exception ex)
         {
-            mainWindow.HotkeyState.Text = $"Supabase setup blocked: {ex.Message}";
+            mainWindow.HotkeyState.Text = $"백엔드 연결 차단됨: {ex.Message}";
             ShowBlockedState(
-                "Supabase setup",
-                "Ping could not connect to Supabase. Check your Windows runtime config and network, then retry from onboarding or relaunch Ping.",
-                ex.Message);
+                "백엔드 연결",
+                "Ping이 백엔드에 연결하지 못했습니다. 인터넷 연결을 확인한 뒤 아래 '다시 시도'를 눌러주세요.",
+                ex.Message,
+                canRetry: true);
         }
+    }
+
+    private void HandleBlockedRetryRequested(object? sender, EventArgs args)
+    {
+        mainWindow.BlockedRetryButton.Visibility = Visibility.Collapsed;
+        mainWindow.StateDetail.Text = "다시 연결하는 중...";
+        _ = BootstrapAndLoadRoomsAsync();
     }
 
     private async Task RunCleanupAsync()

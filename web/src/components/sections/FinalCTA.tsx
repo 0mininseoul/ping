@@ -3,6 +3,7 @@ import ClickSpark from "@/components/bits/ClickSpark";
 import ScrollFloat from "@/components/bits/ScrollFloat";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useOS } from "@/lib/useOS";
 
 interface FinalCTAProps {
   macDownloadUrl: string;
@@ -17,6 +18,23 @@ export default function FinalCTA({
   macVersion,
   windowsVersion,
 }: FinalCTAProps) {
+  const os = useOS();
+  const targets = [
+    {
+      key: "mac",
+      url: macDownloadUrl,
+      label: "Download for macOS",
+      aria: `Ping ${macVersion} macOS DMG 다운로드`,
+    },
+    {
+      key: "win",
+      url: windowsDownloadUrl,
+      label: "Download for Windows",
+      aria: `Ping ${windowsVersion} Windows EXE 다운로드`,
+    },
+  ];
+  const ordered = os === "windows" ? [targets[1], targets[0]] : targets;
+
   return (
     <section id="download" className="border-t border-border py-28 md:py-32">
       <div className="container-app">
@@ -44,38 +62,24 @@ export default function FinalCTA({
 
               <div className="flex flex-col items-stretch gap-3 md:items-end">
                 <div className="grid w-full gap-3 md:inline-grid md:w-auto">
-                  <ClickSpark className="w-full">
-                    <a
-                      className="block w-full"
-                      href={macDownloadUrl}
-                      aria-label={`Ping ${macVersion} macOS DMG 다운로드`}
-                    >
-                      <Button
-                        variant="primary"
-                        size="lg"
-                        className="w-full !shadow-[0_10px_22px_rgba(47,170,110,0.16)]"
-                      >
-                        <MonitorDown aria-hidden className="h-[18px] w-[18px]" />
-                        Download for macOS
-                      </Button>
-                    </a>
-                  </ClickSpark>
-                  <ClickSpark className="w-full">
-                    <a
-                      className="block w-full"
-                      href={windowsDownloadUrl}
-                      aria-label={`Ping ${windowsVersion} Windows EXE 다운로드`}
-                    >
-                      <Button
-                        variant="secondary"
-                        size="lg"
-                        className="w-full"
-                      >
-                        <MonitorDown aria-hidden className="h-[18px] w-[18px]" />
-                        Download for Windows
-                      </Button>
-                    </a>
-                  </ClickSpark>
+                  {ordered.map((t, i) => (
+                    <ClickSpark key={t.key} className="w-full">
+                      <a className="block w-full" href={t.url} aria-label={t.aria}>
+                        <Button
+                          variant={i === 0 ? "primary" : "secondary"}
+                          size="lg"
+                          className={
+                            i === 0
+                              ? "w-full !shadow-[0_10px_22px_rgba(47,170,110,0.16)]"
+                              : "w-full"
+                          }
+                        >
+                          <MonitorDown aria-hidden className="h-[18px] w-[18px]" />
+                          {t.label}
+                        </Button>
+                      </a>
+                    </ClickSpark>
+                  ))}
                 </div>
               </div>
             </div>

@@ -28,6 +28,19 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+  <!--
+    Supabase.json holds the shared backend URL + public anon key and is bundled
+    into the MSIX so a freshly installed Ping works with zero manual setup.
+    The real file is git-ignored and written by CI from repository secrets
+    (PING_SUPABASE_URL / PING_SUPABASE_ANON_KEY). When it is absent (e.g. local
+    dev), the build still succeeds and the app falls back to the user override at
+    %LOCALAPPDATA%\Ping\Supabase.json. See Supabase.example.json for the format.
+  -->
+  <ItemGroup Condition="Exists('Supabase.json')">
+    <Content Include="Supabase.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
   <Target Name="CopyNativeCaptureDllToOutput" AfterTargets="Build">
     <PropertyGroup>
       <NativeCaptureDllPath>$(MSBuildThisFileDirectory)..\Ping.Windows.NativeCapture\bin\$(Platform)\$(Configuration)\$(TargetFramework)\Ping.Windows.NativeCapture.dll</NativeCaptureDllPath>
