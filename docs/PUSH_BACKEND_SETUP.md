@@ -21,9 +21,9 @@ Values are stored encrypted in Vercel — never in git. Names only:
 | `SUPABASE_URL` | `https://qxjtprxvjmaxlbtljcjw.supabase.co` |
 | `SUPABASE_SERVICE_ROLE_KEY` | server-side DB access (RLS bypass) for token lookup + signed URLs |
 | `PUSH_WEBHOOK_SECRET` | shared secret; must equal the webhook's `x-webhook-secret` header |
-| `APNS_KEY_ID` | APNs Auth Key ID (`TMC3PCHDCF`) |
+| `APNS_KEY_ID` | APNs Auth Key ID (`AZU5Y6PKU6`) — a **real APNs key** (developer.apple.com → Keys → APNs capability, Sandbox+Production). **NOT** the App Store Connect API key `TMC3PCHDCF`; using the ASC key here returns `403 InvalidProviderToken` on every send. |
 | `APNS_TEAM_ID` | Apple Team ID (`878FAHTFQJ`) |
-| `APNS_P8` | APNs Auth Key `.p8` contents (PKCS#8 PEM) |
+| `APNS_P8` | APNs Auth Key `.p8` contents (PKCS#8 PEM) for key `AZU5Y6PKU6` |
 | `APNS_BUNDLE_ID` | `com.youngminpark.ping.PingMobile` (iOS app bundle id; set in P3). Needs a redeploy to take effect for real sends (P6). |
 
 Env var changes require a redeploy to take effect (`vercel redeploy <prod-url>` or a git push).
