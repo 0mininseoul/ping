@@ -35,6 +35,7 @@
 		2B1F29CDBE52BC6936DCE599 /* ScreenFaceRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB1A6EF7325EC145996B1CE8 /* ScreenFaceRecorder.swift */; };
 		2BE6D442750C42406D4CE6AF /* StatusMenuBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2F40CF1E71B9600941F2BE1 /* StatusMenuBuilderTests.swift */; };
 		2E6412BD4860FB69C0B3C49A /* DesignSystemContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6157E3107FE54D68F65EFCB /* DesignSystemContractTests.swift */; };
+		2F01792327B781BEF63AC173 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2AF4160B3B74FDD3CA18261B /* Assets.xcassets */; };
 		315501BEACA5034EC49BB7B3 /* InviteLinkContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CC9A5C9C5BA8FF0D9D30E0A /* InviteLinkContractTests.swift */; };
 		385227B9524A34105FB11714 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00EDA916E26BEAF2BAA3A0F3 /* NotificationService.swift */; };
 		3A42A12F85CF34A4D5F2F7CD /* OnboardingWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 050A0147A7508D00A8E2DE3B /* OnboardingWindow.swift */; };
@@ -48,6 +49,7 @@
 		43072A8619301C054B30BC7C /* OnboardingFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05A1A2EA9F9A191DE3263C29 /* OnboardingFlowTests.swift */; };
 		44DC21E6B318CF6969918DE9 /* CompatibilityContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7BA291155ACBFF85185B36B /* CompatibilityContractTests.swift */; };
 		45CDCD2993C1E53FB62356A1 /* StatusMenuBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CAAECC60F6BE44D405DF213 /* StatusMenuBuilder.swift */; };
+		46F9E8AA666F9112513C36A2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 552333A6E0C0847053D21F1B /* Assets.xcassets */; };
 		4798C5AABBEC8C3D9F10A217 /* AccountsFileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFA1291A4824203978317290 /* AccountsFileTests.swift */; };
 		4817EF4ACB6DAD760DDDF3E2 /* OnboardingCopyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F542186B03D30E2C8BE833E /* OnboardingCopyTests.swift */; };
 		489FD8469EFD7A09256A8F54 /* PlaybackPrefetchContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF791350460B22AC63D0CE32 /* PlaybackPrefetchContractTests.swift */; };
@@ -233,6 +235,7 @@
 		23C125D42D4715B503E6E707 /* MirrorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MirrorView.swift; sourceTree = "<group>"; };
 		260A034212C7DCDAE4B05B4E /* UserService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserService.swift; sourceTree = "<group>"; };
 		2823CB8CE254CF54DFA45E9C /* GlassEffectCompat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassEffectCompat.swift; sourceTree = "<group>"; };
+		2AF4160B3B74FDD3CA18261B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		2F806032469E93F02C3C28D9 /* AppcastUpdateOfferParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppcastUpdateOfferParser.swift; sourceTree = "<group>"; };
 		307DEEFD9006672888B273CE /* WatchSessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSessionStore.swift; sourceTree = "<group>"; };
 		311483C170DA8C628A197596 /* DeviceHandoffPayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceHandoffPayload.swift; sourceTree = "<group>"; };
@@ -253,6 +256,7 @@
 		4E1A841BBD8BDD965C164BF8 /* OnboardingInputContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingInputContractTests.swift; sourceTree = "<group>"; };
 		4F542186B03D30E2C8BE833E /* OnboardingCopyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingCopyTests.swift; sourceTree = "<group>"; };
 		5251D41AA9E41DBE6D637EF1 /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScannerView.swift; sourceTree = "<group>"; };
+		552333A6E0C0847053D21F1B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		599B87DE1571A0E649CE5582 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		5B86EF836E41F27EB9EA7504 /* PairingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingView.swift; sourceTree = "<group>"; };
 		5BB81E537D50111710D5B182 /* RoomService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomService.swift; sourceTree = "<group>"; };
@@ -434,6 +438,7 @@
 			children = (
 				702CBA60A095543268771705 /* AppDelegate.swift */,
 				6AAF79DFB70494C0A9C2E18B /* AppEnvironment.swift */,
+				552333A6E0C0847053D21F1B /* Assets.xcassets */,
 				599B87DE1571A0E649CE5582 /* ContentView.swift */,
 				012928FD0CA6F78D08BC8F84 /* Info.plist */,
 				4889748CC37B60C1E533B625 /* PingMobile.entitlements */,
@@ -563,6 +568,7 @@
 		9EFC6A770C2D2D4FCE5122C0 /* PingWatch */ = {
 			isa = PBXGroup;
 			children = (
+				2AF4160B3B74FDD3CA18261B /* Assets.xcassets */,
 				75BEE62CE9A5D00E0ACD5D90 /* Info.plist */,
 				120175272D55BF4CE32E1F4C /* PingWatchApp.swift */,
 				9E1F6F2D8E154DB411DE015B /* WatchAppDelegate.swift */,
@@ -718,6 +724,7 @@
 			buildConfigurationList = E87E8A445FDF6196AD293A59 /* Build configuration list for PBXNativeTarget "PingWatch" */;
 			buildPhases = (
 				CCBD1AC4086B032763878C09 /* Sources */,
+				2CDB93D2EA94B604AB1505FC /* Resources */,
 				F97C772B8C794D376C7A062D /* Frameworks */,
 			);
 			buildRules = (
@@ -773,6 +780,7 @@
 			buildConfigurationList = D04E95698CEC5BEA636F2350 /* Build configuration list for PBXNativeTarget "PingMobile" */;
 			buildPhases = (
 				1268DCCBD2147481EBEED3BF /* Sources */,
+				CEE35E6C2D9C60BC620FFDC1 /* Resources */,
 				7EC4D458C54C4F9F79516563 /* Frameworks */,
 				FA8E9780C6DC0BF333DEA475 /* Embed Foundation Extensions */,
 				E7C67A07ABCFE850BC82B8D3 /* Embed Watch Content */,
@@ -824,15 +832,18 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					0D2DDBF5AF89883B5949473F = {
+						DevelopmentTeam = 878FAHTFQJ;
 						ProvisioningStyle = Automatic;
 					};
 					3277FAE724A18B87D9E7BD00 = {
+						DevelopmentTeam = 878FAHTFQJ;
 						ProvisioningStyle = Automatic;
 					};
 					64724876EDA2DFE638565BE1 = {
 						ProvisioningStyle = Manual;
 					};
 					9BEA67117F1A3DBCB96C9ED0 = {
+						DevelopmentTeam = 878FAHTFQJ;
 						ProvisioningStyle = Automatic;
 					};
 					F11C4A8E12EA5159899C95F5 = {
@@ -875,6 +886,22 @@
 			buildActionMask = 2147483647;
 			files = (
 				E13DC4726E837B9456AF2859 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		2CDB93D2EA94B604AB1505FC /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2F01792327B781BEF63AC173 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CEE35E6C2D9C60BC620FFDC1 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				46F9E8AA666F9112513C36A2 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1293,7 +1320,8 @@
 				CODE_SIGN_ENTITLEMENTS = PingMobile/PingMobile.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = 878FAHTFQJ;
 				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = PingMobile/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -1307,7 +1335,7 @@
 				PRODUCT_NAME = PingMobile;
 				SDKROOT = iphoneos;
 				SWIFT_STRICT_CONCURRENCY = minimal;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -1317,7 +1345,8 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = 878FAHTFQJ;
 				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = PingWatch/Info.plist;
 				MARKETING_VERSION = 0.1.0;
@@ -1354,7 +1383,8 @@
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = 878FAHTFQJ;
 				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = PingPushService/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -1416,7 +1446,8 @@
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = 878FAHTFQJ;
 				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = PingPushService/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -1442,7 +1473,8 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = 878FAHTFQJ;
 				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = PingWatch/Info.plist;
 				MARKETING_VERSION = 0.1.0;
@@ -1532,7 +1564,8 @@
 				CODE_SIGN_ENTITLEMENTS = PingMobile/PingMobile.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = 878FAHTFQJ;
 				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = PingMobile/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -1546,7 +1579,7 @@
 				PRODUCT_NAME = PingMobile;
 				SDKROOT = iphoneos;
 				SWIFT_STRICT_CONCURRENCY = minimal;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
