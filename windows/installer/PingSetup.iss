@@ -23,10 +23,37 @@ ArchitecturesAllowed=x64compatible arm64
 ArchitecturesInstallIn64BitMode=x64compatible arm64
 Uninstallable=no
 SetupLogging=yes
+InfoBeforeFile=welcome.rtf
+SetupIconFile=app.ico
+
+[Tasks]
+Name: "desktopicon"; Description: "바탕 화면에 바로가기 만들기"; GroupDescription: "추가 옵션:"
+Name: "startup"; Description: "Windows 부팅 시 자동 시작 등록"; GroupDescription: "추가 옵션:"
+Name: "launch"; Description: "설치 완료 후 즉시 Ping 실행"; GroupDescription: "추가 옵션:"
 
 [Files]
 Source: "{#PayloadRoot}\Ping-Windows-Sideload.cer"; DestDir: "{tmp}\PingSetup"; Flags: deleteafterinstall
 Source: "{#PayloadRoot}\install-ping-windows.ps1"; DestDir: "{tmp}\PingSetup"; Flags: deleteafterinstall
+Source: "app.ico"; DestDir: "{tmp}\PingSetup"; Flags: deleteafterinstall
 
 [Run]
-Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{tmp}\PingSetup\install-ping-windows.ps1"" -Version ""{#AppVersion}"" -PackageDirectory ""{tmp}\PingSetup"" -PackageBaseUrl ""{#PackageBaseUrl}"" -CertificatePath ""{tmp}\PingSetup\Ping-Windows-Sideload.cer"""; StatusMsg: "Installing Ping for Windows..."; Flags: runhidden waituntilterminated
+Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{tmp}\PingSetup\install-ping-windows.ps1"" {code:GetInstallerParams}"; StatusMsg: "Installing Ping for Windows..."; Flags: runhidden waituntilterminated
+
+[Code]
+function GetInstallerParams(Param: String): String;
+var
+  Params: String;
+begin
+  Params := '-Version "' + ExpandConstant('{#AppVersion}') + '" -PackageDirectory "' + ExpandConstant('{tmp}\PingSetup') + '" -PackageBaseUrl "' + ExpandConstant('{#PackageBaseUrl}') + '" -CertificatePath "' + ExpandConstant('{tmp}\PingSetup\Ping-Windows-Sideload.cer') + '" -IconPath "' + ExpandConstant('{tmp}\PingSetup\app.ico') + '"';
+  
+  if WizardIsTaskSelected('desktopicon') then
+    Params := Params + ' -CreateDesktopShortcut';
+    
+  if WizardIsTaskSelected('startup') then
+    Params := Params + ' -AddToStartup';
+    
+  if not WizardIsTaskSelected('launch') then
+    Params := Params + ' -NoLaunch';
+    
+  Result := Params;
+end;

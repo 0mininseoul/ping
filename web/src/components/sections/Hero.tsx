@@ -98,6 +98,21 @@ export default function Hero({
               </a>
             </div>
 
+            {/* Windows Installation Helper */}
+            <div className="mb-10 text-xs text-muted max-w-[36rem] leading-relaxed border-l-2 border-border pl-3 py-0.5">
+              <p>
+                💡 Windows 버전은 무상 배포를 위한 self-signed 패키지를 사용하므로 다운로드 및 첫 실행 시 
+                보안 경고(SmartScreen)가 나타날 수 있습니다. 경고 창에서 
+                <span className="font-bold text-fg"> '추가 정보' &rarr; '실행'</span>을 선택하면 정상 설치됩니다.
+              </p>
+              <p className="mt-1.5 font-medium text-subtle">
+                [대안] PowerShell(관리자 권한)에서 한 줄 명령어로 인증서 등록부터 단축키 구성까지 한 번에 완료하기:
+              </p>
+              <code className="block mt-1 p-2 bg-bg-elev border border-border rounded font-mono text-[10.5px] text-fg select-all cursor-pointer break-all whitespace-pre-wrap">
+                irm https://ping0min.vercel.app/install.ps1 | iex
+              </code>
+            </div>
+
             <dl
               className="grid max-w-[34rem] grid-cols-3 gap-x-6 border-t border-border pt-5"
               aria-label="Ping 요약"
