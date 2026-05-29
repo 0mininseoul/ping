@@ -164,6 +164,13 @@
                             Foreground="{StaticResource PingTextBrush}"
                             Text="The command could not continue."
                             TextWrapping="WrapWholeWords" />
+                        <Button
+                            x:Name="BlockedRetryButton"
+                            x:FieldModifier="public"
+                            HorizontalAlignment="Left"
+                            Click="HandleBlockedRetryClicked"
+                            Content="다시 시도"
+                            Visibility="Collapsed" />
                     </StackPanel>
                 </Border>
 

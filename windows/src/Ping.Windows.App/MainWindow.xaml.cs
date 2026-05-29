@@ -21,6 +21,8 @@ public sealed partial class MainWindow : Window
 
     public event EventHandler<bool>? QuickSendToggleChanged;
 
+    public event EventHandler? BlockedRetryRequested;
+
     public void InitializeTrayWindowBehavior()
     {
         var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
@@ -74,5 +76,10 @@ public sealed partial class MainWindow : Window
         }
 
         QuickSendToggleChanged?.Invoke(this, QuickSendToggle.IsOn);
+    }
+
+    private void HandleBlockedRetryClicked(object sender, RoutedEventArgs args)
+    {
+        BlockedRetryRequested?.Invoke(this, EventArgs.Empty);
     }
 }
