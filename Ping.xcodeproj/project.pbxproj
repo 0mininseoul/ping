@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		00F43118BC5391A2FE1ABD0C /* ReleaseVersionContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BB8B40BB61BAE16EB12E239 /* ReleaseVersionContractTests.swift */; };
 		053A44897F67094ABE710FF4 /* ChatComposerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B7FBE2B14276ED0005C1615 /* ChatComposerView.swift */; };
+		05F064F14F190E4EC2CDA275 /* PingWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 9DA8354482E6065AA5CBDD0C /* PingWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		06AFB9CF51890A927220471E /* HistoryViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4768EC8284B544E3649C4507 /* HistoryViewModelTests.swift */; };
 		06BC9DFC1F527E3082A3B29A /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 599B87DE1571A0E649CE5582 /* ContentView.swift */; };
 		0C63FD5926C2755B5048FA20 /* RoomCapacityContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 186228D198F99431A3E1EBCE /* RoomCapacityContractTests.swift */; };
@@ -21,6 +22,7 @@
 		19E9FFCD74332CB8A9D4EFE1 /* SearchableTextTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EFC208F3B2DEB94FA5BF469 /* SearchableTextTests.swift */; };
 		1A8C88B22A915E42F85AF3D4 /* PingKit in Frameworks */ = {isa = PBXBuildFile; productRef = B4B8320B6FABC4C5E6A71F7A /* PingKit */; };
 		1A981B3A55999C6FDE480C3B /* HistoryCacheService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B110C3699C333F4B8A9E7E7C /* HistoryCacheService.swift */; };
+		1B5B16AD92FDF59A7FE95F30 /* WatchPlaybackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 973AD72C9CE629F13531F10F /* WatchPlaybackView.swift */; };
 		1DBFF4CDA565E60DE4F12837 /* SelectableTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5C19898F5FCEE8CFE97D3ED /* SelectableTextView.swift */; };
 		1DF73CA186C513531DA2659B /* MultiAccountSwitchingContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02B0C288ED1350D3FD113878 /* MultiAccountSwitchingContractTests.swift */; };
 		1F498DA0EBF60E7D1E23D2DC /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDF74D004DFD2F009A5DA36B /* Models.swift */; };
@@ -41,6 +43,7 @@
 		3E8747EC3C02819DE0808A7E /* GlassButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8841413A695A3C64F0B3F247 /* GlassButton.swift */; };
 		3F281D7BAAC12DAA86E5E838 /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = 1A17C43CDDC3D0D57F6CA5D4 /* Realtime */; };
 		40DDB292A1679F67000D41D4 /* AccountNotifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96D07ED094D1B1E9297946A0 /* AccountNotifications.swift */; };
+		42FAB79B241573C81A6569F5 /* WatchSessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 307DEEFD9006672888B273CE /* WatchSessionStore.swift */; };
 		42FEC3304784AF5DBBC354EA /* PingPushService.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F3ECDFD80CFE634B9C98FDA3 /* PingPushService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		43072A8619301C054B30BC7C /* OnboardingFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05A1A2EA9F9A191DE3263C29 /* OnboardingFlowTests.swift */; };
 		44DC21E6B318CF6969918DE9 /* CompatibilityContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7BA291155ACBFF85185B36B /* CompatibilityContractTests.swift */; };
@@ -79,6 +82,7 @@
 		776C909E046ADCF36EFB3CB8 /* UserService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 260A034212C7DCDAE4B05B4E /* UserService.swift */; };
 		784474049D097C6E7F6C56A7 /* DeviceHandoffPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = 311483C170DA8C628A197596 /* DeviceHandoffPayload.swift */; };
 		7D6820A9720716BA8CC598CE /* WindowPositioning.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73B2E5B2B85836038B79C18B /* WindowPositioning.swift */; };
+		7F6A47959943C9D575EFF846 /* PingKit in Frameworks */ = {isa = PBXBuildFile; productRef = A299A26A76C1EEE355D3B9F4 /* PingKit */; };
 		8034FE36123AC61C5D2661DD /* ChatMessageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCF184494526CD00335EC49D /* ChatMessageService.swift */; };
 		81AD9AA639E624B9BD249F74 /* VideoRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06B4B9E0137AD6A34F151BF2 /* VideoRecorder.swift */; };
 		81CF775CFAC24B82B2F8043A /* GlassChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFDFDDA4D6E69A3184DC445F /* GlassChip.swift */; };
@@ -104,10 +108,12 @@
 		AA6D58F4D096AF00DA5C5B80 /* UpdateReminderStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B5BB40E86D90C32CA784A61 /* UpdateReminderStoreTests.swift */; };
 		AB2E62FD9D04CB1415A796F5 /* UpdateReminderStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4D9879934F48283F7A2774C /* UpdateReminderStore.swift */; };
 		ACDDF0E513D2F7D330B6A9C7 /* SmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEBA01FC9DCA088BE83E5C4F /* SmokeTests.swift */; };
+		AD01F2054A51E668EFA20939 /* PingWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 120175272D55BF4CE32E1F4C /* PingWatchApp.swift */; };
 		AE0BAABF032564CD75C6AC48 /* RoomManagerWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2F526895AEBD9128DA1538F /* RoomManagerWindow.swift */; };
 		B516DA8E35BE22691A6F324C /* LocalNotificationCenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFCF08C61ECD845F231DFFE4 /* LocalNotificationCenter.swift */; };
 		B5ADEAB2D74F268DF698CC0E /* WindowPositioningTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA897CE96651014C4A14D9FF /* WindowPositioningTests.swift */; };
 		B6A11640F9C354B97F970881 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 9A1A6B3E7AB732144F264705 /* Sparkle */; };
+		B81C0B09A4BF899A8773CC3F /* WatchContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 991C6509D6B14DB1451FC377 /* WatchContentView.swift */; };
 		BAC0D847D9554D9F5BE8C122 /* SelectableTextLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCE7247150967CBCEC6BEFF3 /* SelectableTextLayoutTests.swift */; };
 		BD4B27A9FA26170478465688 /* SupabaseClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = C719C9C94BAE6A852AD90D7A /* SupabaseClient.swift */; };
 		BDC7E1C785C6260EEBD1A885 /* AppcastUpdateOfferParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9214746AA17BA72DEFC057E7 /* AppcastUpdateOfferParserTests.swift */; };
@@ -115,6 +121,7 @@
 		BF23CABA33619C05D34368D9 /* ReactionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5ED8738899801C68C4659B20 /* ReactionService.swift */; };
 		C22FA3D46BC721CFF05BDFD4 /* AccountStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03BCCCA5063CABABB6E4E636 /* AccountStoreTests.swift */; };
 		C26014C3EE2AB59B7360E901 /* HotkeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6D978D1D0ADEFE94F8E2D9D /* HotkeyManager.swift */; };
+		C51EF5A8425FA50B189BF2AA /* WatchBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED7C10424EA3C4E5036BACF3 /* WatchBridge.swift */; };
 		C5B52473A941591B9CEBDCF0 /* MirrorViewModelStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F670415508116D43886183A /* MirrorViewModelStateTests.swift */; };
 		C6DB7DFE16BA0630CC3D3570 /* ChatImageAttachmentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6738F61355D4A77DC9EF4E07 /* ChatImageAttachmentView.swift */; };
 		C854F795EC5BB3755F8FB16E /* HistoryWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8344102772E903458A39D6D /* HistoryWindow.swift */; };
@@ -131,6 +138,7 @@
 		D3660AF8AC6874725F533E10 /* SupabaseSessionContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09E2E7CA36EC901ED5EE3FB /* SupabaseSessionContractTests.swift */; };
 		D554E57BED49035560D4AE74 /* PlaybackWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01290226E3F8D2ED2E2FA6AC /* PlaybackWindow.swift */; };
 		D94A00EE205AF8CCF9BE4393 /* RoomListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CD854FC545A367784978698 /* RoomListView.swift */; };
+		DC50B03D4024B3F6BE9B79E0 /* WatchAppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E1F6F2D8E154DB411DE015B /* WatchAppDelegate.swift */; };
 		DE12BE3CE643E58547F434B3 /* LandingPageDesignContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 864AD1809E808999EDC337AA /* LandingPageDesignContractTests.swift */; };
 		DF64AE4C1BA57CB52E98AC20 /* InvitationCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD69BFAD0704FB61C435A68E /* InvitationCard.swift */; };
 		E030B5443F11FB84F2D44E02 /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AAF79DFB70494C0A9C2E18B /* AppEnvironment.swift */; };
@@ -153,6 +161,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		2D1014BF69B31CA53429C655 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B9E9704F4D85DED7987417C2 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 0D2DDBF5AF89883B5949473F;
+			remoteInfo = PingWatch;
+		};
 		ACB9BF3BA9C1F13EB6769A76 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = B9E9704F4D85DED7987417C2 /* Project object */;
@@ -170,6 +185,17 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		E7C67A07ABCFE850BC82B8D3 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				05F064F14F190E4EC2CDA275 /* PingWatch.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		FA8E9780C6DC0BF333DEA475 /* Embed Foundation Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -197,6 +223,7 @@
 		06B4B9E0137AD6A34F151BF2 /* VideoRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoRecorder.swift; sourceTree = "<group>"; };
 		0C732B3F624FC27A02EBFF2D /* DevicePairingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevicePairingView.swift; sourceTree = "<group>"; };
 		0DB8EE7896F96DFAC0EFCA86 /* ScreenCoordinatesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenCoordinatesTests.swift; sourceTree = "<group>"; };
+		120175272D55BF4CE32E1F4C /* PingWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PingWatchApp.swift; sourceTree = "<group>"; };
 		178B779BE40BB245CFDED469 /* VideoThumbnailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoThumbnailView.swift; sourceTree = "<group>"; };
 		186228D198F99431A3E1EBCE /* RoomCapacityContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomCapacityContractTests.swift; sourceTree = "<group>"; };
 		196AE189C92F647078653279 /* CleanupService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleanupService.swift; sourceTree = "<group>"; };
@@ -207,6 +234,7 @@
 		260A034212C7DCDAE4B05B4E /* UserService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserService.swift; sourceTree = "<group>"; };
 		2823CB8CE254CF54DFA45E9C /* GlassEffectCompat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassEffectCompat.swift; sourceTree = "<group>"; };
 		2F806032469E93F02C3C28D9 /* AppcastUpdateOfferParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppcastUpdateOfferParser.swift; sourceTree = "<group>"; };
+		307DEEFD9006672888B273CE /* WatchSessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSessionStore.swift; sourceTree = "<group>"; };
 		311483C170DA8C628A197596 /* DeviceHandoffPayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceHandoffPayload.swift; sourceTree = "<group>"; };
 		327FC4862D3451ACBA1490B2 /* ScreenFaceLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenFaceLayout.swift; sourceTree = "<group>"; };
 		35F242A1F9AF07C6AE883A24 /* ExpandedPlaybackWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpandedPlaybackWindow.swift; sourceTree = "<group>"; };
@@ -247,6 +275,7 @@
 		72E17B6A6D89179C56491009 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		73B2E5B2B85836038B79C18B /* WindowPositioning.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowPositioning.swift; sourceTree = "<group>"; };
 		74C0FE0C7DC03B3C263DCFC0 /* NotificationLedger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationLedger.swift; sourceTree = "<group>"; };
+		75BEE62CE9A5D00E0ACD5D90 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		7975A085C7725F5166047E0C /* ChatMessageCodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessageCodingTests.swift; sourceTree = "<group>"; };
 		79E8595E3EB89DA1A086A473 /* AccountStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountStore.swift; sourceTree = "<group>"; };
 		7B7FBE2B14276ED0005C1615 /* ChatComposerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatComposerView.swift; sourceTree = "<group>"; };
@@ -265,9 +294,13 @@
 		963FCFD5B3AEA79A145B675A /* PingKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PingKit; path = PingKit; sourceTree = SOURCE_ROOT; };
 		96D07ED094D1B1E9297946A0 /* AccountNotifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountNotifications.swift; sourceTree = "<group>"; };
 		97150E02C17DE9AEBD26BF13 /* RainbowBorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RainbowBorder.swift; sourceTree = "<group>"; };
+		973AD72C9CE629F13531F10F /* WatchPlaybackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchPlaybackView.swift; sourceTree = "<group>"; };
 		982866D64B1FD3C9C3E0ACDB /* PingTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PingTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		991C6509D6B14DB1451FC377 /* WatchContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchContentView.swift; sourceTree = "<group>"; };
 		9AABBC608A3DBBCE53D71796 /* AppInstallLocation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppInstallLocation.swift; sourceTree = "<group>"; };
 		9B138D453327DB1DC53FA2EF /* VideoMessageCodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoMessageCodingTests.swift; sourceTree = "<group>"; };
+		9DA8354482E6065AA5CBDD0C /* PingWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PingWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9E1F6F2D8E154DB411DE015B /* WatchAppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchAppDelegate.swift; sourceTree = "<group>"; };
 		A442835C646C43BA7F20E0EA /* PingMobileApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PingMobileApp.swift; sourceTree = "<group>"; };
 		A4A1E99D8A2F055B3DD2924E /* KeyboardRoutingContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardRoutingContractTests.swift; sourceTree = "<group>"; };
 		A54D7D9F08655509CE5894FA /* MirrorWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MirrorWindow.swift; sourceTree = "<group>"; };
@@ -320,6 +353,7 @@
 		E917296A7C45B0DEF90EEB1C /* SearchableText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchableText.swift; sourceTree = "<group>"; };
 		EB469BD2ECF2AC4459C1A4D1 /* LocalArchive.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalArchive.swift; sourceTree = "<group>"; };
 		ECAF925EB5EB36A31683069F /* InlinePlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InlinePlayerView.swift; sourceTree = "<group>"; };
+		ED7C10424EA3C4E5036BACF3 /* WatchBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchBridge.swift; sourceTree = "<group>"; };
 		F2F40CF1E71B9600941F2BE1 /* StatusMenuBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusMenuBuilderTests.swift; sourceTree = "<group>"; };
 		F3ECDFD80CFE634B9C98FDA3 /* PingPushService.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = PingPushService.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		F5C19898F5FCEE8CFE97D3ED /* SelectableTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectableTextView.swift; sourceTree = "<group>"; };
@@ -349,6 +383,14 @@
 				7035C7FE65C8AC75092F13FB /* KeyboardShortcuts in Frameworks */,
 				B6A11640F9C354B97F970881 /* Sparkle in Frameworks */,
 				3F281D7BAAC12DAA86E5E838 /* Realtime in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F97C772B8C794D376C7A062D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7F6A47959943C9D575EFF846 /* PingKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -398,6 +440,7 @@
 				A442835C646C43BA7F20E0EA /* PingMobileApp.swift */,
 				36410F2A63B9906DC8C06A8B /* PushRegistrar.swift */,
 				5251D41AA9E41DBE6D637EF1 /* QRScannerView.swift */,
+				ED7C10424EA3C4E5036BACF3 /* WatchBridge.swift */,
 			);
 			path = PingMobile;
 			sourceTree = "<group>";
@@ -517,6 +560,19 @@
 			path = Updater;
 			sourceTree = "<group>";
 		};
+		9EFC6A770C2D2D4FCE5122C0 /* PingWatch */ = {
+			isa = PBXGroup;
+			children = (
+				75BEE62CE9A5D00E0ACD5D90 /* Info.plist */,
+				120175272D55BF4CE32E1F4C /* PingWatchApp.swift */,
+				9E1F6F2D8E154DB411DE015B /* WatchAppDelegate.swift */,
+				991C6509D6B14DB1451FC377 /* WatchContentView.swift */,
+				973AD72C9CE629F13531F10F /* WatchPlaybackView.swift */,
+				307DEEFD9006672888B273CE /* WatchSessionStore.swift */,
+			);
+			path = PingWatch;
+			sourceTree = "<group>";
+		};
 		A02423B6C8B08B7EA8498178 = {
 			isa = PBXGroup;
 			children = (
@@ -525,6 +581,7 @@
 				1A630E798BE7577EF3751C8C /* PingMobile */,
 				73F6CFB9F5250923B00B043C /* PingPushService */,
 				E210A10C0F07BE54CD148FC4 /* PingTests */,
+				9EFC6A770C2D2D4FCE5122C0 /* PingWatch */,
 				A9B87E8D0F6F0C9AE7E7E82C /* Products */,
 			);
 			sourceTree = "<group>";
@@ -536,6 +593,7 @@
 				B1A78BA95C343579B7C88C10 /* PingMobile.app */,
 				F3ECDFD80CFE634B9C98FDA3 /* PingPushService.appex */,
 				982866D64B1FD3C9C3E0ACDB /* PingTests.xctest */,
+				9DA8354482E6065AA5CBDD0C /* PingWatch.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -655,6 +713,25 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		0D2DDBF5AF89883B5949473F /* PingWatch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E87E8A445FDF6196AD293A59 /* Build configuration list for PBXNativeTarget "PingWatch" */;
+			buildPhases = (
+				CCBD1AC4086B032763878C09 /* Sources */,
+				F97C772B8C794D376C7A062D /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PingWatch;
+			packageProductDependencies = (
+				A299A26A76C1EEE355D3B9F4 /* PingKit */,
+			);
+			productName = PingWatch;
+			productReference = 9DA8354482E6065AA5CBDD0C /* PingWatch.app */;
+			productType = "com.apple.product-type.application";
+		};
 		3277FAE724A18B87D9E7BD00 /* PingPushService */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 220B92130975516989F2FFEB /* Build configuration list for PBXNativeTarget "PingPushService" */;
@@ -698,11 +775,13 @@
 				1268DCCBD2147481EBEED3BF /* Sources */,
 				7EC4D458C54C4F9F79516563 /* Frameworks */,
 				FA8E9780C6DC0BF333DEA475 /* Embed Foundation Extensions */,
+				E7C67A07ABCFE850BC82B8D3 /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				A51819F5D8C3BF2605CA6408 /* PBXTargetDependency */,
+				86A8D864C6AF045D7573687C /* PBXTargetDependency */,
 			);
 			name = PingMobile;
 			packageProductDependencies = (
@@ -744,6 +823,9 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					0D2DDBF5AF89883B5949473F = {
+						ProvisioningStyle = Automatic;
+					};
 					3277FAE724A18B87D9E7BD00 = {
 						ProvisioningStyle = Automatic;
 					};
@@ -782,6 +864,7 @@
 				9BEA67117F1A3DBCB96C9ED0 /* PingMobile */,
 				3277FAE724A18B87D9E7BD00 /* PingPushService */,
 				64724876EDA2DFE638565BE1 /* PingTests */,
+				0D2DDBF5AF89883B5949473F /* PingWatch */,
 			);
 		};
 /* End PBXProject section */
@@ -994,6 +1077,7 @@
 				68C7329A0CC241A8C7AC5C7C /* PingMobileApp.swift in Sources */,
 				50C9793FBA90BD1C6A41402B /* PushRegistrar.swift in Sources */,
 				5E8F74FACE824DA1B4D7CEF4 /* QRScannerView.swift in Sources */,
+				C51EF5A8425FA50B189BF2AA /* WatchBridge.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1141,6 +1225,18 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CCBD1AC4086B032763878C09 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AD01F2054A51E668EFA20939 /* PingWatchApp.swift in Sources */,
+				DC50B03D4024B3F6BE9B79E0 /* WatchAppDelegate.swift in Sources */,
+				B81C0B09A4BF899A8773CC3F /* WatchContentView.swift in Sources */,
+				1B5B16AD92FDF59A7FE95F30 /* WatchPlaybackView.swift in Sources */,
+				42FAB79B241573C81A6569F5 /* WatchSessionStore.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		F335BAAE6B23D23DD75ABF2E /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -1156,6 +1252,11 @@
 			isa = PBXTargetDependency;
 			target = F11C4A8E12EA5159899C95F5 /* Ping */;
 			targetProxy = BD162D3A0E214B1EE34A9F1B /* PBXContainerItemProxy */;
+		};
+		86A8D864C6AF045D7573687C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 0D2DDBF5AF89883B5949473F /* PingWatch */;
+			targetProxy = 2D1014BF69B31CA53429C655 /* PBXContainerItemProxy */;
 		};
 		A51819F5D8C3BF2605CA6408 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -1207,6 +1308,27 @@
 				SDKROOT = iphoneos;
 				SWIFT_STRICT_CONCURRENCY = minimal;
 				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		0DE6A0F2A4AB248E91C32C44 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = NO;
+				INFOPLIST_FILE = PingWatch/Info.plist;
+				MARKETING_VERSION = 0.1.0;
+				OTHER_CODE_SIGN_FLAGS = "";
+				PRODUCT_BUNDLE_IDENTIFIER = com.youngminpark.ping.PingMobile.watchkitapp;
+				PRODUCT_NAME = PingWatch;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_STRICT_CONCURRENCY = minimal;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
 			};
 			name = Debug;
 		};
@@ -1313,6 +1435,27 @@
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
+		};
+		B43F6553947E4025DA173928 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = NO;
+				INFOPLIST_FILE = PingWatch/Info.plist;
+				MARKETING_VERSION = 0.1.0;
+				OTHER_CODE_SIGN_FLAGS = "";
+				PRODUCT_BUNDLE_IDENTIFIER = com.youngminpark.ping.PingMobile.watchkitapp;
+				PRODUCT_NAME = PingWatch;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_STRICT_CONCURRENCY = minimal;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Release;
 		};
 		B7C94E8EE46193BF5C900953 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -1516,6 +1659,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
+		E87E8A445FDF6196AD293A59 /* Build configuration list for PBXNativeTarget "PingWatch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0DE6A0F2A4AB248E91C32C44 /* Debug */,
+				B43F6553947E4025DA173928 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
@@ -1567,6 +1719,10 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 679475D911290B3B5656FA54 /* XCRemoteSwiftPackageReference "Sparkle" */;
 			productName = Sparkle;
+		};
+		A299A26A76C1EEE355D3B9F4 /* PingKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PingKit;
 		};
 		B4B8320B6FABC4C5E6A71F7A /* PingKit */ = {
 			isa = XCSwiftPackageProductDependency;
