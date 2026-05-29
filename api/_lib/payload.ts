@@ -33,3 +33,38 @@ export function buildPingPayload(input: PingPayloadInput): PingPayload {
     senderName: input.senderName,
   };
 }
+
+export interface ChatPayloadInput {
+  senderName: string;
+  body: string;
+  roomId: string;
+  chatId: string;
+}
+
+export interface ChatPayload {
+  aps: {
+    alert: { title: string; body: string };
+    sound: string;
+    category: 'PING_MESSAGE';
+  };
+  kind: 'chat';
+  roomId: string;
+  chatId: string;
+  senderName: string;
+}
+
+/// Text chat push: no video attachment, shows the message body. Uses the same
+/// PING_MESSAGE category so the dictation reply action is available.
+export function buildChatPayload(input: ChatPayloadInput): ChatPayload {
+  return {
+    aps: {
+      alert: { title: input.senderName, body: input.body },
+      sound: 'default',
+      category: 'PING_MESSAGE',
+    },
+    kind: 'chat',
+    roomId: input.roomId,
+    chatId: input.chatId,
+    senderName: input.senderName,
+  };
+}

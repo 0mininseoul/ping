@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { verifyWebhookSecret, parseMessageRecord } from './_lib/webhook';
-import { buildPingPayload } from './_lib/payload';
+import { verifyWebhookSecret, parseMessageRecord, parseChatRecord } from './_lib/webhook';
+import { buildPingPayload, buildChatPayload } from './_lib/payload';
 import { makeApnsJwt, sendApns, type SendApnsInput, type SendApnsResult } from './_lib/apns';
 
 export interface PushDeps {
@@ -26,51 +26,93 @@ export async function handlePush(
     return { code: 401, body: { error: 'unauthorized' } };
   }
 
-  const rec = parseMessageRecord(body);
-  if (!rec) return { code: 200, body: { ignored: true } };
+  // Video ping → push to the message's receiver.
+  const video = parseMessageRecord(body);
+  if (video) {
+    const { data: tokens, error: tokenError } = await deps.supabase
+      .from('device_tokens')
+      .select('token, environment')
+      .eq('uid', video.receiverUid);
+    if (tokenError) return { code: 500, body: { error: 'db_error', detail: tokenError.message } };
+    if (!tokens || tokens.length === 0) return { code: 200, body: { sent: 0, removed: 0 } };
 
-  const { data: tokens, error: tokenError } = await deps.supabase
-    .from('device_tokens')
-    .select('token, environment')
-    .eq('uid', rec.receiverUid);
-  if (tokenError) return { code: 500, body: { error: 'db_error', detail: tokenError.message } };
-  if (!tokens || tokens.length === 0) return { code: 200, body: { sent: 0, removed: 0 } };
+    const path = `${video.senderUid}/${video.videoId}.mp4`;
+    const { data: signed, error: signedError } = await deps.supabase.storage
+      .from('ping-videos')
+      .createSignedUrl(path, 600);
+    if (signedError || !signed?.signedUrl) return { code: 500, body: { error: 'storage_error' } };
+    const videoSignedUrl = signed.signedUrl;
 
-  const path = `${rec.senderUid}/${rec.videoId}.mp4`;
-  const { data: signed, error: signedError } = await deps.supabase.storage
-    .from('ping-videos')
-    .createSignedUrl(path, 600);
-  if (signedError || !signed?.signedUrl) return { code: 500, body: { error: 'storage_error' } };
-  const videoSignedUrl = signed.signedUrl;
+    const result = await sendToTokens(deps, tokens, video.messageId, () =>
+      buildPingPayload({
+        senderName: video.senderNickname,
+        messageId: video.messageId,
+        roomId: video.roomId,
+        videoSignedUrl,
+      })
+    );
+    return { code: 200, body: result };
+  }
 
+  // Text chat → push to the room's other members (chat is room-scoped).
+  const chat = parseChatRecord(body);
+  if (chat) {
+    const { data: members, error: memberError } = await deps.supabase
+      .from('room_members')
+      .select('user_id')
+      .eq('room_id', chat.roomId)
+      .neq('user_id', chat.senderUid);
+    if (memberError) return { code: 500, body: { error: 'db_error', detail: memberError.message } };
+    const uids = (members ?? []).map((m: { user_id: string }) => m.user_id);
+    if (uids.length === 0) return { code: 200, body: { sent: 0, removed: 0 } };
+
+    const { data: tokens, error: tokenError } = await deps.supabase
+      .from('device_tokens')
+      .select('token, environment')
+      .in('uid', uids);
+    if (tokenError) return { code: 500, body: { error: 'db_error', detail: tokenError.message } };
+    if (!tokens || tokens.length === 0) return { code: 200, body: { sent: 0, removed: 0 } };
+
+    const result = await sendToTokens(deps, tokens, chat.chatId, () =>
+      buildChatPayload({
+        senderName: chat.senderNickname,
+        body: chat.body,
+        roomId: chat.roomId,
+        chatId: chat.chatId,
+      })
+    );
+    return { code: 200, body: { ...result, kind: 'chat' } };
+  }
+
+  return { code: 200, body: { ignored: true } };
+}
+
+/// Send one push per token (same payload), prune 410 Unregistered tokens.
+async function sendToTokens(
+  deps: PushDeps,
+  tokens: unknown,
+  collapseId: string,
+  makePayload: () => unknown
+): Promise<{ sent: number; removed: number }> {
   const jwt = await deps.makeJwt();
   let sent = 0;
   const gone: string[] = [];
-
   for (const t of tokens as Array<{ token: string; environment: 'production' | 'sandbox' }>) {
-    const payload = buildPingPayload({
-      senderName: rec.senderNickname,
-      messageId: rec.messageId,
-      roomId: rec.roomId,
-      videoSignedUrl,
-    });
     const res = await deps.send({
       token: t.token,
       environment: t.environment,
       jwt,
       bundleId: deps.bundleId,
-      collapseId: rec.messageId,
-      payload,
+      collapseId,
+      payload: makePayload(),
     });
     if (res.status === 200) sent++;
     else if (res.status === 410) gone.push(t.token);
   }
-
   if (gone.length > 0) {
     await deps.supabase.from('device_tokens').delete().in('token', gone);
   }
-
-  return { code: 200, body: { sent, removed: gone.length } };
+  return { sent, removed: gone.length };
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
