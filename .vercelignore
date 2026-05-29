@@ -3,6 +3,8 @@
 !.vercel/output/
 !.vercel/output/**
 !package.json
+!api/
+!api/**
 !web/
 !web/**
 web/.DS_Store
