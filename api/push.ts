@@ -34,6 +34,7 @@ export async function handlePush(
       .select('token, environment')
       .eq('uid', video.receiverUid);
     if (tokenError) return { code: 500, body: { error: 'db_error', detail: tokenError.message } };
+    console.log(`[push] video receiver=${video.receiverUid} tokens=${tokens?.length ?? 0}`);
     if (!tokens || tokens.length === 0) return { code: 200, body: { sent: 0, removed: 0 } };
 
     const path = `${video.senderUid}/${video.videoId}.mp4`;
@@ -64,6 +65,7 @@ export async function handlePush(
       .neq('user_id', chat.senderUid);
     if (memberError) return { code: 500, body: { error: 'db_error', detail: memberError.message } };
     const uids = (members ?? []).map((m: { user_id: string }) => m.user_id);
+    console.log(`[push] chat room=${chat.roomId} sender=${chat.senderUid} otherMembers=${uids.length}`);
     if (uids.length === 0) return { code: 200, body: { sent: 0, removed: 0 } };
 
     const { data: tokens, error: tokenError } = await deps.supabase
@@ -71,6 +73,7 @@ export async function handlePush(
       .select('token, environment')
       .in('uid', uids);
     if (tokenError) return { code: 500, body: { error: 'db_error', detail: tokenError.message } };
+    console.log(`[push] chat tokens=${tokens?.length ?? 0}`);
     if (!tokens || tokens.length === 0) return { code: 200, body: { sent: 0, removed: 0 } };
 
     const result = await sendToTokens(deps, tokens, chat.chatId, () =>
@@ -106,12 +109,16 @@ async function sendToTokens(
       collapseId,
       payload: makePayload(),
     });
+    console.log(
+      `[push] apns status=${res.status} env=${t.environment} token=…${t.token.slice(-6)} body=${(res.body || '').slice(0, 160)}`
+    );
     if (res.status === 200) sent++;
     else if (res.status === 410) gone.push(t.token);
   }
   if (gone.length > 0) {
     await deps.supabase.from('device_tokens').delete().in('token', gone);
   }
+  console.log(`[push] result sent=${sent} removed=${gone.length}`);
   return { sent, removed: gone.length };
 }
 
