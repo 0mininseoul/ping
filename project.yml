@@ -12,7 +12,7 @@ settings:
     SWIFT_VERSION: "6.0"
     MACOSX_DEPLOYMENT_TARGET: "13.0"
     MARKETING_VERSION: "0.3.35"
-    CURRENT_PROJECT_VERSION: "46"
+    CURRENT_PROJECT_VERSION: "47"
     PRODUCT_NAME: Ping
     ENABLE_HARDENED_RUNTIME: YES
     CODE_SIGN_STYLE: Manual
@@ -29,6 +29,8 @@ packages:
   Supabase:
     url: https://github.com/supabase/supabase-swift
     from: "2.20.0"
+  PingKit:
+    path: PingKit
 
 targets:
   Ping:
@@ -330,3 +332,60 @@ targets:
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/Supabase.example.plist"
     dependencies:
       - target: Ping
+
+  PingMobile:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.youngminpark.ping.PingMobile
+        PRODUCT_NAME: PingMobile
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_STRICT_CONCURRENCY: minimal
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "Apple Development"
+        ENABLE_HARDENED_RUNTIME: NO
+        OTHER_CODE_SIGN_FLAGS: ""
+        CODE_SIGN_ENTITLEMENTS: PingMobile/PingMobile.entitlements
+        TARGETED_DEVICE_FAMILY: "1,2"
+    sources:
+      - path: PingMobile
+    info:
+      path: PingMobile/Info.plist
+      properties:
+        CFBundleDisplayName: Ping
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        UILaunchScreen: {}
+        UIBackgroundModes:
+          - remote-notification
+    dependencies:
+      - package: PingKit
+      - target: PingPushService
+
+  PingPushService:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "17.0"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.youngminpark.ping.PingMobile.PushService
+        PRODUCT_NAME: PingPushService
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_STRICT_CONCURRENCY: minimal
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "Apple Development"
+        ENABLE_HARDENED_RUNTIME: NO
+        OTHER_CODE_SIGN_FLAGS: ""
+    sources:
+      - path: PingPushService
+    info:
+      path: PingPushService/Info.plist
+      properties:
+        CFBundleDisplayName: PingPushService
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.usernotifications.service
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).NotificationService
