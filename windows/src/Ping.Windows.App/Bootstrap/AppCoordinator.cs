@@ -1108,6 +1108,15 @@ public sealed class AppCoordinator : IDisposable
             mainWindow.HotkeyState.Text = HotkeyStatusText.RoomSummary(preferencesStore.Load(), sendableCount);
             StartIncomingPolling();
             StartIncomingChatPolling();
+
+            // 차단 화면에서 '다시 시도'로 재연결에 성공한 경우, 차단 상태를 벗어나
+            // 연결된 화면을 보여준다.
+            if (mainWindow.BlockedPanel.Visibility == Visibility.Visible)
+            {
+                ShowHistory(sendableCount == 0
+                    ? "연결됨. 방을 만들거나 참여하면 전송할 수 있어요."
+                    : $"연결됨. 전송 가능한 방 {sendableCount}개.");
+            }
         }
         catch (Exception ex)
         {
