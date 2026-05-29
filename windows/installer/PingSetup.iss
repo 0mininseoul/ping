@@ -23,7 +23,7 @@ ArchitecturesAllowed=x64compatible arm64
 ArchitecturesInstallIn64BitMode=x64compatible arm64
 Uninstallable=no
 SetupLogging=yes
-InfoBeforeFile=welcome.rtf
+InfoBeforeFile=welcome.txt
 SetupIconFile=app.ico
 
 [Tasks]
@@ -37,14 +37,14 @@ Source: "{#PayloadRoot}\install-ping-windows.ps1"; DestDir: "{tmp}\PingSetup"; F
 Source: "app.ico"; DestDir: "{tmp}\PingSetup"; Flags: deleteafterinstall
 
 [Run]
-Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{tmp}\PingSetup\install-ping-windows.ps1"" {code:GetInstallerParams}"; StatusMsg: "Installing Ping for Windows..."; Flags: runhidden waituntilterminated
+Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{tmp}\PingSetup\install-ping-windows.ps1"" {code:GetInstallerParams}"; StatusMsg: "Installing Ping for Windows..."; Flags: waituntilterminated
 
 [Code]
 function GetInstallerParams(Param: String): String;
 var
   Params: String;
 begin
-  Params := '-Version "' + ExpandConstant('{#AppVersion}') + '" -PackageDirectory "' + ExpandConstant('{tmp}\PingSetup') + '" -PackageBaseUrl "' + ExpandConstant('{#PackageBaseUrl}') + '" -CertificatePath "' + ExpandConstant('{tmp}\PingSetup\Ping-Windows-Sideload.cer') + '" -IconPath "' + ExpandConstant('{tmp}\PingSetup\app.ico') + '"';
+  Params := '-Version "' + ExpandConstant('{#AppVersion}') + '" -PackageDirectory "' + ExpandConstant('{tmp}\PingSetup') + '" -PackageBaseUrl "' + ExpandConstant('{#PackageBaseUrl}') + '" -CertificatePath "' + ExpandConstant('{tmp}\PingSetup\Ping-Windows-Sideload.cer') + '" -IconPath "' + ExpandConstant('{tmp}\PingSetup\app.ico') + '" -AllowUnsigned';
   
   if WizardIsTaskSelected('desktopicon') then
     Params := Params + ' -CreateDesktopShortcut';

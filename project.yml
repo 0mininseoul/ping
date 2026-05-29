@@ -342,14 +342,15 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.youngminpark.ping.PingMobile
         PRODUCT_NAME: PingMobile
         MARKETING_VERSION: "0.1.0"
-        CURRENT_PROJECT_VERSION: "1"
+        CURRENT_PROJECT_VERSION: "2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SWIFT_STRICT_CONCURRENCY: minimal
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_IDENTITY: "Apple Development"
         ENABLE_HARDENED_RUNTIME: NO
         OTHER_CODE_SIGN_FLAGS: ""
         CODE_SIGN_ENTITLEMENTS: PingMobile/PingMobile.entitlements
-        TARGETED_DEVICE_FAMILY: "1,2"
+        TARGETED_DEVICE_FAMILY: "1"
     sources:
       - path: PingMobile
     info:
@@ -360,6 +361,8 @@ targets:
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         UILaunchScreen: {}
         NSCameraUsageDescription: "QR 코드로 데스크톱 계정을 연결하기 위해 카메라를 사용합니다."
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
         UIBackgroundModes:
           - remote-notification
     dependencies:
@@ -376,7 +379,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.youngminpark.ping.PingMobile.PushService
         PRODUCT_NAME: PingPushService
         MARKETING_VERSION: "0.1.0"
-        CURRENT_PROJECT_VERSION: "1"
+        CURRENT_PROJECT_VERSION: "2"
         SWIFT_VERSION: "5.0"
         SWIFT_STRICT_CONCURRENCY: minimal
         CODE_SIGN_STYLE: Automatic
@@ -402,7 +405,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.youngminpark.ping.PingMobile.watchkitapp
         PRODUCT_NAME: PingWatch
         MARKETING_VERSION: "0.1.0"
-        CURRENT_PROJECT_VERSION: "1"
+        CURRENT_PROJECT_VERSION: "2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SWIFT_STRICT_CONCURRENCY: minimal
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_IDENTITY: "Apple Development"
