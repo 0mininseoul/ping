@@ -548,8 +548,8 @@ public sealed class AppCoordinatorSourceTests
 
         Assert.Contains("MAC_DOWNLOAD_URL", routes, StringComparison.Ordinal);
         Assert.Contains("WINDOWS_DOWNLOAD_URL", routes, StringComparison.Ordinal);
-        Assert.Contains("/downloads/windows/PingSetup-v0.3.28.exe", routes, StringComparison.Ordinal);
-        Assert.Contains("PingSetup-v0.3.28.exe", routes, StringComparison.Ordinal);
+        Assert.Contains("/downloads/windows/PingSetup-v0.3.35.exe", routes, StringComparison.Ordinal);
+        Assert.Contains("PingSetup-v0.3.35.exe", routes, StringComparison.Ordinal);
         Assert.Contains("macDownloadUrl", landing, StringComparison.Ordinal);
         Assert.Contains("windowsDownloadUrl", landing, StringComparison.Ordinal);
         Assert.Contains("Download for macOS", hero, StringComparison.Ordinal);
