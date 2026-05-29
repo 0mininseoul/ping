@@ -24,7 +24,7 @@ Values are stored encrypted in Vercel — never in git. Names only:
 | `APNS_KEY_ID` | APNs Auth Key ID (`TMC3PCHDCF`) |
 | `APNS_TEAM_ID` | Apple Team ID (`878FAHTFQJ`) |
 | `APNS_P8` | APNs Auth Key `.p8` contents (PKCS#8 PEM) |
-| `APNS_BUNDLE_ID` | **NOT SET YET** — APNs topic = iOS app bundle id, finalized in P3 |
+| `APNS_BUNDLE_ID` | `com.youngminpark.ping.PingMobile` (iOS app bundle id; set in P3). Needs a redeploy to take effect for real sends (P6). |
 
 Env var changes require a redeploy to take effect (`vercel redeploy <prod-url>` or a git push).
 
