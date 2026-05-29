@@ -101,7 +101,7 @@ export default function Hero({
             {/* Windows Installation Helper */}
             <div className="mb-10 text-xs text-muted max-w-[36rem] leading-relaxed border-l-2 border-border pl-3 py-0.5">
               <p>
-                💡 Windows 버전은 무상 배포를 위한 self-signed 패키지를 사용하므로 다운로드 및 첫 실행 시 
+                💡 Windows 버전은 별도 서명된 패키지(sideload)를 사용하므로 다운로드 및 첫 실행 시 
                 보안 경고(SmartScreen)가 나타날 수 있습니다. 경고 창에서 
                 <span className="font-bold text-fg"> '추가 정보' &rarr; '실행'</span>을 선택하면 정상 설치됩니다.
               </p>
