@@ -11,6 +11,15 @@ public struct PingHandoffPayload: Codable, Sendable {
     public let expiresAt: Date
     public let userId: String
 
+    public init(url: URL, anonKey: String, accessToken: String, refreshToken: String, expiresAt: Date, userId: String) {
+        self.url = url
+        self.anonKey = anonKey
+        self.accessToken = accessToken
+        self.refreshToken = refreshToken
+        self.expiresAt = expiresAt
+        self.userId = userId
+    }
+
     public var configuration: PingConfiguration {
         PingConfiguration(url: url, anonKey: anonKey)
     }
@@ -22,5 +31,11 @@ public struct PingHandoffPayload: Codable, Sendable {
     /// Decode a handoff payload from scanned QR bytes (ISO-8601 dates).
     public static func decode(_ data: Data) throws -> PingHandoffPayload {
         try PingJSON.decoder.decode(PingHandoffPayload.self, from: data)
+    }
+
+    /// Encode for transport (e.g. WatchConnectivity), ISO-8601 dates — symmetric
+    /// with `decode(_:)`.
+    public func encoded() throws -> Data {
+        try PingJSON.encoder.encode(self)
     }
 }

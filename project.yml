@@ -365,6 +365,7 @@ targets:
     dependencies:
       - package: PingKit
       - target: PingPushService
+      - target: PingWatch
 
   PingPushService:
     type: app-extension
@@ -391,3 +392,31 @@ targets:
         NSExtension:
           NSExtensionPointIdentifier: com.apple.usernotifications.service
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).NotificationService
+
+  PingWatch:
+    type: application
+    platform: watchOS
+    deploymentTarget: "10.0"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.youngminpark.ping.PingMobile.watchkitapp
+        PRODUCT_NAME: PingWatch
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_STRICT_CONCURRENCY: minimal
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "Apple Development"
+        ENABLE_HARDENED_RUNTIME: NO
+        OTHER_CODE_SIGN_FLAGS: ""
+    sources:
+      - path: PingWatch
+    info:
+      path: PingWatch/Info.plist
+      properties:
+        CFBundleDisplayName: Ping
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        WKApplication: true
+        WKCompanionAppBundleIdentifier: com.youngminpark.ping.PingMobile
+    dependencies:
+      - package: PingKit

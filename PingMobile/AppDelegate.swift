@@ -12,6 +12,11 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
+        WatchBridge.shared.activate()
+        if let account = AppEnvironment.shared.paired {
+            WatchBridge.shared.sync(account)
+        }
+
         let center = UNUserNotificationCenter.current()
         center.delegate = self
 

@@ -35,6 +35,7 @@ final class AppEnvironment: ObservableObject {
     func setPaired(_ account: PairedAccount) {
         paired = account
         persist()
+        WatchBridge.shared.sync(account)
     }
 
     func updateSession(_ session: SupabaseSession) {
