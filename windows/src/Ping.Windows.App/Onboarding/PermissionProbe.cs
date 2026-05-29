@@ -44,7 +44,7 @@ public sealed class PermissionProbe
         Func<IReadOnlyList<HotkeyRegistrationResult>>? activeHotkeyRegistrationsProvider = null,
         Func<WindowsSupportStatus>? windowsStatusProvider = null)
     {
-        this.supabaseConfigPath = supabaseConfigPath ?? DefaultSupabaseConfigPath();
+        this.supabaseConfigPath = supabaseConfigPath ?? SupabaseConfigLocator.Resolve();
         this.screenCaptureSelfTest = screenCaptureSelfTest ?? new NativeScreenCaptureSelfTest();
         this.hotkeyRegistrationProbe = hotkeyRegistrationProbe;
         this.startupTaskController = startupTaskController ?? new StartupTaskController();
