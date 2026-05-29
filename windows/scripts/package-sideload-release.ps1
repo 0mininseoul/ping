@@ -103,6 +103,10 @@ foreach ($targetPlatform in $Platform) {
 
 Copy-Item -LiteralPath $CertificatePath -Destination (Join-Path $releaseRoot "Ping-Windows-Sideload.cer") -Force
 Copy-Item -LiteralPath $InstallerScriptPath -Destination (Join-Path $releaseRoot "install-ping-windows.ps1") -Force
+$icoSource = Join-Path $windowsRoot "installer\app.ico"
+if (Test-Path -LiteralPath $icoSource) {
+    Copy-Item -LiteralPath $icoSource -Destination (Join-Path $releaseRoot "app.ico") -Force
+}
 
 $distributionNotice = if ($AllowUnsigned) {
     "This bundle was created with -AllowUnsigned for CI/build validation. Do not distribute it to users."

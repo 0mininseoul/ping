@@ -6,7 +6,10 @@ param(
     [string]$PackageDirectory = $PSScriptRoot,
     [string]$PackageBaseUrl,
     [string]$CertificatePath = (Join-Path $PSScriptRoot "Ping-Windows-Sideload.cer"),
-    [switch]$NoLaunch
+    [switch]$NoLaunch,
+    [switch]$CreateDesktopShortcut,
+    [switch]$AddToStartup,
+    [string]$IconPath
 )
 
 Set-StrictMode -Version Latest
@@ -153,6 +156,45 @@ $installed = Get-AppxPackage -Name $packageName |
     Select-Object -First 1
 if (-not $installed) {
     throw "Ping package did not appear in Get-AppxPackage after installation."
+}
+
+# Icon 복사 및 단축키 구성
+$appDataPing = Join-Path $env:LOCALAPPDATA "Ping"
+if (-not (Test-Path -LiteralPath $appDataPing)) {
+    New-Item -ItemType Directory -Force -Path $appDataPing | Out-Null
+}
+
+$localIconPath = ""
+if (-not [string]::IsNullOrWhiteSpace($IconPath) -and (Test-Path -LiteralPath $IconPath)) {
+    $localIconPath = Join-Path $appDataPing "app.ico"
+    Copy-Item -LiteralPath $IconPath -Destination $localIconPath -Force
+}
+
+$wshShell = New-Object -ComObject WScript.Shell
+
+if ($CreateDesktopShortcut) {
+    Write-Host "Creating desktop shortcut..."
+    $desktopPath = [System.IO.Path]::Combine([System.Environment]::GetFolderPath("Desktop"), "Ping.lnk")
+    $shortcut = $wshShell.CreateShortcut($desktopPath)
+    $shortcut.TargetPath = "explorer.exe"
+    $shortcut.Arguments = "shell:AppsFolder\$($installed.PackageFamilyName)!App"
+    if (-not [string]::IsNullOrWhiteSpace($localIconPath)) {
+        $shortcut.IconLocation = $localIconPath
+    }
+    $shortcut.Save()
+}
+
+if ($AddToStartup) {
+    Write-Host "Adding to startup folder..."
+    $startupFolder = [System.Environment]::GetFolderPath("Startup")
+    $startupPath = [System.IO.Path]::Combine($startupFolder, "Ping.lnk")
+    $shortcut = $wshShell.CreateShortcut($startupPath)
+    $shortcut.TargetPath = "explorer.exe"
+    $shortcut.Arguments = "shell:AppsFolder\$($installed.PackageFamilyName)!App"
+    if (-not [string]::IsNullOrWhiteSpace($localIconPath)) {
+        $shortcut.IconLocation = $localIconPath
+    }
+    $shortcut.Save()
 }
 
 if (-not $NoLaunch) {
