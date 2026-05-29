@@ -3,9 +3,9 @@ import LandingPage from "./pages/LandingPage";
 import InviteView from "./components/invite/InviteView";
 
 export const MAC_APP_VERSION = "v0.3.35";
-export const WINDOWS_APP_VERSION = "v0.3.35";
+export const WINDOWS_APP_VERSION = "v0.3.28";
 export const MAC_DOWNLOAD_URL = "/downloads/Ping-v0.3.35.dmg";
-export const WINDOWS_DOWNLOAD_URL = "/downloads/windows/PingSetup-v0.3.35.exe";
+export const WINDOWS_DOWNLOAD_URL = "/downloads/windows/PingSetup-v0.3.28.exe";
 
 function matchInvite(pathname: string): string | null {
   const m = pathname.match(/^\/invite\/([^/]+)\/?$/);

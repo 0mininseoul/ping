@@ -111,7 +111,7 @@ if (Test-Path -LiteralPath $icoSource) {
 $distributionNotice = if ($AllowUnsigned) {
     "This bundle was created with -AllowUnsigned for CI/build validation. Do not distribute it to users."
 } else {
-    "This is the zero-cost sideload distribution package. It uses a self-signed MSIX certificate, so Windows must trust Ping-Windows-Sideload.cer before installing."
+    "This is the standard sideload distribution package. It uses a self-signed MSIX certificate, so Windows must trust Ping-Windows-Sideload.cer before installing."
 }
 
 $readme = @"
@@ -129,7 +129,7 @@ The script imports Ping-Windows-Sideload.cer into LocalMachine\TrustedPeople,
 chooses x64 or arm64 for this PC, installs the MSIX, and launches Ping.
 
 For a publicly trusted one-click install, Ping needs Microsoft Store submission
-or a paid public code-signing route. This folder is the free sideload route.
+or a paid public code-signing route. This folder is the standard sideload route.
 "@
 Set-Content -LiteralPath (Join-Path $releaseRoot "README.txt") -Value $readme -Encoding utf8
 
