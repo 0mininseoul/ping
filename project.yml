@@ -420,6 +420,7 @@ targets:
         CFBundleDisplayName: Ping
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        CFBundleIconName: AppIcon
         WKApplication: true
         WKCompanionAppBundleIdentifier: com.youngminpark.ping.PingMobile
     dependencies:
