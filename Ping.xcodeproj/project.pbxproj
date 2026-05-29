@@ -10,6 +10,7 @@
 		00F43118BC5391A2FE1ABD0C /* ReleaseVersionContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BB8B40BB61BAE16EB12E239 /* ReleaseVersionContractTests.swift */; };
 		053A44897F67094ABE710FF4 /* ChatComposerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B7FBE2B14276ED0005C1615 /* ChatComposerView.swift */; };
 		06AFB9CF51890A927220471E /* HistoryViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4768EC8284B544E3649C4507 /* HistoryViewModelTests.swift */; };
+		06BC9DFC1F527E3082A3B29A /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 599B87DE1571A0E649CE5582 /* ContentView.swift */; };
 		0C63FD5926C2755B5048FA20 /* RoomCapacityContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 186228D198F99431A3E1EBCE /* RoomCapacityContractTests.swift */; };
 		106539313B2378466650F94D /* PartnerPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A06C0316F0F1AFE5297BE0C /* PartnerPicker.swift */; };
 		13BB58129EF1392D96B3753A /* RoomDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 961E0B236B19718866C9702B /* RoomDetailView.swift */; };
@@ -18,6 +19,7 @@
 		18C48517F57EFCA192AD3E54 /* VideoCropper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4741EB3E3614D20DF3C78279 /* VideoCropper.swift */; };
 		18F76346F0F837EF6E0BA48D /* Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = C98008817B561907D8035DB2 /* Typography.swift */; };
 		19E9FFCD74332CB8A9D4EFE1 /* SearchableTextTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EFC208F3B2DEB94FA5BF469 /* SearchableTextTests.swift */; };
+		1A8C88B22A915E42F85AF3D4 /* PingKit in Frameworks */ = {isa = PBXBuildFile; productRef = B4B8320B6FABC4C5E6A71F7A /* PingKit */; };
 		1A981B3A55999C6FDE480C3B /* HistoryCacheService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B110C3699C333F4B8A9E7E7C /* HistoryCacheService.swift */; };
 		1DBFF4CDA565E60DE4F12837 /* SelectableTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5C19898F5FCEE8CFE97D3ED /* SelectableTextView.swift */; };
 		1DF73CA186C513531DA2659B /* MultiAccountSwitchingContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02B0C288ED1350D3FD113878 /* MultiAccountSwitchingContractTests.swift */; };
@@ -32,12 +34,14 @@
 		2BE6D442750C42406D4CE6AF /* StatusMenuBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2F40CF1E71B9600941F2BE1 /* StatusMenuBuilderTests.swift */; };
 		2E6412BD4860FB69C0B3C49A /* DesignSystemContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6157E3107FE54D68F65EFCB /* DesignSystemContractTests.swift */; };
 		315501BEACA5034EC49BB7B3 /* InviteLinkContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CC9A5C9C5BA8FF0D9D30E0A /* InviteLinkContractTests.swift */; };
+		385227B9524A34105FB11714 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00EDA916E26BEAF2BAA3A0F3 /* NotificationService.swift */; };
 		3A42A12F85CF34A4D5F2F7CD /* OnboardingWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 050A0147A7508D00A8E2DE3B /* OnboardingWindow.swift */; };
 		3B5117F35AEE41A4224D9837 /* StorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0323B3DFE22413AC6BB3627D /* StorageService.swift */; };
 		3D8721EF1C7FF79A43DF7064 /* AppcastUpdateOfferParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F806032469E93F02C3C28D9 /* AppcastUpdateOfferParser.swift */; };
 		3E8747EC3C02819DE0808A7E /* GlassButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8841413A695A3C64F0B3F247 /* GlassButton.swift */; };
 		3F281D7BAAC12DAA86E5E838 /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = 1A17C43CDDC3D0D57F6CA5D4 /* Realtime */; };
 		40DDB292A1679F67000D41D4 /* AccountNotifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96D07ED094D1B1E9297946A0 /* AccountNotifications.swift */; };
+		42FEC3304784AF5DBBC354EA /* PingPushService.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F3ECDFD80CFE634B9C98FDA3 /* PingPushService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		43072A8619301C054B30BC7C /* OnboardingFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05A1A2EA9F9A191DE3263C29 /* OnboardingFlowTests.swift */; };
 		44DC21E6B318CF6969918DE9 /* CompatibilityContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7BA291155ACBFF85185B36B /* CompatibilityContractTests.swift */; };
 		45CDCD2993C1E53FB62356A1 /* StatusMenuBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CAAECC60F6BE44D405DF213 /* StatusMenuBuilder.swift */; };
@@ -48,6 +52,7 @@
 		4D70AC0A2112C346C5E4B603 /* AccountStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79E8595E3EB89DA1A086A473 /* AccountStore.swift */; };
 		4F4D329B8A0B15547BF915EC /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C8ECCC44B398DBC07CB2C3 /* HistoryView.swift */; };
 		503D2F33E720C8E32DE485AD /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0B62D708A5A8B647FB677E8 /* AppDelegate.swift */; };
+		50C9793FBA90BD1C6A41402B /* PushRegistrar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36410F2A63B9906DC8C06A8B /* PushRegistrar.swift */; };
 		5139C6DCAD42CCBAE2E11258 /* PIPCompositorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC481CCD223682FF45732D26 /* PIPCompositorTests.swift */; };
 		5214CD941CDE454FE3F3E101 /* ChatRealtimeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F758F3123EB5B3CD54F783B9 /* ChatRealtimeService.swift */; };
 		5587D2DEE80A1085ACF53044 /* ExpandedPlaybackWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35F242A1F9AF07C6AE883A24 /* ExpandedPlaybackWindow.swift */; };
@@ -64,6 +69,7 @@
 		661E54E16BDF7EF0037D6F5E /* MirrorWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A54D7D9F08655509CE5894FA /* MirrorWindow.swift */; };
 		67FBBC00ABEE4FDC9A8E5496 /* EntitlementsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0CE48710A798DC7E4F5F387 /* EntitlementsTests.swift */; };
 		68155E2EA147765775AA1E78 /* VideoThumbnailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 178B779BE40BB245CFDED469 /* VideoThumbnailView.swift */; };
+		68C7329A0CC241A8C7AC5C7C /* PingMobileApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A442835C646C43BA7F20E0EA /* PingMobileApp.swift */; };
 		6C7E8E8138C42E9ED2D0D8CF /* LocalSavePermissionContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE28695E12B3BFE879774504 /* LocalSavePermissionContractTests.swift */; };
 		6D10BA31F2FBF6ADCB3D99B1 /* ScreenCoordinates.swift in Sources */ = {isa = PBXBuildFile; fileRef = F760D624DE03E352A8514854 /* ScreenCoordinates.swift */; };
 		6E1D0F1C5152D44720289D6E /* GlassEffectCompat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2823CB8CE254CF54DFA45E9C /* GlassEffectCompat.swift */; };
@@ -88,6 +94,7 @@
 		9F82291BBB72BBCE49382029 /* ClientEventService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A628BE96FDE0D4A8AE65516D /* ClientEventService.swift */; };
 		9FA1400BCD0EA12F757DB346 /* OnboardingCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = C11910C93D73837A29B0536C /* OnboardingCopy.swift */; };
 		A0CC34586E73BD4AD949C332 /* AppInstallLocationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F1E09D4F9233190C884D2DF /* AppInstallLocationTests.swift */; };
+		A29C926DA0D7F0AC9D7285CA /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 702CBA60A095543268771705 /* AppDelegate.swift */; };
 		A2A8F13860B8335BA473B110 /* PIPCompositor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C961D96527E4B05B3F131D0 /* PIPCompositor.swift */; };
 		A35216D4802F7669D7CEE926 /* RoomSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B5BE5E27DBD69263538CCD7 /* RoomSearchView.swift */; };
 		A548B41AA3E0A501424B712B /* PairingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B86EF836E41F27EB9EA7504 /* PairingView.swift */; };
@@ -123,6 +130,7 @@
 		D94A00EE205AF8CCF9BE4393 /* RoomListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CD854FC545A367784978698 /* RoomListView.swift */; };
 		DE12BE3CE643E58547F434B3 /* LandingPageDesignContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 864AD1809E808999EDC337AA /* LandingPageDesignContractTests.swift */; };
 		DF64AE4C1BA57CB52E98AC20 /* InvitationCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD69BFAD0704FB61C435A68E /* InvitationCard.swift */; };
+		E030B5443F11FB84F2D44E02 /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AAF79DFB70494C0A9C2E18B /* AppEnvironment.swift */; };
 		E084BE11E5BC26F4B3EAB844 /* VideoMessageCodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B138D453327DB1DC53FA2EF /* VideoMessageCodingTests.swift */; };
 		E13DC4726E837B9456AF2859 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 38C7B41AC566CD880C3BB9BD /* Assets.xcassets */; };
 		E4C44F790AB4501AE2D9B4DD /* PingError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62D2F7B67DB16ADA6741BD44 /* PingError.swift */; };
@@ -142,6 +150,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		ACB9BF3BA9C1F13EB6769A76 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B9E9704F4D85DED7987417C2 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3277FAE724A18B87D9E7BD00;
+			remoteInfo = PingPushService;
+		};
 		BD162D3A0E214B1EE34A9F1B /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = B9E9704F4D85DED7987417C2 /* Project object */;
@@ -151,9 +166,25 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		FA8E9780C6DC0BF333DEA475 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				42FEC3304784AF5DBBC354EA /* PingPushService.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		0046D5141DDF76BC6DD5F048 /* SettingsScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsScene.swift; sourceTree = "<group>"; };
+		00EDA916E26BEAF2BAA3A0F3 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
 		01290226E3F8D2ED2E2FA6AC /* PlaybackWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackWindow.swift; sourceTree = "<group>"; };
+		012928FD0CA6F78D08BC8F84 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		0194505B84DC32C2BA700F6C /* InviteLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteLink.swift; sourceTree = "<group>"; };
 		02B0C288ED1350D3FD113878 /* MultiAccountSwitchingContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiAccountSwitchingContractTests.swift; sourceTree = "<group>"; };
 		0323B3DFE22413AC6BB3627D /* StorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageService.swift; sourceTree = "<group>"; };
@@ -174,6 +205,7 @@
 		2F806032469E93F02C3C28D9 /* AppcastUpdateOfferParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppcastUpdateOfferParser.swift; sourceTree = "<group>"; };
 		327FC4862D3451ACBA1490B2 /* ScreenFaceLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenFaceLayout.swift; sourceTree = "<group>"; };
 		35F242A1F9AF07C6AE883A24 /* ExpandedPlaybackWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpandedPlaybackWindow.swift; sourceTree = "<group>"; };
+		36410F2A63B9906DC8C06A8B /* PushRegistrar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushRegistrar.swift; sourceTree = "<group>"; };
 		3847490D60B97829AB0CA7B6 /* ReactionPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReactionPickerView.swift; sourceTree = "<group>"; };
 		38C7B41AC566CD880C3BB9BD /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		3A06C0316F0F1AFE5297BE0C /* PartnerPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PartnerPicker.swift; sourceTree = "<group>"; };
@@ -182,10 +214,12 @@
 		3F670415508116D43886183A /* MirrorViewModelStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MirrorViewModelStateTests.swift; sourceTree = "<group>"; };
 		4741EB3E3614D20DF3C78279 /* VideoCropper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoCropper.swift; sourceTree = "<group>"; };
 		4768EC8284B544E3649C4507 /* HistoryViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryViewModelTests.swift; sourceTree = "<group>"; };
+		4889748CC37B60C1E533B625 /* PingMobile.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PingMobile.entitlements; sourceTree = "<group>"; };
 		4B5BB40E86D90C32CA784A61 /* UpdateReminderStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateReminderStoreTests.swift; sourceTree = "<group>"; };
 		4CD854FC545A367784978698 /* RoomListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomListView.swift; sourceTree = "<group>"; };
 		4E1A841BBD8BDD965C164BF8 /* OnboardingInputContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingInputContractTests.swift; sourceTree = "<group>"; };
 		4F542186B03D30E2C8BE833E /* OnboardingCopyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingCopyTests.swift; sourceTree = "<group>"; };
+		599B87DE1571A0E649CE5582 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		5B86EF836E41F27EB9EA7504 /* PairingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingView.swift; sourceTree = "<group>"; };
 		5BB81E537D50111710D5B182 /* RoomService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomService.swift; sourceTree = "<group>"; };
 		5C56300160B566EFB16A4161 /* ScreenFaceLayoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenFaceLayoutTests.swift; sourceTree = "<group>"; };
@@ -196,11 +230,13 @@
 		61B40DAFC4A8F76E67E6335E /* StoragePolicyContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoragePolicyContractTests.swift; sourceTree = "<group>"; };
 		62D2F7B67DB16ADA6741BD44 /* PingError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PingError.swift; sourceTree = "<group>"; };
 		6738F61355D4A77DC9EF4E07 /* ChatImageAttachmentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatImageAttachmentView.swift; sourceTree = "<group>"; };
+		6AAF79DFB70494C0A9C2E18B /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
 		6B5BE5E27DBD69263538CCD7 /* RoomSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomSearchView.swift; sourceTree = "<group>"; };
 		6BB8B40BB61BAE16EB12E239 /* ReleaseVersionContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReleaseVersionContractTests.swift; sourceTree = "<group>"; };
 		6C961D96527E4B05B3F131D0 /* PIPCompositor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PIPCompositor.swift; sourceTree = "<group>"; };
 		6DC60D1B1D70DAAB6DC8BAB0 /* ScreenCaptureManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenCaptureManager.swift; sourceTree = "<group>"; };
 		6FD73952C51CA80616FFA8E6 /* MessageRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageRowView.swift; sourceTree = "<group>"; };
+		702CBA60A095543268771705 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		727042FF4263267EEFA18D20 /* CameraManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraManager.swift; sourceTree = "<group>"; };
 		72E17B6A6D89179C56491009 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		73B2E5B2B85836038B79C18B /* WindowPositioning.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowPositioning.swift; sourceTree = "<group>"; };
@@ -220,15 +256,18 @@
 		90A916C7BE813E0B77E80E22 /* RoomManagerUXContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomManagerUXContractTests.swift; sourceTree = "<group>"; };
 		9214746AA17BA72DEFC057E7 /* AppcastUpdateOfferParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppcastUpdateOfferParserTests.swift; sourceTree = "<group>"; };
 		961E0B236B19718866C9702B /* RoomDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomDetailView.swift; sourceTree = "<group>"; };
+		963FCFD5B3AEA79A145B675A /* PingKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PingKit; path = PingKit; sourceTree = SOURCE_ROOT; };
 		96D07ED094D1B1E9297946A0 /* AccountNotifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountNotifications.swift; sourceTree = "<group>"; };
 		97150E02C17DE9AEBD26BF13 /* RainbowBorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RainbowBorder.swift; sourceTree = "<group>"; };
 		982866D64B1FD3C9C3E0ACDB /* PingTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PingTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		9AABBC608A3DBBCE53D71796 /* AppInstallLocation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppInstallLocation.swift; sourceTree = "<group>"; };
 		9B138D453327DB1DC53FA2EF /* VideoMessageCodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoMessageCodingTests.swift; sourceTree = "<group>"; };
+		A442835C646C43BA7F20E0EA /* PingMobileApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PingMobileApp.swift; sourceTree = "<group>"; };
 		A4A1E99D8A2F055B3DD2924E /* KeyboardRoutingContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardRoutingContractTests.swift; sourceTree = "<group>"; };
 		A54D7D9F08655509CE5894FA /* MirrorWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MirrorWindow.swift; sourceTree = "<group>"; };
 		A6157E3107FE54D68F65EFCB /* DesignSystemContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystemContractTests.swift; sourceTree = "<group>"; };
 		A628BE96FDE0D4A8AE65516D /* ClientEventService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientEventService.swift; sourceTree = "<group>"; };
+		A7F90834D87864409135CE76 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		A8DEB2830970ABFE4A394A01 /* SettingsSceneContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSceneContractTests.swift; sourceTree = "<group>"; };
 		A8FB69216D7387687F778166 /* ChatImageAttachmentPopupContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatImageAttachmentPopupContractTests.swift; sourceTree = "<group>"; };
 		A998B4DE490C410DD8C04545 /* UserPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserPreferences.swift; sourceTree = "<group>"; };
@@ -237,6 +276,7 @@
 		AE35E9FFD55B61D62E4BE8EB /* ScreenCapturePermission.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenCapturePermission.swift; sourceTree = "<group>"; };
 		B110C3699C333F4B8A9E7E7C /* HistoryCacheService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryCacheService.swift; sourceTree = "<group>"; };
 		B156E510EB6A9724929971C1 /* CameraStartupContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraStartupContractTests.swift; sourceTree = "<group>"; };
+		B1A78BA95C343579B7C88C10 /* PingMobile.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PingMobile.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B297B0F942C3BA0AEFCF8EA3 /* HistoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryViewModel.swift; sourceTree = "<group>"; };
 		B2F526895AEBD9128DA1538F /* RoomManagerWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomManagerWindow.swift; sourceTree = "<group>"; };
 		B34FE34A23EC76CE975F980D /* MenuBarIconContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarIconContractTests.swift; sourceTree = "<group>"; };
@@ -275,6 +315,7 @@
 		EB469BD2ECF2AC4459C1A4D1 /* LocalArchive.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalArchive.swift; sourceTree = "<group>"; };
 		ECAF925EB5EB36A31683069F /* InlinePlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InlinePlayerView.swift; sourceTree = "<group>"; };
 		F2F40CF1E71B9600941F2BE1 /* StatusMenuBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusMenuBuilderTests.swift; sourceTree = "<group>"; };
+		F3ECDFD80CFE634B9C98FDA3 /* PingPushService.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = PingPushService.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		F5C19898F5FCEE8CFE97D3ED /* SelectableTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectableTextView.swift; sourceTree = "<group>"; };
 		F758F3123EB5B3CD54F783B9 /* ChatRealtimeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRealtimeService.swift; sourceTree = "<group>"; };
 		F760D624DE03E352A8514854 /* ScreenCoordinates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenCoordinates.swift; sourceTree = "<group>"; };
@@ -287,6 +328,14 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		7EC4D458C54C4F9F79516563 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1A8C88B22A915E42F85AF3D4 /* PingKit in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		9D05FB8D8D7F0319FEB6F66B /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -332,6 +381,20 @@
 			path = Core;
 			sourceTree = "<group>";
 		};
+		1A630E798BE7577EF3751C8C /* PingMobile */ = {
+			isa = PBXGroup;
+			children = (
+				702CBA60A095543268771705 /* AppDelegate.swift */,
+				6AAF79DFB70494C0A9C2E18B /* AppEnvironment.swift */,
+				599B87DE1571A0E649CE5582 /* ContentView.swift */,
+				012928FD0CA6F78D08BC8F84 /* Info.plist */,
+				4889748CC37B60C1E533B625 /* PingMobile.entitlements */,
+				A442835C646C43BA7F20E0EA /* PingMobileApp.swift */,
+				36410F2A63B9906DC8C06A8B /* PushRegistrar.swift */,
+			);
+			path = PingMobile;
+			sourceTree = "<group>";
+		};
 		24C9F620DF318B2C9259165A /* Ping */ = {
 			isa = PBXGroup;
 			children = (
@@ -357,6 +420,15 @@
 				B6D978D1D0ADEFE94F8E2D9D /* HotkeyManager.swift */,
 			);
 			path = Hotkey;
+			sourceTree = "<group>";
+		};
+		73F6CFB9F5250923B00B043C /* PingPushService */ = {
+			isa = PBXGroup;
+			children = (
+				A7F90834D87864409135CE76 /* Info.plist */,
+				00EDA916E26BEAF2BAA3A0F3 /* NotificationService.swift */,
+			);
+			path = PingPushService;
 			sourceTree = "<group>";
 		};
 		7694D112F2E7ACAD351B6DFF /* Backend */ = {
@@ -440,7 +512,10 @@
 		A02423B6C8B08B7EA8498178 = {
 			isa = PBXGroup;
 			children = (
+				E1AE396447CE1F118F06797D /* Packages */,
 				24C9F620DF318B2C9259165A /* Ping */,
+				1A630E798BE7577EF3751C8C /* PingMobile */,
+				73F6CFB9F5250923B00B043C /* PingPushService */,
 				E210A10C0F07BE54CD148FC4 /* PingTests */,
 				A9B87E8D0F6F0C9AE7E7E82C /* Products */,
 			);
@@ -450,6 +525,8 @@
 			isa = PBXGroup;
 			children = (
 				DB4BE060956FB1ACEAC2591B /* Ping.app */,
+				B1A78BA95C343579B7C88C10 /* PingMobile.app */,
+				F3ECDFD80CFE634B9C98FDA3 /* PingPushService.appex */,
 				982866D64B1FD3C9C3E0ACDB /* PingTests.xctest */,
 			);
 			name = Products;
@@ -491,6 +568,14 @@
 				01290226E3F8D2ED2E2FA6AC /* PlaybackWindow.swift */,
 			);
 			path = Playback;
+			sourceTree = "<group>";
+		};
+		E1AE396447CE1F118F06797D /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				963FCFD5B3AEA79A145B675A /* PingKit */,
+			);
+			name = Packages;
 			sourceTree = "<group>";
 		};
 		E210A10C0F07BE54CD148FC4 /* PingTests */ = {
@@ -561,6 +646,23 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		3277FAE724A18B87D9E7BD00 /* PingPushService */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 220B92130975516989F2FFEB /* Build configuration list for PBXNativeTarget "PingPushService" */;
+			buildPhases = (
+				F335BAAE6B23D23DD75ABF2E /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PingPushService;
+			packageProductDependencies = (
+			);
+			productName = PingPushService;
+			productReference = F3ECDFD80CFE634B9C98FDA3 /* PingPushService.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		64724876EDA2DFE638565BE1 /* PingTests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 787A6BB62E68680C0DF93019 /* Build configuration list for PBXNativeTarget "PingTests" */;
@@ -579,6 +681,27 @@
 			productName = PingTests;
 			productReference = 982866D64B1FD3C9C3E0ACDB /* PingTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		9BEA67117F1A3DBCB96C9ED0 /* PingMobile */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D04E95698CEC5BEA636F2350 /* Build configuration list for PBXNativeTarget "PingMobile" */;
+			buildPhases = (
+				1268DCCBD2147481EBEED3BF /* Sources */,
+				7EC4D458C54C4F9F79516563 /* Frameworks */,
+				FA8E9780C6DC0BF333DEA475 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A51819F5D8C3BF2605CA6408 /* PBXTargetDependency */,
+			);
+			name = PingMobile;
+			packageProductDependencies = (
+				B4B8320B6FABC4C5E6A71F7A /* PingKit */,
+			);
+			productName = PingMobile;
+			productReference = B1A78BA95C343579B7C88C10 /* PingMobile.app */;
+			productType = "com.apple.product-type.application";
 		};
 		F11C4A8E12EA5159899C95F5 /* Ping */ = {
 			isa = PBXNativeTarget;
@@ -612,8 +735,14 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					3277FAE724A18B87D9E7BD00 = {
+						ProvisioningStyle = Automatic;
+					};
 					64724876EDA2DFE638565BE1 = {
 						ProvisioningStyle = Manual;
+					};
+					9BEA67117F1A3DBCB96C9ED0 = {
+						ProvisioningStyle = Automatic;
 					};
 					F11C4A8E12EA5159899C95F5 = {
 						ProvisioningStyle = Manual;
@@ -633,6 +762,7 @@
 				84AB79F3D2E263AAFDDC843A /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */,
 				679475D911290B3B5656FA54 /* XCRemoteSwiftPackageReference "Sparkle" */,
 				E0C38CFC336E15F7B2588C65 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				E15FA5F1B25B160154ED470B /* XCLocalSwiftPackageReference "PingKit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A9B87E8D0F6F0C9AE7E7E82C /* Products */;
@@ -640,6 +770,8 @@
 			projectRoot = "";
 			targets = (
 				F11C4A8E12EA5159899C95F5 /* Ping */,
+				9BEA67117F1A3DBCB96C9ED0 /* PingMobile */,
+				3277FAE724A18B87D9E7BD00 /* PingPushService */,
 				64724876EDA2DFE638565BE1 /* PingTests */,
 			);
 		};
@@ -843,6 +975,18 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		1268DCCBD2147481EBEED3BF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A29C926DA0D7F0AC9D7285CA /* AppDelegate.swift in Sources */,
+				E030B5443F11FB84F2D44E02 /* AppEnvironment.swift in Sources */,
+				06BC9DFC1F527E3082A3B29A /* ContentView.swift in Sources */,
+				68C7329A0CC241A8C7AC5C7C /* PingMobileApp.swift in Sources */,
+				50C9793FBA90BD1C6A41402B /* PushRegistrar.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		2E9C98A9747EABEAAB8E9E48 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -985,6 +1129,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F335BAAE6B23D23DD75ABF2E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				385227B9524A34105FB11714 /* NotificationService.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -992,6 +1144,11 @@
 			isa = PBXTargetDependency;
 			target = F11C4A8E12EA5159899C95F5 /* Ping */;
 			targetProxy = BD162D3A0E214B1EE34A9F1B /* PBXContainerItemProxy */;
+		};
+		A51819F5D8C3BF2605CA6408 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3277FAE724A18B87D9E7BD00 /* PingPushService */;
+			targetProxy = ACB9BF3BA9C1F13EB6769A76 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -1016,6 +1173,31 @@
 			};
 			name = Debug;
 		};
+		038629C5630B46DAB60C3D1E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = PingMobile/PingMobile.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = NO;
+				INFOPLIST_FILE = PingMobile/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				OTHER_CODE_SIGN_FLAGS = "";
+				PRODUCT_BUNDLE_IDENTIFIER = com.youngminpark.ping.PingMobile;
+				PRODUCT_NAME = PingMobile;
+				SDKROOT = iphoneos;
+				SWIFT_STRICT_CONCURRENCY = minimal;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
 		2BC2E3A501E28EC9050517AB /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1030,6 +1212,31 @@
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.youngminpark.ping.Ping;
 				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		31501021312AD93525B721B5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = NO;
+				INFOPLIST_FILE = PingPushService/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				OTHER_CODE_SIGN_FLAGS = "";
+				PRODUCT_BUNDLE_IDENTIFIER = com.youngminpark.ping.PingMobile.PushService;
+				PRODUCT_NAME = PingPushService;
+				SDKROOT = iphoneos;
+				SWIFT_STRICT_CONCURRENCY = minimal;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -1070,6 +1277,31 @@
 			};
 			name = Release;
 		};
+		95198E523A336D5DF907E1C7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = NO;
+				INFOPLIST_FILE = PingPushService/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				OTHER_CODE_SIGN_FLAGS = "";
+				PRODUCT_BUNDLE_IDENTIFIER = com.youngminpark.ping.PingMobile.PushService;
+				PRODUCT_NAME = PingPushService;
+				SDKROOT = iphoneos;
+				SWIFT_STRICT_CONCURRENCY = minimal;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
 		B7C94E8EE46193BF5C900953 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1106,7 +1338,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 46;
+				CURRENT_PROJECT_VERSION = 47;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -1126,18 +1358,42 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 0.3.34;
+				MARKETING_VERSION = 0.3.35;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CODE_SIGN_FLAGS = "--requirements '=designated => identifier \"com.youngminpark.ping.Ping\"'";
 				PRODUCT_NAME = Ping;
-				SDKROOT = macosx;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 6.0;
 			};
 			name = Debug;
+		};
+		DE28D7F55459651DB7687911 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = PingMobile/PingMobile.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = NO;
+				INFOPLIST_FILE = PingMobile/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				OTHER_CODE_SIGN_FLAGS = "";
+				PRODUCT_BUNDLE_IDENTIFIER = com.youngminpark.ping.PingMobile;
+				PRODUCT_NAME = PingMobile;
+				SDKROOT = iphoneos;
+				SWIFT_STRICT_CONCURRENCY = minimal;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
 		};
 		E1EF64693C93F74DF4AFD463 /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -1175,7 +1431,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 46;
+				CURRENT_PROJECT_VERSION = 47;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1189,12 +1445,11 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 0.3.34;
+				MARKETING_VERSION = 0.3.35;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				OTHER_CODE_SIGN_FLAGS = "--requirements '=designated => identifier \"com.youngminpark.ping.Ping\"'";
 				PRODUCT_NAME = Ping;
-				SDKROOT = macosx;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 6.0;
@@ -1204,6 +1459,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		220B92130975516989F2FFEB /* Build configuration list for PBXNativeTarget "PingPushService" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				95198E523A336D5DF907E1C7 /* Debug */,
+				31501021312AD93525B721B5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		278B05766CC8B8E71A6B2837 /* Build configuration list for PBXNativeTarget "Ping" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -1231,7 +1495,23 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
+		D04E95698CEC5BEA636F2350 /* Build configuration list for PBXNativeTarget "PingMobile" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				038629C5630B46DAB60C3D1E /* Debug */,
+				DE28D7F55459651DB7687911 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		E15FA5F1B25B160154ED470B /* XCLocalSwiftPackageReference "PingKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = PingKit;
+		};
+/* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
 		679475D911290B3B5656FA54 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
@@ -1275,6 +1555,10 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 679475D911290B3B5656FA54 /* XCRemoteSwiftPackageReference "Sparkle" */;
 			productName = Sparkle;
+		};
+		B4B8320B6FABC4C5E6A71F7A /* PingKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PingKit;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

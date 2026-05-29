@@ -8,6 +8,10 @@ DerivedData/
 *.xcodeproj/project.xcworkspace/xcuserdata/
 *.xcworkspace/xcuserdata/
 
+# Node (root tooling for Vercel /api functions)
+node_modules/
+pr_body.md
+
 # Swift Package Manager
 .build/
 .swiftpm/
