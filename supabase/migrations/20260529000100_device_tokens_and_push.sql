@@ -14,12 +14,17 @@ create index if not exists device_tokens_uid_idx on public.device_tokens (uid);
 
 alter table public.device_tokens enable row level security;
 
+-- Idempotent: safe to re-run via dashboard SQL editor or a later `supabase db push`.
+drop policy if exists device_tokens_select_own on public.device_tokens;
 create policy device_tokens_select_own on public.device_tokens
     for select to authenticated using (uid = auth.uid());
+drop policy if exists device_tokens_insert_own on public.device_tokens;
 create policy device_tokens_insert_own on public.device_tokens
     for insert to authenticated with check (uid = auth.uid());
+drop policy if exists device_tokens_update_own on public.device_tokens;
 create policy device_tokens_update_own on public.device_tokens
     for update to authenticated using (uid = auth.uid()) with check (uid = auth.uid());
+drop policy if exists device_tokens_delete_own on public.device_tokens;
 create policy device_tokens_delete_own on public.device_tokens
     for delete to authenticated using (uid = auth.uid());
 
