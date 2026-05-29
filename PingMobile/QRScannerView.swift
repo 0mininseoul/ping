@@ -75,16 +75,20 @@ final class ScannerViewController: UIViewController, AVCaptureMetadataOutputObje
         if session.isRunning { session.stopRunning() }
     }
 
-    func metadataOutput(
+    // Delivered on the main queue (set above), so it's safe to assume main-actor
+    // isolation to touch the @MainActor members.
+    nonisolated func metadataOutput(
         _ output: AVCaptureMetadataOutput,
         didOutput metadataObjects: [AVMetadataObject],
         from connection: AVCaptureConnection
     ) {
-        guard !hasScanned,
-              let object = metadataObjects.first as? AVMetadataMachineReadableCodeObject,
+        guard let object = metadataObjects.first as? AVMetadataMachineReadableCodeObject,
               object.type == .qr,
               let value = object.stringValue else { return }
-        hasScanned = true
-        delegate?.scanner(self, didScan: value)
+        MainActor.assumeIsolated {
+            guard !hasScanned else { return }
+            hasScanned = true
+            delegate?.scanner(self, didScan: value)
+        }
     }
 }
