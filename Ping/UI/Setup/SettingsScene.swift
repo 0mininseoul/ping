@@ -41,6 +41,10 @@ struct SettingsView: View {
                 .tabItem { Label("저장", systemImage: "folder") }
                 .tag(SettingsTab.storage)
 
+            DevicePairingView()
+                .tabItem { Label("기기", systemImage: "iphone.gen3") }
+                .tag(SettingsTab.devices)
+
             AboutSettingsView()
                 .tabItem { Label("정보", systemImage: "info.circle") }
                 .tag(SettingsTab.about)
@@ -54,6 +58,7 @@ private enum SettingsTab: Hashable {
     case hotkey
     case rooms
     case storage
+    case devices
     case about
 }
 

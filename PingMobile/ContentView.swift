@@ -1,7 +1,10 @@
 import SwiftUI
+import PingKit
 
 struct ContentView: View {
     @ObservedObject private var environment = AppEnvironment.shared
+    @State private var showScanner = false
+    @State private var pairError: String?
 
     var body: some View {
         VStack(spacing: 16) {
@@ -17,13 +20,46 @@ struct ContentView: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             } else {
-                Text("Mac의 Ping 설정에서 QR 코드로 이 기기를 추가하세요.")
+                Text("Mac의 Ping 설정 → 기기 탭의 QR 코드를 스캔하세요.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+
+                Button {
+                    pairError = nil
+                    showScanner = true
+                } label: {
+                    Label("Mac QR 스캔", systemImage: "qrcode.viewfinder")
+                }
+                .buttonStyle(.borderedProminent)
+            }
+
+            if let pairError {
+                Text(pairError)
+                    .font(.caption)
+                    .foregroundStyle(.red)
                     .multilineTextAlignment(.center)
             }
         }
         .padding(32)
+        .sheet(isPresented: $showScanner) {
+            QRScannerView { code in
+                showScanner = false
+                handleScanned(code)
+            }
+            .ignoresSafeArea()
+        }
         .task { await PushRegistrar.shared.registerIfPossible() }
+    }
+
+    private func handleScanned(_ code: String) {
+        guard let data = code.data(using: .utf8),
+              let payload = try? PingHandoffPayload.decode(data) else {
+            pairError = "QR을 읽지 못했습니다. 다시 시도하세요."
+            return
+        }
+        let account = PairedAccount(url: payload.url, anonKey: payload.anonKey, session: payload.session)
+        environment.setPaired(account)
+        Task { await PushRegistrar.shared.registerIfPossible() }
     }
 }

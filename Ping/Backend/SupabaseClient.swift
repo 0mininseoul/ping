@@ -211,6 +211,23 @@ final class SupabaseClient: ObservableObject {
         accountStore.save(updated)
     }
 
+    /// Encode the current session + config as a pairing payload for the QR
+    /// handoff to iPhone/Apple Watch (P4).
+    func exportDeviceHandoff() async throws -> Data {
+        try configureIfNeeded()
+        let session = try await authenticatedSession()
+        guard let configuration else { throw PingError.supabaseUnavailable }
+        let payload = DeviceHandoffPayload(
+            url: configuration.url,
+            anonKey: configuration.anonKey,
+            accessToken: session.accessToken,
+            refreshToken: session.refreshToken,
+            expiresAt: session.expiresAt,
+            userId: session.userId
+        )
+        return try SupabaseJSON.encoder.encode(payload)
+    }
+
     func rpcArray<T: Decodable>(_ function: String, body: [String: Any] = [:]) async throws -> [T] {
         let data = try await rpcData(function, body: body)
         if data.isEmpty {
