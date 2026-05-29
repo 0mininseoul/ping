@@ -25,6 +25,25 @@ final class CameraManager: NSObject, ObservableObject {
         await prepareAudioForRecording()
     }
 
+    /// Robustly resolve an available camera. `AVCaptureDevice.default(for: .video)`
+    /// can return nil on newer macOS (multiple cameras / Continuity Camera) even
+    /// when a camera is present, surfacing as "디바이스를 찾을 수 없습니다". A
+    /// DiscoverySession enumerates concrete device types and prefers the built-in.
+    static func preferredCamera() -> AVCaptureDevice? {
+        var deviceTypes: [AVCaptureDevice.DeviceType] = [.builtInWideAngleCamera, .deskViewCamera]
+        if #available(macOS 14.0, *) {
+            deviceTypes.append(contentsOf: [.external, .continuityCamera])
+        }
+        let discovery = AVCaptureDevice.DiscoverySession(
+            deviceTypes: deviceTypes,
+            mediaType: .video,
+            position: .unspecified
+        )
+        return discovery.devices.first { $0.deviceType == .builtInWideAngleCamera }
+            ?? discovery.devices.first
+            ?? AVCaptureDevice.default(for: .video)
+    }
+
     func start() async {
         guard !Task.isCancelled else { return }
 
@@ -62,7 +81,7 @@ final class CameraManager: NSObject, ObservableObject {
         session.beginConfiguration()
         session.sessionPreset = .hd1920x1080
 
-        guard let camera = AVCaptureDevice.default(for: .video),
+        guard let camera = Self.preferredCamera(),
               let cameraInput = try? AVCaptureDeviceInput(device: camera),
               session.canAddInput(cameraInput) else {
             lastError = "카메라 디바이스를 찾을 수 없습니다."
