@@ -7,6 +7,7 @@ import ClickSpark from "@/components/bits/ClickSpark";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import BrandMark from "@/components/ui/brand-mark";
+import { useOS } from "@/lib/useOS";
 
 interface HeroProps {
   macDownloadUrl: string;
@@ -21,6 +22,23 @@ export default function Hero({
   macVersion,
   windowsVersion,
 }: HeroProps) {
+  const os = useOS();
+  const targets = [
+    {
+      key: "mac",
+      url: macDownloadUrl,
+      label: "Download for macOS",
+      aria: `Ping ${macVersion} macOS DMG 다운로드`,
+    },
+    {
+      key: "win",
+      url: windowsDownloadUrl,
+      label: "Download for Windows",
+      aria: `Ping ${windowsVersion} Windows EXE 다운로드`,
+    },
+  ];
+  const ordered = os === "windows" ? [targets[1], targets[0]] : targets;
+
   return (
     <section className="relative isolate overflow-hidden pt-32 pb-28 md:pt-44 md:pb-36">
       <Aurora
@@ -68,28 +86,19 @@ export default function Hero({
             </p>
 
             <div className="mb-10 flex flex-wrap items-center gap-3">
-              <ClickSpark>
-                <a
-                  href={macDownloadUrl}
-                  aria-label={`Ping ${macVersion} macOS DMG 다운로드`}
-                >
-                  <Button variant="primary" size="lg">
-                    <MonitorDown aria-hidden className="h-[18px] w-[18px]" />
-                    Download for macOS
-                  </Button>
-                </a>
-              </ClickSpark>
-              <ClickSpark>
-                <a
-                  href={windowsDownloadUrl}
-                  aria-label={`Ping ${windowsVersion} Windows EXE 다운로드`}
-                >
-                  <Button variant="secondary" size="lg">
-                    <MonitorDown aria-hidden className="h-[18px] w-[18px]" />
-                    Download for Windows
-                  </Button>
-                </a>
-              </ClickSpark>
+              {ordered.map((t, i) => (
+                <ClickSpark key={t.key}>
+                  <a href={t.url} aria-label={t.aria}>
+                    <Button
+                      variant={i === 0 ? "primary" : "secondary"}
+                      size="lg"
+                    >
+                      <MonitorDown aria-hidden className="h-[18px] w-[18px]" />
+                      {t.label}
+                    </Button>
+                  </a>
+                </ClickSpark>
+              ))}
               <a href="#flow">
                 <Button variant="ghost" size="lg">
                   작동 방식 보기
@@ -98,19 +107,27 @@ export default function Hero({
               </a>
             </div>
 
-            {/* Windows Installation Helper */}
-            <div className="mb-10 text-xs text-muted max-w-[36rem] leading-relaxed border-l-2 border-border pl-3 py-0.5">
-              <p>
-                💡 Windows 버전은 별도 서명된 패키지(sideload)를 사용하므로 다운로드 및 첫 실행 시 
-                보안 경고(SmartScreen)가 나타날 수 있습니다. 경고 창에서 
-                <span className="font-bold text-fg"> '추가 정보' &rarr; '실행'</span>을 선택하면 정상 설치됩니다.
+            {/* Windows 설치 안내 */}
+            <div className="mb-10 max-w-[36rem] rounded-md border border-border bg-bg-elev/50 px-4 py-3 text-xs leading-relaxed text-muted">
+              <p className="font-medium text-fg">Windows 설치 안내</p>
+              <p className="mt-1">
+                Windows 버전은 무료 자체서명(sideload) 패키지라 첫 실행 시 보안
+                경고(SmartScreen)가 보일 수 있어요. 경고 창에서
+                <span className="font-bold text-fg"> '추가 정보' &rarr; '실행'</span>
+                을 누르면 정상 설치됩니다.
               </p>
-              <p className="mt-1.5 font-medium text-subtle">
-                [대안] PowerShell(관리자 권한)에서 한 줄 명령어로 인증서 등록부터 단축키 구성까지 한 번에 완료하기:
-              </p>
-              <code className="block mt-1 p-2 bg-bg-elev border border-border rounded font-mono text-[10.5px] text-fg select-all cursor-pointer break-all whitespace-pre-wrap">
-                irm https://ping0min.vercel.app/install.ps1 | iex
-              </code>
+              <details className="mt-2">
+                <summary className="cursor-pointer select-none text-subtle transition-colors hover:text-fg">
+                  고급: PowerShell 한 줄 설치
+                </summary>
+                <p className="mt-1.5">
+                  관리자 권한 PowerShell에서 아래를 실행하면 인증서 등록부터
+                  바로가기 구성까지 한 번에 끝납니다.
+                </p>
+                <code className="mt-1 block break-all select-all rounded border border-border bg-bg px-2 py-1.5 font-mono text-[10.5px] text-fg">
+                  irm https://ping0min.vercel.app/install.ps1 | iex
+                </code>
+              </details>
             </div>
 
             <dl
