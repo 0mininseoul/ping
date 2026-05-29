@@ -340,6 +340,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.youngminpark.ping.PingMobile
+        DEVELOPMENT_TEAM: "878FAHTFQJ"
         PRODUCT_NAME: PingMobile
         MARKETING_VERSION: "0.1.0"
         CURRENT_PROJECT_VERSION: "2"
@@ -378,6 +379,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.youngminpark.ping.PingMobile.PushService
+        DEVELOPMENT_TEAM: "878FAHTFQJ"
         PRODUCT_NAME: PingPushService
         MARKETING_VERSION: "0.1.0"
         CURRENT_PROJECT_VERSION: "2"
@@ -404,6 +406,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.youngminpark.ping.PingMobile.watchkitapp
+        DEVELOPMENT_TEAM: "878FAHTFQJ"
         PRODUCT_NAME: PingWatch
         MARKETING_VERSION: "0.1.0"
         CURRENT_PROJECT_VERSION: "2"
