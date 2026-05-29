@@ -34,7 +34,7 @@ Supabase Dashboard의 Authentication 설정에서 Anonymous sign-ins가 켜져 �
 
 ### macOS
 
-1. `Ping-v0.3.35.dmg`를 더블클릭해 마운트한다.
+1. `Ping-v0.3.36.dmg`를 더블클릭해 마운트한다.
 2. `Ping.app`을 Applications 폴더로 드래그한다.
 3. 더블클릭해 실행한다. Developer ID 서명 + Apple 공증(notarized) 빌드라 Gatekeeper 경고 없이 바로 열린다.
 4. 카메라, 마이크, 알림 권한을 허용한다.
