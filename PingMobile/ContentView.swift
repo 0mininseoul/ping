@@ -72,6 +72,11 @@ struct ContentView: View {
             }
 
             Spacer()
+
+            Button("앱 기능 미리보기") { loadDemo() }
+                .font(.footnote)
+                .foregroundStyle(.tertiary)
+                .padding(.bottom, 8)
         }
         .padding(24)
         .sheet(isPresented: $showScanner) {
@@ -82,6 +87,24 @@ struct ContentView: View {
             .ignoresSafeArea()
         }
         .task { await PushRegistrar.shared.registerIfPossible() }
+    }
+
+    /// Loads a pre-seeded demo account so App Store reviewers can explore the
+    /// companion UI without needing a paired Mac.
+    private func loadDemo() {
+        guard let url = URL(string: "https://qxjtprxvjmaxlbtljcjw.supabase.co") else { return }
+        let session = SupabaseSession(
+            accessToken: "",
+            refreshToken: "4ba67vbxrxzo",
+            expiresAt: Date(timeIntervalSince1970: 1780140285),
+            userId: "c91fbdbd-ab5c-461e-a74d-e66b99d0d651"
+        )
+        let account = PairedAccount(
+            url: url,
+            anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4anRwcnh2am1heGxidGxqY2p3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg5MzcxNjQsImV4cCI6MjA5NDUxMzE2NH0.z3mxwdHQrII5CeI0UFlnBKqkWP0jfXbB3iyjBVJ97vI",
+            session: session
+        )
+        environment.setPaired(account)
     }
 
     private func handleScanned(_ code: String) {
