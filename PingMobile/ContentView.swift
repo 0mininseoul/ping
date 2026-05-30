@@ -96,7 +96,7 @@ struct ContentView: View {
         let session = SupabaseSession(
             accessToken: "",
             refreshToken: "4ba67vbxrxzo",
-            expiresAt: Date(timeIntervalSince1970: 1780140285),
+            expiresAt: Date(timeIntervalSince1970: 0),
             userId: "c91fbdbd-ab5c-461e-a74d-e66b99d0d651"
         )
         let account = PairedAccount(

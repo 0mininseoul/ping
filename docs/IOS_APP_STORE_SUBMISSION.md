@@ -1,7 +1,7 @@
 # iOS / Apple Watch — App Store 심사 제출 체크리스트
 
 마지막 업데이트: 2026-05-30. 대상: **PingMobile**(`com.youngminpark.ping.PingMobile`) + 내장 watchOS 앱(PingWatch).
-TestFlight에 최신 빌드 **build 9**(버전 0.1.0) 업로드 완료. 아래는 App Store Connect(ASC) 웹에서 직접 해야 하는 액션이다 (대부분 웹 UI라 CLI로 대신 못 함).
+TestFlight에 최신 빌드 **build 10**(버전 0.1.0) 업로드 완료. 아래는 App Store Connect(ASC) 웹에서 직접 해야 하는 액션이다 (대부분 웹 UI라 CLI로 대신 못 함).
 
 준비된 자산:
 - 개인정보 처리방침 URL: `https://ping0min.vercel.app/privacy`
@@ -11,16 +11,12 @@ TestFlight에 최신 빌드 **build 9**(버전 0.1.0) 업로드 완료. 아래�
 
 ---
 
-## 0. 🚨 먼저 결정해야 할 블로커 — 리뷰어 데모 경로
+## 0. 🚨 리뷰어 데모 경로 (A안 선택 및 구현 완료)
 
 폰 앱은 **Mac과 QR 페어링이 없으면 "Mac과 연결하기" 화면에서 막혀** 아무것도 못 한다.
-애플 심사관은 Mac이 없으므로 그대로면 **Guideline 2.1(앱이 불완전/동작 확인 불가)으로 거절**될 확률이 높다.
-
-선택지(제출 전 반드시 하나 정해야 함):
-- **(A·권장) 리뷰 전용 데모 경로를 추가** — 폰 단독에서 익명 계정 생성 + 샘플 ping을 볼 수 있는 숨은 진입점(예: 페어링 화면에서 특정 코드 입력 시 데모 룸 활성화). 개발 작업 필요(후속). 가장 통과 확률 높음.
-- **(B) 리뷰 노트 + 데모 영상으로 설명** — "이 앱은 Mac/PC 앱의 컴패니언"이라 설명하고, Mac에서 ping 보내고 폰에서 받는 전체 흐름 영상을 첨부. 심사관이 직접 못 써보므로 거절 위험 남음. 거절 시 회신으로 재설명.
-
-> 권장: 시간이 허락하면 (A)를 먼저 구현하고 제출. 그게 어려우면 (B)로 시도하되 거절 가능성 감안.
+이를 방지하기 위해 **(A) 리뷰 전용 데모 경로**를 구현 완료했다.
+- **진입 방법**: unpaired(페어링 전) 화면 하단에 있는 **"앱 기능 미리보기"** 버튼을 누른다.
+- **동작**: pre-seeded anonymous 데모 계정으로 자동 로그인되며, "Ping Demo" 룸과 3개의 샘플 채팅 메시지가 활성화되어 심사위원이 동반 Mac 없이도 companion UI를 체험할 수 있다.
 
 ---
 
@@ -116,19 +112,12 @@ ASC → App Privacy → "Get Started". 아래대로 신고(처리방침과 일�
 ## 8. App Review Information (심사용 정보)
 
 - **연락처**: 이름/전화/이메일(`contact@ascentum.co.kr`).
-- **데모 계정**: 위 0번 블로커 참고. (A)면 데모 진입 방법을, (B)면 "Mac 컴패니언 앱이라 폰 단독 사용 불가" 설명 + 데모 영상 링크.
+- **데모 계정**: 데모 계정 정보 불필요 (앱 화면 하단의 "앱 기능 미리보기" 버튼으로 자동 로그인).
 - **노트(영문, 붙여넣기용 초안)**:
 ```
-Ping is a companion to our macOS/Windows desktop app. A 3-second video is recorded
-on the desktop and delivered to the paired iPhone/Apple Watch, where the user views
-it and replies with dictated text. The iPhone app links to the same anonymous account
-on the desktop via a QR code (Settings > Devices in the desktop app); there is no
-email/password sign-up.
+Ping is a companion to our macOS/Windows desktop app. A 3-second video is recorded on the desktop and delivered to the paired iPhone/Apple Watch, where the user views it and replies with dictated text. The iPhone app links to the same anonymous account on the desktop via a QR code (Settings > Devices in the desktop app); there is no email/password sign-up.
 
-Because the phone is a receiver+reply companion, full functionality requires a paired
-desktop. [If option A: To review standalone, use demo entry: <설명>.]
-[If option B: A demo video of the full flow is here: <영상 URL>. We are happy to
-provide a live walkthrough.]
+Because the phone is a receiver+reply companion, full functionality requires a paired desktop. To review standalone without a paired desktop, please tap the small button at the very bottom of the pairing screen: "앱 기능 미리보기" (App Preview). This loads a pre-seeded anonymous demo account and opens the main screen containing a "Ping Demo" room with sample messages, allowing you to explore the companion UI and chat threads directly.
 
 Video messages auto-delete after ~7 days. No ads, no third-party tracking.
 ```
@@ -144,7 +133,7 @@ Video messages auto-delete after ~7 days. No ads, no third-party tracking.
 ---
 
 ## 빠른 요약 (해야 할 일 순서)
-1. **0번 데모 경로 결정**(A 권장: 데모 진입점 추가 / B: 영상+노트).
+1. **0번 데모 경로 구현 완료** (A안: 페어링 전 화면 하단의 "앱 기능 미리보기" 버튼 추가).
 2. 스크린샷 생성(iPhone 6.9" + 워치).
-3. ASC에서 2~8번 메타데이터/Privacy/연령/리뷰노트 입력 + build 9 선택.
+3. ASC에서 2~8번 메타데이터/Privacy/연령/리뷰노트 입력 + build 10 선택.
 4. **Submit for Review**.

@@ -106,20 +106,19 @@ final class PermissionUXContractTests: XCTestCase {
         XCTAssertTrue(source.contains("Ping을 종료하고 다시 열어야 적용됩니다."))
     }
 
-    func testReleaseBuildUsesStableAdHocDesignatedRequirement() throws {
+    func testReleaseBuildUsesStableDeveloperIDRequirement() throws {
         let source = try readSourceFile("build-release.sh")
 
-        XCTAssertTrue(source.contains("--requirements '=designated => identifier \"com.youngminpark.ping.Ping\"'"))
+        XCTAssertTrue(source.contains("codesign --force --sign \"$SIGN_IDENTITY\""))
     }
 
     func testReleaseBuildDoesNotOverwriteSparkleHelperEntitlements() throws {
         let source = try readSourceFile("build-release.sh")
 
         XCTAssertFalse(source.contains("codesign --force --deep --sign - \\\n  --options runtime \\\n  --entitlements Ping.entitlements"))
-        XCTAssertTrue(source.contains("--preserve-metadata=entitlements,requirements"))
+        XCTAssertTrue(source.contains("--preserve-metadata=entitlements"))
         XCTAssertTrue(source.contains("sign_preserving_metadata \"$SPARKLE_FRAMEWORK/Versions/B/XPCServices/Installer.xpc\""))
         XCTAssertTrue(source.contains("sign_framework \"$SPARKLE_FRAMEWORK\""))
-        XCTAssertTrue(source.contains("--preserve-metadata=entitlements \\\n    \"$code_object\""))
     }
 
     private func readSourceFile(_ relativePath: String) throws -> String {

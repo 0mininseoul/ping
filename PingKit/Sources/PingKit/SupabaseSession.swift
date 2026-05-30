@@ -19,6 +19,6 @@ public struct SupabaseSession: Codable, Sendable, Equatable {
 
     /// Refresh ~90s before expiry, matching the macOS client.
     public var needsRefresh: Bool {
-        expiresAt <= Date().addingTimeInterval(90)
+        accessToken.isEmpty || expiresAt <= Date().addingTimeInterval(90)
     }
 }

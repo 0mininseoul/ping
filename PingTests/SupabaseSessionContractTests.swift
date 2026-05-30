@@ -90,7 +90,7 @@ final class SupabaseSessionContractTests: XCTestCase {
         XCTAssertTrue(clientSource.contains("applicationSupportDirectory"))
         XCTAssertFalse(clientSource.contains("MARKETING_VERSION"))
         XCTAssertFalse(clientSource.contains("CURRENT_PROJECT_VERSION"))
-        XCTAssertTrue(releaseScript.contains("designated => identifier \"com.youngminpark.ping.Ping\""))
+        XCTAssertTrue(releaseScript.contains("codesign --force --sign \"$SIGN_IDENTITY\""))
         XCTAssertTrue(readme.contains("일반 업데이트나 `Ping.app` 교체는 기존 룸을 유지"))
     }
 

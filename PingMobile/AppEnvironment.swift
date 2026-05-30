@@ -53,6 +53,7 @@ final class AppEnvironment: ObservableObject {
         account.session = session
         paired = account
         persist()
+        WatchBridge.shared.sync(account)
     }
 
     private func persist() {
