@@ -1,0 +1,150 @@
+# iOS / Apple Watch — App Store 심사 제출 체크리스트
+
+마지막 업데이트: 2026-05-30. 대상: **PingMobile**(`com.youngminpark.ping.PingMobile`) + 내장 watchOS 앱(PingWatch).
+TestFlight에 최신 빌드 **build 9**(버전 0.1.0) 업로드 완료. 아래는 App Store Connect(ASC) 웹에서 직접 해야 하는 액션이다 (대부분 웹 UI라 CLI로 대신 못 함).
+
+준비된 자산:
+- 개인정보 처리방침 URL: `https://ping0min.vercel.app/privacy`
+- 지원 URL: `https://ping0min.vercel.app/support`
+- 연락 이메일: `contact@ascentum.co.kr`
+- Team ID: `878FAHTFQJ` · 수출규정: `ITSAppUsesNonExemptEncryption=false`(자동 통과)
+
+---
+
+## 0. 🚨 먼저 결정해야 할 블로커 — 리뷰어 데모 경로
+
+폰 앱은 **Mac과 QR 페어링이 없으면 "Mac과 연결하기" 화면에서 막혀** 아무것도 못 한다.
+애플 심사관은 Mac이 없으므로 그대로면 **Guideline 2.1(앱이 불완전/동작 확인 불가)으로 거절**될 확률이 높다.
+
+선택지(제출 전 반드시 하나 정해야 함):
+- **(A·권장) 리뷰 전용 데모 경로를 추가** — 폰 단독에서 익명 계정 생성 + 샘플 ping을 볼 수 있는 숨은 진입점(예: 페어링 화면에서 특정 코드 입력 시 데모 룸 활성화). 개발 작업 필요(후속). 가장 통과 확률 높음.
+- **(B) 리뷰 노트 + 데모 영상으로 설명** — "이 앱은 Mac/PC 앱의 컴패니언"이라 설명하고, Mac에서 ping 보내고 폰에서 받는 전체 흐름 영상을 첨부. 심사관이 직접 못 써보므로 거절 위험 남음. 거절 시 회신으로 재설명.
+
+> 권장: 시간이 허락하면 (A)를 먼저 구현하고 제출. 그게 어려우면 (B)로 시도하되 거절 가능성 감안.
+
+---
+
+## 1. ASC에서 앱 레코드 / 빌드 준비
+
+App Store Connect → My Apps → Ping → (없으면 `+` 새 앱 생성: 플랫폼 iOS, 번들 ID `com.youngminpark.ping.PingMobile`, SKU 임의, 기본 언어 한국어).
+
+- **빌드 선택**: 버전(0.1.0) → "빌드" 섹션에서 **build 9** 선택. (TestFlight 처리 완료 상태여야 함)
+- watchOS 앱은 iOS 앱에 내장되어 자동 포함된다(별도 제출 아님).
+
+---
+
+## 2. App Information (앱 정보)
+
+- **이름**: Ping
+- **부제(Subtitle, 30자)**: `3초 영상 메시지`
+- **카테고리**: 기본 = 소셜 네트워킹(Social Networking), 보조 = 라이프스타일(선택)
+- **콘텐츠 권한**: 제3자 콘텐츠 없음
+- **개인정보 처리방침 URL**: `https://ping0min.vercel.app/privacy`
+
+---
+
+## 3. Pricing and Availability
+
+- **가격**: 무료
+- **국가/지역**: 전체(또는 대한민국부터)
+
+---
+
+## 4. 버전 메타데이터 (한국어, 붙여넣기용 초안)
+
+**프로모션 텍스트(170자)**
+```
+짝과 3초 영상으로 안부를 전하세요. Mac·PC에서 짧게 찍어 보내면, iPhone과 Apple Watch로 바로 도착하고 받아쓰기로 답할 수 있어요.
+```
+
+**설명(Description)**
+```
+Ping은 가까운 사람과 3초 영상 메시지를 주고받는 가장 가벼운 방법입니다.
+
+• Mac·Windows에서 단축키 한 번으로 3초 영상을 찍어 보냅니다.
+• iPhone과 Apple Watch로 알림이 도착하고, 탭하면 바로 재생됩니다.
+• 받아쓰기(음성)로 빠르게 텍스트 답장을 보낼 수 있습니다.
+
+영상은 책상에서, 답장은 손안에서. 길게 쓰지 않아도 표정과 목소리로 안부가 전해집니다.
+
+• 익명 계정 — 이메일·전화번호 없이 시작합니다.
+• 영상 메시지는 약 7일 후 자동 삭제됩니다.
+• 광고 없음, 데이터 판매 없음.
+
+iPhone·Apple Watch 앱은 Mac/PC의 같은 계정을 QR로 연결해 사용하는 컴패니언입니다.
+```
+
+**키워드(100자, 쉼표 구분)**
+```
+영상메시지,3초,영상,메시지,커플,가족,친구,안부,음성,받아쓰기,푸시,워치,컴패니언,짧은영상
+```
+
+- **지원 URL**: `https://ping0min.vercel.app/support`
+- **마케팅 URL**(선택): `https://ping0min.vercel.app`
+
+---
+
+## 5. 스크린샷 (필수)
+
+- **iPhone 6.9"**(예: iPhone 16 Pro Max, 1320×2868) — 또는 6.5" — **최소 1장, 권장 3~5장**.
+- **Apple Watch**(내장 워치앱 포함 시) — 워치 스크린샷이 요구될 수 있음(예: 49mm). 알림/재생 화면 1~3장.
+- 생성 방법: 시뮬레이터(`xcrun simctl io booted screenshot`)로 각 화면 캡처하거나, 실기기 스크린샷.
+- 추천 화면: ① "연결됐어요" 인박스, ② 룸 스레드(영상 썸네일+채팅), ③ 영상 풀스크린 재생, ④ 받아쓰기 답장.
+
+---
+
+## 6. App Privacy (개인정보 라벨)
+
+ASC → App Privacy → "Get Started". 아래대로 신고(처리방침과 일치):
+
+- **데이터 수집함: 예**
+- 수집 항목:
+  - **사용자 콘텐츠(User Content)** — 영상/사진/기타: ✅ "앱 기능(App Functionality)" 목적. 사용자에게 연결됨(Linked). 추적(Tracking) 아님.
+  - **식별자(Identifiers)** — 기기 ID/푸시 토큰: ✅ "앱 기능" 목적. Linked. 추적 아님.
+  - **사용 데이터(Usage Data)** 또는 **진단(Diagnostics)** — 익명 이벤트: ✅ "분석(Analytics)" 목적. **Not linked**(익명). 추적 아님.
+- **이름/이메일/전화/연락처/위치/결제: 수집 안 함.**
+- **광고/제3자 추적: 없음** (App Tracking Transparency 불필요).
+
+---
+
+## 7. 연령 등급 (Age Rating)
+
+- 설문에서 대부분 "없음/드물게"가 아닌 **모두 없음**으로 답. 사용자 생성 콘텐츠(메시지)가 있으나 1:1/소규모 비공개 → "Unrestricted Web Access: No". 예상 등급 **4+ ~ 12+** 수준.
+
+---
+
+## 8. App Review Information (심사용 정보)
+
+- **연락처**: 이름/전화/이메일(`contact@ascentum.co.kr`).
+- **데모 계정**: 위 0번 블로커 참고. (A)면 데모 진입 방법을, (B)면 "Mac 컴패니언 앱이라 폰 단독 사용 불가" 설명 + 데모 영상 링크.
+- **노트(영문, 붙여넣기용 초안)**:
+```
+Ping is a companion to our macOS/Windows desktop app. A 3-second video is recorded
+on the desktop and delivered to the paired iPhone/Apple Watch, where the user views
+it and replies with dictated text. The iPhone app links to the same anonymous account
+on the desktop via a QR code (Settings > Devices in the desktop app); there is no
+email/password sign-up.
+
+Because the phone is a receiver+reply companion, full functionality requires a paired
+desktop. [If option A: To review standalone, use demo entry: <설명>.]
+[If option B: A demo video of the full flow is here: <영상 URL>. We are happy to
+provide a live walkthrough.]
+
+Video messages auto-delete after ~7 days. No ads, no third-party tracking.
+```
+
+---
+
+## 9. 제출
+
+- 모든 섹션 녹색 체크 → 우상단 **"Add for Review" / "Submit for Review"**.
+- 수출규정: 코드에 `ITSAppUsesNonExemptEncryption=false`가 있어 자동 통과(추가 질문 없음).
+- 심사 ~24–48시간. 거절 시 Resolution Center 회신으로 0번/8번 내용 보강.
+
+---
+
+## 빠른 요약 (해야 할 일 순서)
+1. **0번 데모 경로 결정**(A 권장: 데모 진입점 추가 / B: 영상+노트).
+2. 스크린샷 생성(iPhone 6.9" + 워치).
+3. ASC에서 2~8번 메타데이터/Privacy/연령/리뷰노트 입력 + build 9 선택.
+4. **Submit for Review**.
