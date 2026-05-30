@@ -66,34 +66,37 @@ struct ThreadView: View {
 
     private func videoRow(_ message: VideoMessage) -> some View {
         let mine = message.senderUid == myUid
+        let size = thumbnailSize(for: message)
         return HStack {
-            if mine { Spacer(minLength: 40) }
-            Button { play(message) } label: {
-                HStack(spacing: 10) {
-                    ZStack {
-                        Circle().fill(Color.accentColor.opacity(0.18)).frame(width: 38, height: 38)
-                        if loadingVideoId == message.id {
-                            ProgressView()
-                        } else {
-                            Image(systemName: "play.fill").foregroundStyle(Color.accentColor)
-                        }
-                    }
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(mine ? "내가 보낸 ping" : "\(message.senderNickname)님의 ping")
-                            .font(.subheadline.weight(.semibold))
-                        Text("3초 영상 · 탭하면 재생")
-                            .font(.caption2).foregroundStyle(.secondary)
-                    }
+            if mine { Spacer(minLength: 60) }
+            VStack(alignment: mine ? .trailing : .leading, spacing: 3) {
+                if !mine {
+                    Text(message.senderNickname).font(.caption2).foregroundStyle(.secondary)
                 }
-                .padding(.vertical, 8).padding(.horizontal, 12)
-                .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(Color(uiColor: .secondarySystemBackground))
-                )
+                Button { play(message) } label: {
+                    VideoThumbnailView(message: message)
+                        .frame(width: size.width, height: size.height)
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .strokeBorder(Color.primary.opacity(0.06))
+                        )
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
-            if !mine { Spacer(minLength: 40) }
+            if !mine { Spacer(minLength: 60) }
         }
+    }
+
+    /// Mirror the macOS thumbnail sizing: square for face-only, otherwise a
+    /// width-fixed tile whose height follows the clip's aspect ratio.
+    private func thumbnailSize(for message: VideoMessage) -> CGSize {
+        if message.captureMode == "face_only" {
+            return CGSize(width: 150, height: 150)
+        }
+        let aspect = max(0.5, min(3.0, message.aspectRatio ?? 1.78))
+        let width: CGFloat = 190
+        return CGSize(width: width, height: width / aspect)
     }
 
     private func chatRow(_ chat: PingChatMessage) -> some View {
@@ -176,13 +179,12 @@ struct ThreadView: View {
         loadingVideoId = message.id
         Task {
             defer { loadingVideoId = nil }
-            guard let client = AppEnvironment.shared.makeClient() else { return }
-            guard let data = try? await client.downloadVideo(message) else { return }
-            let url = FileManager.default.temporaryDirectory
-                .appendingPathComponent("\(message.videoId).mp4")
-            guard (try? data.write(to: url, options: .atomic)) != nil else { return }
+            // Reuse the same cached clip the thumbnail downloaded.
+            guard let url = try? await VideoCache.shared.localURL(for: message) else { return }
             playable = PlayableVideo(id: message.id, url: url)
-            try? await client.markSeen(messageId: message.id)
+            if let client = AppEnvironment.shared.makeClient() {
+                try? await client.markSeen(messageId: message.id)
+            }
         }
     }
 }

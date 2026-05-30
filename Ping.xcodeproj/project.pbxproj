@@ -71,6 +71,7 @@
 		5E8F74FACE824DA1B4D7CEF4 /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5251D41AA9E41DBE6D637EF1 /* QRScannerView.swift */; };
 		5EE98B4867742225FE567CD4 /* PartnerCyclingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F441B1B93C9D79CB77E24D4 /* PartnerCyclingTests.swift */; };
 		5F547FCCA25D9DBDC39E0527 /* HistoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B297B0F942C3BA0AEFCF8EA3 /* HistoryViewModel.swift */; };
+		647D023951472D012B739794 /* VideoThumbnailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91CA4C2B635FD53502BAE5A6 /* VideoThumbnailView.swift */; };
 		64FB720C71D2506C3FF0A5F6 /* InlinePlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECAF925EB5EB36A31683069F /* InlinePlayerView.swift */; };
 		661E54E16BDF7EF0037D6F5E /* MirrorWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A54D7D9F08655509CE5894FA /* MirrorWindow.swift */; };
 		67FBBC00ABEE4FDC9A8E5496 /* EntitlementsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0CE48710A798DC7E4F5F387 /* EntitlementsTests.swift */; };
@@ -297,6 +298,7 @@
 		8F441B1B93C9D79CB77E24D4 /* PartnerCyclingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PartnerCyclingTests.swift; sourceTree = "<group>"; };
 		8F8F7409AE1AFA053895230D /* MultiAccountGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiAccountGate.swift; sourceTree = "<group>"; };
 		90A916C7BE813E0B77E80E22 /* RoomManagerUXContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomManagerUXContractTests.swift; sourceTree = "<group>"; };
+		91CA4C2B635FD53502BAE5A6 /* VideoThumbnailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoThumbnailView.swift; sourceTree = "<group>"; };
 		9214746AA17BA72DEFC057E7 /* AppcastUpdateOfferParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppcastUpdateOfferParserTests.swift; sourceTree = "<group>"; };
 		961E0B236B19718866C9702B /* RoomDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomDetailView.swift; sourceTree = "<group>"; };
 		963FCFD5B3AEA79A145B675A /* PingKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PingKit; path = PingKit; sourceTree = SOURCE_ROOT; };
@@ -451,6 +453,7 @@
 				36410F2A63B9906DC8C06A8B /* PushRegistrar.swift */,
 				5251D41AA9E41DBE6D637EF1 /* QRScannerView.swift */,
 				57D8312BCCBDE5E2CBF7CDC2 /* ThreadView.swift */,
+				91CA4C2B635FD53502BAE5A6 /* VideoThumbnailView.swift */,
 				ED7C10424EA3C4E5036BACF3 /* WatchBridge.swift */,
 			);
 			path = PingMobile;
@@ -1112,6 +1115,7 @@
 				50C9793FBA90BD1C6A41402B /* PushRegistrar.swift in Sources */,
 				5E8F74FACE824DA1B4D7CEF4 /* QRScannerView.swift in Sources */,
 				AF3DC3BABC1FF1344A9E0432 /* ThreadView.swift in Sources */,
+				647D023951472D012B739794 /* VideoThumbnailView.swift in Sources */,
 				C51EF5A8425FA50B189BF2AA /* WatchBridge.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1328,7 +1332,7 @@
 				CODE_SIGN_ENTITLEMENTS = PingMobile/PingMobile.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = 878FAHTFQJ;
 				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = PingMobile/Info.plist;
@@ -1353,7 +1357,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = 878FAHTFQJ;
 				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = PingWatch/Info.plist;
@@ -1391,7 +1395,7 @@
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = 878FAHTFQJ;
 				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = PingPushService/Info.plist;
@@ -1454,7 +1458,7 @@
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = 878FAHTFQJ;
 				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = PingPushService/Info.plist;
@@ -1481,7 +1485,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = 878FAHTFQJ;
 				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = PingWatch/Info.plist;
@@ -1572,7 +1576,7 @@
 				CODE_SIGN_ENTITLEMENTS = PingMobile/PingMobile.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = 878FAHTFQJ;
 				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = PingMobile/Info.plist;
