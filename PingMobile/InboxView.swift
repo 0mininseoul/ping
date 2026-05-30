@@ -9,6 +9,7 @@ struct InboxView: View {
 
     @State private var rooms: [PingRoom] = []
     @State private var isLoading = true
+    @State private var showDisconnectConfirmation = false
 
     var body: some View {
         Group {
@@ -32,6 +33,12 @@ struct InboxView: View {
         }
         .navigationTitle("Ping")
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button("연결 해제") {
+                    showDisconnectConfirmation = true
+                }
+                .foregroundStyle(.red)
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Label("연결됨", systemImage: "checkmark.seal.fill")
                     .font(.caption2)
@@ -44,6 +51,14 @@ struct InboxView: View {
         }
         .refreshable { await load() }
         .task { await load() }
+        .confirmationDialog("연결 해제", isPresented: $showDisconnectConfirmation, titleVisibility: .visible) {
+            Button("연결 해제", role: .destructive) {
+                AppEnvironment.shared.disconnect()
+            }
+            Button("취소", role: .cancel) {}
+        } message: {
+            Text("연결을 해제하면 QR 코드를 다시 스캔해야 합니다.")
+        }
     }
 
     private func roomRow(_ room: PingRoom) -> some View {

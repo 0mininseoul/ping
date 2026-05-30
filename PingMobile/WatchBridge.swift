@@ -28,6 +28,11 @@ final class WatchBridge: NSObject {
               let json = String(data: data, encoding: .utf8) else { return }
         try? WCSession.default.updateApplicationContext(["pairedAccount": json])
     }
+
+    func unpair() {
+        guard WCSession.isSupported() else { return }
+        try? WCSession.default.updateApplicationContext(["unpair": true])
+    }
 }
 
 extension WatchBridge: WCSessionDelegate {

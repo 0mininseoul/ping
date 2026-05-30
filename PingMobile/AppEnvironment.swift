@@ -56,6 +56,12 @@ final class AppEnvironment: ObservableObject {
         WatchBridge.shared.sync(account)
     }
 
+    func disconnect() {
+        paired = nil
+        try? FileManager.default.removeItem(at: fileURL)
+        WatchBridge.shared.unpair()
+    }
+
     private func persist() {
         guard let account = paired, let data = try? JSONEncoder().encode(account) else { return }
         try? data.write(to: fileURL, options: .atomic)

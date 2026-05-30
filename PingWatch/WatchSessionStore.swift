@@ -58,6 +58,11 @@ final class WatchSessionStore: NSObject, ObservableObject {
     }
 
     fileprivate func ingest(applicationContext: [String: Any]) {
+        if applicationContext["unpair"] as? Bool == true {
+            paired = nil
+            try? FileManager.default.removeItem(at: fileURL)
+            return
+        }
         guard let json = applicationContext["pairedAccount"] as? String,
               let data = json.data(using: .utf8),
               let payload = try? PingHandoffPayload.decode(data) else { return }
