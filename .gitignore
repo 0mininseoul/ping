@@ -52,3 +52,7 @@ windows/certs/private/
 windows/certs/*.pfx
 windows/certs/*.p12
 default.profraw
+
+# Design Screenshots
+design/screenshots/
+
