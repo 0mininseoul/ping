@@ -43,4 +43,32 @@ public extension PingSupabaseClient {
     func downloadVideo(_ message: VideoMessage) async throws -> Data {
         try await downloadData(bucket: "ping-videos", path: message.storagePath)
     }
+
+    // MARK: - Inbox / thread reads (iOS companion)
+
+    /// Rooms the current identity belongs to (inbox list).
+    func myRooms() async throws -> [PingRoom] {
+        try await rpcArray("ping_my_rooms")
+    }
+
+    /// Recent video messages in a room (backend returns newest-first).
+    func roomMessages(roomId: String, limit: Int = 50) async throws -> [VideoMessage] {
+        try await rpcArray("ping_room_messages", body: [
+            "room_uuid": roomId,
+            "page_limit": limit
+        ])
+    }
+
+    /// Recent text chat in a room.
+    func roomChatMessages(roomId: String, limit: Int = 50) async throws -> [PingChatMessage] {
+        try await rpcArray("ping_room_chat_messages", body: [
+            "room_uuid": roomId,
+            "page_limit": limit
+        ])
+    }
+
+    /// Clear a room's unread chat badge after the user views the thread.
+    func markRoomRead(roomId: String) async throws {
+        try await rpcVoid("ping_mark_room_read", body: ["room_uuid": roomId])
+    }
 }

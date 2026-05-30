@@ -80,31 +80,40 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         DispatchQueue.main.async { handler.value([.banner, .sound]) }
     }
 
-    // Inline reply -> ping_send_chat to the originating room.
+    // Tap (default action) -> deep-link into the room thread.
+    // Reply action -> post the dictated text to the room.
     nonisolated func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         let handler = Unchecked(completionHandler)
-        guard
-            let textResponse = response as? UNTextInputNotificationResponse,
-            let roomId = response.notification.request.content.userInfo["roomId"] as? String
-        else {
-            DispatchQueue.main.async { handler.value() }
-            return
-        }
-        let text = textResponse.userText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else {
-            DispatchQueue.main.async { handler.value() }
+        let roomId = response.notification.request.content.userInfo["roomId"] as? String
+
+        // Inline dictation reply.
+        if response.actionIdentifier == Self.replyActionId,
+           let textResponse = response as? UNTextInputNotificationResponse,
+           let roomId {
+            let text = textResponse.userText.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !text.isEmpty else {
+                DispatchQueue.main.async { handler.value() }
+                return
+            }
+            // Keep the app alive until posted; resume on the main actor so the
+            // completion (and UIKit's follow-up work) runs on the main thread.
+            Task { @MainActor in
+                if let client = AppEnvironment.shared.makeClient() {
+                    try? await client.sendChat(roomId: roomId, body: text)
+                }
+                handler.value()
+            }
             return
         }
 
-        // Keep the app alive until the reply is posted; resume on the main actor
-        // so the completion (and UIKit's follow-up work) runs on the main thread.
+        // Default tap (or dismiss): open the room's thread if we know the room.
         Task { @MainActor in
-            if let client = AppEnvironment.shared.makeClient() {
-                try? await client.sendChat(roomId: roomId, body: text)
+            if let roomId {
+                AppEnvironment.shared.pendingRoute = .thread(roomId: roomId)
             }
             handler.value()
         }

@@ -8,6 +8,12 @@ struct PairedAccount: Codable, Sendable {
     var session: SupabaseSession
 }
 
+/// A deep-link target set when the user taps a notification, consumed by
+/// `ContentView` to push the matching screen.
+enum PingRoute: Hashable {
+    case thread(roomId: String)
+}
+
 /// App-wide state: holds the paired account, persists it, and builds a
 /// `PingSupabaseClient` whose refreshed sessions are written back to disk.
 @MainActor
@@ -15,6 +21,10 @@ final class AppEnvironment: ObservableObject {
     static let shared = AppEnvironment()
 
     @Published private(set) var paired: PairedAccount?
+
+    /// Set by `AppDelegate` when a notification is tapped; `ContentView` reads
+    /// it to navigate, then clears it.
+    @Published var pendingRoute: PingRoute?
 
     private let fileURL: URL
 
