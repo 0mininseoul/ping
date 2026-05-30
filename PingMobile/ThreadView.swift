@@ -16,6 +16,7 @@ struct ThreadView: View {
     @State private var sending = false
     @State private var loadingVideoId: String?
     @State private var playable: PlayableVideo?
+    @StateObject private var thumbnails = ThumbnailStore()
 
     private var myUid: String { account.session.userId }
 
@@ -74,7 +75,7 @@ struct ThreadView: View {
                     Text(message.senderNickname).font(.caption2).foregroundStyle(.secondary)
                 }
                 Button { play(message) } label: {
-                    VideoThumbnailView(message: message)
+                    VideoThumbnailView(store: thumbnails, message: message)
                         .frame(width: size.width, height: size.height)
                         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                         .overlay(
@@ -157,6 +158,7 @@ struct ThreadView: View {
         merged.sort { $0.date < $1.date }
         items = merged
         isLoading = false
+        thumbnails.prefetch(videos)
         try? await client.markRoomRead(roomId: roomId)
     }
 

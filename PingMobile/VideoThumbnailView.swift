@@ -35,58 +35,75 @@ actor VideoCache {
     }
 }
 
-/// Shows the first frame of a received ping as its thumbnail (mirrors the macOS
-/// history view, which extracts a frame at 0.5s rather than storing a poster).
-struct VideoThumbnailView: View {
-    let message: VideoMessage
+/// Generates and caches ping thumbnails. A thumbnail is the first frame of the
+/// clip (there is no server-stored poster), so the first time we see a video we
+/// download it and extract a frame. Results are cached in memory **and on disk**
+/// (keyed by video id) so re-renders and later visits are instant. Prefetch runs
+/// newest-first with limited concurrency so the most recent pings appear first.
+@MainActor
+final class ThumbnailStore: ObservableObject {
+    @Published private(set) var images: [String: UIImage] = [:]
+    private var queued: Set<String> = []
+    private let diskDir: URL
 
-    @State private var image: UIImage?
-    @State private var failed = false
+    init() {
+        let base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
+        diskDir = base.appendingPathComponent("ping-thumbs", isDirectory: true)
+        try? FileManager.default.createDirectory(at: diskDir, withIntermediateDirectories: true)
+    }
 
-    var body: some View {
-        ZStack {
-            if let image {
-                Image(uiImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            } else {
-                Rectangle().fill(Color.gray.opacity(0.15))
-                if failed {
-                    Image(systemName: "play.slash.fill").foregroundStyle(.secondary)
-                } else {
-                    ProgressView().scaleEffect(0.7)
+    /// Warm thumbnails newest-first; already-loaded ids are skipped.
+    func prefetch(_ messages: [VideoMessage]) {
+        let ordered = messages
+            .filter { images[$0.videoId] == nil && !queued.contains($0.videoId) }
+            .sorted { $0.createdAt > $1.createdAt }
+        guard !ordered.isEmpty else { return }
+        ordered.forEach { queued.insert($0.videoId) }
+        Task { await run(ordered) }
+    }
+
+    private func run(_ ordered: [VideoMessage]) async {
+        let dir = diskDir
+        var index = 0
+        let batchSize = 3
+        while index < ordered.count {
+            let slice = Array(ordered[index..<min(index + batchSize, ordered.count)])
+            await withTaskGroup(of: (String, Data?).self) { group in
+                for message in slice {
+                    group.addTask { (message.videoId, await ThumbnailStore.produce(message, dir: dir)) }
+                }
+                for await (id, data) in group {
+                    queued.remove(id)
+                    if let data, let image = UIImage(data: data) { images[id] = image }
                 }
             }
-        }
-        .overlay {
-            if image != nil {
-                Image(systemName: "play.circle.fill")
-                    .font(.system(size: 30))
-                    .foregroundStyle(.white.opacity(0.92))
-                    .shadow(radius: 4)
-            }
-        }
-        .task(id: message.id) { await load() }
-    }
-
-    private func load() async {
-        guard let url = try? await VideoCache.shared.localURL(for: message) else {
-            failed = true
-            return
-        }
-        if let frame = await Self.extractFrame(url) {
-            image = frame
-        } else {
-            failed = true
+            index += batchSize
         }
     }
 
-    static func extractFrame(_ url: URL) async -> UIImage? {
+    /// Off the main actor: disk cache → download clip → extract frame → JPEG.
+    /// Returns JPEG bytes (Sendable) so no UIImage crosses the actor boundary.
+    private nonisolated static func produce(_ message: VideoMessage, dir: URL) async -> Data? {
+        let disk = dir.appendingPathComponent("\(message.videoId).jpg")
+        if let cached = try? Data(contentsOf: disk), !cached.isEmpty { return cached }
+
+        guard let clip = try? await VideoCache.shared.localURL(for: message),
+              let frame = await extractFrame(clip),
+              let jpeg = frame.jpegData(compressionQuality: 0.8) else { return nil }
+        try? jpeg.write(to: disk, options: .atomic)
+        return jpeg
+    }
+
+    private nonisolated static func extractFrame(_ url: URL) async -> UIImage? {
         let asset = AVURLAsset(url: url)
         let generator = AVAssetImageGenerator(asset: asset)
         generator.appliesPreferredTrackTransform = true
-        generator.maximumSize = CGSize(width: 360, height: 360)
-        let time = CMTime(seconds: 0.5, preferredTimescale: 600)
+        generator.maximumSize = CGSize(width: 240, height: 240)
+        // Accept any nearby frame instead of an exact seek — much faster.
+        generator.requestedTimeToleranceBefore = CMTime(seconds: 1, preferredTimescale: 600)
+        generator.requestedTimeToleranceAfter = CMTime(seconds: 1, preferredTimescale: 600)
+        let time = CMTime(seconds: 0.1, preferredTimescale: 600)
         do {
             if #available(iOS 16.0, *) {
                 let cg = try await generator.image(at: time).image
@@ -97,6 +114,33 @@ struct VideoThumbnailView: View {
             }
         } catch {
             return nil
+        }
+    }
+}
+
+/// Displays a ping's cached thumbnail (from `ThumbnailStore`) with a play badge.
+struct VideoThumbnailView: View {
+    @ObservedObject var store: ThumbnailStore
+    let message: VideoMessage
+
+    var body: some View {
+        ZStack {
+            if let image = store.images[message.videoId] {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } else {
+                Rectangle().fill(Color.gray.opacity(0.15))
+                ProgressView().scaleEffect(0.7)
+            }
+        }
+        .overlay {
+            if store.images[message.videoId] != nil {
+                Image(systemName: "play.circle.fill")
+                    .font(.system(size: 30))
+                    .foregroundStyle(.white.opacity(0.92))
+                    .shadow(radius: 4)
+            }
         }
     }
 }
