@@ -3,9 +3,12 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Imaging;
 using Ping.Windows.App.Playback;
 using Ping.Windows.Core.Backend;
 using Ping.Windows.Core.Models;
+using Windows.Storage;
+using Windows.Storage.FileProperties;
 using Windows.Storage.Pickers;
 using WinRT.Interop;
 
@@ -24,6 +27,7 @@ public sealed partial class HistoryWindow : Window
     private readonly string? initialChatId;
     private string? selectedChatImagePath;
     private bool isApplyingSelection;
+    private readonly HashSet<string> thumbnailLoads = [];
 
     public HistoryWindow(
         HistoryViewModel viewModel,
@@ -282,6 +286,56 @@ public sealed partial class HistoryWindow : Window
         finally
         {
             isApplyingSelection = false;
+        }
+
+        LoadVideoThumbnails();
+    }
+
+    /// Best-effort: download each room video and show its first frame as a
+    /// thumbnail (mirrors the macOS history view). Guarded so a 5s auto-refresh
+    /// does not re-download already-loaded clips.
+    private async void LoadVideoThumbnails()
+    {
+        foreach (var entry in viewModel.Timeline.ToList())
+        {
+            var item = entry.Video;
+            if (item is null || item.ThumbnailSource is not null)
+            {
+                continue;
+            }
+
+            var key = item.Message.Id ?? item.VideoId;
+            if (string.IsNullOrWhiteSpace(key) || !thumbnailLoads.Add(key))
+            {
+                continue;
+            }
+
+            try
+            {
+                var localPath = await downloadVideoAsync(item.Message, CancellationToken.None);
+                if (string.IsNullOrWhiteSpace(localPath))
+                {
+                    thumbnailLoads.Remove(key);
+                    continue;
+                }
+
+                var file = await StorageFile.GetFileFromPathAsync(localPath);
+                using var thumb = await file.GetThumbnailAsync(ThumbnailMode.VideosView, 240);
+                if (thumb is null || thumb.Size == 0)
+                {
+                    thumbnailLoads.Remove(key);
+                    continue;
+                }
+
+                var bitmap = new BitmapImage();
+                await bitmap.SetSourceAsync(thumb);
+                item.SetThumbnail(bitmap);
+            }
+            catch
+            {
+                // Leave the placeholder; allow a retry on the next refresh.
+                thumbnailLoads.Remove(key);
+            }
         }
     }
 

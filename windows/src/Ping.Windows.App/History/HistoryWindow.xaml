@@ -110,6 +110,28 @@
                                             FontSize="13"
                                             FontWeight="SemiBold"
                                             Text="{Binding Video.SenderNickname}" />
+                                        <Grid
+                                            Width="160"
+                                            Height="120"
+                                            Margin="0,2"
+                                            HorizontalAlignment="Left">
+                                            <Border
+                                                Background="#22808080"
+                                                CornerRadius="10"
+                                                Visibility="{Binding Video.ThumbnailPlaceholderVisibility}" />
+                                            <Image
+                                                Source="{Binding Video.ThumbnailSource}"
+                                                Stretch="UniformToFill"
+                                                Visibility="{Binding Video.ThumbnailVisibility}" />
+                                            <FontIcon
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                FontFamily="Segoe Fluent Icons"
+                                                FontSize="20"
+                                                Foreground="White"
+                                                Glyph="&#xE768;"
+                                                Visibility="{Binding Video.ThumbnailVisibility}" />
+                                        </Grid>
                                         <TextBlock
                                             FontSize="11"
                                             Foreground="{StaticResource PingMutedBrush}"

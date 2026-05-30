@@ -43,8 +43,14 @@ public sealed class TimelineHistoryItem
 #endif
 }
 
-public sealed class VideoHistoryItem
+public sealed class VideoHistoryItem : INotifyPropertyChanged
 {
+#if WINDOWS
+    private BitmapImage? thumbnailSource;
+#else
+    private Uri? thumbnailSource;
+#endif
+
     public VideoHistoryItem(
         VideoMessage message,
         IReadOnlyCollection<string> quickReactions,
@@ -76,11 +82,42 @@ public sealed class VideoHistoryItem
 
     public bool CanSave { get; }
 
+    public event PropertyChangedEventHandler? PropertyChanged;
+
 #if WINDOWS
     public Visibility SaveVisibility => CanSave ? Visibility.Visible : Visibility.Collapsed;
+
+    public Visibility ThumbnailVisibility => thumbnailSource is null ? Visibility.Collapsed : Visibility.Visible;
+
+    public Visibility ThumbnailPlaceholderVisibility => thumbnailSource is null ? Visibility.Visible : Visibility.Collapsed;
+
+    public BitmapImage? ThumbnailSource
 #else
     public bool SaveVisibility => CanSave;
+
+    public bool ThumbnailVisibility => thumbnailSource is not null;
+
+    public bool ThumbnailPlaceholderVisibility => thumbnailSource is null;
+
+    public Uri? ThumbnailSource
 #endif
+    {
+        get => thumbnailSource;
+        private set
+        {
+            thumbnailSource = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(ThumbnailVisibility));
+            OnPropertyChanged(nameof(ThumbnailPlaceholderVisibility));
+        }
+    }
+
+#if WINDOWS
+    public void SetThumbnail(BitmapImage image) => ThumbnailSource = image;
+#endif
+
+    private void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }
 
 public sealed class ChatHistoryItem : INotifyPropertyChanged
