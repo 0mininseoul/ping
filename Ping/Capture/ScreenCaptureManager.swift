@@ -27,6 +27,12 @@ final class ScreenCaptureManager: NSObject, ObservableObject {
     }
 
     private func start(on screen: NSScreen, frameRateHz: Int) async {
+        // Tear down any existing stream (e.g. the live preview) first so we never
+        // run two capture streams on the same display at once.
+        if let existing = stream {
+            try? await existing.stopCapture()
+            stream = nil
+        }
         do {
             let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
             guard let display = matchingDisplay(in: content.displays, for: screen) else {

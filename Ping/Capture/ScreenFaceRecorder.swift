@@ -114,7 +114,8 @@ final class ScreenFaceRecorder: NSObject {
         let ciContext = CIContext()
         let start = Date()
         let frameInterval: TimeInterval = 1.0 / 30.0
-        var frameIndex: Int64 = 0
+        var lastPresentation: CMTime = .zero
+        var hasAppended = false
 
         while Date().timeIntervalSince(start) < duration {
             while !writerInput.isReadyForMoreMediaData {
@@ -149,9 +150,17 @@ final class ScreenFaceRecorder: NSObject {
             guard let pb = pbOpt else { continue }
             ciContext.render(composed, to: pb)
 
-            let presentation = CMTime(value: frameIndex, timescale: 30)
+            // Stamp by real elapsed time so the clip is a true `duration`
+            // seconds at natural speed. A frame counter under-rates whenever the
+            // composite loop can't sustain 30fps, which shortened and sped up
+            // the clip.
+            var presentation = CMTime(seconds: Date().timeIntervalSince(start), preferredTimescale: 600)
+            if hasAppended, presentation <= lastPresentation {
+                presentation = lastPresentation + CMTime(value: 1, timescale: 600)
+            }
             adaptor.append(pb, withPresentationTime: presentation)
-            frameIndex += 1
+            lastPresentation = presentation
+            hasAppended = true
             try? await Task.sleep(for: .seconds(frameInterval))
         }
 

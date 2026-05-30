@@ -164,6 +164,60 @@ extension CameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
         from connection: AVCaptureConnection
     ) {
         guard let pb = sampleBuffer.imageBuffer else { return }
-        CameraManager.latestVideoFrame = CIImage(cvPixelBuffer: pb)
+        // Copy into an independently-owned buffer so the capture output's own
+        // pool buffer is released as soon as this callback returns. Retaining the
+        // output's buffers (via a long-lived CIImage) can exhaust its small pool
+        // and stall delivery mid-capture — which froze the face overlay ~2s into
+        // screen+face clips while the screen kept updating.
+        guard let copy = CameraManager.copyPixelBuffer(pb) else { return }
+        CameraManager.latestVideoFrame = CIImage(cvPixelBuffer: copy)
+    }
+
+    /// Deep-copies a pixel buffer into a fresh, app-owned buffer.
+    nonisolated static func copyPixelBuffer(_ source: CVPixelBuffer) -> CVPixelBuffer? {
+        let width = CVPixelBufferGetWidth(source)
+        let height = CVPixelBufferGetHeight(source)
+        let format = CVPixelBufferGetPixelFormatType(source)
+
+        var destination: CVPixelBuffer?
+        let attributes: [String: Any] = [
+            kCVPixelBufferIOSurfacePropertiesKey as String: [:],
+            kCVPixelBufferCGImageCompatibilityKey as String: true,
+            kCVPixelBufferCGBitmapContextCompatibilityKey as String: true
+        ]
+        guard CVPixelBufferCreate(
+            kCFAllocatorDefault, width, height, format, attributes as CFDictionary, &destination
+        ) == kCVReturnSuccess, let destination else { return nil }
+
+        CVPixelBufferLockBaseAddress(source, .readOnly)
+        CVPixelBufferLockBaseAddress(destination, [])
+        defer {
+            CVPixelBufferUnlockBaseAddress(destination, [])
+            CVPixelBufferUnlockBaseAddress(source, .readOnly)
+        }
+
+        if CVPixelBufferIsPlanar(source) {
+            for plane in 0..<CVPixelBufferGetPlaneCount(source) {
+                guard let src = CVPixelBufferGetBaseAddressOfPlane(source, plane),
+                      let dst = CVPixelBufferGetBaseAddressOfPlane(destination, plane) else { return nil }
+                let srcStride = CVPixelBufferGetBytesPerRowOfPlane(source, plane)
+                let dstStride = CVPixelBufferGetBytesPerRowOfPlane(destination, plane)
+                let planeHeight = CVPixelBufferGetHeightOfPlane(source, plane)
+                let rowBytes = min(srcStride, dstStride)
+                for row in 0..<planeHeight {
+                    memcpy(dst + row * dstStride, src + row * srcStride, rowBytes)
+                }
+            }
+        } else {
+            guard let src = CVPixelBufferGetBaseAddress(source),
+                  let dst = CVPixelBufferGetBaseAddress(destination) else { return nil }
+            let srcStride = CVPixelBufferGetBytesPerRow(source)
+            let dstStride = CVPixelBufferGetBytesPerRow(destination)
+            let rowBytes = min(srcStride, dstStride)
+            for row in 0..<height {
+                memcpy(dst + row * dstStride, src + row * srcStride, rowBytes)
+            }
+        }
+        return destination
     }
 }
