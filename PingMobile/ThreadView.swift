@@ -32,8 +32,10 @@ struct ThreadView: View {
                     .padding(.horizontal, 14)
                     .padding(.vertical, 12)
                 }
+                // Rest at the bottom (newest) on entry without an animated scroll.
+                .defaultScrollAnchor(.bottom)
                 .onChange(of: items.count) { _, _ in
-                    if let last = items.last { withAnimation { proxy.scrollTo(last.id, anchor: .bottom) } }
+                    if let last = items.last { proxy.scrollTo(last.id, anchor: .bottom) }
                 }
                 .overlay { if isLoading && items.isEmpty { ProgressView() } }
             }

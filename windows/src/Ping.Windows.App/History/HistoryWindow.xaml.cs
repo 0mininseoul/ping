@@ -27,6 +27,7 @@ public sealed partial class HistoryWindow : Window
     private readonly string? initialChatId;
     private string? selectedChatImagePath;
     private bool isApplyingSelection;
+    private string? lastScrolledRoomId;
     private readonly HashSet<string> thumbnailLoads = [];
 
     public HistoryWindow(
@@ -278,9 +279,24 @@ public sealed partial class HistoryWindow : Window
         {
             RoomsList.SelectedItem = viewModel.SelectedRoom;
             VideosList.SelectedItem = viewModel.SelectedTimelineItem;
+            var currentRoomId = viewModel.SelectedRoom?.Id;
             if (viewModel.SelectedTimelineItem is not null)
             {
                 VideosList.ScrollIntoView(viewModel.SelectedTimelineItem);
+            }
+            else if (currentRoomId is not null && currentRoomId != lastScrolledRoomId)
+            {
+                // First time entering this room with no specific selection:
+                // jump straight to the newest message (bottom), no animation.
+                var newest = viewModel.Timeline.LastOrDefault();
+                if (newest is not null)
+                {
+                    DispatcherQueue.TryEnqueue(() => VideosList.ScrollIntoView(newest));
+                }
+            }
+            if (currentRoomId is not null)
+            {
+                lastScrolledRoomId = currentRoomId;
             }
         }
         finally

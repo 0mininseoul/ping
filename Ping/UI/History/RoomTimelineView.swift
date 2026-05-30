@@ -16,6 +16,7 @@ struct RoomTimelineView: View {
     @State private var revealResetTask: Task<Void, Never>?
     @State private var revealOffset: CGFloat = 0
     @State private var isImageDropTargeted = false
+    @State private var didInitialScroll = false
     private let timestampWidth: CGFloat = 78
     private let timestampGap: CGFloat = 16
     private let timelineBottomInset: CGFloat = 24
@@ -47,11 +48,20 @@ struct RoomTimelineView: View {
                     .padding(.horizontal, 16)
                     .padding(.bottom, timelineBottomInset)
                 }
-                .onChange(of: viewModel.groups.last?.items.last?.id) { _ in
+                .onChange(of: viewModel.groups.last?.items.last?.id) { lastId in
+                    guard lastId != nil else { return }
+                    // The first scroll after entering a room jumps without
+                    // animation (no dizzying sweep down a long thread); later
+                    // new messages scroll gently.
+                    let animated = didInitialScroll
+                    didInitialScroll = true
                     Task { @MainActor in
                         await Task.yield()
-                        scrollToLatestTimelineItem(using: scrollProxy, animated: true)
+                        scrollToLatestTimelineItem(using: scrollProxy, animated: animated)
                     }
+                }
+                .onChange(of: viewModel.selectedRoomId) { _ in
+                    didInitialScroll = false
                 }
                 .onChange(of: viewModel.expandedMessageId) { expandedMessageId in
                     guard let expandedMessageId else { return }
