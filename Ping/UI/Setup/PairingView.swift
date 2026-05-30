@@ -307,7 +307,7 @@ struct PairingView: View {
 
             onboardingTextField(
                 label: "닉네임",
-                placeholder: "예: 박영민",
+                placeholder: "예: 민지",
                 text: $viewModel.nickname,
                 field: .nickname,
                 message: nicknameFieldMessage,
