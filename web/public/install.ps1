@@ -48,7 +48,7 @@ Write-Host "3. Ping 개발자 보안 인증서 등록 중..."
 Import-Certificate -CertStoreLocation "Cert:\LocalMachine\TrustedPeople" -FilePath $certPath | Out-Null
 
 Write-Host "4. MSIX 앱 패키지 설치 중..."
-Add-AppxPackage -LiteralPath $msixPath -ForceUpdateFromAnyVersion
+Add-AppxPackage -Path $msixPath -ForceUpdateFromAnyVersion
 
 # 설치된 패키지 확인
 $installed = Get-AppxPackage -Name $packageName |

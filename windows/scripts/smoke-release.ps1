@@ -174,7 +174,7 @@ if ($Install) {
         throw "Could not find package for current architecture: $installPackage"
     }
 
-    Add-AppxPackage -LiteralPath $installPackage -ForceUpdateFromAnyVersion
+    Add-AppxPackage -Path $installPackage -ForceUpdateFromAnyVersion
     $installed = Get-AppxPackage -Name "YoungminPark.PingWindows" |
         Sort-Object InstallDate -Descending |
         Select-Object -First 1

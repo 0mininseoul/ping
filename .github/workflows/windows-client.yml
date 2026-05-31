@@ -11,6 +11,16 @@ on:
         required: false
         type: boolean
         default: false
+      publish_web_downloads:
+        description: "Commit the signed EXE/MSIX download payloads to web/public/downloads/windows"
+        required: false
+        type: boolean
+        default: false
+      upload_artifacts:
+        description: "Upload large build artifacts to GitHub Actions storage"
+        required: false
+        type: boolean
+        default: false
       release_tag:
         description: "Release tag to create/update when publish_release is true"
         required: false
@@ -24,6 +34,7 @@ on:
       - "PING_PROJECT_SPECIFICATION.md"
       - "docs/WINDOWS_APP_SETUP.md"
       - "web/**"
+      - "!web/public/downloads/windows/**"
   push:
     branches:
       - main
@@ -36,6 +47,7 @@ on:
       - "PING_PROJECT_SPECIFICATION.md"
       - "docs/WINDOWS_APP_SETUP.md"
       - "web/**"
+      - "!web/public/downloads/windows/**"
 
 jobs:
   build:
@@ -148,6 +160,7 @@ jobs:
           }
 
       - name: Upload MSIX packages
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.upload_artifacts }}
         uses: actions/upload-artifact@v4
         with:
           name: ping-windows-msix
@@ -156,6 +169,7 @@ jobs:
           retention-days: 14
 
       - name: Upload sideload bundle
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.upload_artifacts }}
         uses: actions/upload-artifact@v4
         with:
           name: ping-windows-sideload
@@ -166,7 +180,7 @@ jobs:
           retention-days: 14
 
       - name: Upload EXE installer
-        if: ${{ env.PING_WINDOWS_SIGNED == 'true' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.upload_artifacts && env.PING_WINDOWS_SIGNED == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: ping-windows-installer
@@ -175,7 +189,7 @@ jobs:
           retention-days: 14
 
       - name: Upload public web download payloads
-        if: ${{ env.PING_WINDOWS_SIGNED == 'true' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.upload_artifacts && env.PING_WINDOWS_SIGNED == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: ping-windows-web-downloads
@@ -186,6 +200,78 @@ jobs:
             windows/dist/Ping-Windows-v*-sideload/Ping-Windows-Sideload.cer
           if-no-files-found: error
           retention-days: 14
+
+      - name: Publish web download payloads to repository
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_web_downloads }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          if ($env:PING_WINDOWS_SIGNED -ne "true") {
+            throw "Refusing to publish unsigned Windows download payloads. Configure PING_WINDOWS_CERT_BASE64 and PING_WINDOWS_CERT_PASSWORD."
+          }
+
+          if ($env:GITHUB_REF_NAME -ne "main") {
+            throw "publish_web_downloads must be run from main so the public site deploys the committed binaries."
+          }
+
+          [xml]$manifest = Get-Content -Raw -LiteralPath "windows/src/Ping.Windows.App/Package.appxmanifest"
+          $identityVersion = [string]$manifest.Package.Identity.Version
+          $match = [regex]::Match($identityVersion, '^(?<version>\d+\.\d+\.\d+)\.0$')
+          if (-not $match.Success) {
+            throw "Package.appxmanifest Identity.Version must use major.minor.patch.0 format. Found $identityVersion."
+          }
+
+          $version = $match.Groups["version"].Value
+          $releaseDir = "windows/dist/Ping-Windows-v$version-sideload"
+          $downloadsDir = "web/public/downloads/windows"
+          $payloads = @(
+            @{ Source = "windows/dist/PingSetup-v$version.exe"; Destination = "PingSetup-v$version.exe" },
+            @{ Source = "$releaseDir/Ping-Windows-v$version-x64.msix"; Destination = "Ping-Windows-v$version-x64.msix" },
+            @{ Source = "$releaseDir/Ping-Windows-v$version-arm64.msix"; Destination = "Ping-Windows-v$version-arm64.msix" },
+            @{ Source = "$releaseDir/Ping-Windows-Sideload.cer"; Destination = "Ping-Windows-Sideload.cer" }
+          )
+
+          foreach ($payload in $payloads) {
+            if (-not (Test-Path -LiteralPath $payload.Source)) {
+              throw "Missing Windows download payload: $($payload.Source)"
+            }
+          }
+
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          foreach ($packagePath in @(
+            "$releaseDir/Ping-Windows-v$version-x64.msix",
+            "$releaseDir/Ping-Windows-v$version-arm64.msix"
+          )) {
+            $archive = [System.IO.Compression.ZipFile]::OpenRead($packagePath)
+            try {
+              $hasConfig = $archive.Entries | Where-Object { $_.FullName -eq "Supabase.json" } | Select-Object -First 1
+              if (-not $hasConfig) {
+                throw "$packagePath does not bundle Supabase.json."
+              }
+            }
+            finally {
+              $archive.Dispose()
+            }
+          }
+
+          New-Item -ItemType Directory -Force -Path $downloadsDir | Out-Null
+          foreach ($payload in $payloads) {
+            Copy-Item -LiteralPath $payload.Source -Destination (Join-Path $downloadsDir $payload.Destination) -Force
+          }
+          Set-Content -LiteralPath (Join-Path $downloadsDir "latest-version.txt") -Value $version -Encoding ascii -NoNewline
+
+          git status --short -- $downloadsDir
+          $changes = git status --short -- $downloadsDir
+          if ([string]::IsNullOrWhiteSpace($changes)) {
+            Write-Host "Windows download payloads are already current."
+            exit 0
+          }
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add $downloadsDir
+          git commit -m "chore(windows): redeploy v$version installer"
+          git push origin HEAD:$env:GITHUB_REF_NAME
 
       - name: Publish GitHub Release assets
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_release }}

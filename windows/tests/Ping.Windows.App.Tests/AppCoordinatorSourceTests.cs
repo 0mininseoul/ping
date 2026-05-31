@@ -341,6 +341,7 @@ public sealed class AppCoordinatorSourceTests
         Assert.Contains("\"README.md\"", workflow, StringComparison.Ordinal);
         Assert.Contains("\"PING_PROJECT_SPECIFICATION.md\"", workflow, StringComparison.Ordinal);
         Assert.Contains("\"docs/WINDOWS_APP_SETUP.md\"", workflow, StringComparison.Ordinal);
+        Assert.Contains("\"!web/public/downloads/windows/**\"", workflow, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -486,6 +487,25 @@ public sealed class AppCoordinatorSourceTests
     }
 
     [Fact]
+    public void WindowsInstallScriptsUseSupportedAddAppxPackagePathParameter()
+    {
+        var root = RepoRoot();
+        var scriptPaths = new[]
+        {
+            Path.Combine(root, "windows", "scripts", "install-ping-windows.ps1"),
+            Path.Combine(root, "windows", "scripts", "smoke-release.ps1"),
+            Path.Combine(root, "web", "public", "install.ps1")
+        };
+
+        foreach (var scriptPath in scriptPaths)
+        {
+            var script = File.ReadAllText(scriptPath);
+            Assert.Contains("Add-AppxPackage -Path", script, StringComparison.Ordinal);
+            Assert.DoesNotContain("Add-AppxPackage -LiteralPath", script, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
     public void WindowsWorkflowPublishesExeInstallerAsPrimaryReleaseAsset()
     {
         var workflow = File.ReadAllText(Path.Combine(
@@ -501,6 +521,41 @@ public sealed class AppCoordinatorSourceTests
         Assert.Contains("PingSetup-v$version.exe", workflow, StringComparison.Ordinal);
         Assert.Contains("ping-windows-web-downloads", workflow, StringComparison.Ordinal);
         Assert.Contains("gh release edit", workflow, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WindowsWorkflowUploadsLargeArtifactsOnlyWhenExplicitlyRequested()
+    {
+        var workflow = File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            ".github",
+            "workflows",
+            "windows-client.yml"));
+
+        Assert.Contains("upload_artifacts:", workflow, StringComparison.Ordinal);
+        Assert.Contains("github.event_name == 'workflow_dispatch' && inputs.upload_artifacts", workflow, StringComparison.Ordinal);
+        Assert.Contains("Upload MSIX packages", workflow, StringComparison.Ordinal);
+        Assert.Contains("Upload sideload bundle", workflow, StringComparison.Ordinal);
+        Assert.Contains("Upload EXE installer", workflow, StringComparison.Ordinal);
+        Assert.Contains("Upload public web download payloads", workflow, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WindowsWorkflowCanPublishWebDownloadsWithoutArtifactQuota()
+    {
+        var workflow = File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            ".github",
+            "workflows",
+            "windows-client.yml"));
+
+        Assert.Contains("publish_web_downloads:", workflow, StringComparison.Ordinal);
+        Assert.Contains("Publish web download payloads to repository", workflow, StringComparison.Ordinal);
+        Assert.Contains("web/public/downloads/windows", workflow, StringComparison.Ordinal);
+        Assert.Contains("Supabase.json", workflow, StringComparison.Ordinal);
+        Assert.Contains("chore(windows): redeploy v$version installer", workflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("redeploy v$version installer [skip ci]", workflow, StringComparison.Ordinal);
+        Assert.Contains("git push origin HEAD:$env:GITHUB_REF_NAME", workflow, StringComparison.Ordinal);
     }
 
     [Fact]

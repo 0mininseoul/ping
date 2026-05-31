@@ -168,7 +168,7 @@ try {
     }
 
     Write-Host "Installing $packageFileName..."
-    Add-AppxPackage -LiteralPath $packagePath -ForceUpdateFromAnyVersion
+    Add-AppxPackage -Path $packagePath -ForceUpdateFromAnyVersion
 
     $installed = Get-AppxPackage -Name $packageName |
         Sort-Object InstallDate -Descending |
