@@ -176,5 +176,5 @@ $shortcut.Save()
 Remove-Item -Recurse -Force -LiteralPath $tempDir -ErrorAction SilentlyContinue
 
 Write-Host "6. 설치 완료! Ping을 실행합니다..."
-Start-Process "shell:AppsFolder\$($installed.PackageFamilyName)!App"
+Start-Process -FilePath "explorer.exe" -ArgumentList "shell:AppsFolder\$($installed.PackageFamilyName)!App"
 Write-Host "설치가 정상적으로 성공했습니다."

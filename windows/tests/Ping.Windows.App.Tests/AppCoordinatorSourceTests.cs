@@ -95,14 +95,22 @@ public sealed class AppCoordinatorSourceTests
     [Fact]
     public void InstallerLaunchesPackagedAppThroughExplorerShellAppsFolder()
     {
+        var root = RepoRoot();
         var script = File.ReadAllText(Path.Combine(
-            RepoRoot(),
+            root,
             "windows",
             "scripts",
             "install-ping-windows.ps1"));
+        var remoteScript = File.ReadAllText(Path.Combine(
+            root,
+            "web",
+            "public",
+            "install.ps1"));
 
         Assert.Contains("Start-Process -FilePath \"explorer.exe\" -ArgumentList \"shell:AppsFolder\\$($installed.PackageFamilyName)!App\"", script, StringComparison.Ordinal);
+        Assert.Contains("Start-Process -FilePath \"explorer.exe\" -ArgumentList \"shell:AppsFolder\\$($installed.PackageFamilyName)!App\"", remoteScript, StringComparison.Ordinal);
         Assert.DoesNotContain("Start-Process \"shell:AppsFolder", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("Start-Process \"shell:AppsFolder", remoteScript, StringComparison.Ordinal);
     }
 
     [Fact]
