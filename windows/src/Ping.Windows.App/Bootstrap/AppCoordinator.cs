@@ -107,6 +107,10 @@ public sealed class AppCoordinator : IDisposable
         this.tray = tray ?? new TrayIconController(ExecuteTrayCommand);
         mainWindow.QuickSendToggleChanged += HandleQuickSendToggleChanged;
         mainWindow.BlockedRetryRequested += HandleBlockedRetryRequested;
+        mainWindow.OpenRoomsRequested += HandleOpenRoomsRequested;
+        mainWindow.OpenHistoryRequested += HandleOpenHistoryRequested;
+        mainWindow.NewPingRequested += HandleNewPingRequested;
+        mainWindow.OpenSettingsRequested += HandleOpenSettingsRequested;
     }
 
     public void Start()
@@ -200,6 +204,11 @@ public sealed class AppCoordinator : IDisposable
 
         hotkeys.HotkeyPressed -= HandleHotkeyPressed;
         mainWindow.QuickSendToggleChanged -= HandleQuickSendToggleChanged;
+        mainWindow.BlockedRetryRequested -= HandleBlockedRetryRequested;
+        mainWindow.OpenRoomsRequested -= HandleOpenRoomsRequested;
+        mainWindow.OpenHistoryRequested -= HandleOpenHistoryRequested;
+        mainWindow.NewPingRequested -= HandleNewPingRequested;
+        mainWindow.OpenSettingsRequested -= HandleOpenSettingsRequested;
         StopIncomingPolling();
         StopIncomingChatPolling();
         notificationController.Dispose();
@@ -424,6 +433,26 @@ public sealed class AppCoordinator : IDisposable
         {
             Preferences = quickSendSettings.Preferences with { IsEnabled = isEnabled }
         });
+        ShowSettings();
+    }
+
+    private void HandleOpenRoomsRequested(object? sender, EventArgs args)
+    {
+        OpenRoomManagerWindow();
+    }
+
+    private void HandleOpenHistoryRequested(object? sender, EventArgs args)
+    {
+        OpenHistoryWindow();
+    }
+
+    private void HandleNewPingRequested(object? sender, EventArgs args)
+    {
+        Execute(HotkeyCommand.FacePing);
+    }
+
+    private void HandleOpenSettingsRequested(object? sender, EventArgs args)
+    {
         ShowSettings();
     }
 

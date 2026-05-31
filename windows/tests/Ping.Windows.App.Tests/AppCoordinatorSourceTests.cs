@@ -7,6 +7,43 @@ namespace Ping.Windows.App.Tests;
 public sealed class AppCoordinatorSourceTests
 {
     [Fact]
+    public void MainWindowExposesClickablePrimaryActions()
+    {
+        var root = RepoRoot();
+        var xaml = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "MainWindow.xaml"));
+        var code = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "MainWindow.xaml.cs"));
+        var coordinator = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Bootstrap",
+            "AppCoordinator.cs"));
+
+        Assert.Contains("Content=\"Create / Join room\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Click=\"HandleOpenRoomsClicked\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Content=\"History\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Click=\"HandleOpenHistoryClicked\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Content=\"New face ping\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Click=\"HandleNewPingClicked\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Content=\"Settings\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Click=\"HandleOpenSettingsClicked\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("public event EventHandler? OpenRoomsRequested;", code, StringComparison.Ordinal);
+        Assert.Contains("OpenRoomsRequested += HandleOpenRoomsRequested", coordinator, StringComparison.Ordinal);
+        Assert.Contains("OpenRoomManagerWindow();", coordinator, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void QuickSendDisabled_UsesNormalScreenFaceMirrorPreflightPath()
     {
         var source = File.ReadAllText(Path.Combine(
@@ -796,6 +833,10 @@ public sealed class AppCoordinatorSourceTests
             "windows-client.yml"));
 
         Assert.Contains("Copy-FrameworkDependencies", buildRelease, StringComparison.Ordinal);
+        Assert.Contains("/p:RuntimeIdentifier=$runtimeIdentifier", buildRelease, StringComparison.Ordinal);
+        Assert.Contains("/p:SelfContained=true", buildRelease, StringComparison.Ordinal);
+        Assert.Contains("Assert-PackageIsDotNetSelfContained", buildRelease, StringComparison.Ordinal);
+        Assert.Contains("framework-dependent and will prompt users", buildRelease, StringComparison.Ordinal);
         Assert.Contains("WindowsAppRuntime", buildRelease, StringComparison.Ordinal);
         Assert.Contains("Microsoft.WindowsAppSDK.Runtime", buildRelease, StringComparison.Ordinal);
         Assert.Contains("GetElementsByTagName(\"PackageReference\")", buildRelease, StringComparison.Ordinal);

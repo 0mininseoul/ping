@@ -23,6 +23,14 @@ public sealed partial class MainWindow : Window
 
     public event EventHandler? BlockedRetryRequested;
 
+    public event EventHandler? OpenRoomsRequested;
+
+    public event EventHandler? OpenHistoryRequested;
+
+    public event EventHandler? NewPingRequested;
+
+    public event EventHandler? OpenSettingsRequested;
+
     public void InitializeTrayWindowBehavior()
     {
         var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
@@ -81,5 +89,25 @@ public sealed partial class MainWindow : Window
     private void HandleBlockedRetryClicked(object sender, RoutedEventArgs args)
     {
         BlockedRetryRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void HandleOpenRoomsClicked(object sender, RoutedEventArgs args)
+    {
+        OpenRoomsRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void HandleOpenHistoryClicked(object sender, RoutedEventArgs args)
+    {
+        OpenHistoryRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void HandleNewPingClicked(object sender, RoutedEventArgs args)
+    {
+        NewPingRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void HandleOpenSettingsClicked(object sender, RoutedEventArgs args)
+    {
+        OpenSettingsRequested?.Invoke(this, EventArgs.Empty);
     }
 }
