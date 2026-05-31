@@ -44,6 +44,34 @@ public sealed class AppCoordinatorSourceTests
     }
 
     [Fact]
+    public void RoomManagerMutationsRefreshCoordinatorRoomsBeforeWindowClose()
+    {
+        var root = RepoRoot();
+        var coordinator = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Bootstrap",
+            "AppCoordinator.cs"));
+        var viewModel = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Setup",
+            "RoomManagerViewModel.cs"));
+
+        Assert.Contains("public event EventHandler? RoomsChanged;", viewModel, StringComparison.Ordinal);
+        Assert.Contains("RoomsChanged?.Invoke(this, EventArgs.Empty);", viewModel, StringComparison.Ordinal);
+        Assert.Contains("viewModel.RoomsChanged += HandleRoomManagerRoomsChanged;", coordinator, StringComparison.Ordinal);
+        Assert.Contains("viewModel.RoomsChanged -= HandleRoomManagerRoomsChanged;", coordinator, StringComparison.Ordinal);
+        Assert.Contains("private void HandleRoomManagerRoomsChanged", coordinator, StringComparison.Ordinal);
+        Assert.Contains("_ = BootstrapAndLoadRoomsAsync();", coordinator, StringComparison.Ordinal);
+        Assert.Contains("A room needs at least two members before Ping can send", coordinator, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void QuickSendDisabled_UsesNormalScreenFaceMirrorPreflightPath()
     {
         var source = File.ReadAllText(Path.Combine(

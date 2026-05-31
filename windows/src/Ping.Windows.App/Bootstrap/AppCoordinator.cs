@@ -324,18 +324,26 @@ public sealed class AppCoordinator : IDisposable
             return;
         }
 
-        roomManagerWindow = new RoomManagerWindow(new RoomManagerViewModel(
+        var viewModel = new RoomManagerViewModel(
             roomService,
             invitationService,
             CurrentNickname,
             userService: userService,
-            currentUidProvider: () => currentUid));
+            currentUidProvider: () => currentUid);
+        viewModel.RoomsChanged += HandleRoomManagerRoomsChanged;
+        roomManagerWindow = new RoomManagerWindow(viewModel);
         roomManagerWindow.Closed += (_, _) =>
         {
+            viewModel.RoomsChanged -= HandleRoomManagerRoomsChanged;
             roomManagerWindow = null;
             _ = BootstrapAndLoadRoomsAsync();
         };
         roomManagerWindow.Activate();
+    }
+
+    private void HandleRoomManagerRoomsChanged(object? sender, EventArgs args)
+    {
+        _ = BootstrapAndLoadRoomsAsync();
     }
 
     private void OpenHistoryWindow(string? preferredRoomId = null, string? preferredChatId = null)
@@ -543,8 +551,8 @@ public sealed class AppCoordinator : IDisposable
         {
             ShowBlockedState(
                 "Face Ping",
-                $"{HotkeyLabel(HotkeyCommand.FacePing)} reached Ping. Create or join a room before sending a face ping.",
-                "No sendable room available.");
+                $"{HotkeyLabel(HotkeyCommand.FacePing)} reached Ping, but there is no room with another member yet. Invite someone, accept an invite, or join a room that already has another member before sending.",
+                "No sendable room available. A room needs at least two members before Ping can send.");
             OpenRoomManagerWindow();
             return;
         }
@@ -603,8 +611,8 @@ public sealed class AppCoordinator : IDisposable
         {
             ShowBlockedState(
                 "Screen+Face Ping",
-                $"{HotkeyLabel(HotkeyCommand.ScreenFacePing)} reached Ping. Create or join a room before sending a screen+face ping.",
-                "No sendable room available.");
+                $"{HotkeyLabel(HotkeyCommand.ScreenFacePing)} reached Ping, but there is no room with another member yet. Invite someone, accept an invite, or join a room that already has another member before sending.",
+                "No sendable room available. A room needs at least two members before Ping can send.");
             OpenRoomManagerWindow();
             return;
         }
