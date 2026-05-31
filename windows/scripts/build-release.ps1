@@ -89,6 +89,14 @@ function Get-PackageArchitectureManifestValue([string]$TargetPlatform) {
     return "x64"
 }
 
+function Get-PackageRuntimeIdentifier([string]$TargetPlatform) {
+    if ($TargetPlatform -eq "ARM64") {
+        return "win-arm64"
+    }
+
+    return "win-x64"
+}
+
 function Add-SigningProperties([System.Collections.Generic.List[string]]$Arguments) {
     $Arguments.Add("/p:AppxPackageSigningEnabled=false")
     if (-not (Test-HasSigningCertificate)) {
@@ -233,6 +241,35 @@ function Assert-PackageContainsNativeCaptureDll($Archive, [string]$PackagePath) 
     }
 }
 
+function Assert-PackageIsDotNetSelfContained($Archive, [string]$PackagePath) {
+    $runtimeConfigEntry = $Archive.Entries |
+        Where-Object { $_.Name -eq "Ping.Windows.App.runtimeconfig.json" } |
+        Select-Object -First 1
+
+    if (-not $runtimeConfigEntry) {
+        throw "Package $PackagePath does not contain Ping.Windows.App.runtimeconfig.json."
+    }
+
+    $stream = $runtimeConfigEntry.Open()
+    try {
+        $reader = [System.IO.StreamReader]::new($stream)
+        try {
+            $runtimeConfig = $reader.ReadToEnd() | ConvertFrom-Json
+        }
+        finally {
+            $reader.Dispose()
+        }
+    }
+    finally {
+        $stream.Dispose()
+    }
+
+    if ($runtimeConfig.runtimeOptions.PSObject.Properties.Name -contains "framework" -or
+        $runtimeConfig.runtimeOptions.PSObject.Properties.Name -contains "frameworks") {
+        throw "Package $PackagePath is framework-dependent and will prompt users to install the .NET Desktop Runtime. Build the release with SelfContained=true and an architecture-specific RuntimeIdentifier."
+    }
+}
+
 $version = Get-PingWindowsPackageVersion
 $msbuild = Resolve-MSBuild
 New-Item -ItemType Directory -Force -Path $distRoot | Out-Null
@@ -252,6 +289,7 @@ if (-not $SkipTests) {
 foreach ($targetPlatform in $Platform) {
     $architectureLabel = Get-PackageArchitectureLabel $targetPlatform
     $architectureManifestValue = Get-PackageArchitectureManifestValue $targetPlatform
+    $runtimeIdentifier = Get-PackageRuntimeIdentifier $targetPlatform
     $packageOutputRoot = Join-Path $windowsRoot "artifacts\appx\$targetPlatform"
     Remove-Item -Recurse -Force -LiteralPath $packageOutputRoot -ErrorAction SilentlyContinue
     New-Item -ItemType Directory -Force -Path $packageOutputRoot | Out-Null
@@ -262,6 +300,8 @@ foreach ($targetPlatform in $Platform) {
     $arguments.Add("/m:1")
     $arguments.Add("/p:Configuration=$Configuration")
     $arguments.Add("/p:Platform=$targetPlatform")
+    $arguments.Add("/p:RuntimeIdentifier=$runtimeIdentifier")
+    $arguments.Add("/p:SelfContained=true")
     $arguments.Add("/p:GenerateAppxPackageOnBuild=true")
     $arguments.Add("/p:UapAppxPackageBuildMode=SideloadOnly")
     $arguments.Add("/p:AppxBundle=Never")
@@ -327,6 +367,7 @@ foreach ($targetPlatform in $Platform) {
         }
 
         Assert-PackageContainsNativeCaptureDll $archive $destination
+        Assert-PackageIsDotNetSelfContained $archive $destination
     }
     finally {
         $archive.Dispose()

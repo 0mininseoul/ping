@@ -6,6 +6,14 @@
     <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
     <Platforms>x64;ARM64</Platforms>
     <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+    <!--
+      Public Windows installers must not prompt users to install the .NET
+      Desktop Runtime separately. The release script also passes
+      /p:SelfContained=true with an architecture-specific RuntimeIdentifier;
+      keeping the default here prevents accidental framework-dependent MSIX
+      packages when someone builds the app project directly.
+    -->
+    <SelfContained>true</SelfContained>
     <UseWinUI>true</UseWinUI>
     <EnableMsixTooling>true</EnableMsixTooling>
     <WindowsPackageType>MSIX</WindowsPackageType>
