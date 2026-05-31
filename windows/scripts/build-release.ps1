@@ -136,18 +136,63 @@ function Sign-Package([string]$PackagePath) {
     }
 }
 
-function Copy-FrameworkDependencies([string]$PackageOutputRoot, [string]$ArchitectureLabel) {
-    $dependenciesRoot = Join-Path $PackageOutputRoot "Dependencies"
-    if (-not (Test-Path -LiteralPath $dependenciesRoot)) {
-        throw "MSBuild did not emit a Dependencies folder for $ArchitectureLabel. Ping's packaged WinUI app requires bundled Microsoft Windows App Runtime framework packages for clean Windows installs."
+function Get-WindowsAppSdkRuntimeVersion {
+    $projectPath = Join-Path $appProjectRoot "Ping.Windows.App.csproj"
+    [xml]$project = Get-Content -Raw -LiteralPath $projectPath
+    $reference = $project.Project.ItemGroup.PackageReference |
+        Where-Object { $_.Include -eq "Microsoft.WindowsAppSDK" } |
+        Select-Object -First 1
+
+    if (-not $reference -or [string]::IsNullOrWhiteSpace($reference.Version)) {
+        throw "Ping.Windows.App.csproj must reference Microsoft.WindowsAppSDK with an explicit Version."
     }
 
-    $dependencyPackages = Get-ChildItem -LiteralPath $dependenciesRoot -Recurse -File -Include "*.msix", "*.appx" |
-        Where-Object { $_.Name -match 'WindowsAppRuntime|VCLibs|NET\.Native|Microsoft\.UI\.Xaml' } |
-        Sort-Object Name -Unique
+    return [string]$reference.Version
+}
+
+function Resolve-WindowsAppSdkRuntimeMsixRoot([string]$ArchitectureLabel) {
+    $runtimeVersion = Get-WindowsAppSdkRuntimeVersion
+    $nugetRoot = if (-not [string]::IsNullOrWhiteSpace($env:NUGET_PACKAGES)) {
+        $env:NUGET_PACKAGES
+    } else {
+        Join-Path $env:USERPROFILE ".nuget\packages"
+    }
+
+    $runtimePackageRoot = Join-Path $nugetRoot "microsoft.windowsappsdk.runtime\$runtimeVersion"
+    $runtimeArchitecture = if ($ArchitectureLabel -eq "arm64") { "win10-arm64" } else { "win10-x64" }
+    $runtimeMsixRoot = Join-Path $runtimePackageRoot "tools\MSIX\$runtimeArchitecture"
+
+    if (-not (Test-Path -LiteralPath $runtimeMsixRoot)) {
+        throw "Microsoft.WindowsAppSDK.Runtime $runtimeVersion MSIX payload was not found at $runtimeMsixRoot. Restore the app project before building the release payload."
+    }
+
+    return $runtimeMsixRoot
+}
+
+function Get-FrameworkDependencyPackages([string]$PackageOutputRoot, [string]$ArchitectureLabel) {
+    $candidateRoots = [System.Collections.Generic.List[string]]::new()
+    $dependenciesRoot = Join-Path $PackageOutputRoot "Dependencies"
+    if (Test-Path -LiteralPath $dependenciesRoot) {
+        $candidateRoots.Add($dependenciesRoot)
+    } else {
+        Write-Warning "MSBuild did not emit a Dependencies folder for $ArchitectureLabel. Falling back to Microsoft.WindowsAppSDK.Runtime NuGet redist payload."
+    }
+
+    $candidateRoots.Add((Resolve-WindowsAppSdkRuntimeMsixRoot $ArchitectureLabel))
+
+    $dependencyPackages = foreach ($root in $candidateRoots) {
+        Get-ChildItem -LiteralPath $root -Recurse -File -Include "*.msix", "*.appx" |
+            Where-Object { $_.Name -match 'WindowsAppRuntime|VCLibs|NET\.Native|Microsoft\.UI\.Xaml' }
+    }
+
+    return @($dependencyPackages | Sort-Object FullName -Unique)
+}
+
+function Copy-FrameworkDependencies([string]$PackageOutputRoot, [string]$ArchitectureLabel) {
+    $dependencyPackages = @(Get-FrameworkDependencyPackages $PackageOutputRoot $ArchitectureLabel)
 
     if (-not $dependencyPackages) {
-        throw "No MSIX/AppX framework dependencies were found under $dependenciesRoot. Refusing to build a distributable that would fail with 0x80073CF3 on clean Windows machines."
+        throw "No MSIX/AppX framework dependencies were found for $ArchitectureLabel. Refusing to build a distributable that would fail with 0x80073CF3 on clean Windows machines."
     }
 
     $destinationRoot = Join-Path $distRoot "Dependencies\$ArchitectureLabel"
