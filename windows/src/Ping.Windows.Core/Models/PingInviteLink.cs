@@ -2,7 +2,7 @@ namespace Ping.Windows.Core.Models;
 
 public static class PingInviteLink
 {
-    private const string DefaultBaseUrl = "https://ping0min.vercel.app";
+    private const string DefaultBaseUrl = "https://0minping.vercel.app";
 
     public static Uri UrlFor(string token, string? baseUrl = null)
     {

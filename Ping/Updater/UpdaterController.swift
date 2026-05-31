@@ -5,7 +5,7 @@ import Sparkle
 final class UpdaterController: NSObject, @preconcurrency SPUStandardUserDriverDelegate {
     static let shared = UpdaterController()
 
-    private let appcastURL = URL(string: "https://ping0min.vercel.app/appcast.xml")!
+    private let appcastURL = URL(string: "https://0minping.vercel.app/appcast.xml")!
     private var controller: SPUStandardUpdaterController!
     private let updateReminderStore: UpdateReminderStore
 
@@ -94,7 +94,7 @@ final class UpdaterController: NSObject, @preconcurrency SPUStandardUserDriverDe
             alert.addButton(withTitle: "나중에")
 
             if alert.runModal() == .alertFirstButtonReturn,
-               let downloadPage = URL(string: "https://ping0min.vercel.app") {
+               let downloadPage = URL(string: "https://0minping.vercel.app") {
                 NSWorkspace.shared.open(downloadPage)
             }
         }

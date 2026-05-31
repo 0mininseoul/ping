@@ -4,7 +4,7 @@
 
 **Goal:** Stand up the server-side foundation for Apple Watch push: a `device_tokens` table + register/remove RPCs in Supabase, and a Vercel serverless function that turns a `messages` INSERT webhook into an APNs push carrying a short-lived signed video URL.
 
-**Architecture:** Supabase stores device tokens (RLS: owner-only) and fires a Database Webhook on `messages` INSERT → POST to `https://ping0min.vercel.app/api/push`. The Vercel function (`/api/push.ts`) verifies a shared secret, looks up the receiver's tokens with the service-role key, mints a short-lived signed Storage URL for the 3s clip, builds an APNs payload (`mutable-content` so a later Notification Service Extension can attach the video), signs an ES256 APNs JWT, and sends over HTTP/2. Pure logic (webhook parse, payload build, JWT) is split into `/api/_lib/*` for unit testing; the network send and DB webhook wiring are verified manually at the end (full E2E push needs a real device token from P3).
+**Architecture:** Supabase stores device tokens (RLS: owner-only) and fires a Database Webhook on `messages` INSERT → POST to `https://0minping.vercel.app/api/push`. The Vercel function (`/api/push.ts`) verifies a shared secret, looks up the receiver's tokens with the service-role key, mints a short-lived signed Storage URL for the 3s clip, builds an APNs payload (`mutable-content` so a later Notification Service Extension can attach the video), signs an ES256 APNs JWT, and sends over HTTP/2. Pure logic (webhook parse, payload build, JWT) is split into `/api/_lib/*` for unit testing; the network send and DB webhook wiring are verified manually at the end (full E2E push needs a real device token from P3).
 
 **Tech Stack:** Supabase Postgres + pgTAP (`supabase test db`), Vercel Node serverless functions (`@vercel/node`), `@supabase/supabase-js`, `jose` (ES256 JWT), Node built-in `http2`, Vitest.
 
@@ -994,7 +994,7 @@ Use that value for `PUSH_WEBHOOK_SECRET` (you'll paste the same value into the D
 
 ```bash
 npx vercel deploy --prod 2>&1 | tee /tmp/ping-prod.txt
-curl -s "https://ping0min.vercel.app/api/health"
+curl -s "https://0minping.vercel.app/api/health"
 ```
 
 Expected: `{"ok":true,"service":"ping-push"}`.
@@ -1003,7 +1003,7 @@ Expected: `{"ok":true,"service":"ping-push"}`.
 
 In Supabase dashboard → Database → Webhooks → Create:
 - Table: `public.messages`, Events: **Insert** only.
-- Type: HTTP Request, Method: `POST`, URL: `https://ping0min.vercel.app/api/push`.
+- Type: HTTP Request, Method: `POST`, URL: `https://0minping.vercel.app/api/push`.
 - HTTP Header: `x-webhook-secret` = the value from Step 1.
 
 (Per the design doc this is configured in the dashboard, not a migration, to avoid depending on `supabase_functions`/`pg_net` in local pgTAP runs.)
@@ -1013,7 +1013,7 @@ In Supabase dashboard → Database → Webhooks → Create:
 Insert a throwaway message row against the **remote** project as an authenticated test user (or via the dashboard SQL editor with a valid `sender_uid`/`receiver_uid`/`room_id` from existing data), then check the function log:
 
 ```bash
-npx vercel logs https://ping0min.vercel.app --since 5m
+npx vercel logs https://0minping.vercel.app --since 5m
 ```
 
 Expected: a `POST /api/push` entry returning `200` with `{"sent":0,"removed":0}` (no device token registered for that receiver yet). A `401` means the `x-webhook-secret` header/value is mismatched — fix and re-test.

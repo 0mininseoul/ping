@@ -1,7 +1,7 @@
 import Foundation
 
 enum PingInviteLink {
-    private static let defaultBaseURL = URL(string: "https://ping0min.vercel.app")!
+    private static let defaultBaseURL = URL(string: "https://0minping.vercel.app")!
 
     static func url(for token: String) -> URL {
         configuredBaseURL()

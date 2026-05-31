@@ -2,7 +2,7 @@
 
 - 작성일: 2026-05-17
 - 작업 브랜치: `feat/web-redesign`
-- 대상: `web/`(현재 `https://ping0min.vercel.app` 배포 소스)
+- 대상: `web/`(현재 `https://0minping.vercel.app` 배포 소스)
 
 ## 1. 목표
 

@@ -125,7 +125,7 @@ export default function Hero({
                   바로가기 구성까지 한 번에 끝납니다.
                 </p>
                 <code className="mt-1 block break-all select-all rounded border border-border bg-bg px-2 py-1.5 font-mono text-[10.5px] text-fg">
-                  irm https://ping0min.vercel.app/install.ps1 | iex
+                  irm https://0minping.vercel.app/install.ps1 | iex
                 </code>
               </details>
             </div>

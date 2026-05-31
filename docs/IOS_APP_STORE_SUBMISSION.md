@@ -4,8 +4,8 @@
 TestFlight에 최신 빌드 **build 12**(버전 0.1.0) 업로드 완료. 아래는 App Store Connect(ASC) 웹에서 직접 해야 하는 액션이다 (대부분 웹 UI라 CLI로 대신 못 함).
 
 준비된 자산:
-- 개인정보 처리방침 URL: `https://ping0min.vercel.app/privacy`
-- 지원 URL: `https://ping0min.vercel.app/support`
+- 개인정보 처리방침 URL: `https://0minping.vercel.app/privacy`
+- 지원 URL: `https://0minping.vercel.app/support`
 - 연락 이메일: `contact@ascentum.co.kr`
 - Team ID: `878FAHTFQJ` · 수출규정: `ITSAppUsesNonExemptEncryption=false`(자동 통과)
 
@@ -35,7 +35,7 @@ App Store Connect → My Apps → Ping → (없으면 `+` 새 앱 생성: 플랫
 - **부제(Subtitle, 30자)**: `3초 영상 메시지`
 - **카테고리**: 기본 = 소셜 네트워킹(Social Networking), 보조 = 라이프스타일(선택)
 - **콘텐츠 권한**: 제3자 콘텐츠 없음
-- **개인정보 처리방침 URL**: `https://ping0min.vercel.app/privacy`
+- **개인정보 처리방침 URL**: `https://0minping.vercel.app/privacy`
 
 ---
 
@@ -75,8 +75,8 @@ iPhone·Apple Watch 앱은 Mac/PC의 같은 계정을 QR로 연결해 사용하�
 영상메시지,3초,영상,메시지,커플,가족,친구,안부,음성,받아쓰기,푸시,워치,컴패니언,짧은영상
 ```
 
-- **지원 URL**: `https://ping0min.vercel.app/support`
-- **마케팅 URL**(선택): `https://ping0min.vercel.app`
+- **지원 URL**: `https://0minping.vercel.app/support`
+- **마케팅 URL**(선택): `https://0minping.vercel.app`
 
 ---
 

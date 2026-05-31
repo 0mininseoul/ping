@@ -4,7 +4,7 @@ This records the live wiring for the Apple Watch push pipeline so P3/P6 can repr
 
 ## Architecture (recap)
 
-`messages` INSERT → Supabase Database Webhook → `https://ping0min.vercel.app/api/push` (Vercel serverless) → looks up `device_tokens` for the receiver (service-role) → short-lived signed Storage URL → APNs (ES256 `.p8`, HTTP/2). No Supabase Edge Functions; free plan preserved.
+`messages` INSERT → Supabase Database Webhook → `https://0minping.vercel.app/api/push` (Vercel serverless) → looks up `device_tokens` for the receiver (service-role) → short-lived signed Storage URL → APNs (ES256 `.p8`, HTTP/2). No Supabase Edge Functions; free plan preserved.
 
 ## Supabase project
 
@@ -32,12 +32,12 @@ Env var changes require a redeploy to take effect (`vercel redeploy <prod-url>` 
 
 - Database → Webhooks → `ping_push`
 - Table `public.messages`, Events: **Insert** only
-- HTTP Request, `POST`, URL `https://ping0min.vercel.app/api/push`, timeout 5000ms
+- HTTP Request, `POST`, URL `https://0minping.vercel.app/api/push`, timeout 5000ms
 - Header `x-webhook-secret` = the `PUSH_WEBHOOK_SECRET` value
 
 ## Verified (P1)
 
-Against production `ping0min.vercel.app`:
+Against production `0minping.vercel.app`:
 
 - `GET /api/health` → `200 {"ok":true,"service":"ping-push"}`
 - `POST /api/push` wrong secret → `401`

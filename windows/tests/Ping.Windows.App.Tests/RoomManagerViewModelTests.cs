@@ -18,15 +18,15 @@ public sealed class RoomManagerViewModelTests
             new InvitationService(rpc),
             "Youngmin",
             clipboard,
-            inviteLinkFormatter: token => PingInviteLink.ShareTextFor(token, "https://ping0min.vercel.app"))
+            inviteLinkFormatter: token => PingInviteLink.ShareTextFor(token, "https://0minping.vercel.app"))
         {
             SelectedRoom = Room()
         };
 
         var token = await viewModel.CreateInviteLinkAsync();
 
-        Assert.Equal("https://ping0min.vercel.app/invite/invite-token", token);
-        Assert.Equal("https://ping0min.vercel.app/invite/invite-token", clipboard.Text);
+        Assert.Equal("https://0minping.vercel.app/invite/invite-token", token);
+        Assert.Equal("https://0minping.vercel.app/invite/invite-token", clipboard.Text);
         Assert.Equal("Invite link copied to clipboard.", viewModel.StatusMessage);
     }
 
@@ -76,7 +76,7 @@ public sealed class RoomManagerViewModelTests
 
         viewModel.ApplyProfileNickname("  New\tName\n  ");
         await viewModel.InviteUserAsync("receiver", "Fallback");
-        await viewModel.AcceptInviteLinkAsync("https://ping0min.vercel.app/invite/token-123");
+        await viewModel.AcceptInviteLinkAsync("https://0minping.vercel.app/invite/token-123");
 
         Assert.Contains(rpc.Calls, call =>
             call.Function == "ping_send_invitation"

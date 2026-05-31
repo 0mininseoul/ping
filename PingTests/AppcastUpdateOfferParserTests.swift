@@ -11,13 +11,13 @@ final class AppcastUpdateOfferParserTests: XCTestCase {
               <title>0.3.28</title>
               <sparkle:version>38</sparkle:version>
               <sparkle:shortVersionString>0.3.28</sparkle:shortVersionString>
-              <enclosure url="https://ping0min.vercel.app/downloads/Ping-v0.3.28.dmg" length="7222917" type="application/octet-stream"/>
+              <enclosure url="https://0minping.vercel.app/downloads/Ping-v0.3.28.dmg" length="7222917" type="application/octet-stream"/>
             </item>
             <item>
               <title>0.3.25</title>
               <sparkle:version>35</sparkle:version>
               <sparkle:shortVersionString>0.3.25</sparkle:shortVersionString>
-              <enclosure url="https://ping0min.vercel.app/downloads/Ping-v0.3.25.dmg" length="7150046" type="application/octet-stream"/>
+              <enclosure url="https://0minping.vercel.app/downloads/Ping-v0.3.25.dmg" length="7150046" type="application/octet-stream"/>
             </item>
           </channel>
         </rss>
@@ -27,7 +27,7 @@ final class AppcastUpdateOfferParserTests: XCTestCase {
 
         XCTAssertEqual(offer?.displayVersion, "0.3.28")
         XCTAssertEqual(offer?.build, 38)
-        XCTAssertEqual(offer?.downloadURL.absoluteString, "https://ping0min.vercel.app/downloads/Ping-v0.3.28.dmg")
+        XCTAssertEqual(offer?.downloadURL.absoluteString, "https://0minping.vercel.app/downloads/Ping-v0.3.28.dmg")
     }
 
     func testReturnsNilWhenCurrentBuildIsAlreadyLatest() {
@@ -38,7 +38,7 @@ final class AppcastUpdateOfferParserTests: XCTestCase {
               <title>0.3.28</title>
               <sparkle:version>38</sparkle:version>
               <sparkle:shortVersionString>0.3.28</sparkle:shortVersionString>
-              <enclosure url="https://ping0min.vercel.app/downloads/Ping-v0.3.28.dmg" length="7222917" type="application/octet-stream"/>
+              <enclosure url="https://0minping.vercel.app/downloads/Ping-v0.3.28.dmg" length="7222917" type="application/octet-stream"/>
             </item>
           </channel>
         </rss>

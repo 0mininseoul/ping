@@ -3,7 +3,7 @@ param(
     [string]$Version,
     [string]$DistRoot = (Join-Path $PSScriptRoot "..\dist"),
     [string]$PayloadRoot,
-    [string]$PackageBaseUrl = "https://ping0min.vercel.app/downloads/windows",
+    [string]$PackageBaseUrl = "https://0minping.vercel.app/downloads/windows",
     [string]$InnoSetupCompilerPath,
     [string]$InnoScriptPath = (Join-Path $PSScriptRoot "..\installer\PingSetup.iss")
 )

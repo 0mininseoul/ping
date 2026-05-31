@@ -78,7 +78,7 @@ targets:
           - CFBundleURLName: com.youngminpark.ping.invite
             CFBundleURLSchemes:
               - ping
-        SUFeedURL: https://ping0min.vercel.app/appcast.xml
+        SUFeedURL: https://0minping.vercel.app/appcast.xml
         SUPublicEDKey: ZmfTayyDvfWn3zo/4+FoWUFi9MplFtZsjsrZcbijLnM=
         SUEnableInstallerLauncherService: true
         SUEnableAutomaticChecks: true

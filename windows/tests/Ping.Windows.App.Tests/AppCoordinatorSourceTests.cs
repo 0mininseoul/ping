@@ -477,7 +477,7 @@ public sealed class AppCoordinatorSourceTests
         Assert.Contains("install-ping-windows.ps1", inno, StringComparison.Ordinal);
         Assert.Contains("Ping-Windows-Sideload.cer", inno, StringComparison.Ordinal);
         Assert.Contains("PackageBaseUrl", inno, StringComparison.Ordinal);
-        Assert.Contains("https://ping0min.vercel.app/downloads/windows", buildScript, StringComparison.Ordinal);
+        Assert.Contains("https://0minping.vercel.app/downloads/windows", buildScript, StringComparison.Ordinal);
         Assert.DoesNotContain("Ping-Windows-v{#AppVersion}-x64.msix", inno, StringComparison.Ordinal);
         Assert.DoesNotContain("Ping-Windows-v{#AppVersion}-arm64.msix", inno, StringComparison.Ordinal);
         Assert.Contains("PowerShell", inno, StringComparison.Ordinal);

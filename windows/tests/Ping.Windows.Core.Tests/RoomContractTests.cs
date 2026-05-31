@@ -159,9 +159,9 @@ public sealed class RoomContractTests
     public void PingInviteLink_MatchesMacUrlAndTokenParsing()
     {
         Assert.Equal(
-            "https://ping0min.vercel.app/invite/abc12345",
-            PingInviteLink.ShareTextFor("abc12345", "https://ping0min.vercel.app"));
-        Assert.Equal("abc12345", PingInviteLink.TokenFrom("https://ping0min.vercel.app/invite/abc12345"));
+            "https://0minping.vercel.app/invite/abc12345",
+            PingInviteLink.ShareTextFor("abc12345", "https://0minping.vercel.app"));
+        Assert.Equal("abc12345", PingInviteLink.TokenFrom("https://0minping.vercel.app/invite/abc12345"));
         Assert.Equal("abc12345", PingInviteLink.TokenFrom("ping://invite/abc12345"));
         Assert.Equal("abc12345", PingInviteLink.TokenFrom("https://example.com/join?token=abc12345"));
         Assert.Equal("path12345", PingInviteLink.TokenFrom("https://example.com/invite/path12345?token=query12345"));

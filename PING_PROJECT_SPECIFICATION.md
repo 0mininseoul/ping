@@ -49,7 +49,7 @@ macOS 26 이상에서는 `.pingGlassEffect()` wrapper가 SwiftUI 네이티브 `.
 - 글로벌 단축키: 기본 `Option + P`, `KeyboardShortcuts` 패키지 사용.
 - 메뉴바 상주 앱: `NSStatusItem`, Dock 아이콘 숨김, `LSUIElement = true`.
 - 로그인 시 자동 시작: `SMAppService.mainApp` 기반 Settings 토글.
-- 자동 업데이트: Sparkle 2, `SUFeedURL = https://ping0min.vercel.app/appcast.xml`, scheduled update는 gentle reminder 알림을 함께 표시.
+- 자동 업데이트: Sparkle 2, `SUFeedURL = https://0minping.vercel.app/appcast.xml`, scheduled update는 gentle reminder 알림을 함께 표시.
 
 ### Windows 시스템 통합
 
@@ -57,7 +57,7 @@ macOS 26 이상에서는 `.pingGlassEffect()` wrapper가 SwiftUI 네이티브 `.
 - 트레이 상주 앱: Win32 `Shell_NotifyIcon` 기반 notification area icon.
 - 알림: Windows App SDK app notifications. Elevated/admin 실행에서는 알림이 지원되지 않으므로 일반 권한 재실행을 안내한다.
 - 히스토리: 열린 룸은 Supabase chat/video RPC를 짧은 주기로 polling해 macOS Realtime 히스토리와 유사하게 채팅, 첨부 이미지, 답장, 반응 변경을 반영하며, 채팅 알림 클릭 시 해당 룸의 알림 대상 채팅 row를 선택한다. 채팅 입력은 Enter 전송, Shift+Enter 줄바꿈을 사용한다.
-- 패키징: Windows App SDK packaged full-trust MSIX. 비용 없는 직접 배포는 signed MSIX를 `PingSetup-v0.3.28.exe` 웹 설치파일로 감싸고, 설치 중 `https://ping0min.vercel.app/downloads/windows/`에서 PC 아키텍처에 맞는 MSIX를 내려받는 랜딩페이지 다운로드를 기본 UX로 사용한다. sideload zip은 fallback/debug 경로로 유지한다. Windows는 Sparkle을 사용하지 않고 MSIX/App Installer 또는 Store 업데이트 채널을 사용한다.
+- 패키징: Windows App SDK packaged full-trust MSIX. 비용 없는 직접 배포는 signed MSIX를 `PingSetup-v0.3.28.exe` 웹 설치파일로 감싸고, 설치 중 `https://0minping.vercel.app/downloads/windows/`에서 PC 아키텍처에 맞는 MSIX를 내려받는 랜딩페이지 다운로드를 기본 UX로 사용한다. sideload zip은 fallback/debug 경로로 유지한다. Windows는 Sparkle을 사용하지 않고 MSIX/App Installer 또는 Store 업데이트 채널을 사용한다.
 
 ### 권한
 
@@ -156,7 +156,7 @@ Windows packaged client는 Windows 11 24H2 미만에서는 설치 대상이 아�
 <key>SUPABASE_ANON_KEY</key>
 <string>YOUR_SUPABASE_ANON_KEY</string>
 <key>PING_INVITE_BASE_URL</key>
-<string>https://ping0min.vercel.app</string>
+<string>https://0minping.vercel.app</string>
 ```
 
 원격 프로젝트 적용:

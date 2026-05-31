@@ -9,12 +9,12 @@ function Test-Administrator {
 
 if (-not (Test-Administrator)) {
     Write-Host "Ping 설치를 진행하기 위해 관리자 권한이 필요합니다..."
-    Start-Process powershell.exe -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"& { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; irm https://ping0min.vercel.app/install.ps1 | iex }`""
+    Start-Process powershell.exe -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"& { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; irm https://0minping.vercel.app/install.ps1 | iex }`""
     return
 }
 
 $packageName = "YoungminPark.PingWindows"
-$baseUrl = "https://ping0min.vercel.app/downloads/windows"
+$baseUrl = "https://0minping.vercel.app/downloads/windows"
 $tempDir = Join-Path $env:TEMP "PingSetup"
 
 Remove-Item -Recurse -Force -LiteralPath $tempDir -ErrorAction SilentlyContinue

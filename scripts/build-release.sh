@@ -218,8 +218,8 @@ fi
 
 "$GENERATE_APPCAST" \
   --account "com.youngminpark.ping.Ping" \
-  --download-url-prefix "https://ping0min.vercel.app/downloads/" \
-  --link "https://ping0min.vercel.app" \
+  --download-url-prefix "https://0minping.vercel.app/downloads/" \
+  --link "https://0minping.vercel.app" \
   --maximum-versions 10 \
   web/public/downloads
 

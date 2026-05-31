@@ -108,9 +108,9 @@ final class InviteLinkContractTests: XCTestCase {
         let readme = try readSourceFile("README.md")
         let examplePlist = try readSourceFile("Supabase.example.plist")
 
-        XCTAssertTrue(source.contains("https://ping0min.vercel.app"))
-        XCTAssertTrue(readme.contains("https://ping0min.vercel.app"))
-        XCTAssertTrue(examplePlist.contains("https://ping0min.vercel.app"))
+        XCTAssertTrue(source.contains("https://0minping.vercel.app"))
+        XCTAssertTrue(readme.contains("https://0minping.vercel.app"))
+        XCTAssertTrue(examplePlist.contains("https://0minping.vercel.app"))
         XCTAssertFalse(source.contains("ping-0mininseoul.vercel.app"))
         XCTAssertFalse(readme.contains("ping-0mininseoul.vercel.app"))
         XCTAssertFalse(examplePlist.contains("ping-0mininseoul.vercel.app"))

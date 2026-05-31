@@ -100,7 +100,7 @@ Signed packages are required for external distribution. If signing is not config
 
 ### Zero-Cost EXE Sideload Distribution
 
-The recommended no-cost self-hosted channel is the public landing page plus a single `PingSetup-v0.3.28.exe` web bootstrap installer. The EXE bundles `Ping-Windows-Sideload.cer` and `install-ping-windows.ps1`, then downloads the signed x64 or ARM64 MSIX package from `https://ping0min.vercel.app/downloads/windows/` during install. It avoids paid public code-signing, but Windows SmartScreen can still warn because the outer EXE is not publicly trusted.
+The recommended no-cost self-hosted channel is the public landing page plus a single `PingSetup-v0.3.28.exe` web bootstrap installer. The EXE bundles `Ping-Windows-Sideload.cer` and `install-ping-windows.ps1`, then downloads the signed x64 or ARM64 MSIX package from `https://0minping.vercel.app/downloads/windows/` during install. It avoids paid public code-signing, but Windows SmartScreen can still warn because the outer EXE is not publicly trusted.
 
 Maintainer setup on Windows:
 

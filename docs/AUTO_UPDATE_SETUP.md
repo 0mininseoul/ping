@@ -34,7 +34,7 @@ Ping은 [Sparkle 2](https://sparkle-project.org/) 로 사용자 측 자동 업�
 3. `generate_appcast` 가 `web/public/downloads/` 의 DMG를 스캔하고, Keychain의
    개인키로 각 DMG를 EdDSA 서명한 뒤 `web/public/appcast.xml` 을 생성한다.
 
-이후 Vercel에 배포하면 `https://ping0min.vercel.app/appcast.xml` 에서 appcast가 노출되고,
+이후 Vercel에 배포하면 `https://0minping.vercel.app/appcast.xml` 에서 appcast가 노출되고,
 `Ping/Info.plist` 의 `SUFeedURL` 이 이 주소를 가리키므로 사용자 앱이 자동으로 폴링한다.
 
 ## 4. 사용자 측 동작

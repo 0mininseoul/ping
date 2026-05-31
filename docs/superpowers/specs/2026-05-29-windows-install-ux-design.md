@@ -2,7 +2,7 @@
 
 ## 배경
 
-Windows 사용자는 랜딩페이지(`ping0min.vercel.app`)에서 `PingSetup-v*.exe`를 내려받아
+Windows 사용자는 랜딩페이지(`0minping.vercel.app`)에서 `PingSetup-v*.exe`를 내려받아
 설치한 뒤 Ping을 사용한다. 전체 깔때기(다운로드 → 설치 → 첫 실행 → 사용)를 검토한 결과
 여러 UX 문제와 버그가 발견되어 4개 계층을 한 번에 개선한다.
 

@@ -7,6 +7,6 @@
 	<key>SUPABASE_ANON_KEY</key>
 	<string>YOUR_SUPABASE_ANON_KEY</string>
 	<key>PING_INVITE_BASE_URL</key>
-	<string>https://ping0min.vercel.app</string>
+	<string>https://0minping.vercel.app</string>
 </dict>
 </plist>

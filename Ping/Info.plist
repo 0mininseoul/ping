@@ -46,7 +46,7 @@
 	<key>SUEnableInstallerLauncherService</key>
 	<true/>
 	<key>SUFeedURL</key>
-	<string>https://ping0min.vercel.app/appcast.xml</string>
+	<string>https://0minping.vercel.app/appcast.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>ZmfTayyDvfWn3zo/4+FoWUFi9MplFtZsjsrZcbijLnM=</string>
 	<key>SUScheduledCheckInterval</key>

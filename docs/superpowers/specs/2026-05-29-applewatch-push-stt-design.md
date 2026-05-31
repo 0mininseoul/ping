@@ -124,7 +124,7 @@
 ### 5.4 푸시 백엔드 — A안 (Vercel serverless + DB Webhook + APNs)
 
 - **위치**: `web/api/push.ts` (Vercel Node serverless function 신설; 현재 `web/api/` 없음).
-- **트리거**: Supabase Database Webhook — `public.messages` `INSERT` 시 `https://ping0min.vercel.app/api/push`로 POST. 헤더에 공유 시크릿.
+- **트리거**: Supabase Database Webhook — `public.messages` `INSERT` 시 `https://0minping.vercel.app/api/push`로 POST. 헤더에 공유 시크릿.
 - **함수 동작**:
   1. 공유 시크릿 검증(미일치 → 401).
   2. payload의 새 row에서 `receiver_uid`, 영상 path, `room_id`, sender nickname 추출.

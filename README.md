@@ -18,7 +18,7 @@ cp Resources/Supabase.example.plist Resources/Supabase.plist
 <key>SUPABASE_ANON_KEY</key>
 <string>YOUR_SUPABASE_ANON_KEY</string>
 <key>PING_INVITE_BASE_URL</key>
-<string>https://ping0min.vercel.app</string>
+<string>https://0minping.vercel.app</string>
 ```
 
 스키마는 `supabase/migrations/20260517000100_create_ping_backend.sql`에 있다. 원격 프로젝트에 연결한 뒤 적용한다.
@@ -80,7 +80,7 @@ macOS 앱은 Sparkle로 업데이트를 확인한다. 새 버전이 공개되면
 
 0.3.28 초기 빌드(38/39)에서 업데이트 설치 오류가 반복되면 랜딩페이지의 최신 macOS DMG를 한 번 수동으로 내려받아 `Ping.app`을 Applications 폴더에 덮어쓴다. 이 초기 빌드는 Sparkle installer helper 권한/서명이 잘못 들어간 상태라, 현재 실행 중인 앱만으로는 자동 업데이트 설치가 실패할 수 있다. build 40 이상은 Sparkle helper 권한을 보존하고 sandbox mach-lookup 예외를 포함한다.
 
-Windows 앱은 Sparkle을 사용하지 않는다. 비용 없는 배포는 self-signed MSIX를 작은 `PingSetup-v0.3.28.exe` 웹 설치파일로 감싸고, 설치 중 PC 아키텍처에 맞는 MSIX를 `https://ping0min.vercel.app/downloads/windows/`에서 받는 방식이다. 최초 설치 시 installer가 Ping 공개 인증서를 등록한다. Microsoft Store, Azure Artifact Signing, OV 코드서명 인증서는 더 매끄러운 신뢰 UX를 제공하지만 비용 또는 외부 계정 검증이 필요하다.
+Windows 앱은 Sparkle을 사용하지 않는다. 비용 없는 배포는 self-signed MSIX를 작은 `PingSetup-v0.3.28.exe` 웹 설치파일로 감싸고, 설치 중 PC 아키텍처에 맞는 MSIX를 `https://0minping.vercel.app/downloads/windows/`에서 받는 방식이다. 최초 설치 시 installer가 Ping 공개 인증서를 등록한다. Microsoft Store, Azure Artifact Signing, OV 코드서명 인증서는 더 매끄러운 신뢰 UX를 제공하지만 비용 또는 외부 계정 검증이 필요하다.
 
 ## v0.3.34 macOS 수정
 
