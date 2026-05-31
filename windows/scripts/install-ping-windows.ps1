@@ -341,7 +341,7 @@ try {
     }
 
     if (-not $NoLaunch) {
-        Start-Process "shell:AppsFolder\$($installed.PackageFamilyName)!App"
+        Start-Process -FilePath "explorer.exe" -ArgumentList "shell:AppsFolder\$($installed.PackageFamilyName)!App"
     }
 
     Write-Host "Ping for Windows is installed."

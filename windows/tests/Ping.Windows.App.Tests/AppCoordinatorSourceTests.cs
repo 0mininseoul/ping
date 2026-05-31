@@ -72,6 +72,40 @@ public sealed class AppCoordinatorSourceTests
     }
 
     [Fact]
+    public void MainSettingsButtonDoesNotOpenCrashySecondarySettingsWindow()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Bootstrap",
+            "AppCoordinator.cs"));
+
+        var showSettingsStart = source.IndexOf("private void ShowSettings()", StringComparison.Ordinal);
+        Assert.True(showSettingsStart >= 0);
+        var nextMethodStart = source.IndexOf("private void OpenRoomManagerWindow()", showSettingsStart, StringComparison.Ordinal);
+        Assert.True(nextMethodStart > showSettingsStart);
+        var showSettingsBody = source[showSettingsStart..nextMethodStart];
+
+        Assert.DoesNotContain("OpenSettingsWindow();", showSettingsBody, StringComparison.Ordinal);
+        Assert.Contains("mainWindow.SettingsPanel.Visibility = Visibility.Visible;", showSettingsBody, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void InstallerLaunchesPackagedAppThroughExplorerShellAppsFolder()
+    {
+        var script = File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            "windows",
+            "scripts",
+            "install-ping-windows.ps1"));
+
+        Assert.Contains("Start-Process -FilePath \"explorer.exe\" -ArgumentList \"shell:AppsFolder\\$($installed.PackageFamilyName)!App\"", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("Start-Process \"shell:AppsFolder", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void QuickSendDisabled_UsesNormalScreenFaceMirrorPreflightPath()
     {
         var source = File.ReadAllText(Path.Combine(

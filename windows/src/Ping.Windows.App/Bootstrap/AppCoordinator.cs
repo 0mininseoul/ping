@@ -312,7 +312,12 @@ public sealed class AppCoordinator : IDisposable
             quickSendSettings.Preferences.IsEnabled,
             defaultRoom?.Name ?? "No sendable default room");
         mainWindow.ShowShell();
-        OpenSettingsWindow();
+
+        // Keep Settings inside the stable main shell for now. The separate WinUI
+        // SettingsWindow has caused Microsoft.UI.Xaml.dll crashes in packaged
+        // builds on user machines, so opening it from the primary Settings button
+        // is intentionally disabled until that window is rebuilt and covered by
+        // a packaged UI smoke test.
     }
 
     private void OpenRoomManagerWindow()
