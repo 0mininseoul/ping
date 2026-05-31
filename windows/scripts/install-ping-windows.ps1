@@ -256,7 +256,7 @@ try {
     $packagePath = Join-Path $PackageDirectory $packageFileName
 
     Download-PackageIfNeeded $packagePath $packageFileName
-    $dependencyPaths = Resolve-DependencyPackagePaths $targetArchitecture
+    [string[]]$dependencyPaths = @(Resolve-DependencyPackagePaths $targetArchitecture)
 
     Write-Host "Trusting Ping sideload certificate..."
     Import-Certificate -CertStoreLocation "Cert:\LocalMachine\TrustedPeople" -FilePath $CertificatePath | Out-Null

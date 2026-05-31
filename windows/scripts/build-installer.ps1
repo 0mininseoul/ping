@@ -70,6 +70,11 @@ function Assert-InstallerPayload([string]$Root, [string]$TargetVersion) {
     }
 
     foreach ($architectureLabel in @("x64", "arm64")) {
+        $msixPath = Join-Path $Root "Ping-Windows-v$TargetVersion-$architectureLabel.msix"
+        if (-not (Test-Path -LiteralPath $msixPath)) {
+            throw "Missing installer MSIX payload: $msixPath"
+        }
+
         $dependencyRoot = Join-Path $Root "Dependencies\$architectureLabel"
         if (-not (Test-Path -LiteralPath $dependencyRoot)) {
             throw "Missing installer dependency directory: $dependencyRoot"

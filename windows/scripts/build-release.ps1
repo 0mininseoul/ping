@@ -192,7 +192,10 @@ function Get-FrameworkDependencyPackages([string]$PackageOutputRoot, [string]$Ar
 
     $dependencyPackages = foreach ($root in $candidateRoots) {
         Get-ChildItem -LiteralPath $root -Recurse -File -Include "*.msix", "*.appx" |
-            Where-Object { $_.Name -match 'WindowsAppRuntime|VCLibs|NET\.Native|Microsoft\.UI\.Xaml' }
+            Where-Object {
+                $_.Name -match 'VCLibs|NET\.Native|Microsoft\.UI\.Xaml' -or
+                $_.Name -match '^Microsoft\.WindowsAppRuntime\.\d+\.msix$'
+            }
     }
 
     return @($dependencyPackages | Sort-Object FullName -Unique)

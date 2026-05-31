@@ -736,11 +736,19 @@ public sealed class AppCoordinatorSourceTests
             "install.ps1"));
 
         Assert.Contains("dependencies-$TargetArchitecture.txt", installerScript, StringComparison.Ordinal);
+        Assert.Contains("[string[]]$dependencyPaths = @(Resolve-DependencyPackagePaths $targetArchitecture)", installerScript, StringComparison.Ordinal);
         Assert.Contains("-DependencyPath $dependencyPaths", installerScript, StringComparison.Ordinal);
         Assert.Contains("dependencies-$arch.txt", remoteScript, StringComparison.Ordinal);
+        Assert.Contains("[string[]]$dependencyPaths", remoteScript, StringComparison.Ordinal);
         Assert.Contains("-DependencyPath $dependencyPaths", remoteScript, StringComparison.Ordinal);
         Assert.Contains("dependencies-*.txt", innoScript, StringComparison.Ordinal);
         Assert.Contains("Dependencies", innoScript, StringComparison.Ordinal);
+        Assert.Contains("Ping-Windows-v*-x64.msix", innoScript, StringComparison.Ordinal);
+        Assert.Contains("Ping-Windows-v*-arm64.msix", innoScript, StringComparison.Ordinal);
+        Assert.DoesNotContain("CreateDownloadPage", innoScript, StringComparison.Ordinal);
+        Assert.DoesNotContain("DownloadPage.Download", innoScript, StringComparison.Ordinal);
+        Assert.Contains("DisableDirPage=no", innoScript, StringComparison.Ordinal);
+        Assert.Contains("AlwaysShowDirOnReadyPage=yes", innoScript, StringComparison.Ordinal);
         Assert.Contains("MinVersion=10.0.26100", innoScript, StringComparison.Ordinal);
         Assert.Contains("Assert-SupportedWindowsVersion", installerScript, StringComparison.Ordinal);
         Assert.Contains("CurrentBuildNumber", installerScript, StringComparison.Ordinal);
@@ -799,6 +807,7 @@ public sealed class AppCoordinatorSourceTests
         Assert.DoesNotContain("$ArchitectureLabel:", sideload, StringComparison.Ordinal);
         Assert.Contains("dependencies-x64.txt", buildInstaller, StringComparison.Ordinal);
         Assert.Contains("dependencies-arm64.txt", buildInstaller, StringComparison.Ordinal);
+        Assert.Contains("Missing installer MSIX payload", buildInstaller, StringComparison.Ordinal);
         Assert.Contains("uninstall-ping-windows.ps1", sideload, StringComparison.Ordinal);
         Assert.Contains("Dependencies/**", workflow, StringComparison.Ordinal);
         Assert.Contains("dependencies-*.txt", workflow, StringComparison.Ordinal);

@@ -75,7 +75,7 @@ $icoPath = Join-Path $tempDir "app.ico"
 Invoke-WebRequest -Uri "$baseUrl/Ping-Windows-Sideload.cer" -OutFile $certPath -UseBasicParsing
 Invoke-WebRequest -Uri "$baseUrl/$msixFileName" -OutFile $msixPath -UseBasicParsing
 
-$dependencyPaths = @()
+[string[]]$dependencyPaths = @()
 $dependencyManifestUrl = "$baseUrl/dependencies-$arch.txt"
 $packageRoot = [System.IO.Path]::GetFullPath($tempDir).TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
 try {
