@@ -139,15 +139,25 @@ function Sign-Package([string]$PackagePath) {
 function Get-WindowsAppSdkRuntimeVersion {
     $projectPath = Join-Path $appProjectRoot "Ping.Windows.App.csproj"
     [xml]$project = Get-Content -Raw -LiteralPath $projectPath
-    $reference = $project.Project.ItemGroup.PackageReference |
-        Where-Object { $_.Include -eq "Microsoft.WindowsAppSDK" } |
-        Select-Object -First 1
 
-    if (-not $reference -or [string]::IsNullOrWhiteSpace($reference.Version)) {
+    $reference = @($project.GetElementsByTagName("PackageReference") |
+        Where-Object { $_.GetAttribute("Include") -eq "Microsoft.WindowsAppSDK" } |
+        Select-Object -First 1)
+
+    if (-not $reference -or $reference.Count -eq 0) {
+        throw "Ping.Windows.App.csproj must reference Microsoft.WindowsAppSDK."
+    }
+
+    $version = $reference[0].GetAttribute("Version")
+    if ([string]::IsNullOrWhiteSpace($version)) {
+        $version = [string]$reference[0].Version
+    }
+
+    if ([string]::IsNullOrWhiteSpace($version)) {
         throw "Ping.Windows.App.csproj must reference Microsoft.WindowsAppSDK with an explicit Version."
     }
 
-    return [string]$reference.Version
+    return $version
 }
 
 function Resolve-WindowsAppSdkRuntimeMsixRoot([string]$ArchitectureLabel) {
