@@ -8,6 +8,7 @@ param(
     [string]$CertificatePath = (Join-Path $PSScriptRoot "Ping-Windows-Sideload.cer"),
     [switch]$NoLaunch,
     [switch]$CreateDesktopShortcut,
+    [switch]$CreateStartMenuShortcut,
     [switch]$AddToStartup,
     [string]$IconPath,
     [switch]$AllowUnsigned
@@ -59,6 +60,9 @@ function Restart-Elevated {
     if ($CreateDesktopShortcut) {
         $arguments.Add("-CreateDesktopShortcut")
     }
+    if ($CreateStartMenuShortcut) {
+        $arguments.Add("-CreateStartMenuShortcut")
+    }
     if ($AddToStartup) {
         $arguments.Add("-AddToStartup")
     }
@@ -86,6 +90,29 @@ function Resolve-Architecture {
     }
 
     return "x64"
+}
+
+function Get-CurrentWindowsBuild {
+    try {
+        $currentVersion = Get-ItemProperty -LiteralPath "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion"
+        $buildText = [string]$currentVersion.CurrentBuildNumber
+        if (-not [string]::IsNullOrWhiteSpace($buildText)) {
+            return [int]$buildText
+        }
+    }
+    catch {
+        Write-Warning "Could not read Windows build from registry. Falling back to Environment.OSVersion. $($_.Exception.Message)"
+    }
+
+    return [Environment]::OSVersion.Version.Build
+}
+
+function Assert-SupportedWindowsVersion {
+    $minimumBuild = 26100
+    $build = Get-CurrentWindowsBuild
+    if ($build -lt $minimumBuild) {
+        throw "Ping for Windows requires Windows 11 24H2 or newer (build $minimumBuild+). This PC reports build $build. Please update Windows before installing Ping."
+    }
 }
 
 function Resolve-Version([string]$TargetArchitecture) {
@@ -130,12 +157,87 @@ function Download-PackageIfNeeded([string]$PackagePath, [string]$PackageFileName
     Invoke-WebRequest -Uri $packageUrl -OutFile $PackagePath -UseBasicParsing
 }
 
+function Resolve-DependencyManifestLines([string]$TargetArchitecture) {
+    $manifestFileName = "dependencies-$TargetArchitecture.txt"
+    $localManifestPath = Join-Path $PackageDirectory $manifestFileName
+    if (Test-Path -LiteralPath $localManifestPath) {
+        return @(Get-Content -LiteralPath $localManifestPath | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    }
+
+    if ([string]::IsNullOrWhiteSpace($PackageBaseUrl)) {
+        return @()
+    }
+
+    try {
+        $manifestUrl = Join-PackageUrl $PackageBaseUrl $manifestFileName
+        Write-Host "Downloading $manifestFileName..."
+        return @((Invoke-RestMethod -Uri $manifestUrl -UseBasicParsing) -split "`r?`n" | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    }
+    catch {
+        throw "Could not download $manifestFileName from $PackageBaseUrl. Ping requires Microsoft Windows App Runtime dependency packages. $($_.Exception.Message)"
+    }
+}
+
+function Resolve-DependencyPackagePaths([string]$TargetArchitecture) {
+    $manifestLines = Resolve-DependencyManifestLines $TargetArchitecture
+    $dependencyPaths = [System.Collections.Generic.List[string]]::new()
+    $packageRoot = [System.IO.Path]::GetFullPath($PackageDirectory).TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
+
+    foreach ($line in $manifestLines) {
+        $trimmedLine = $line.Trim()
+        $relativePath = $trimmedLine.Replace('/', [System.IO.Path]::DirectorySeparatorChar)
+        if ($relativePath -match '^[a-zA-Z]+:|^\\|^[a-zA-Z][a-zA-Z0-9+.-]*:') {
+            throw "Dependency manifest contains an absolute path or URI, which is not allowed: $line"
+        }
+
+        if ([System.IO.Path]::GetExtension($relativePath) -notin @(".msix", ".appx")) {
+            throw "Dependency manifest entry must be an .msix or .appx package: $line"
+        }
+
+        $dependencyPath = Join-Path $PackageDirectory $relativePath
+        $resolvedDependencyPath = [System.IO.Path]::GetFullPath($dependencyPath)
+        if (-not $resolvedDependencyPath.StartsWith($packageRoot + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase)) {
+            throw "Dependency manifest entry escapes the package directory: $line"
+        }
+
+        if (-not (Test-Path -LiteralPath $resolvedDependencyPath)) {
+            if ([string]::IsNullOrWhiteSpace($PackageBaseUrl)) {
+                throw "Missing framework dependency: $resolvedDependencyPath"
+            }
+
+            New-Item -ItemType Directory -Force -Path (Split-Path -Parent $resolvedDependencyPath) | Out-Null
+            $dependencyUrl = Join-PackageUrl $PackageBaseUrl $trimmedLine
+            Write-Host "Downloading $(Split-Path -Leaf $resolvedDependencyPath)..."
+            Invoke-WebRequest -Uri $dependencyUrl -OutFile $resolvedDependencyPath -UseBasicParsing
+        }
+
+        $dependencyPaths.Add($resolvedDependencyPath)
+    }
+
+    if ($dependencyPaths.Count -eq 0) {
+        Write-Warning "No framework dependency manifest was found for $TargetArchitecture. Continuing without -DependencyPath; this can fail with 0x80073CF3 on clean Windows installs."
+    }
+
+    return $dependencyPaths.ToArray()
+}
+
+function Test-SignatureMatchesCertificate($Signature, [string]$ExpectedCertificatePath) {
+    if (-not $Signature.SignerCertificate) {
+        return $false
+    }
+
+    $expectedCertificate = [Security.Cryptography.X509Certificates.X509Certificate2]::new($ExpectedCertificatePath)
+    return $Signature.SignerCertificate.Thumbprint -eq $expectedCertificate.Thumbprint
+}
+
 try {
     if (-not (Test-Administrator)) {
         Write-Host "Ping needs one administrator prompt to trust the sideload certificate."
         Restart-Elevated
         return
     }
+
+    Assert-SupportedWindowsVersion
 
     if ([string]::IsNullOrWhiteSpace($PackageBaseUrl) -and -not (Test-Path -LiteralPath $PackageDirectory)) {
         throw "Package directory does not exist: $PackageDirectory"
@@ -154,21 +256,29 @@ try {
     $packagePath = Join-Path $PackageDirectory $packageFileName
 
     Download-PackageIfNeeded $packagePath $packageFileName
+    $dependencyPaths = Resolve-DependencyPackagePaths $targetArchitecture
 
     Write-Host "Trusting Ping sideload certificate..."
     Import-Certificate -CertStoreLocation "Cert:\LocalMachine\TrustedPeople" -FilePath $CertificatePath | Out-Null
 
     $signature = Get-AuthenticodeSignature -LiteralPath $packagePath
-    if ($signature.Status -ne "Valid") {
+    if (-not (Test-SignatureMatchesCertificate $signature $CertificatePath)) {
         if ($AllowUnsigned) {
-            Write-Warning "The MSIX signature is $($signature.Status), not Valid. Proceeding because -AllowUnsigned was provided."
+            Write-Warning "The MSIX signer does not match Ping-Windows-Sideload.cer. Proceeding because -AllowUnsigned was provided."
         } else {
-            throw "The MSIX signature is $($signature.Status), not Valid. Make sure this package was signed with Ping-Windows-Sideload.cer."
+            throw "The MSIX signer does not match Ping-Windows-Sideload.cer. Refusing to install an unexpected package."
         }
+    }
+    elseif ($signature.Status -ne "Valid") {
+        Write-Warning "The MSIX signer matches Ping-Windows-Sideload.cer, but signature status is $($signature.Status). Continuing after trusting the bundled certificate."
     }
 
     Write-Host "Installing $packageFileName..."
-    Add-AppxPackage -Path $packagePath -ForceUpdateFromAnyVersion
+    if ($dependencyPaths.Count -gt 0) {
+        Add-AppxPackage -Path $packagePath -DependencyPath $dependencyPaths -ForceUpdateFromAnyVersion
+    } else {
+        Add-AppxPackage -Path $packagePath -ForceUpdateFromAnyVersion
+    }
 
     $installed = Get-AppxPackage -Name $packageName |
         Sort-Object InstallDate -Descending |
@@ -195,6 +305,20 @@ try {
         Write-Host "Creating desktop shortcut..."
         $desktopPath = [System.IO.Path]::Combine([System.Environment]::GetFolderPath("Desktop"), "Ping.lnk")
         $shortcut = $wshShell.CreateShortcut($desktopPath)
+        $shortcut.TargetPath = "explorer.exe"
+        $shortcut.Arguments = "shell:AppsFolder\$($installed.PackageFamilyName)!App"
+        if (-not [string]::IsNullOrWhiteSpace($localIconPath)) {
+            $shortcut.IconLocation = $localIconPath
+        }
+        $shortcut.Save()
+    }
+
+    if ($CreateStartMenuShortcut) {
+        Write-Host "Creating Start menu shortcut..."
+        $programsPath = [System.Environment]::GetFolderPath("Programs")
+        $pingStartMenuFolder = [System.IO.Path]::Combine($programsPath, "Ping")
+        New-Item -ItemType Directory -Force -Path $pingStartMenuFolder | Out-Null
+        $shortcut = $wshShell.CreateShortcut([System.IO.Path]::Combine($pingStartMenuFolder, "Ping.lnk"))
         $shortcut.TargetPath = "explorer.exe"
         $shortcut.Arguments = "shell:AppsFolder\$($installed.PackageFamilyName)!App"
         if (-not [string]::IsNullOrWhiteSpace($localIconPath)) {

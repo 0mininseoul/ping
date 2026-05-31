@@ -6,6 +6,7 @@ param(
     [string]$DistRoot = (Join-Path $PSScriptRoot "..\dist"),
     [string]$CertificatePath = (Join-Path $PSScriptRoot "..\certs\Ping-Windows-Sideload.cer"),
     [string]$InstallerScriptPath = (Join-Path $PSScriptRoot "install-ping-windows.ps1"),
+    [string]$UninstallerScriptPath = (Join-Path $PSScriptRoot "uninstall-ping-windows.ps1"),
     [switch]$AllowUnsigned
 )
 
@@ -68,6 +69,29 @@ function Assert-SignedPackage([string]$PackagePath, [string]$ExpectedCertificate
     throw "Package is not signed with the committed Ping sideload certificate: $PackagePath"
 }
 
+function Copy-DependencyPackages([string]$ArchitectureLabel, [string]$TargetRoot) {
+    $sourceRoot = Join-Path $DistRoot "Dependencies\$ArchitectureLabel"
+    if (-not (Test-Path -LiteralPath $sourceRoot)) {
+        throw "Missing Windows framework dependencies for $ArchitectureLabel: $sourceRoot"
+    }
+
+    $dependencyPackages = Get-ChildItem -LiteralPath $sourceRoot -File |
+        Where-Object { $_.Extension -in @(".msix", ".appx") } |
+        Sort-Object Name
+    if (-not $dependencyPackages) {
+        throw "No Windows framework dependency packages found in $sourceRoot"
+    }
+
+    $destinationRoot = Join-Path $TargetRoot "Dependencies\$ArchitectureLabel"
+    New-Item -ItemType Directory -Force -Path $destinationRoot | Out-Null
+    foreach ($dependency in $dependencyPackages) {
+        Copy-Item -LiteralPath $dependency.FullName -Destination (Join-Path $destinationRoot $dependency.Name) -Force
+    }
+
+    $manifestPath = Join-Path $TargetRoot "dependencies-$ArchitectureLabel.txt"
+    Set-Content -LiteralPath $manifestPath -Value ($dependencyPackages | ForEach-Object { "Dependencies/$ArchitectureLabel/$($_.Name)" }) -Encoding ascii
+}
+
 if ([string]::IsNullOrWhiteSpace($Version)) {
     $Version = Get-PingWindowsPackageVersion
 }
@@ -82,6 +106,10 @@ if (-not (Test-Path -LiteralPath $CertificatePath)) {
 
 if (-not (Test-Path -LiteralPath $InstallerScriptPath)) {
     throw "Missing installer script: $InstallerScriptPath"
+}
+
+if (-not (Test-Path -LiteralPath $UninstallerScriptPath)) {
+    throw "Missing uninstaller script: $UninstallerScriptPath"
 }
 
 $releaseRoot = Join-Path $DistRoot "Ping-Windows-v$Version-sideload"
@@ -99,10 +127,12 @@ foreach ($targetPlatform in $Platform) {
 
     Assert-SignedPackage $source $CertificatePath
     Copy-Item -LiteralPath $source -Destination (Join-Path $releaseRoot (Split-Path -Leaf $source)) -Force
+    Copy-DependencyPackages $architectureLabel $releaseRoot
 }
 
 Copy-Item -LiteralPath $CertificatePath -Destination (Join-Path $releaseRoot "Ping-Windows-Sideload.cer") -Force
 Copy-Item -LiteralPath $InstallerScriptPath -Destination (Join-Path $releaseRoot "install-ping-windows.ps1") -Force
+Copy-Item -LiteralPath $UninstallerScriptPath -Destination (Join-Path $releaseRoot "uninstall-ping-windows.ps1") -Force
 $icoSource = Join-Path $windowsRoot "installer\app.ico"
 if (Test-Path -LiteralPath $icoSource) {
     Copy-Item -LiteralPath $icoSource -Destination (Join-Path $releaseRoot "app.ico") -Force
@@ -126,18 +156,21 @@ Install:
    powershell -ExecutionPolicy Bypass -File .\install-ping-windows.ps1
 
 The script imports Ping-Windows-Sideload.cer into LocalMachine\TrustedPeople,
-chooses x64 or arm64 for this PC, installs the MSIX, and launches Ping.
+installs the bundled Microsoft Windows App Runtime dependency, chooses x64 or
+arm64 for this PC, installs the MSIX, and launches Ping.
 
 For a publicly trusted one-click install, Ping needs Microsoft Store submission
 or a paid public code-signing route. This folder is the standard sideload route.
 "@
 Set-Content -LiteralPath (Join-Path $releaseRoot "README.txt") -Value $readme -Encoding utf8
 
-$checksums = Get-ChildItem -LiteralPath $releaseRoot -File |
-    Sort-Object Name |
+$releaseRootForRelativePath = (Resolve-Path -LiteralPath $releaseRoot).Path.TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
+$checksums = Get-ChildItem -LiteralPath $releaseRoot -Recurse -File |
+    Sort-Object FullName |
     ForEach-Object {
         $hash = Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256
-        "$($hash.Hash.ToLowerInvariant())  $($_.Name)"
+        $relativePath = $_.FullName.Substring($releaseRootForRelativePath.Length + 1).Replace('\', '/')
+        "$($hash.Hash.ToLowerInvariant())  $relativePath"
     }
 Set-Content -LiteralPath (Join-Path $releaseRoot "SHA256SUMS.txt") -Value $checksums -Encoding ascii
 

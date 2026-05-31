@@ -136,6 +136,33 @@ function Assert-TrustedPackageSignature([string]$PackagePath, [string]$ExpectedC
     throw "Package is not signed with the committed Ping sideload certificate. Re-run with -AllowUnsigned only for local CI/build validation."
 }
 
+function Get-DependencyPackagePaths([string]$ArchitectureLabel) {
+    $manifestPath = Join-Path $distRoot "Ping-Windows-v$Version-sideload\dependencies-$ArchitectureLabel.txt"
+    if (-not (Test-Path -LiteralPath $manifestPath)) {
+        $manifestPath = Join-Path $distRoot "dependencies-$ArchitectureLabel.txt"
+    }
+
+    if (-not (Test-Path -LiteralPath $manifestPath)) {
+        throw "Missing dependency manifest for smoke install: $manifestPath. Run package-sideload-release.ps1 before -Install."
+    }
+
+    $manifestRoot = Split-Path -Parent $manifestPath
+    $dependencyPaths = @(Get-Content -LiteralPath $manifestPath |
+        Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+        ForEach-Object {
+            $relativePath = $_.Trim().Replace('/', [System.IO.Path]::DirectorySeparatorChar)
+            Join-Path $manifestRoot $relativePath
+        })
+
+    foreach ($dependencyPath in $dependencyPaths) {
+        if (-not (Test-Path -LiteralPath $dependencyPath)) {
+            throw "Missing smoke install dependency package: $dependencyPath"
+        }
+    }
+
+    return $dependencyPaths
+}
+
 if ([string]::IsNullOrWhiteSpace($Version)) {
     $Version = Get-PingWindowsPackageVersion
 }
@@ -174,7 +201,8 @@ if ($Install) {
         throw "Could not find package for current architecture: $installPackage"
     }
 
-    Add-AppxPackage -Path $installPackage -ForceUpdateFromAnyVersion
+    $dependencyPaths = Get-DependencyPackagePaths $currentArchitectureLabel
+    Add-AppxPackage -Path $installPackage -DependencyPath $dependencyPaths -ForceUpdateFromAnyVersion
     $installed = Get-AppxPackage -Name "YoungminPark.PingWindows" |
         Sort-Object InstallDate -Descending |
         Select-Object -First 1

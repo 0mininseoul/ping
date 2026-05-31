@@ -198,6 +198,9 @@ jobs:
             windows/dist/Ping-Windows-v*-sideload/Ping-Windows-v*-x64.msix
             windows/dist/Ping-Windows-v*-sideload/Ping-Windows-v*-arm64.msix
             windows/dist/Ping-Windows-v*-sideload/Ping-Windows-Sideload.cer
+            windows/dist/Ping-Windows-v*-sideload/app.ico
+            windows/dist/Ping-Windows-v*-sideload/dependencies-*.txt
+            windows/dist/Ping-Windows-v*-sideload/Dependencies/**
           if-no-files-found: error
           retention-days: 14
 
@@ -228,8 +231,16 @@ jobs:
             @{ Source = "windows/dist/PingSetup-v$version.exe"; Destination = "PingSetup-v$version.exe" },
             @{ Source = "$releaseDir/Ping-Windows-v$version-x64.msix"; Destination = "Ping-Windows-v$version-x64.msix" },
             @{ Source = "$releaseDir/Ping-Windows-v$version-arm64.msix"; Destination = "Ping-Windows-v$version-arm64.msix" },
-            @{ Source = "$releaseDir/Ping-Windows-Sideload.cer"; Destination = "Ping-Windows-Sideload.cer" }
+            @{ Source = "$releaseDir/Ping-Windows-Sideload.cer"; Destination = "Ping-Windows-Sideload.cer" },
+            @{ Source = "$releaseDir/app.ico"; Destination = "app.ico" },
+            @{ Source = "$releaseDir/dependencies-x64.txt"; Destination = "dependencies-x64.txt" },
+            @{ Source = "$releaseDir/dependencies-arm64.txt"; Destination = "dependencies-arm64.txt" }
           )
+
+          foreach ($dependency in Get-ChildItem -LiteralPath "$releaseDir/Dependencies" -Recurse -File -Include "*.msix", "*.appx") {
+            $relativePath = [System.IO.Path]::GetRelativePath($releaseDir, $dependency.FullName).Replace('\', '/')
+            $payloads += @{ Source = $dependency.FullName; Destination = $relativePath }
+          }
 
           foreach ($payload in $payloads) {
             if (-not (Test-Path -LiteralPath $payload.Source)) {
@@ -256,7 +267,9 @@ jobs:
 
           New-Item -ItemType Directory -Force -Path $downloadsDir | Out-Null
           foreach ($payload in $payloads) {
-            Copy-Item -LiteralPath $payload.Source -Destination (Join-Path $downloadsDir $payload.Destination) -Force
+            $destinationPath = Join-Path $downloadsDir $payload.Destination
+            New-Item -ItemType Directory -Force -Path (Split-Path -Parent $destinationPath) | Out-Null
+            Copy-Item -LiteralPath $payload.Source -Destination $destinationPath -Force
           }
           Set-Content -LiteralPath (Join-Path $downloadsDir "latest-version.txt") -Value $version -Encoding ascii -NoNewline
 
@@ -312,6 +325,10 @@ jobs:
           }
           gh release edit $tag --title "Ping Windows v$version" --notes "Zero-cost Windows web installer. PingSetup-v$version.exe imports Ping's self-signed MSIX certificate, downloads the right MSIX package from https://0minping.vercel.app/downloads/windows, installs the app, and launches it. Because it is not publicly code-signed, Windows SmartScreen may show a warning."
 
+          $dependencyAssets = Get-ChildItem -LiteralPath "$releaseDir/Dependencies" -Recurse -File -Include "*.msix", "*.appx" |
+            Sort-Object FullName |
+            ForEach-Object { $_.FullName }
+
           gh release upload $tag `
             $setupExe `
             $releaseZip `
@@ -319,5 +336,9 @@ jobs:
             "$releaseDir/Ping-Windows-v$version-arm64.msix" `
             "$releaseDir/Ping-Windows-Sideload.cer" `
             "$releaseDir/install-ping-windows.ps1" `
+            "$releaseDir/uninstall-ping-windows.ps1" `
+            "$releaseDir/dependencies-x64.txt" `
+            "$releaseDir/dependencies-arm64.txt" `
+            $dependencyAssets `
             "$releaseDir/SHA256SUMS.txt" `
             --clobber

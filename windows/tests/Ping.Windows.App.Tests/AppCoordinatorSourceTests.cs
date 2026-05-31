@@ -714,6 +714,92 @@ public sealed class AppCoordinatorSourceTests
         Assert.Contains("Ping.Windows.NativeCapture.dll", project, StringComparison.Ordinal);
     }
 
+
+    [Fact]
+    public void WindowsInstallerInstallsMsixFrameworkDependencies()
+    {
+        var root = RepoRoot();
+        var installerScript = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "scripts",
+            "install-ping-windows.ps1"));
+        var innoScript = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "installer",
+            "PingSetup.iss"));
+        var remoteScript = File.ReadAllText(Path.Combine(
+            root,
+            "web",
+            "public",
+            "install.ps1"));
+
+        Assert.Contains("dependencies-$TargetArchitecture.txt", installerScript, StringComparison.Ordinal);
+        Assert.Contains("-DependencyPath $dependencyPaths", installerScript, StringComparison.Ordinal);
+        Assert.Contains("dependencies-$arch.txt", remoteScript, StringComparison.Ordinal);
+        Assert.Contains("-DependencyPath $dependencyPaths", remoteScript, StringComparison.Ordinal);
+        Assert.Contains("dependencies-*.txt", innoScript, StringComparison.Ordinal);
+        Assert.Contains("Dependencies", innoScript, StringComparison.Ordinal);
+        Assert.Contains("MinVersion=10.0.26100", innoScript, StringComparison.Ordinal);
+        Assert.Contains("Assert-SupportedWindowsVersion", installerScript, StringComparison.Ordinal);
+        Assert.Contains("CurrentBuildNumber", installerScript, StringComparison.Ordinal);
+        Assert.Contains("26100", installerScript, StringComparison.Ordinal);
+        Assert.Contains("Assert-SupportedWindowsVersion", remoteScript, StringComparison.Ordinal);
+        Assert.Contains("CurrentBuildNumber", remoteScript, StringComparison.Ordinal);
+        Assert.Contains("Test-SignatureMatchesCertificate", installerScript, StringComparison.Ordinal);
+        Assert.Contains("Test-SignatureMatchesCertificate", remoteScript, StringComparison.Ordinal);
+        Assert.Contains("The MSIX signer does not match Ping-Windows-Sideload.cer", installerScript, StringComparison.Ordinal);
+        Assert.Contains("다운로드한 Ping MSIX 서명자가 Ping-Windows-Sideload.cer와 일치하지 않습니다", remoteScript, StringComparison.Ordinal);
+        Assert.Contains("escapes the package directory", installerScript, StringComparison.Ordinal);
+        Assert.Contains("escapes the installer temp directory", remoteScript, StringComparison.Ordinal);
+        Assert.Contains("Dependency manifest entry must be an .msix or .appx package", installerScript, StringComparison.Ordinal);
+        Assert.Contains("Dependency manifest entry must be an .msix or .appx package", remoteScript, StringComparison.Ordinal);
+        Assert.DoesNotContain(" -AllowUnsigned';", innoScript, StringComparison.Ordinal);
+        Assert.Contains("uninstall-ping-windows.ps1", innoScript, StringComparison.Ordinal);
+        Assert.Contains("[UninstallRun]", innoScript, StringComparison.Ordinal);
+        Assert.Contains("CreateStartMenuShortcut", installerScript, StringComparison.Ordinal);
+        Assert.DoesNotContain("Uninstallable=no", innoScript, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WindowsReleasePublishesFrameworkDependencies()
+    {
+        var root = RepoRoot();
+        var buildRelease = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "scripts",
+            "build-release.ps1"));
+        var sideload = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "scripts",
+            "package-sideload-release.ps1"));
+        var buildInstaller = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "scripts",
+            "build-installer.ps1"));
+        var workflow = File.ReadAllText(Path.Combine(
+            root,
+            ".github",
+            "workflows",
+            "windows-client.yml"));
+
+        Assert.Contains("Copy-FrameworkDependencies", buildRelease, StringComparison.Ordinal);
+        Assert.Contains("WindowsAppRuntime", buildRelease, StringComparison.Ordinal);
+        Assert.Contains("throw \"MSBuild did not emit a Dependencies folder", buildRelease, StringComparison.Ordinal);
+        Assert.Contains("Refusing to build a distributable", buildRelease, StringComparison.Ordinal);
+        Assert.Contains("Copy-DependencyPackages", sideload, StringComparison.Ordinal);
+        Assert.Contains("dependencies-x64.txt", buildInstaller, StringComparison.Ordinal);
+        Assert.Contains("dependencies-arm64.txt", buildInstaller, StringComparison.Ordinal);
+        Assert.Contains("uninstall-ping-windows.ps1", sideload, StringComparison.Ordinal);
+        Assert.Contains("Dependencies/**", workflow, StringComparison.Ordinal);
+        Assert.Contains("dependencies-*.txt", workflow, StringComparison.Ordinal);
+        Assert.Contains("app.ico", workflow, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void OnboardingWindowRendersSecondaryActions()
     {
@@ -815,6 +901,20 @@ public sealed class AppCoordinatorSourceTests
         }
 
         Assert.Empty(violations);
+    }
+
+    [Fact]
+    public void NativeCaptureUsesStaticRuntimeToAvoidExternalVcRedistributableRequirement()
+    {
+        var project = File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            "windows",
+            "src",
+            "Ping.Windows.NativeCapture",
+            "Ping.Windows.NativeCapture.vcxproj"));
+
+        Assert.Contains("<RuntimeLibrary Condition=\"'$(Configuration)'=='Release'\">MultiThreaded</RuntimeLibrary>", project, StringComparison.Ordinal);
+        Assert.Contains("<RuntimeLibrary Condition=\"'$(Configuration)'=='Debug'\">MultiThreadedDebug</RuntimeLibrary>", project, StringComparison.Ordinal);
     }
 
     private static string RepoRoot()

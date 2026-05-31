@@ -11,8 +11,7 @@ AppPublisher=Youngmin Park
 AppPublisherURL=https://0minping.vercel.app
 AppSupportURL=https://github.com/0mininseoul/ping/releases
 DefaultDirName={autopf}\Ping
-DisableDirPage=yes
-DisableProgramGroupPage=yes
+DefaultGroupName=Ping
 OutputDir={#OutputRoot}
 OutputBaseFilename=PingSetup-v{#AppVersion}
 Compression=lzma2
@@ -21,20 +20,29 @@ WizardStyle=modern
 PrivilegesRequired=admin
 ArchitecturesAllowed=x64compatible arm64
 ArchitecturesInstallIn64BitMode=x64compatible arm64
-Uninstallable=no
+MinVersion=10.0.26100
 SetupLogging=yes
 InfoBeforeFile=welcome.txt
 SetupIconFile=app.ico
 
 [Tasks]
 Name: "desktopicon"; Description: "바탕 화면에 바로가기 만들기"; GroupDescription: "추가 옵션:"
+Name: "startmenu"; Description: "시작 메뉴에 Ping 폴더 및 바로가기 만들기"; GroupDescription: "추가 옵션:"; Flags: checkedonce
 Name: "startup"; Description: "Windows 부팅 시 자동 시작 등록"; GroupDescription: "추가 옵션:"
-Name: "launch"; Description: "설치 완료 후 즉시 Ping 실행"; GroupDescription: "추가 옵션:"
+Name: "launch"; Description: "설치 완료 후 즉시 Ping 실행"; GroupDescription: "추가 옵션:"; Flags: checkedonce
 
 [Files]
 Source: "{#PayloadRoot}\Ping-Windows-Sideload.cer"; DestDir: "{tmp}"; Flags: deleteafterinstall
+Source: "{#PayloadRoot}\Ping-Windows-Sideload.cer"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#PayloadRoot}\install-ping-windows.ps1"; DestDir: "{tmp}"; Flags: deleteafterinstall
+Source: "{#PayloadRoot}\uninstall-ping-windows.ps1"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#PayloadRoot}\dependencies-*.txt"; DestDir: "{tmp}"; Flags: deleteafterinstall
+Source: "{#PayloadRoot}\Dependencies\*"; DestDir: "{tmp}\Dependencies"; Flags: recursesubdirs createallsubdirs deleteafterinstall
 Source: "app.ico"; DestDir: "{tmp}"; Flags: deleteafterinstall
+Source: "app.ico"; DestDir: "{app}"; Flags: ignoreversion
+
+[UninstallRun]
+Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\uninstall-ping-windows.ps1"" -CertificatePath ""{app}\Ping-Windows-Sideload.cer"""; Flags: runhidden waituntilterminated
 
 [Code]
 var
@@ -70,11 +78,13 @@ begin
     ' -Architecture ' + MsixArchitecture +
     ' -PackageDirectory "' + ExpandConstant('{tmp}') + '"' +
     ' -CertificatePath "' + ExpandConstant('{tmp}\Ping-Windows-Sideload.cer') + '"' +
-    ' -IconPath "' + ExpandConstant('{tmp}\app.ico') + '"' +
-    ' -AllowUnsigned';
+    ' -IconPath "' + ExpandConstant('{tmp}\app.ico') + '"';
 
   if WizardIsTaskSelected('desktopicon') then
     Params := Params + ' -CreateDesktopShortcut';
+
+  if WizardIsTaskSelected('startmenu') then
+    Params := Params + ' -CreateStartMenuShortcut';
 
   if WizardIsTaskSelected('startup') then
     Params := Params + ' -AddToStartup';

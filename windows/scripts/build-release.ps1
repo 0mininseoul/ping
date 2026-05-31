@@ -136,6 +136,31 @@ function Sign-Package([string]$PackagePath) {
     }
 }
 
+function Copy-FrameworkDependencies([string]$PackageOutputRoot, [string]$ArchitectureLabel) {
+    $dependenciesRoot = Join-Path $PackageOutputRoot "Dependencies"
+    if (-not (Test-Path -LiteralPath $dependenciesRoot)) {
+        throw "MSBuild did not emit a Dependencies folder for $ArchitectureLabel. Ping's packaged WinUI app requires bundled Microsoft Windows App Runtime framework packages for clean Windows installs."
+    }
+
+    $dependencyPackages = Get-ChildItem -LiteralPath $dependenciesRoot -Recurse -File -Include "*.msix", "*.appx" |
+        Where-Object { $_.Name -match 'WindowsAppRuntime|VCLibs|NET\.Native|Microsoft\.UI\.Xaml' } |
+        Sort-Object Name -Unique
+
+    if (-not $dependencyPackages) {
+        throw "No MSIX/AppX framework dependencies were found under $dependenciesRoot. Refusing to build a distributable that would fail with 0x80073CF3 on clean Windows machines."
+    }
+
+    $destinationRoot = Join-Path $distRoot "Dependencies\$ArchitectureLabel"
+    Remove-Item -Recurse -Force -LiteralPath $destinationRoot -ErrorAction SilentlyContinue
+    New-Item -ItemType Directory -Force -Path $destinationRoot | Out-Null
+
+    foreach ($dependency in $dependencyPackages) {
+        Copy-Item -LiteralPath $dependency.FullName -Destination (Join-Path $destinationRoot $dependency.Name) -Force
+    }
+
+    Write-Host "Copied $($dependencyPackages.Count) framework dependenc$(if ($dependencyPackages.Count -eq 1) { 'y' } else { 'ies' }) to $destinationRoot"
+}
+
 function Assert-PackageContainsNativeCaptureDll($Archive, [string]$PackagePath) {
     $nativeDllEntry = $Archive.Entries |
         Where-Object { $_.Name -eq "Ping.Windows.NativeCapture.dll" } |
@@ -206,6 +231,7 @@ foreach ($targetPlatform in $Platform) {
     $destination = Join-Path $distRoot "Ping-Windows-v$version-$architectureLabel.msix"
     Copy-Item -LiteralPath $package.FullName -Destination $destination -Force
     Sign-Package $destination
+    Copy-FrameworkDependencies $packageOutputRoot $architectureLabel
 
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     $archive = [System.IO.Compression.ZipFile]::OpenRead($destination)

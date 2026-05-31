@@ -97,7 +97,7 @@ For self-hosted distribution, Ping uses a self-signed MSIX sideload package plus
 .\scripts\build-installer.ps1
 ```
 
-CI reads `PING_WINDOWS_CERT_BASE64` and `PING_WINDOWS_CERT_PASSWORD` from GitHub Secrets, imports the PFX into the current user's certificate store, and signs by certificate thumbprint. When those secrets exist, the workflow signs the MSIX packages, copies the public `windows\certs\Ping-Windows-Sideload.cer`, writes `windows\dist\Ping-Windows-v0.3.28-sideload.zip`, and builds `windows\dist\PingSetup-v0.3.28.exe`. The setup EXE downloads the correct MSIX from `https://0minping.vercel.app/downloads/windows/` during installation.
+CI reads `PING_WINDOWS_CERT_BASE64` and `PING_WINDOWS_CERT_PASSWORD` from GitHub Secrets, imports the PFX into the current user's certificate store, and signs by certificate thumbprint. When those secrets exist, the workflow signs the MSIX packages, copies the public `windows\certs\Ping-Windows-Sideload.cer`, copies the MSBuild-generated Windows App Runtime dependency packages under `Dependencies\x64` and `Dependencies\arm64`, writes `windows\dist\Ping-Windows-v0.3.28-sideload.zip`, and builds `windows\dist\PingSetup-v0.3.28.exe`. The setup EXE downloads the correct MSIX from `https://0minping.vercel.app/downloads/windows/` during installation and installs the bundled framework dependencies via `Add-AppxPackage -DependencyPath`.
 
 General users install the distribution by running:
 
@@ -113,7 +113,7 @@ The sideload zip remains available as a fallback/debug path:
 powershell -ExecutionPolicy Bypass -File .\install-ping-windows.ps1
 ```
 
-Both installer paths import `Ping-Windows-Sideload.cer` into `Cert:\LocalMachine\TrustedPeople`, pick x64 or arm64 from `ProcessArchitecture`, install the MSIX, and launch Ping. This is the best self-hosted route, but it is still sideloading under the hood. Microsoft Store, Azure Artifact Signing, or an OV code-signing certificate are required for broad public-trust installation.
+Both installer paths import `Ping-Windows-Sideload.cer` into `Cert:\LocalMachine\TrustedPeople`, verify Windows 11 24H2/build 26100+ before attempting MSIX deployment, pick x64 or arm64 from `ProcessArchitecture`, install the MSIX with the bundled Windows App Runtime framework package, and launch Ping. The setup EXE also registers a standard Control Panel/Settings uninstall entry; uninstall runs `uninstall-ping-windows.ps1` to remove the MSIX, shortcuts/startup entry, and trusted sideload certificate. The native capture DLL is linked with the static MSVC runtime so users do not need to install a separate Visual C++ Redistributable. This is the best self-hosted route, but it is still sideloading under the hood. Microsoft Store, Azure Artifact Signing, or an OV code-signing certificate are required for broad public-trust installation.
 
 Unsigned packages are only for CI/build validation and will not install cleanly on user machines without developer/test-signing workarounds.
 

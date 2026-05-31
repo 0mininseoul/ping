@@ -56,13 +56,29 @@ function Resolve-InnoSetupCompiler {
 function Assert-InstallerPayload([string]$Root, [string]$TargetVersion) {
     $requiredFiles = @(
         "Ping-Windows-Sideload.cer",
-        "install-ping-windows.ps1"
+        "install-ping-windows.ps1",
+        "uninstall-ping-windows.ps1",
+        "dependencies-x64.txt",
+        "dependencies-arm64.txt"
     )
 
     foreach ($file in $requiredFiles) {
         $path = Join-Path $Root $file
         if (-not (Test-Path -LiteralPath $path)) {
             throw "Missing installer payload file: $path"
+        }
+    }
+
+    foreach ($architectureLabel in @("x64", "arm64")) {
+        $dependencyRoot = Join-Path $Root "Dependencies\$architectureLabel"
+        if (-not (Test-Path -LiteralPath $dependencyRoot)) {
+            throw "Missing installer dependency directory: $dependencyRoot"
+        }
+
+        $dependencyPackages = Get-ChildItem -LiteralPath $dependencyRoot -File |
+            Where-Object { $_.Extension -in @(".msix", ".appx") }
+        if (-not $dependencyPackages) {
+            throw "Installer dependency directory has no MSIX/AppX packages: $dependencyRoot"
         }
     }
 }
