@@ -6,6 +6,14 @@
     <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
     <Platforms>x64;ARM64</Platforms>
     <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+    <!--
+      Public Windows installers must not prompt users to install the .NET
+      Desktop Runtime separately. The release script also passes
+      /p:SelfContained=true with an architecture-specific RuntimeIdentifier;
+      keeping the default here prevents accidental framework-dependent MSIX
+      packages when someone builds the app project directly.
+    -->
+    <SelfContained>true</SelfContained>
     <UseWinUI>true</UseWinUI>
     <EnableMsixTooling>true</EnableMsixTooling>
     <WindowsPackageType>MSIX</WindowsPackageType>
@@ -43,7 +51,10 @@
   </ItemGroup>
   <Target Name="CopyNativeCaptureDllToOutput" AfterTargets="Build">
     <PropertyGroup>
-      <NativeCaptureDllPath>$(MSBuildThisFileDirectory)..\Ping.Windows.NativeCapture\bin\$(Platform)\$(Configuration)\$(TargetFramework)\Ping.Windows.NativeCapture.dll</NativeCaptureDllPath>
+      <NativeCaptureDllBasePath>$(MSBuildThisFileDirectory)..\Ping.Windows.NativeCapture\bin\$(Platform)\$(Configuration)\$(TargetFramework)</NativeCaptureDllBasePath>
+      <NativeCaptureDllPath>$(NativeCaptureDllBasePath)\Ping.Windows.NativeCapture.dll</NativeCaptureDllPath>
+      <NativeCaptureDllRidPath Condition="'$(RuntimeIdentifier)' != ''">$(NativeCaptureDllBasePath)\$(RuntimeIdentifier)\Ping.Windows.NativeCapture.dll</NativeCaptureDllRidPath>
+      <NativeCaptureDllPath Condition="'$(RuntimeIdentifier)' != '' and Exists('$(NativeCaptureDllRidPath)')">$(NativeCaptureDllRidPath)</NativeCaptureDllPath>
     </PropertyGroup>
     <Error
       Condition="!Exists('$(NativeCaptureDllPath)')"

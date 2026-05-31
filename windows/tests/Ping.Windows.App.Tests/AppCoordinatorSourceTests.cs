@@ -7,6 +7,113 @@ namespace Ping.Windows.App.Tests;
 public sealed class AppCoordinatorSourceTests
 {
     [Fact]
+    public void MainWindowExposesClickablePrimaryActions()
+    {
+        var root = RepoRoot();
+        var xaml = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "MainWindow.xaml"));
+        var code = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "MainWindow.xaml.cs"));
+        var coordinator = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Bootstrap",
+            "AppCoordinator.cs"));
+
+        Assert.Contains("Content=\"Create / Join room\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Click=\"HandleOpenRoomsClicked\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Content=\"History\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Click=\"HandleOpenHistoryClicked\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Content=\"New face ping\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Click=\"HandleNewPingClicked\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Content=\"Settings\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Click=\"HandleOpenSettingsClicked\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("public event EventHandler? OpenRoomsRequested;", code, StringComparison.Ordinal);
+        Assert.Contains("OpenRoomsRequested += HandleOpenRoomsRequested", coordinator, StringComparison.Ordinal);
+        Assert.Contains("OpenRoomManagerWindow();", coordinator, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RoomManagerMutationsRefreshCoordinatorRoomsBeforeWindowClose()
+    {
+        var root = RepoRoot();
+        var coordinator = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Bootstrap",
+            "AppCoordinator.cs"));
+        var viewModel = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Setup",
+            "RoomManagerViewModel.cs"));
+
+        Assert.Contains("public event EventHandler? RoomsChanged;", viewModel, StringComparison.Ordinal);
+        Assert.Contains("RoomsChanged?.Invoke(this, EventArgs.Empty);", viewModel, StringComparison.Ordinal);
+        Assert.Contains("viewModel.RoomsChanged += HandleRoomManagerRoomsChanged;", coordinator, StringComparison.Ordinal);
+        Assert.Contains("viewModel.RoomsChanged -= HandleRoomManagerRoomsChanged;", coordinator, StringComparison.Ordinal);
+        Assert.Contains("private void HandleRoomManagerRoomsChanged", coordinator, StringComparison.Ordinal);
+        Assert.Contains("_ = BootstrapAndLoadRoomsAsync();", coordinator, StringComparison.Ordinal);
+        Assert.Contains("A room needs at least two members before Ping can send", coordinator, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MainSettingsButtonDoesNotOpenCrashySecondarySettingsWindow()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Bootstrap",
+            "AppCoordinator.cs"));
+
+        var showSettingsStart = source.IndexOf("private void ShowSettings()", StringComparison.Ordinal);
+        Assert.True(showSettingsStart >= 0);
+        var nextMethodStart = source.IndexOf("private void OpenRoomManagerWindow()", showSettingsStart, StringComparison.Ordinal);
+        Assert.True(nextMethodStart > showSettingsStart);
+        var showSettingsBody = source[showSettingsStart..nextMethodStart];
+
+        Assert.DoesNotContain("OpenSettingsWindow();", showSettingsBody, StringComparison.Ordinal);
+        Assert.Contains("mainWindow.SettingsPanel.Visibility = Visibility.Visible;", showSettingsBody, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void InstallerLaunchesPackagedAppThroughExplorerShellAppsFolder()
+    {
+        var root = RepoRoot();
+        var script = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "scripts",
+            "install-ping-windows.ps1"));
+        var remoteScript = File.ReadAllText(Path.Combine(
+            root,
+            "web",
+            "public",
+            "install.ps1"));
+
+        Assert.Contains("Start-Process -FilePath \"explorer.exe\" -ArgumentList \"shell:AppsFolder\\$($installed.PackageFamilyName)!App\"", script, StringComparison.Ordinal);
+        Assert.Contains("Start-Process -FilePath \"explorer.exe\" -ArgumentList \"shell:AppsFolder\\$($installed.PackageFamilyName)!App\"", remoteScript, StringComparison.Ordinal);
+        Assert.DoesNotContain("Start-Process \"shell:AppsFolder", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("Start-Process \"shell:AppsFolder", remoteScript, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void QuickSendDisabled_UsesNormalScreenFaceMirrorPreflightPath()
     {
         var source = File.ReadAllText(Path.Combine(
@@ -710,7 +817,9 @@ public sealed class AppCoordinatorSourceTests
         Assert.Contains("AddNativeCaptureDllToAppxPackage", project, StringComparison.Ordinal);
         Assert.Contains("BeforeTargets=\"_ComputeAppxPackagePayload\"", project, StringComparison.Ordinal);
         Assert.Contains("AppxPackagePayload", project, StringComparison.Ordinal);
-        Assert.Contains(@"..\Ping.Windows.NativeCapture\bin\$(Platform)\$(Configuration)\$(TargetFramework)", project, StringComparison.Ordinal);
+        Assert.Contains("NativeCaptureDllBasePath", project, StringComparison.Ordinal);
+        Assert.Contains("NativeCaptureDllRidPath", project, StringComparison.Ordinal);
+        Assert.Contains("$(RuntimeIdentifier)", project, StringComparison.Ordinal);
         Assert.Contains("Ping.Windows.NativeCapture.dll", project, StringComparison.Ordinal);
     }
 
@@ -736,11 +845,19 @@ public sealed class AppCoordinatorSourceTests
             "install.ps1"));
 
         Assert.Contains("dependencies-$TargetArchitecture.txt", installerScript, StringComparison.Ordinal);
+        Assert.Contains("[string[]]$dependencyPaths = @(Resolve-DependencyPackagePaths $targetArchitecture)", installerScript, StringComparison.Ordinal);
         Assert.Contains("-DependencyPath $dependencyPaths", installerScript, StringComparison.Ordinal);
         Assert.Contains("dependencies-$arch.txt", remoteScript, StringComparison.Ordinal);
+        Assert.Contains("[string[]]$dependencyPaths", remoteScript, StringComparison.Ordinal);
         Assert.Contains("-DependencyPath $dependencyPaths", remoteScript, StringComparison.Ordinal);
         Assert.Contains("dependencies-*.txt", innoScript, StringComparison.Ordinal);
         Assert.Contains("Dependencies", innoScript, StringComparison.Ordinal);
+        Assert.Contains("Ping-Windows-v*-x64.msix", innoScript, StringComparison.Ordinal);
+        Assert.Contains("Ping-Windows-v*-arm64.msix", innoScript, StringComparison.Ordinal);
+        Assert.DoesNotContain("CreateDownloadPage", innoScript, StringComparison.Ordinal);
+        Assert.DoesNotContain("DownloadPage.Download", innoScript, StringComparison.Ordinal);
+        Assert.Contains("DisableDirPage=no", innoScript, StringComparison.Ordinal);
+        Assert.Contains("AlwaysShowDirOnReadyPage=yes", innoScript, StringComparison.Ordinal);
         Assert.Contains("MinVersion=10.0.26100", innoScript, StringComparison.Ordinal);
         Assert.Contains("Assert-SupportedWindowsVersion", installerScript, StringComparison.Ordinal);
         Assert.Contains("CurrentBuildNumber", installerScript, StringComparison.Ordinal);
@@ -788,6 +905,10 @@ public sealed class AppCoordinatorSourceTests
             "windows-client.yml"));
 
         Assert.Contains("Copy-FrameworkDependencies", buildRelease, StringComparison.Ordinal);
+        Assert.Contains("/p:RuntimeIdentifier=$runtimeIdentifier", buildRelease, StringComparison.Ordinal);
+        Assert.Contains("/p:SelfContained=true", buildRelease, StringComparison.Ordinal);
+        Assert.Contains("Assert-PackageIsDotNetSelfContained", buildRelease, StringComparison.Ordinal);
+        Assert.Contains("framework-dependent and will prompt users", buildRelease, StringComparison.Ordinal);
         Assert.Contains("WindowsAppRuntime", buildRelease, StringComparison.Ordinal);
         Assert.Contains("Microsoft.WindowsAppSDK.Runtime", buildRelease, StringComparison.Ordinal);
         Assert.Contains("GetElementsByTagName(\"PackageReference\")", buildRelease, StringComparison.Ordinal);
@@ -799,6 +920,7 @@ public sealed class AppCoordinatorSourceTests
         Assert.DoesNotContain("$ArchitectureLabel:", sideload, StringComparison.Ordinal);
         Assert.Contains("dependencies-x64.txt", buildInstaller, StringComparison.Ordinal);
         Assert.Contains("dependencies-arm64.txt", buildInstaller, StringComparison.Ordinal);
+        Assert.Contains("Missing installer MSIX payload", buildInstaller, StringComparison.Ordinal);
         Assert.Contains("uninstall-ping-windows.ps1", sideload, StringComparison.Ordinal);
         Assert.Contains("Dependencies/**", workflow, StringComparison.Ordinal);
         Assert.Contains("dependencies-*.txt", workflow, StringComparison.Ordinal);

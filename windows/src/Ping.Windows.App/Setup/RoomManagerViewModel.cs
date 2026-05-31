@@ -46,6 +46,8 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
+    public event EventHandler? RoomsChanged;
+
     public ObservableCollection<Room> Rooms { get; } = [];
 
     public ObservableCollection<Room> SearchResults { get; } = [];
@@ -142,6 +144,7 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
     {
         var room = await roomService.CreateRoomAsync(roomName, nickname, cancellationToken);
         await ReloadRoomsAsync(cancellationToken);
+        RoomsChanged?.Invoke(this, EventArgs.Empty);
         SelectedRoom = Rooms.FirstOrDefault(candidate => candidate.Id == room.Id) ?? room;
         StatusMessage = $"Created {room.Name}.";
     }
@@ -168,6 +171,7 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
         var roomName = SelectedSearchResult.Name;
         await roomService.JoinRoomAsync(roomId, nickname, cancellationToken);
         await ReloadRoomsAsync(cancellationToken);
+        RoomsChanged?.Invoke(this, EventArgs.Empty);
         SelectedRoom = Rooms.FirstOrDefault(room => room.Id == roomId) ?? SelectedRoom;
         StatusMessage = $"Joined {roomName}.";
     }
@@ -181,6 +185,7 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
 
         await roomService.RenameRoomAsync(roomId, newName, cancellationToken);
         await ReloadRoomsAsync(cancellationToken);
+        RoomsChanged?.Invoke(this, EventArgs.Empty);
         StatusMessage = "Room renamed.";
     }
 
@@ -193,6 +198,7 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
 
         await roomService.LeaveRoomAsync(roomId, cancellationToken);
         await ReloadRoomsAsync(cancellationToken);
+        RoomsChanged?.Invoke(this, EventArgs.Empty);
         StatusMessage = "Left room.";
     }
 
@@ -212,6 +218,7 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
 
         var room = await invitationService.InviteUserAsync(userId.Trim(), nickname, fallbackRoomName, cancellationToken);
         await ReloadRoomsAsync(cancellationToken);
+        RoomsChanged?.Invoke(this, EventArgs.Empty);
         SelectedRoom = Rooms.FirstOrDefault(candidate => candidate.Id == room.Id) ?? room;
         StatusMessage = "Invitation sent in a new room.";
     }
@@ -261,6 +268,7 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
 
         await invitationService.AcceptAsync(invitationId, nickname, cancellationToken);
         await LoadAsync(cancellationToken);
+        RoomsChanged?.Invoke(this, EventArgs.Empty);
         StatusMessage = "Invitation accepted.";
     }
 
@@ -303,6 +311,7 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
 
         var room = await invitationService.AcceptInviteLinkAsync(inviteToken, nickname, cancellationToken);
         await ReloadRoomsAsync(cancellationToken);
+        RoomsChanged?.Invoke(this, EventArgs.Empty);
         SelectedRoom = Rooms.FirstOrDefault(candidate => candidate.Id == room.Id) ?? room;
         StatusMessage = $"Joined {room.Name}.";
     }

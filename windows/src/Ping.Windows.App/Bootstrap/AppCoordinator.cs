@@ -107,6 +107,10 @@ public sealed class AppCoordinator : IDisposable
         this.tray = tray ?? new TrayIconController(ExecuteTrayCommand);
         mainWindow.QuickSendToggleChanged += HandleQuickSendToggleChanged;
         mainWindow.BlockedRetryRequested += HandleBlockedRetryRequested;
+        mainWindow.OpenRoomsRequested += HandleOpenRoomsRequested;
+        mainWindow.OpenHistoryRequested += HandleOpenHistoryRequested;
+        mainWindow.NewPingRequested += HandleNewPingRequested;
+        mainWindow.OpenSettingsRequested += HandleOpenSettingsRequested;
     }
 
     public void Start()
@@ -200,6 +204,11 @@ public sealed class AppCoordinator : IDisposable
 
         hotkeys.HotkeyPressed -= HandleHotkeyPressed;
         mainWindow.QuickSendToggleChanged -= HandleQuickSendToggleChanged;
+        mainWindow.BlockedRetryRequested -= HandleBlockedRetryRequested;
+        mainWindow.OpenRoomsRequested -= HandleOpenRoomsRequested;
+        mainWindow.OpenHistoryRequested -= HandleOpenHistoryRequested;
+        mainWindow.NewPingRequested -= HandleNewPingRequested;
+        mainWindow.OpenSettingsRequested -= HandleOpenSettingsRequested;
         StopIncomingPolling();
         StopIncomingChatPolling();
         notificationController.Dispose();
@@ -303,7 +312,12 @@ public sealed class AppCoordinator : IDisposable
             quickSendSettings.Preferences.IsEnabled,
             defaultRoom?.Name ?? "No sendable default room");
         mainWindow.ShowShell();
-        OpenSettingsWindow();
+
+        // Keep Settings inside the stable main shell for now. The separate WinUI
+        // SettingsWindow has caused Microsoft.UI.Xaml.dll crashes in packaged
+        // builds on user machines, so opening it from the primary Settings button
+        // is intentionally disabled until that window is rebuilt and covered by
+        // a packaged UI smoke test.
     }
 
     private void OpenRoomManagerWindow()
@@ -315,18 +329,26 @@ public sealed class AppCoordinator : IDisposable
             return;
         }
 
-        roomManagerWindow = new RoomManagerWindow(new RoomManagerViewModel(
+        var viewModel = new RoomManagerViewModel(
             roomService,
             invitationService,
             CurrentNickname,
             userService: userService,
-            currentUidProvider: () => currentUid));
+            currentUidProvider: () => currentUid);
+        viewModel.RoomsChanged += HandleRoomManagerRoomsChanged;
+        roomManagerWindow = new RoomManagerWindow(viewModel);
         roomManagerWindow.Closed += (_, _) =>
         {
+            viewModel.RoomsChanged -= HandleRoomManagerRoomsChanged;
             roomManagerWindow = null;
             _ = BootstrapAndLoadRoomsAsync();
         };
         roomManagerWindow.Activate();
+    }
+
+    private void HandleRoomManagerRoomsChanged(object? sender, EventArgs args)
+    {
+        _ = BootstrapAndLoadRoomsAsync();
     }
 
     private void OpenHistoryWindow(string? preferredRoomId = null, string? preferredChatId = null)
@@ -427,6 +449,26 @@ public sealed class AppCoordinator : IDisposable
         ShowSettings();
     }
 
+    private void HandleOpenRoomsRequested(object? sender, EventArgs args)
+    {
+        OpenRoomManagerWindow();
+    }
+
+    private void HandleOpenHistoryRequested(object? sender, EventArgs args)
+    {
+        OpenHistoryWindow();
+    }
+
+    private void HandleNewPingRequested(object? sender, EventArgs args)
+    {
+        Execute(HotkeyCommand.FacePing);
+    }
+
+    private void HandleOpenSettingsRequested(object? sender, EventArgs args)
+    {
+        ShowSettings();
+    }
+
     private void ApplyQuickSendSettings(ScreenFaceQuickSendSettings settings)
     {
         quickSendSettings = settings;
@@ -514,8 +556,8 @@ public sealed class AppCoordinator : IDisposable
         {
             ShowBlockedState(
                 "Face Ping",
-                $"{HotkeyLabel(HotkeyCommand.FacePing)} reached Ping. Create or join a room before sending a face ping.",
-                "No sendable room available.");
+                $"{HotkeyLabel(HotkeyCommand.FacePing)} reached Ping, but there is no room with another member yet. Invite someone, accept an invite, or join a room that already has another member before sending.",
+                "No sendable room available. A room needs at least two members before Ping can send.");
             OpenRoomManagerWindow();
             return;
         }
@@ -574,8 +616,8 @@ public sealed class AppCoordinator : IDisposable
         {
             ShowBlockedState(
                 "Screen+Face Ping",
-                $"{HotkeyLabel(HotkeyCommand.ScreenFacePing)} reached Ping. Create or join a room before sending a screen+face ping.",
-                "No sendable room available.");
+                $"{HotkeyLabel(HotkeyCommand.ScreenFacePing)} reached Ping, but there is no room with another member yet. Invite someone, accept an invite, or join a room that already has another member before sending.",
+                "No sendable room available. A room needs at least two members before Ping can send.");
             OpenRoomManagerWindow();
             return;
         }
