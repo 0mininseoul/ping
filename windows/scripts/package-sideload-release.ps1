@@ -72,7 +72,7 @@ function Assert-SignedPackage([string]$PackagePath, [string]$ExpectedCertificate
 function Copy-DependencyPackages([string]$ArchitectureLabel, [string]$TargetRoot) {
     $sourceRoot = Join-Path $DistRoot "Dependencies\$ArchitectureLabel"
     if (-not (Test-Path -LiteralPath $sourceRoot)) {
-        throw "Missing Windows framework dependencies for $ArchitectureLabel: $sourceRoot"
+        throw "Missing Windows framework dependencies for ${ArchitectureLabel}: $sourceRoot"
     }
 
     $dependencyPackages = Get-ChildItem -LiteralPath $sourceRoot -File |

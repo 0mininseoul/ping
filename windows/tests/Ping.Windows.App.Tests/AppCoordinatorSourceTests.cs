@@ -794,6 +794,8 @@ public sealed class AppCoordinatorSourceTests
         Assert.Contains("Falling back to Microsoft.WindowsAppSDK.Runtime NuGet redist payload", buildRelease, StringComparison.Ordinal);
         Assert.Contains("Refusing to build a distributable", buildRelease, StringComparison.Ordinal);
         Assert.Contains("Copy-DependencyPackages", sideload, StringComparison.Ordinal);
+        Assert.Contains("Missing Windows framework dependencies for ${ArchitectureLabel}: $sourceRoot", sideload, StringComparison.Ordinal);
+        Assert.DoesNotContain("$ArchitectureLabel: $sourceRoot", sideload, StringComparison.Ordinal);
         Assert.Contains("dependencies-x64.txt", buildInstaller, StringComparison.Ordinal);
         Assert.Contains("dependencies-arm64.txt", buildInstaller, StringComparison.Ordinal);
         Assert.Contains("uninstall-ping-windows.ps1", sideload, StringComparison.Ordinal);
