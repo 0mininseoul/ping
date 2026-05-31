@@ -790,6 +790,8 @@ public sealed class AppCoordinatorSourceTests
         Assert.Contains("Copy-FrameworkDependencies", buildRelease, StringComparison.Ordinal);
         Assert.Contains("WindowsAppRuntime", buildRelease, StringComparison.Ordinal);
         Assert.Contains("Microsoft.WindowsAppSDK.Runtime", buildRelease, StringComparison.Ordinal);
+        Assert.Contains("GetElementsByTagName(\"PackageReference\")", buildRelease, StringComparison.Ordinal);
+        Assert.DoesNotContain("$project.Project.ItemGroup.PackageReference", buildRelease, StringComparison.Ordinal);
         Assert.Contains("Falling back to Microsoft.WindowsAppSDK.Runtime NuGet redist payload", buildRelease, StringComparison.Ordinal);
         Assert.Contains("Refusing to build a distributable", buildRelease, StringComparison.Ordinal);
         Assert.Contains("Copy-DependencyPackages", sideload, StringComparison.Ordinal);
