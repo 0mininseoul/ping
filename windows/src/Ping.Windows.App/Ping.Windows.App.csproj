@@ -51,7 +51,10 @@
   </ItemGroup>
   <Target Name="CopyNativeCaptureDllToOutput" AfterTargets="Build">
     <PropertyGroup>
-      <NativeCaptureDllPath>$(MSBuildThisFileDirectory)..\Ping.Windows.NativeCapture\bin\$(Platform)\$(Configuration)\$(TargetFramework)\Ping.Windows.NativeCapture.dll</NativeCaptureDllPath>
+      <NativeCaptureDllBasePath>$(MSBuildThisFileDirectory)..\Ping.Windows.NativeCapture\bin\$(Platform)\$(Configuration)\$(TargetFramework)</NativeCaptureDllBasePath>
+      <NativeCaptureDllPath>$(NativeCaptureDllBasePath)\Ping.Windows.NativeCapture.dll</NativeCaptureDllPath>
+      <NativeCaptureDllRidPath Condition="'$(RuntimeIdentifier)' != ''">$(NativeCaptureDllBasePath)\$(RuntimeIdentifier)\Ping.Windows.NativeCapture.dll</NativeCaptureDllRidPath>
+      <NativeCaptureDllPath Condition="'$(RuntimeIdentifier)' != '' and Exists('$(NativeCaptureDllRidPath)')">$(NativeCaptureDllRidPath)</NativeCaptureDllPath>
     </PropertyGroup>
     <Error
       Condition="!Exists('$(NativeCaptureDllPath)')"

@@ -747,7 +747,9 @@ public sealed class AppCoordinatorSourceTests
         Assert.Contains("AddNativeCaptureDllToAppxPackage", project, StringComparison.Ordinal);
         Assert.Contains("BeforeTargets=\"_ComputeAppxPackagePayload\"", project, StringComparison.Ordinal);
         Assert.Contains("AppxPackagePayload", project, StringComparison.Ordinal);
-        Assert.Contains(@"..\Ping.Windows.NativeCapture\bin\$(Platform)\$(Configuration)\$(TargetFramework)", project, StringComparison.Ordinal);
+        Assert.Contains("NativeCaptureDllBasePath", project, StringComparison.Ordinal);
+        Assert.Contains("NativeCaptureDllRidPath", project, StringComparison.Ordinal);
+        Assert.Contains("$(RuntimeIdentifier)", project, StringComparison.Ordinal);
         Assert.Contains("Ping.Windows.NativeCapture.dll", project, StringComparison.Ordinal);
     }
 
