@@ -254,7 +254,7 @@ public sealed class AppCoordinator : IDisposable
         switch (command)
         {
             case TrayCommand.OpenPing:
-                OpenHistoryWindow();
+                ShowHomeShell();
                 break;
             case TrayCommand.NewFacePing:
                 Execute(HotkeyCommand.FacePing);
@@ -281,6 +281,19 @@ public sealed class AppCoordinator : IDisposable
     private void HandleHotkeyPressed(object? sender, HotkeyCommand command)
     {
         Execute(command);
+    }
+
+    private void ShowHomeShell()
+    {
+        mainWindow.ShellTitle.Text = "Ping";
+        mainWindow.StateBadge.Text = "Ready";
+        mainWindow.StateTitle.Text = "Ping is running";
+        mainWindow.StateDetail.Text = "Close this window to keep Ping in the tray. Use the tray menu or hotkeys to send a ping.";
+        mainWindow.StateBorder.BorderBrush = mainWindow.IdleBorderBrush;
+        mainWindow.HistoryPanel.Visibility = Visibility.Visible;
+        mainWindow.BlockedPanel.Visibility = Visibility.Collapsed;
+        mainWindow.SettingsPanel.Visibility = Visibility.Collapsed;
+        mainWindow.ShowShell();
     }
 
     private void ShowHistory(string detail)
