@@ -570,12 +570,6 @@ public sealed class AppCoordinator : IDisposable
 
         var sendableRooms = await SendableRoomsForCaptureAsync(uid);
 
-        if (faceMirrorWindow is not null)
-        {
-            faceMirrorWindow.Activate();
-            return;
-        }
-
         // Match macOS behavior: the capture mirror should open immediately and
         // surface camera/microphone problems inside the mirror instead of doing
         // a blocking MediaCapture preflight first. On Windows, MediaCapture

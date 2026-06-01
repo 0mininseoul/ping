@@ -328,14 +328,14 @@ public sealed class FaceMirrorViewModelTests
             });
 
         Assert.True(model.SelectTargetOption(model.TargetOptions[2]));
-        Assert.Equal("Main", model.PartnerLabel);
+        Assert.Equal("Design", model.PartnerLabel);
         Assert.False(model.IsAllTargetsSelected);
-        Assert.True(model.SelectTargetOption(model.TargetOptions[2]));
+        Assert.False(model.SelectTargetOption(model.TargetOptions[2]));
+        Assert.Equal("Design", model.PartnerLabel);
+        Assert.False(model.IsAllTargetsSelected);
+        Assert.True(model.SelectTargetOption(model.TargetOptions[0]));
         Assert.Equal("All rooms (2)", model.PartnerLabel);
         Assert.True(model.IsAllTargetsSelected);
-        Assert.True(model.SelectTargetOption(model.TargetOptions[0]));
-        Assert.Equal("No partner", model.PartnerLabel);
-        Assert.False(model.IsAllTargetsSelected);
     }
 
     private static FaceMirrorContext FaceMirrorContextFor(bool saveSentCopy) =>

@@ -153,40 +153,5 @@ internal sealed class MirrorTargetSelector
     }
 
     public bool SelectOption(MirrorTargetOption option) =>
-        option.IsAll ? ToggleAll() : ToggleIndex(option.Index);
-
-    private bool ToggleAll()
-    {
-        if (rooms.Count <= 1)
-        {
-            return false;
-        }
-
-        if (IsAllSelected)
-        {
-            selectedIndexes.Clear();
-        }
-        else
-        {
-            selectedIndexes.Clear();
-            selectedIndexes.UnionWith(Enumerable.Range(0, rooms.Count));
-        }
-
-        return true;
-    }
-
-    private bool ToggleIndex(int index)
-    {
-        if (index < 0 || index >= rooms.Count)
-        {
-            return false;
-        }
-
-        if (!selectedIndexes.Add(index))
-        {
-            selectedIndexes.Remove(index);
-        }
-
-        return true;
-    }
+        option.IsAll ? SelectAll() : SelectIndex(option.Index);
 }

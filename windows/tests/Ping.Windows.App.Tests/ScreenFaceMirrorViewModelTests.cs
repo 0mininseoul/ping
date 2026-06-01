@@ -211,7 +211,9 @@ public sealed class ScreenFaceMirrorViewModelTests
             });
 
         Assert.True(model.SelectTargetOption(model.TargetOptions[2]));
-        Assert.Equal("Main", model.PartnerLabel);
+        Assert.Equal("Design", model.PartnerLabel);
+        Assert.False(model.SelectTargetOption(model.TargetOptions[2]));
+        Assert.Equal("Design", model.PartnerLabel);
     }
 
     [Fact]
