@@ -928,6 +928,7 @@ public sealed class AppCoordinator : IDisposable
     private async Task HandleIncomingMessageAsync(VideoMessage message, CancellationToken cancellationToken)
     {
         var notificationResult = notificationController.ShowIncoming(message);
+        await RefreshOpenHistoryRoomAsync(message.RoomId, cancellationToken);
         try
         {
             await OpenIncomingPlaybackAsync(message, cancellationToken);
@@ -954,13 +955,31 @@ public sealed class AppCoordinator : IDisposable
 
     private Task HandleIncomingChatAsync(IncomingChatNotification notification, CancellationToken cancellationToken)
     {
-        _ = cancellationToken;
+        _ = RefreshOpenHistoryRoomAsync(notification.Message.RoomId, cancellationToken);
         if (notificationController.ShowIncomingChat(notification) == NotificationShowResult.Unavailable)
         {
             throw new InvalidOperationException("Incoming chat notification is unavailable.");
         }
 
         return Task.CompletedTask;
+    }
+
+    private Task RefreshOpenHistoryRoomAsync(string? roomId, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(roomId) || historyWindow is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        return RunOnUiThreadAsync(() =>
+        {
+            if (historyWindow is not { } window || !window.IsViewingRoom(roomId))
+            {
+                return;
+            }
+
+            _ = window.RefreshNowAsync(cancellationToken);
+        });
     }
 
     private async Task OpenMessageFromNotificationAsync(string messageId, CancellationToken cancellationToken)

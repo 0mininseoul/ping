@@ -244,6 +244,33 @@ public sealed class AppCoordinatorSourceTests
     }
 
     [Fact]
+    public void IncomingMessagesRefreshVisibleHistoryRoomImmediately()
+    {
+        var root = RepoRoot();
+        var coordinator = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Bootstrap",
+            "AppCoordinator.cs"));
+        var historyWindow = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "History",
+            "HistoryWindow.xaml.cs"));
+
+        Assert.Contains("public async Task RefreshNowAsync(CancellationToken cancellationToken = default)", historyWindow, StringComparison.Ordinal);
+        Assert.Contains("public bool IsViewingRoom(string roomId)", historyWindow, StringComparison.Ordinal);
+        Assert.Contains("await RefreshOpenHistoryRoomAsync(message.RoomId, cancellationToken);", coordinator, StringComparison.Ordinal);
+        Assert.Contains("_ = RefreshOpenHistoryRoomAsync(notification.Message.RoomId, cancellationToken);", coordinator, StringComparison.Ordinal);
+        Assert.Contains("!window.IsViewingRoom(roomId)", coordinator, StringComparison.Ordinal);
+        Assert.Contains("window.RefreshNowAsync(cancellationToken)", coordinator, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void HistoryComposerSupportsEnterSendAndShiftEnterNewline()
     {
         var root = RepoRoot();
