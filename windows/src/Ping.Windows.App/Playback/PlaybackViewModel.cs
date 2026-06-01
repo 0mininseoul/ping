@@ -299,7 +299,7 @@ public sealed partial class PlaybackWindow : Window
             return new global::Windows.Graphics.SizeInt32(200, 200);
         }
 
-        const int width = 420;
+        const int width = 480;
         var height = Math.Max(120, (int)Math.Round(width / viewModel.AspectRatio));
         return new global::Windows.Graphics.SizeInt32(width, height);
     }

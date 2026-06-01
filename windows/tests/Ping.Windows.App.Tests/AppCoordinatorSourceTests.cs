@@ -1153,6 +1153,21 @@ public sealed class AppCoordinatorSourceTests
     }
 
     [Fact]
+    public void ScreenFacePlaybackUsesMacOSReferenceLongSide()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Playback",
+            "PlaybackViewModel.cs"));
+
+        Assert.Contains("const int width = 480;", source, StringComparison.Ordinal);
+        Assert.Contains("var height = Math.Max(120, (int)Math.Round(width / viewModel.AspectRatio));", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void AppSourcesQualifyWinRtNamespacesInsidePingWindowsNamespace()
     {
         var root = RepoRoot();
