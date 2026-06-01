@@ -61,15 +61,15 @@ final class PlaybackWindow: NSWindow {
         isReleasedWhenClosed = false
 
         let shape = Self.shape(for: mode)
-        let root = ZStack {
-            PlaybackView(url: videoURL, onFirstPlayEnd: { [weak self] in
+        let root = PlaybackWindowContent(
+            videoURL: videoURL,
+            shape: shape,
+            controllerBox: controllerBox,
+            onFirstPlayEnd: { [weak self] in
                 self?.handleFirstPlayEnd()
-            }, controllerBox: controllerBox)
-            .clipShape(shape)
-
-            shape.stroke(Color.white.opacity(0.30), lineWidth: 1)
-        }
-        .frame(width: size.width, height: size.height)
+            }
+        )
+            .frame(width: size.width, height: size.height)
 
         let host = NSHostingView(rootView: AnyView(root))
         host.frame = NSRect(origin: .zero, size: size)
@@ -198,5 +198,57 @@ final class PlaybackWindow: NSWindow {
                 self?.onDone()
             }
         })
+    }
+}
+
+private struct PlaybackWindowContent: View {
+    let videoURL: URL
+    let shape: AnyShape
+    let controllerBox: PlaybackView.ControllerBox
+    let onFirstPlayEnd: @MainActor @Sendable () -> Void
+
+    @State private var showsControlsHint = false
+
+    var body: some View {
+        ZStack {
+            PlaybackView(
+                url: videoURL,
+                onFirstPlayEnd: {
+                    showsControlsHint = true
+                    onFirstPlayEnd()
+                },
+                controllerBox: controllerBox
+            )
+            .clipShape(shape)
+
+            shape.stroke(Color.white.opacity(0.30), lineWidth: 1)
+
+            if showsControlsHint {
+                VStack {
+                    Spacer()
+                    PlaybackControlsHint()
+                        .padding(.bottom, 14)
+                }
+                .transition(.opacity)
+            }
+        }
+        .animation(.easeOut(duration: 0.18), value: showsControlsHint)
+        .allowsHitTesting(false)
+    }
+}
+
+private struct PlaybackControlsHint: View {
+    var body: some View {
+        Text("↵ 다시 재생 · Esc 닫기")
+            .font(PingFont.caption)
+            .foregroundStyle(.white)
+            .lineLimit(1)
+            .minimumScaleFactor(0.75)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background {
+                Capsule()
+                    .fill(Color.black.opacity(0.62))
+            }
     }
 }
