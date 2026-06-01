@@ -12,6 +12,7 @@
 		05F064F14F190E4EC2CDA275 /* PingWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 9DA8354482E6065AA5CBDD0C /* PingWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		06AFB9CF51890A927220471E /* HistoryViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4768EC8284B544E3649C4507 /* HistoryViewModelTests.swift */; };
 		06BC9DFC1F527E3082A3B29A /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 599B87DE1571A0E649CE5582 /* ContentView.swift */; };
+		09D937C3A5246BE80AB78C1A /* PingMobileOnboardingContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2225B62EC954CFD86429E093 /* PingMobileOnboardingContractTests.swift */; };
 		0C63FD5926C2755B5048FA20 /* RoomCapacityContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 186228D198F99431A3E1EBCE /* RoomCapacityContractTests.swift */; };
 		106539313B2378466650F94D /* PartnerPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A06C0316F0F1AFE5297BE0C /* PartnerPicker.swift */; };
 		13BB58129EF1392D96B3753A /* RoomDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 961E0B236B19718866C9702B /* RoomDetailView.swift */; };
@@ -67,6 +68,7 @@
 		5786E8216FB61CB6DBE1397A /* PlaybackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F48333663676556795B9E01 /* PlaybackView.swift */; };
 		57E6FA3756604468815628BB /* SettingsSceneContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8DEB2830970ABFE4A394A01 /* SettingsSceneContractTests.swift */; };
 		593B51C4CE943EE1FBB2FD87 /* AppInstallLocation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AABBC608A3DBBCE53D71796 /* AppInstallLocation.swift */; };
+		5AA7E9EB021EE17E4D1A1B15 /* DesktopInstallGuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1616675AE7695B824BD066DE /* DesktopInstallGuideView.swift */; };
 		5D89DB1CFC8A93880FABEB80 /* MessageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8EEA4E1E7817FF473236F52 /* MessageService.swift */; };
 		5E8F74FACE824DA1B4D7CEF4 /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5251D41AA9E41DBE6D637EF1 /* QRScannerView.swift */; };
 		5EE98B4867742225FE567CD4 /* PartnerCyclingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F441B1B93C9D79CB77E24D4 /* PartnerCyclingTests.swift */; };
@@ -230,12 +232,14 @@
 		0C732B3F624FC27A02EBFF2D /* DevicePairingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevicePairingView.swift; sourceTree = "<group>"; };
 		0DB8EE7896F96DFAC0EFCA86 /* ScreenCoordinatesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenCoordinatesTests.swift; sourceTree = "<group>"; };
 		120175272D55BF4CE32E1F4C /* PingWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PingWatchApp.swift; sourceTree = "<group>"; };
+		1616675AE7695B824BD066DE /* DesktopInstallGuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesktopInstallGuideView.swift; sourceTree = "<group>"; };
 		178B779BE40BB245CFDED469 /* VideoThumbnailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoThumbnailView.swift; sourceTree = "<group>"; };
 		186228D198F99431A3E1EBCE /* RoomCapacityContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomCapacityContractTests.swift; sourceTree = "<group>"; };
 		18CCBF09517648670FCCB72C /* PlaybackControlsContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackControlsContractTests.swift; sourceTree = "<group>"; };
 		196AE189C92F647078653279 /* CleanupService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleanupService.swift; sourceTree = "<group>"; };
 		199D7CD1E2E710997AE7A749 /* ScreenFaceExpansionOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenFaceExpansionOverlay.swift; sourceTree = "<group>"; };
 		1CAAECC60F6BE44D405DF213 /* StatusMenuBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusMenuBuilder.swift; sourceTree = "<group>"; };
+		2225B62EC954CFD86429E093 /* PingMobileOnboardingContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PingMobileOnboardingContractTests.swift; sourceTree = "<group>"; };
 		2319CC860C1B8D1CEC0E1E4E /* SupabaseDecodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseDecodingTests.swift; sourceTree = "<group>"; };
 		23C125D42D4715B503E6E707 /* MirrorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MirrorView.swift; sourceTree = "<group>"; };
 		242765EC4E5CC70241BB46FB /* InboxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InboxView.swift; sourceTree = "<group>"; };
@@ -448,6 +452,7 @@
 				6AAF79DFB70494C0A9C2E18B /* AppEnvironment.swift */,
 				552333A6E0C0847053D21F1B /* Assets.xcassets */,
 				599B87DE1571A0E649CE5582 /* ContentView.swift */,
+				1616675AE7695B824BD066DE /* DesktopInstallGuideView.swift */,
 				242765EC4E5CC70241BB46FB /* InboxView.swift */,
 				012928FD0CA6F78D08BC8F84 /* Info.plist */,
 				4889748CC37B60C1E533B625 /* PingMobile.entitlements */,
@@ -690,6 +695,7 @@
 				4E1A841BBD8BDD965C164BF8 /* OnboardingInputContractTests.swift */,
 				8F441B1B93C9D79CB77E24D4 /* PartnerCyclingTests.swift */,
 				C68B271420DEF87D935A0913 /* PermissionUXContractTests.swift */,
+				2225B62EC954CFD86429E093 /* PingMobileOnboardingContractTests.swift */,
 				AC481CCD223682FF45732D26 /* PIPCompositorTests.swift */,
 				18CCBF09517648670FCCB72C /* PlaybackControlsContractTests.swift */,
 				DF791350460B22AC63D0CE32 /* PlaybackPrefetchContractTests.swift */,
@@ -1115,6 +1121,7 @@
 				A29C926DA0D7F0AC9D7285CA /* AppDelegate.swift in Sources */,
 				E030B5443F11FB84F2D44E02 /* AppEnvironment.swift in Sources */,
 				06BC9DFC1F527E3082A3B29A /* ContentView.swift in Sources */,
+				5AA7E9EB021EE17E4D1A1B15 /* DesktopInstallGuideView.swift in Sources */,
 				D16003558CADE09FB3893E91 /* InboxView.swift in Sources */,
 				68C7329A0CC241A8C7AC5C7C /* PingMobileApp.swift in Sources */,
 				50C9793FBA90BD1C6A41402B /* PushRegistrar.swift in Sources */,
@@ -1155,6 +1162,7 @@
 				5139C6DCAD42CCBAE2E11258 /* PIPCompositorTests.swift in Sources */,
 				5EE98B4867742225FE567CD4 /* PartnerCyclingTests.swift in Sources */,
 				9187DD9F1F8EDEDD38CF6C4A /* PermissionUXContractTests.swift in Sources */,
+				09D937C3A5246BE80AB78C1A /* PingMobileOnboardingContractTests.swift in Sources */,
 				C37132F0098B315DD40EF93F /* PlaybackControlsContractTests.swift in Sources */,
 				489FD8469EFD7A09256A8F54 /* PlaybackPrefetchContractTests.swift in Sources */,
 				EE1A8480D0A1A17293759871 /* ReactionPersistenceContractTests.swift in Sources */,
