@@ -679,6 +679,7 @@ public sealed class AppCoordinatorSourceTests
         Assert.Contains("PingSetup-v$version.exe", workflow, StringComparison.Ordinal);
         Assert.Contains("ping-windows-web-downloads", workflow, StringComparison.Ordinal);
         Assert.Contains("gh release edit", workflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("$dependencyAssets", workflow, StringComparison.Ordinal);
     }
 
     [Fact]

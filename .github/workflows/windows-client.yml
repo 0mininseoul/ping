@@ -325,10 +325,6 @@ jobs:
           }
           gh release edit $tag --title "Ping Windows v$version" --notes "Zero-cost Windows web installer. PingSetup-v$version.exe imports Ping's self-signed MSIX certificate, downloads the right MSIX package from https://0minping.vercel.app/downloads/windows, installs the app, and launches it. Because it is not publicly code-signed, Windows SmartScreen may show a warning."
 
-          $dependencyAssets = Get-ChildItem -LiteralPath "$releaseDir/Dependencies" -Recurse -File -Include "*.msix", "*.appx" |
-            Sort-Object FullName |
-            ForEach-Object { $_.FullName }
-
           gh release upload $tag `
             $setupExe `
             $releaseZip `
@@ -339,6 +335,5 @@ jobs:
             "$releaseDir/uninstall-ping-windows.ps1" `
             "$releaseDir/dependencies-x64.txt" `
             "$releaseDir/dependencies-arm64.txt" `
-            $dependencyAssets `
             "$releaseDir/SHA256SUMS.txt" `
             --clobber
