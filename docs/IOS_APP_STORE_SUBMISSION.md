@@ -15,6 +15,9 @@ TestFlight에 최신 빌드 **build 12**(버전 0.1.0) 업로드 완료. 아래�
 
 폰 앱은 **Mac과 QR 페어링이 없으면 "Mac과 연결하기" 화면에서 막혀** 아무것도 못 한다.
 이를 방지하기 위해 **(A) 리뷰 전용 데모 경로**를 구현 완료했다.
+- 폰 앱은 Mac/Windows 데스크톱 앱의 companion입니다. 페어링 전 화면은 이 점을 설명하고,
+  `https://0minping.vercel.app` 설치 링크 복사/공유/Safari 열기와 "설치 끝났어요, QR 스캔"을 제공합니다.
+  리뷰어는 하단 "앱 기능 미리보기"로 동반 데스크톱 없이 주요 UI를 볼 수 있습니다.
 - **진입 방법**: unpaired(페어링 전) 화면 하단에 있는 **"앱 기능 미리보기"** 버튼을 누른다.
 - **동작**: pre-seeded anonymous 데모 계정으로 자동 로그인되며, "Ping Demo" 룸과 3개의 샘플 채팅 메시지가 활성화되어 심사위원이 동반 Mac 없이도 companion UI를 체험할 수 있다.
 
@@ -116,6 +119,8 @@ ASC → App Privacy → "Get Started". 아래대로 신고(처리방침과 일�
 - **노트(영문, 붙여넣기용 초안)**:
 ```
 Ping is a companion to our macOS/Windows desktop app. A 3-second video is recorded on the desktop and delivered to the paired iPhone/Apple Watch, where the user views it and replies with dictated text. The iPhone app links to the same anonymous account on the desktop via a QR code (Settings > Devices in the desktop app); there is no email/password sign-up.
+
+The unpaired screen explains that the iPhone app is a companion and provides actions to copy/share/open the desktop install link (https://0minping.vercel.app) in Safari, followed by a QR scan action after desktop installation.
 
 Because the phone is a receiver+reply companion, full functionality requires a paired desktop. To review standalone without a paired desktop, please tap the small button at the very bottom of the pairing screen: "앱 기능 미리보기" (App Preview). This loads a pre-seeded anonymous demo account and opens the main screen containing a "Ping Demo" room with sample messages, allowing you to explore the companion UI and chat threads directly.
 

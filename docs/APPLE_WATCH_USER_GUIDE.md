@@ -42,7 +42,8 @@
 - 두 사람 모두 iPhone에 TestFlight로 설치, **Apple Watch 페어링**(워치 앱 자동 설치).
 
 ### 7. 페어링 (앱 안에서)
-- Mac의 Ping → **설정 → 기기 탭**의 QR을, iPhone Ping 앱의 **"Mac QR 스캔"**으로 스캔 → "연결됨" 표시 확인.
+- iPhone Ping 첫 화면에서 `Mac 설치 링크 복사` 또는 `Mac으로 공유`를 사용해 Mac에서 `https://0minping.vercel.app`를 연다.
+- Mac Ping 설치 후 설정 → 기기 탭의 QR을 iPhone Ping의 `설치 끝났어요, QR 스캔`으로 스캔한다.
 - (스캔 즉시 이 폰의 APNs 토큰이 등록됩니다.)
 
 ### 8. 최종 테스트
