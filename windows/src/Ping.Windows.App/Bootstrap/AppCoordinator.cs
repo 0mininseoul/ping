@@ -925,15 +925,31 @@ public sealed class AppCoordinator : IDisposable
         incomingChatPollingCancellation = null;
     }
 
-    private Task HandleIncomingMessageAsync(VideoMessage message, CancellationToken cancellationToken)
+    private async Task HandleIncomingMessageAsync(VideoMessage message, CancellationToken cancellationToken)
     {
-        _ = cancellationToken;
-        if (notificationController.ShowIncoming(message) == NotificationShowResult.Unavailable)
+        var notificationResult = notificationController.ShowIncoming(message);
+        try
+        {
+            await OpenIncomingPlaybackAsync(message, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            if (notificationResult == NotificationShowResult.Unavailable)
+            {
+                throw new InvalidOperationException("Incoming notification and playback are unavailable.", ex);
+            }
+        }
+
+        if (notificationResult == NotificationShowResult.Unavailable)
         {
             throw new InvalidOperationException("Incoming notification is unavailable.");
         }
+    }
 
-        return Task.CompletedTask;
+    private async Task OpenIncomingPlaybackAsync(VideoMessage message, CancellationToken cancellationToken)
+    {
+        var localVideoPath = await DownloadVideoForPlaybackAsync(message, cancellationToken);
+        await RunOnUiThreadAsync(() => ShowPlayback(message, localVideoPath));
     }
 
     private Task HandleIncomingChatAsync(IncomingChatNotification notification, CancellationToken cancellationToken)
