@@ -168,6 +168,58 @@ public sealed class AppCoordinatorSourceTests
     }
 
     [Fact]
+    public void TrayOpenPingRestoresMainShellInsteadOfBypassingToHistoryWindow()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Bootstrap",
+            "AppCoordinator.cs"));
+
+        var switchStart = source.IndexOf("private void ExecuteTrayCommand", StringComparison.Ordinal);
+        Assert.True(switchStart >= 0);
+        var nextMethodStart = source.IndexOf("private void HandleHotkeyPressed", switchStart, StringComparison.Ordinal);
+        Assert.True(nextMethodStart > switchStart);
+        var executeTrayCommandBody = source[switchStart..nextMethodStart];
+        var openPingStart = executeTrayCommandBody.IndexOf("case TrayCommand.OpenPing:", StringComparison.Ordinal);
+        Assert.True(openPingStart >= 0);
+        var nextCaseStart = executeTrayCommandBody.IndexOf("case TrayCommand.NewFacePing:", openPingStart, StringComparison.Ordinal);
+        Assert.True(nextCaseStart > openPingStart);
+        var openPingCase = executeTrayCommandBody[openPingStart..nextCaseStart];
+
+        Assert.Contains("ShowHomeShell();", openPingCase, StringComparison.Ordinal);
+        Assert.DoesNotContain("OpenHistoryWindow();", openPingCase, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TrayControllerUsesPackagedPingIconAndDoesNotThrowFromMessageCallback()
+    {
+        var root = RepoRoot();
+        var traySource = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Tray",
+            "TrayIconController.cs"));
+        var project = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Ping.Windows.App.csproj"));
+
+        Assert.Contains("<ApplicationIcon>Assets\\Ping.ico</ApplicationIcon>", project, StringComparison.Ordinal);
+        Assert.Contains("LoadImage", traySource, StringComparison.Ordinal);
+        Assert.Contains("Assets", traySource, StringComparison.Ordinal);
+        Assert.DoesNotContain("LoadIcon(IntPtr.Zero, new IntPtr(32512))", traySource, StringComparison.Ordinal);
+        Assert.Contains("catch (Exception exception)", traySource, StringComparison.Ordinal);
+        Assert.Contains("PostMessage(hwnd, WmNull", traySource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void HistoryComposerSupportsEnterSendAndShiftEnterNewline()
     {
         var root = RepoRoot();

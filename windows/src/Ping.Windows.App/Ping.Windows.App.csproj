@@ -20,6 +20,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AppxManifest>Package.appxmanifest</AppxManifest>
     <RootNamespace>Ping.Windows.App</RootNamespace>
+    <ApplicationIcon>Assets\Ping.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.1.3" />
