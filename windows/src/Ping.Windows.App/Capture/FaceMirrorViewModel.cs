@@ -12,6 +12,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
+using Ping.Windows.App.UI;
 using Windows.Graphics;
 using Windows.Media.Core;
 using Windows.Media.Playback;
@@ -739,6 +740,7 @@ public sealed partial class FaceMirrorWindow : Window
     private async void HandleLoaded(object sender, RoutedEventArgs args)
     {
         Root.Focus(FocusState.Programmatic);
+        ApplyRoundedMediaClips();
         UpdatePositionFromWindow();
         if (previewRecorder is null)
         {
@@ -755,6 +757,13 @@ public sealed partial class FaceMirrorWindow : Window
         {
             PreviewPlaceholder.Visibility = Visibility.Visible;
         }
+    }
+
+    private void ApplyRoundedMediaClips()
+    {
+        const double diameter = 200;
+        RoundedCompositionClip.Apply(PreviewElement, diameter, diameter, diameter / 2d);
+        RoundedCompositionClip.Apply(ReviewElement, diameter, diameter, diameter / 2d);
     }
 
     private void UpdatePositionFromWindow()

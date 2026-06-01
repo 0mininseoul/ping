@@ -400,6 +400,47 @@ public sealed class AppCoordinatorSourceTests
     }
 
     [Fact]
+    public void FacePlaybackAndCaptureUseWindowsSafeRoundedCompositionClips()
+    {
+        var root = RepoRoot();
+        var helper = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "UI",
+            "RoundedCompositionClip.cs"));
+        var playback = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Playback",
+            "PlaybackViewModel.cs"));
+        var face = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Capture",
+            "FaceMirrorViewModel.cs"));
+        var screenFace = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Capture",
+            "ScreenFaceMirrorViewModel.cs"));
+
+        Assert.Contains("CreateRoundedRectangleGeometry", helper, StringComparison.Ordinal);
+        Assert.Contains("CreateGeometricClip", helper, StringComparison.Ordinal);
+        Assert.Contains("RoundedCompositionClip.Apply(PlayerSurface, size.Width, size.Height, size.Width / 2d)", playback, StringComparison.Ordinal);
+        Assert.Contains("RoundedCompositionClip.Apply(PreviewElement, diameter, diameter, diameter / 2d)", face, StringComparison.Ordinal);
+        Assert.Contains("RoundedCompositionClip.Apply(ReviewElement, diameter, diameter, diameter / 2d)", face, StringComparison.Ordinal);
+        Assert.Contains("RoundedCompositionClip.Apply(FacePreviewElement, 82, 82, 41)", screenFace, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void MirrorReviewPlaybackRemainsVisibleDuringFailedUpload()
     {
         var root = RepoRoot();
