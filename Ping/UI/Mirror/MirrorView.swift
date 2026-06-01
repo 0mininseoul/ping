@@ -16,7 +16,7 @@ struct MirrorView: View {
 
     @State private var keyMonitor: Any?
     @State private var lastRecordedAspect: Double = 1.0
-    @State private var selectedRoomId: String?
+    @State private var selectedRoomIds = Set<String>()
     @State private var pickerExpanded = false
 
     private var contentSize: CGSize {
@@ -47,8 +47,11 @@ struct MirrorView: View {
         .frame(width: contentSize.width, height: contentSize.height)
         .contentShape(mirrorShape)
         .onAppear {
-            selectedRoomId = appState.defaultRoom?.id
+            reconcileSelectedRooms()
             installKeyMonitor()
+        }
+        .onChange(of: appState.rooms.map(\.id)) { _ in
+            reconcileSelectedRooms()
         }
         .onDisappear {
             if let keyMonitor {
@@ -101,7 +104,7 @@ struct MirrorView: View {
         switch viewModel.state {
         case .idle:
             if camera.isReady {
-                HintCapsuleView(text: "↵ 녹화 시작")
+                HintCapsuleView(text: "↵ 녹화 시작 · Esc 닫기")
                     .padding(.top, 14)
             } else {
                 Text(camera.lastError ?? "카메라 준비 중")
@@ -123,7 +126,7 @@ struct MirrorView: View {
                     .padding(8)
             }
         case .reviewing:
-            HintCapsuleView(text: "↵ 보내기 · ⌫ 다시")
+            HintCapsuleView(text: "↵ 보내기 · ⌫ 다시 · Esc 닫기")
                 .padding(.top, 14)
         case .failed(let message):
             Text(message)
@@ -142,10 +145,10 @@ struct MirrorView: View {
     @ViewBuilder private var bottomOverlay: some View {
         switch viewModel.state {
         case .idle:
-            PartnerPicker(appState: appState, selectedRoomId: $selectedRoomId, isExpanded: $pickerExpanded)
+            PartnerPicker(appState: appState, selectedRoomIds: $selectedRoomIds, isExpanded: $pickerExpanded)
                 .padding(.bottom, 10)
         case .reviewing:
-            PartnerPicker(appState: appState, selectedRoomId: $selectedRoomId, isExpanded: $pickerExpanded)
+            PartnerPicker(appState: appState, selectedRoomIds: $selectedRoomIds, isExpanded: $pickerExpanded)
                 .padding(.bottom, 10)
         case .uploading:
             Text("전송 중...")
@@ -189,19 +192,22 @@ struct MirrorView: View {
                 onClose()
                 return nil
             case 48: // Tab
-                if let next = appState.cycleToNextPartner(currentRoomId: selectedRoomId) {
-                    selectedRoomId = next.id
+                if let next = appState.cycleToNextPartner(currentRoomId: singleSelectedRoomId),
+                   let id = next.id {
+                    selectedRoomIds = [id]
                     appState.sendMode = .singlePartner
                 }
                 return nil
             case 18, 19, 20, 21, 23, 22, 26, 28, 25:
                 if let index = Self.numericKeyIndex(for: event.keyCode),
-                   let room = appState.selectPartner(at: index) {
-                    selectedRoomId = room.id
+                   let room = appState.selectPartner(at: index),
+                   let id = room.id {
+                    selectedRoomIds = [id]
                     appState.sendMode = .singlePartner
                 }
                 return nil
             case 29, 0:
+                selectedRoomIds = Set(activeRooms.compactMap(\.id))
                 appState.sendMode = .allPartners
                 return nil
             default:
@@ -296,28 +302,17 @@ struct MirrorView: View {
 
     @discardableResult
     private func targetsResolvingFailed() -> Bool {
-        switch appState.sendMode {
-        case .singlePartner:
-            if currentRoom() == nil {
-                viewModel.state = .failed("파트너 없음")
-                return true
-            }
-        case .allPartners:
-            let targets = appState.rooms.filter { $0.memberUids.count >= RoomLimits.minSendableMembers }
-            if targets.isEmpty {
-                viewModel.state = .failed("파트너 없음")
-                return true
-            }
+        if currentTargets().isEmpty {
+            viewModel.state = .failed("파트너 없음")
+            return true
         }
         return false
     }
 
     private func currentTargets() -> [Room] {
-        switch appState.sendMode {
-        case .singlePartner:
-            return currentRoom().map { [$0] } ?? []
-        case .allPartners:
-            return appState.rooms.filter { $0.memberUids.count >= RoomLimits.minSendableMembers }
+        activeRooms.filter { room in
+            guard let id = room.id else { return false }
+            return selectedRoomIds.contains(id)
         }
     }
 
@@ -341,15 +336,46 @@ struct MirrorView: View {
         }
     }
 
-    private func currentRoom() -> Room? {
-        guard let selectedRoomId else { return appState.defaultRoom }
-        return appState.rooms.first(where: { $0.id == selectedRoomId }) ?? appState.defaultRoom
+    private var activeRooms: [Room] {
+        appState.rooms.filter { room in
+            room.id != nil && room.memberUids.count >= RoomLimits.minSendableMembers
+        }
+    }
+
+    private var singleSelectedRoomId: String? {
+        selectedRoomIds.count == 1 ? selectedRoomIds.first : nil
+    }
+
+    private func reconcileSelectedRooms() {
+        let activeIds = Set(activeRooms.compactMap(\.id))
+        selectedRoomIds.formIntersection(activeIds)
+
+        if selectedRoomIds.isEmpty,
+           let defaultRoomId = appState.defaultRoom?.id,
+           activeIds.contains(defaultRoomId) {
+            selectedRoomIds = [defaultRoomId]
+        }
+
+        updateSendMode()
+    }
+
+    private func updateSendMode() {
+        let activeIds = Set(activeRooms.compactMap(\.id))
+        let selectedCount = selectedRoomIds.intersection(activeIds).count
+
+        if selectedCount >= 2 && selectedCount == activeIds.count {
+            appState.sendMode = .allPartners
+        } else if selectedCount >= 2 {
+            appState.sendMode = .selectedRooms
+        } else {
+            appState.sendMode = .singlePartner
+        }
     }
 
     private var showsRainbowBorder: Bool {
         switch viewModel.state {
         case .idle, .reviewing:
-            return appState.sendMode == .allPartners
+            return currentTargets().count > 1
         case .uploading:
             return true
         case .recording, .failed:

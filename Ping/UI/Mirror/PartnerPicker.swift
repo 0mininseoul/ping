@@ -2,7 +2,7 @@ import SwiftUI
 
 struct PartnerPicker: View {
     @ObservedObject var appState: AppState
-    @Binding var selectedRoomId: String?
+    @Binding var selectedRoomIds: Set<String>
     @Binding var isExpanded: Bool
 
     var body: some View {
@@ -20,16 +20,7 @@ struct PartnerPicker: View {
         Button {
             isExpanded.toggle()
         } label: {
-            switch appState.sendMode {
-            case .singlePartner:
-                if let room = currentRoom() {
-                    GlassChip("👤 \(partnerNickname(in: room))", isHover: isExpanded)
-                } else {
-                    GlassChip("파트너 없음", isHover: isExpanded)
-                }
-            case .allPartners:
-                GlassChip("🌐 모두에게 (\(activeRooms.count))", isHover: isExpanded)
-            }
+            GlassChip(chipLabel, isHover: isExpanded)
         }
         .buttonStyle(.plain)
     }
@@ -37,25 +28,25 @@ struct PartnerPicker: View {
     @ViewBuilder private var dropdown: some View {
         VStack(spacing: 4) {
             if activeRooms.count >= 2 {
-                optionRow(label: "🌐 모두에게", selected: appState.sendMode == .allPartners) {
-                    appState.sendMode = .allPartners
-                    isExpanded = false
+                optionRow(
+                    label: "🌐 모두에게",
+                    selected: selectedRoomIds.intersection(activeRoomIds).count == activeRoomIds.count
+                ) {
+                    setAllRoomsSelected(selectedRoomIds.intersection(activeRoomIds).count != activeRoomIds.count)
                 }
                 Divider().opacity(0.3)
             }
             ForEach(Array(activeRooms.enumerated()), id: \.element.id) { index, room in
                 optionRow(
                     label: "\(index + 1). \(partnerNickname(in: room))",
-                    selected: appState.sendMode == .singlePartner && selectedRoomId == room.id
+                    selected: isSelected(room)
                 ) {
-                    selectedRoomId = room.id
-                    appState.sendMode = .singlePartner
-                    isExpanded = false
+                    setRoom(room, selected: !isSelected(room))
                 }
             }
         }
         .padding(8)
-        .frame(maxWidth: 180)
+        .frame(width: 220)
         .background {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .fill(PingDesign.Surface.panelFill.opacity(0.94))
@@ -69,16 +60,16 @@ struct PartnerPicker: View {
 
     private func optionRow(label: String, selected: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            HStack {
+            HStack(spacing: 8) {
+                Image(systemName: selected ? "checkmark.square.fill" : "square")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(selected ? Color.white : Color.white.opacity(0.70))
+                    .frame(width: 14)
                 Text(label)
                     .font(PingFont.label)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
                 Spacer()
-                if selected {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 10, weight: .semibold))
-                }
             }
             .padding(.horizontal, 6)
             .padding(.vertical, 4)
@@ -87,12 +78,69 @@ struct PartnerPicker: View {
     }
 
     private var activeRooms: [Room] {
-        appState.rooms.filter { $0.memberUids.count >= RoomLimits.minSendableMembers }
+        appState.rooms.filter { room in
+            room.id != nil && room.memberUids.count >= RoomLimits.minSendableMembers
+        }
     }
 
-    private func currentRoom() -> Room? {
-        guard let selectedRoomId else { return appState.defaultRoom }
-        return appState.rooms.first(where: { $0.id == selectedRoomId }) ?? appState.defaultRoom
+    private var activeRoomIds: Set<String> {
+        Set(activeRooms.compactMap(\.id))
+    }
+
+    private var selectedRooms: [Room] {
+        activeRooms.filter { room in
+            guard let id = room.id else { return false }
+            return selectedRoomIds.contains(id)
+        }
+    }
+
+    private var chipLabel: String {
+        let selected = selectedRooms
+        guard !selected.isEmpty else { return "파트너 없음" }
+
+        if selected.count == 1, let room = selected.first {
+            return "👤 \(partnerNickname(in: room))"
+        }
+
+        if selected.count == activeRooms.count {
+            return "🌐 모두에게 (\(selected.count))"
+        }
+
+        return "👥 \(selected.count)개 룸"
+    }
+
+    private func isSelected(_ room: Room) -> Bool {
+        guard let id = room.id else { return false }
+        return selectedRoomIds.contains(id)
+    }
+
+    private func setRoom(_ room: Room, selected: Bool) {
+        guard let id = room.id else { return }
+
+        if selected {
+            selectedRoomIds.insert(id)
+        } else {
+            selectedRoomIds.remove(id)
+        }
+
+        updateSendMode()
+    }
+
+    private func setAllRoomsSelected(_ selected: Bool) {
+        selectedRoomIds = selected ? activeRoomIds : []
+        updateSendMode()
+    }
+
+    private func updateSendMode() {
+        let selectedCount = selectedRoomIds.intersection(activeRoomIds).count
+
+        if selectedCount >= 2 && selectedCount == activeRoomIds.count {
+            appState.sendMode = .allPartners
+        } else if selectedCount >= 2 {
+            appState.sendMode = .selectedRooms
+        } else {
+            appState.sendMode = .singlePartner
+        }
     }
 
     private func partnerNickname(in room: Room) -> String {

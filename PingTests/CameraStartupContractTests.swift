@@ -28,7 +28,7 @@ final class CameraStartupContractTests: XCTestCase {
         let recording = try sourceSlice(
             in: source,
             from: "private func startRecording() async",
-            to: "private func currentRoom()"
+            to: "@discardableResult"
         )
 
         XCTAssertTrue(recording.contains("await camera.prepareAudioForRecording()"))

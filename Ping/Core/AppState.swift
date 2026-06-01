@@ -17,6 +17,7 @@ final class AppState: ObservableObject {
 
     enum SendMode: Equatable {
         case singlePartner
+        case selectedRooms
         case allPartners
     }
 

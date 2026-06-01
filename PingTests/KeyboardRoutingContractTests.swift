@@ -65,6 +65,36 @@ final class KeyboardRoutingContractTests: XCTestCase {
         XCTAssertTrue(monitor.contains("case 29, 0"))
     }
 
+    func testMirrorHintsIncludeEscapeCloseGuidance() throws {
+        let source = try readSourceFile("Ping/UI/Mirror/MirrorView.swift")
+
+        XCTAssertTrue(source.contains("↵ 녹화 시작 · Esc 닫기"))
+        XCTAssertTrue(source.contains("↵ 보내기 · ⌫ 다시 · Esc 닫기"))
+    }
+
+    func testMirrorSendsCheckedRoomTargets() throws {
+        let source = try readSourceFile("Ping/UI/Mirror/MirrorView.swift")
+        let targets = try sourceSlice(
+            in: source,
+            from: "private func currentTargets() -> [Room]",
+            to: "private func uploadReviewedClip"
+        )
+
+        XCTAssertTrue(source.contains("@State private var selectedRoomIds = Set<String>()"))
+        XCTAssertTrue(source.contains("selectedRoomIds = Set(activeRooms.compactMap(\\.id))"))
+        XCTAssertTrue(targets.contains("selectedRoomIds.contains(id)"))
+    }
+
+    func testPartnerPickerUsesCheckboxesForMultiRoomSelection() throws {
+        let source = try readSourceFile("Ping/UI/Mirror/PartnerPicker.swift")
+
+        XCTAssertTrue(source.contains("@Binding var selectedRoomIds: Set<String>"))
+        XCTAssertTrue(source.contains("checkmark.square.fill"))
+        XCTAssertTrue(source.contains("setRoom(room, selected: !isSelected(room))"))
+        XCTAssertTrue(source.contains("return \"👥 \\(selected.count)개 룸\""))
+        XCTAssertFalse(source.contains("isExpanded = false"))
+    }
+
     private func readSourceFile(_ relativePath: String) throws -> String {
         let fileName = URL(fileURLWithPath: relativePath).lastPathComponent
         let fileURL = try XCTUnwrap(Bundle(for: Self.self).resourceURL?.appendingPathComponent(fileName))
