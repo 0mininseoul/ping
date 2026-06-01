@@ -276,7 +276,7 @@ public sealed class BackendContractTests
 
             Assert.Equal(HttpMethod.Get, request.Method);
             Assert.Equal(
-                "https://example.supabase.co/storage/v1/object/ping-media/sender-uid/chat-images/message-id.png",
+                "https://example.supabase.co/storage/v1/object/authenticated/ping-media/sender-uid/chat-images/message-id.png",
                 request.RequestUri?.ToString());
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
