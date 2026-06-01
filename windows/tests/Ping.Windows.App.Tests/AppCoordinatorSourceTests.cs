@@ -1188,8 +1188,7 @@ public sealed class AppCoordinatorSourceTests
             "PlaybackViewModel.cs"));
 
         Assert.Contains("new CornerRadius(size.Width / 2d)", source, StringComparison.Ordinal);
-        Assert.Contains("new RectangleGeometry", source, StringComparison.Ordinal);
-        Assert.Contains("new global::Windows.Foundation.Rect", source, StringComparison.Ordinal);
+        Assert.Contains("RoundedCompositionClip.Apply(PlayerSurface, size.Width, size.Height, size.Width / 2d)", source, StringComparison.Ordinal);
         Assert.DoesNotContain("new EllipseGeometry", source, StringComparison.Ordinal);
     }
 
