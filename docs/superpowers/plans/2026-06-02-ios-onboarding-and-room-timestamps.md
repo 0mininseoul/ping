@@ -807,6 +807,94 @@ git commit -m "docs(ios): document desktop companion onboarding"
 
 ---
 
+### Task 7: Push and Upload TestFlight Build
+
+**Files:**
+- Modify: `project.yml`
+- Generated: `Ping.xcodeproj/project.pbxproj`
+
+- [ ] **Step 1: Verify current branch is clean**
+
+Run:
+
+```bash
+git status --short
+git branch --show-current
+```
+
+Expected: clean worktree on `ios-onboarding-timestamps`.
+
+- [ ] **Step 2: Increment iOS-family build numbers**
+
+In `project.yml`, increment `CURRENT_PROJECT_VERSION` for all three iOS delivery targets together:
+
+- `PingMobile`
+- `PingPushService`
+- `PingWatch`
+
+If the current value is `12`, change all three to `13`. Do not change the macOS app version/build.
+
+- [ ] **Step 3: Regenerate the Xcode project**
+
+Run:
+
+```bash
+xcodegen generate
+```
+
+Expected: `Ping.xcodeproj/project.pbxproj` reflects only generated project updates, including the build number changes.
+
+- [ ] **Step 4: Build archive for App Store distribution**
+
+Run:
+
+```bash
+xcodebuild -project Ping.xcodeproj -scheme PingMobile -configuration Release \
+  -destination "generic/platform=iOS" \
+  -archivePath build/PingMobile.xcarchive \
+  archive
+```
+
+Expected: `** ARCHIVE SUCCEEDED **`.
+
+- [ ] **Step 5: Export/upload to TestFlight**
+
+Prefer Xcode Organizer or existing App Store Connect API key setup if present. If CLI credentials are configured, use:
+
+```bash
+xcodebuild -exportArchive \
+  -archivePath build/PingMobile.xcarchive \
+  -exportPath build/PingMobile-AppStore \
+  -exportOptionsPlist build/ExportOptions-AppStore.plist
+
+xcrun altool --upload-app \
+  --type ios \
+  --file build/PingMobile-AppStore/PingMobile.ipa \
+  --apiKey "$APP_STORE_CONNECT_API_KEY_ID" \
+  --apiIssuer "$APP_STORE_CONNECT_API_ISSUER_ID"
+```
+
+If API key env vars are not configured, stop with a clear blocker listing the required App Store Connect API key ID, issuer ID, and private key path/location. Do not invent credentials.
+
+- [ ] **Step 6: Commit release build number**
+
+```bash
+git add project.yml Ping.xcodeproj/project.pbxproj
+git commit -m "release(ios): bump TestFlight build"
+```
+
+- [ ] **Step 7: Push branch**
+
+Run:
+
+```bash
+git push -u origin ios-onboarding-timestamps
+```
+
+Expected: branch is pushed successfully.
+
+---
+
 ## Acceptance Criteria
 
 - A first-time iPhone user can tell from the first screen that Ping requires the Mac desktop app.
@@ -815,7 +903,8 @@ git commit -m "docs(ios): document desktop companion onboarding"
 - Notification permission is not requested before the user understands and completes pairing.
 - Mobile room threads reveal per-message timestamps when the user drags left, matching the macOS behavior closely enough for iPhone touch interaction.
 - Video playback, chat send, demo mode, and QR pairing still build and work.
+- The final verified branch is pushed and a new TestFlight build is uploaded, unless App Store Connect credentials are missing and reported as a blocker.
 
 ## Execution Choice
 
-Recommended execution mode: Subagent-Driven for Tasks 1-6, with review after each commit. Inline execution is also reasonable because the code surface is small, but timestamp gesture QA benefits from a focused review pass.
+Recommended execution mode: Subagent-Driven for Tasks 1-7, with review after each commit. Inline execution is also reasonable because the code surface is small, but timestamp gesture QA benefits from a focused review pass.
