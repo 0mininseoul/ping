@@ -100,7 +100,7 @@ Signed packages are required for external distribution. If signing is not config
 
 ### Zero-Cost EXE Sideload Distribution
 
-The recommended no-cost self-hosted channel is the public landing page plus a single `PingSetup-v0.3.29.exe` installer. The EXE bundles `Ping-Windows-Sideload.cer`, installer scripts, the signed x64 and ARM64 MSIX packages, and Windows App Runtime dependency packages. It installs the selected local payload without downloading MSIX files during EXE installation. It avoids paid public code-signing, but Windows SmartScreen can still warn because the outer EXE is not publicly trusted.
+The recommended no-cost self-hosted channel is the public landing page plus a single `PingSetup-v0.3.29.exe` installer. The EXE bundles `Ping-Windows-Sideload.cer` and installer scripts, then downloads the signed x64 or ARM64 MSIX package plus Windows App Runtime dependency packages from `https://0minping.vercel.app/downloads/windows/` during installation. It avoids paid public code-signing, but Windows SmartScreen can still warn because the outer EXE is not publicly trusted.
 
 Maintainer setup on Windows:
 
@@ -112,7 +112,7 @@ gh secret set PING_WINDOWS_CERT_PASSWORD
 
 Only commit `windows\certs\Ping-Windows-Sideload.cer`. Do not commit `.pfx`, `.p12`, base64 payloads, or passwords.
 
-The GitHub Actions workflow imports the PFX secret into `Cert:\CurrentUser\My`, signs both MSIX packages by certificate thumbprint, builds `windows\dist\Ping-Windows-v0.3.29-sideload.zip`, and builds `windows\dist\PingSetup-v0.3.29.exe` with Inno Setup. The workflow uploads a `ping-windows-web-downloads` artifact containing the setup EXE, both MSIX payloads, dependency manifests/packages, and the public certificate so those files can be published under `web/public/downloads/windows/`.
+The GitHub Actions workflow imports the PFX secret into `Cert:\CurrentUser\My`, signs both MSIX packages by certificate thumbprint, builds `windows\dist\Ping-Windows-v0.3.29-sideload.zip`, and builds the small web installer `windows\dist\PingSetup-v0.3.29.exe` with Inno Setup. The workflow uploads a `ping-windows-web-downloads` artifact containing the setup EXE, both MSIX payloads, dependency manifests/packages, and the public certificate so those files can be published under `web/public/downloads/windows/`.
 
 End-user install:
 
@@ -132,7 +132,7 @@ Both installer paths import `Ping-Windows-Sideload.cer` into `Cert:\LocalMachine
 
 Windows does not use Sparkle. v1 chooses MSIX distribution as the update boundary:
 
-- Free direct distribution: public landing-page setup EXE. Users install newer self-contained setup EXEs that embed signed MSIX packages with the same Ping sideload certificate.
+- Free direct distribution: public landing-page setup EXE. Users install a small setup EXE that trusts the Ping sideload certificate and downloads the signed MSIX payload plus dependencies from the public downloads directory.
 - Direct production distribution: App Installer feed or equivalent MSIX update channel with a public-trust signing route.
 - Store distribution: Microsoft Store update channel.
 - Velopack remains a fallback only if MSIX update UX is not sufficient.

@@ -902,10 +902,10 @@ public sealed class AppCoordinatorSourceTests
         Assert.Contains("dependencies-$arch.txt", remoteScript, StringComparison.Ordinal);
         Assert.Contains("[string[]]$dependencyPaths", remoteScript, StringComparison.Ordinal);
         Assert.Contains("-DependencyPath $dependencyPaths", remoteScript, StringComparison.Ordinal);
-        Assert.Contains("dependencies-*.txt", innoScript, StringComparison.Ordinal);
-        Assert.Contains("Dependencies", innoScript, StringComparison.Ordinal);
-        Assert.Contains("Ping-Windows-v*-x64.msix", innoScript, StringComparison.Ordinal);
-        Assert.Contains("Ping-Windows-v*-arm64.msix", innoScript, StringComparison.Ordinal);
+        Assert.Contains("PackageBaseUrl", innoScript, StringComparison.Ordinal);
+        Assert.DoesNotContain("dependencies-*.txt", innoScript, StringComparison.Ordinal);
+        Assert.DoesNotContain("Ping-Windows-v*-x64.msix", innoScript, StringComparison.Ordinal);
+        Assert.DoesNotContain("Ping-Windows-v*-arm64.msix", innoScript, StringComparison.Ordinal);
         Assert.DoesNotContain("CreateDownloadPage", innoScript, StringComparison.Ordinal);
         Assert.DoesNotContain("DownloadPage.Download", innoScript, StringComparison.Ordinal);
         Assert.Contains("DisableDirPage=no", innoScript, StringComparison.Ordinal);

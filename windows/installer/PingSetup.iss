@@ -34,14 +34,10 @@ Name: "startup"; Description: "Windows 부팅 시 자동 시작 등록"; GroupDe
 Name: "launch"; Description: "설치 완료 후 즉시 Ping 실행"; GroupDescription: "추가 옵션:"; Flags: checkedonce
 
 [Files]
-Source: "{#PayloadRoot}\Ping-Windows-v*-x64.msix"; DestDir: "{tmp}"; Flags: deleteafterinstall
-Source: "{#PayloadRoot}\Ping-Windows-v*-arm64.msix"; DestDir: "{tmp}"; Flags: deleteafterinstall
 Source: "{#PayloadRoot}\Ping-Windows-Sideload.cer"; DestDir: "{tmp}"; Flags: deleteafterinstall
 Source: "{#PayloadRoot}\Ping-Windows-Sideload.cer"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#PayloadRoot}\install-ping-windows.ps1"; DestDir: "{tmp}"; Flags: deleteafterinstall
 Source: "{#PayloadRoot}\uninstall-ping-windows.ps1"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#PayloadRoot}\dependencies-*.txt"; DestDir: "{tmp}"; Flags: deleteafterinstall
-Source: "{#PayloadRoot}\Dependencies\*"; DestDir: "{tmp}\Dependencies"; Flags: recursesubdirs createallsubdirs deleteafterinstall
 Source: "app.ico"; DestDir: "{tmp}"; Flags: deleteafterinstall
 Source: "app.ico"; DestDir: "{app}"; Flags: ignoreversion
 
@@ -63,8 +59,8 @@ begin
   Result := 'Ping-Windows-v{#AppVersion}-' + MsixArchitecture + '.msix';
 end;
 
-{ install-ping-windows.ps1에 전달할 인자. 이미 내려받은 로컬 MSIX만 사용하도록
-  PackageBaseUrl은 넘기지 않는다(설치 중 추가 다운로드 없음). }
+{ install-ping-windows.ps1에 전달할 인자. EXE는 작게 유지하고 MSIX/런타임
+  dependency는 공개 다운로드 서버에서 설치 중 내려받는다. }
 function GetInstallerParams: String;
 var
   Params: String;
@@ -73,6 +69,7 @@ begin
     '-Version "{#AppVersion}"' +
     ' -Architecture ' + MsixArchitecture +
     ' -PackageDirectory "' + ExpandConstant('{tmp}') + '"' +
+    ' -PackageBaseUrl "{#PackageBaseUrl}"' +
     ' -CertificatePath "' + ExpandConstant('{tmp}\Ping-Windows-Sideload.cer') + '"' +
     ' -IconPath "' + ExpandConstant('{tmp}\app.ico') + '"';
 
