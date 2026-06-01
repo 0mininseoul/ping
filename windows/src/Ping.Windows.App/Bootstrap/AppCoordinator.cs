@@ -150,19 +150,36 @@ public sealed class AppCoordinator : IDisposable
         switch (command)
         {
             case HotkeyCommand.FacePing:
-                _ = ShowFaceMirrorAsync();
+                _ = RunUiCommandAsync(ShowFaceMirrorAsync, "Face Ping");
                 break;
             case HotkeyCommand.ScreenFacePing:
-                _ = ShowScreenFaceMirrorAsync();
+                _ = RunUiCommandAsync(ShowScreenFaceMirrorAsync, "Screen+Face Ping");
                 break;
             case HotkeyCommand.QuickScreenFacePing:
-                _ = RunQuickScreenFacePingAsync();
+                _ = RunUiCommandAsync(RunQuickScreenFacePingAsync, "Quick Screen+Face Ping");
                 break;
             case HotkeyCommand.History:
                 OpenHistoryWindow();
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(command), command, "Unknown Ping hotkey command.");
+        }
+    }
+
+    private async Task RunUiCommandAsync(Func<Task> action, string title)
+    {
+        try
+        {
+            await action();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Ping {title} command failed: {ex}");
+            ShowBlockedState(
+                title,
+                $"{title} reached Ping, but the command failed before the mirror could open.",
+                ex.Message,
+                canRetry: true);
         }
     }
 
@@ -551,28 +568,13 @@ public sealed class AppCoordinator : IDisposable
             return;
         }
 
-        var sendableRooms = SendableRoomsFor(uid);
-        if (sendableRooms.Length == 0)
-        {
-            ShowBlockedState(
-                "Face Ping",
-                $"{HotkeyLabel(HotkeyCommand.FacePing)} reached Ping, but there is no room with another member yet. Invite someone, accept an invite, or join a room that already has another member before sending.",
-                "No sendable room available. A room needs at least two members before Ping can send.");
-            OpenRoomManagerWindow();
-            return;
-        }
+        var sendableRooms = await SendableRoomsForCaptureAsync(uid);
 
-        if (faceMirrorWindow is not null)
-        {
-            faceMirrorWindow.Activate();
-            return;
-        }
-
-        if (!await EnsureCaptureReadyAsync(CaptureMode.FaceOnly, "Face Ping", HotkeyCommand.FacePing))
-        {
-            return;
-        }
-
+        // Match macOS behavior: the capture mirror should open immediately and
+        // surface camera/microphone problems inside the mirror instead of doing
+        // a blocking MediaCapture preflight first. On Windows, MediaCapture
+        // initialization can hang or wait behind privacy/device prompts before
+        // any UI appears, which makes New face ping look dead.
         if (faceMirrorWindow is not null)
         {
             faceMirrorWindow.Activate();
@@ -583,7 +585,7 @@ public sealed class AppCoordinator : IDisposable
             Rooms: sendableRooms,
             SenderUid: uid,
             SenderNickname: CurrentNickname,
-            PartnerLabel: sendableRooms.Length == 1 ? sendableRooms[0].Name : "All rooms",
+            PartnerLabel: PartnerLabelFor(sendableRooms),
             AllowsLocalSave: quickSendSettings.Preferences.AllowsLocalSave,
             SaveSentCopy: quickSendSettings.Preferences.SaveSentCopy,
             InitialPosition: mirrorPlacementStore.Load(CaptureMode.FaceOnly),
@@ -611,16 +613,7 @@ public sealed class AppCoordinator : IDisposable
             return;
         }
 
-        var sendableRooms = SendableRoomsFor(uid);
-        if (sendableRooms.Length == 0)
-        {
-            ShowBlockedState(
-                "Screen+Face Ping",
-                $"{HotkeyLabel(HotkeyCommand.ScreenFacePing)} reached Ping, but there is no room with another member yet. Invite someone, accept an invite, or join a room that already has another member before sending.",
-                "No sendable room available. A room needs at least two members before Ping can send.");
-            OpenRoomManagerWindow();
-            return;
-        }
+        var sendableRooms = await SendableRoomsForCaptureAsync(uid);
 
         if (screenFaceMirrorWindow is not null)
         {
@@ -628,11 +621,11 @@ public sealed class AppCoordinator : IDisposable
             return;
         }
 
-        if (!await EnsureCaptureReadyAsync(CaptureMode.ScreenFace, "Screen+Face Ping", HotkeyCommand.ScreenFacePing))
-        {
-            return;
-        }
-
+        // Keep screen+face consistent with macOS: show the mirror first, then let
+        // the preview/record path report unavailable camera, microphone, or
+        // screen capture state inside the mirror. Blocking preflight before the
+        // window opens makes the Windows command feel broken when permission or
+        // device checks stall.
         ShowScreenFaceMirror(new ScreenFaceMirrorContext(
             Rooms: sendableRooms,
             SenderUid: uid,
@@ -1111,8 +1104,33 @@ public sealed class AppCoordinator : IDisposable
             .Where(room => room.Id is not null && room.MemberUids.Contains(uid) && room.MemberUids.Count >= 2)
             .ToArray();
 
+    private async Task<Room[]> SendableRoomsForCaptureAsync(string uid)
+    {
+        var sendableRooms = SendableRoomsFor(uid);
+        if (sendableRooms.Length > 0)
+        {
+            return sendableRooms;
+        }
+
+        try
+        {
+            rooms = await roomService.MyRoomsAsync();
+        }
+        catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException or TaskCanceledException)
+        {
+            Debug.WriteLine($"Ping room refresh before capture failed: {ex}");
+        }
+
+        return SendableRoomsFor(uid);
+    }
+
     private static string PartnerLabelFor(IReadOnlyCollection<Room> sendableRooms) =>
-        sendableRooms.Count == 1 ? sendableRooms.First().Name : "All rooms";
+        sendableRooms.Count switch
+        {
+            0 => "No partner",
+            1 => sendableRooms.First().Name,
+            _ => "All rooms"
+        };
 
     private async Task BootstrapAndLoadRoomsAsync()
     {

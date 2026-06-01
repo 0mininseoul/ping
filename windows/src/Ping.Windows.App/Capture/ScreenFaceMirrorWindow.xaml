@@ -6,13 +6,12 @@
     Title="Ping">
     <Grid
         x:Name="Root"
-        Width="390"
-        Height="300"
+        Width="508"
+        Height="298"
         Padding="14"
         Background="Transparent"
         IsTabStop="True"
-        KeyDown="HandleKeyDown"
-        RowSpacing="10">
+        KeyDown="HandleKeyDown">
         <Grid.Resources>
             <ResourceDictionary>
                 <ResourceDictionary.MergedDictionaries>
@@ -22,26 +21,21 @@
             </ResourceDictionary>
         </Grid.Resources>
 
-        <Grid.RowDefinitions>
-            <RowDefinition Height="203" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
-
         <Border
             x:Name="MirrorBorder"
-            Width="360"
-            Height="203"
+            Width="480"
+            Height="270"
             HorizontalAlignment="Center"
+            VerticalAlignment="Center"
             Background="{StaticResource PingSurfaceBrush}"
             BorderBrush="{StaticResource PingBorderIdleBrush}"
             BorderThickness="1"
             CornerRadius="{StaticResource PingCornerRadius}">
-            <Grid>
+            <Grid Clip="{StaticResource PingScreenFaceClip}">
                 <Rectangle
                     Fill="#182024"
-                    RadiusX="14"
-                    RadiusY="14" />
+                    RadiusX="16"
+                    RadiusY="16" />
                 <Image
                     Source="{Binding ScreenPreviewUri}"
                     Stretch="UniformToFill" />
@@ -67,17 +61,37 @@
                         Foreground="{StaticResource PingMutedTextBrush}"
                         Text="Screen+Face" />
                 </StackPanel>
+
+                <Border
+                    x:Name="HintCapsule"
+                    Margin="0,14,0,0"
+                    Padding="10,5"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Top"
+                    Background="{StaticResource PingCapsuleBrush}"
+                    CornerRadius="12"
+                    Opacity="{Binding HintOpacity}">
+                    <TextBlock
+                        MaxWidth="360"
+                        FontSize="11"
+                        Foreground="{StaticResource PingTextBrush}"
+                        Text="{Binding HintText}"
+                        TextAlignment="Center"
+                        TextTrimming="CharacterEllipsis"
+                        TextWrapping="NoWrap" />
+                </Border>
+
                 <Border
                     x:Name="FacePreviewBubble"
-                    Width="74"
-                    Height="74"
-                    Margin="0,0,12,12"
+                    Width="82"
+                    Height="82"
+                    Margin="0,0,14,14"
                     HorizontalAlignment="Right"
                     VerticalAlignment="Bottom"
                     Background="#3324272A"
                     BorderBrush="{StaticResource PingBorderIdleBrush}"
                     BorderThickness="1"
-                    CornerRadius="37">
+                    CornerRadius="41">
                     <Grid>
                         <MediaPlayerElement
                             x:Name="FacePreviewElement"
@@ -92,6 +106,7 @@
                             Text="Camera" />
                     </Grid>
                 </Border>
+
                 <Border
                     Width="34"
                     Height="34"
@@ -111,33 +126,27 @@
                         Foreground="{StaticResource PingTextBrush}"
                         Text="{Binding RecordingCountdownText}" />
                 </Border>
+
+                <Border
+                    x:Name="PartnerChip"
+                    Margin="0,0,0,12"
+                    Padding="12,5"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Bottom"
+                    Background="{StaticResource PingSurfaceBrush}"
+                    BorderBrush="{StaticResource PingBorderIdleBrush}"
+                    BorderThickness="1"
+                    CornerRadius="{StaticResource PingCornerRadius}"
+                    IsTapEnabled="True"
+                    Tapped="PartnerChip_Tapped">
+                    <TextBlock
+                        MaxWidth="260"
+                        FontSize="12"
+                        Foreground="{StaticResource PingTextBrush}"
+                        Text="{Binding PartnerLabel}"
+                        TextTrimming="CharacterEllipsis" />
+                </Border>
             </Grid>
         </Border>
-
-        <Border
-            x:Name="PartnerChip"
-            Grid.Row="1"
-            HorizontalAlignment="Center"
-            Padding="12,5"
-            Background="{StaticResource PingSurfaceBrush}"
-            BorderBrush="{StaticResource PingBorderIdleBrush}"
-            BorderThickness="1"
-            CornerRadius="{StaticResource PingCornerRadius}"
-            IsTapEnabled="True"
-            Tapped="PartnerChip_Tapped">
-            <TextBlock
-                FontSize="12"
-                Foreground="{StaticResource PingTextBrush}"
-                Text="{Binding PartnerLabel}" />
-        </Border>
-
-        <TextBlock
-            Grid.Row="2"
-            HorizontalAlignment="Center"
-            FontSize="12"
-            Foreground="{StaticResource PingMutedTextBrush}"
-            Text="{Binding StatusMessage}"
-            TextAlignment="Center"
-            TextWrapping="WrapWholeWords" />
     </Grid>
 </Window>

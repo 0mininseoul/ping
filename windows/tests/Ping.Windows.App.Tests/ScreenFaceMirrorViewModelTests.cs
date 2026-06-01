@@ -21,7 +21,7 @@ public sealed class ScreenFaceMirrorViewModelTests
                 return Task.CompletedTask;
             });
 
-        Assert.Equal("All rooms", model.PartnerLabel);
+        Assert.Equal("All rooms (2)", model.PartnerLabel);
         Assert.True(model.IsAllTargetsSelected);
         Assert.True(model.SelectNextTarget());
         Assert.Equal("Main", model.PartnerLabel);
@@ -142,6 +142,27 @@ public sealed class ScreenFaceMirrorViewModelTests
     }
 
     [Fact]
+    public async Task Enter_WithNoTargetShowsPartnerGuidanceWithoutRecording()
+    {
+        var engine = new FakeScreenFaceCaptureEngine();
+        var model = new ScreenFaceMirrorViewModel(
+            MultiRoomContext() with
+            {
+                Rooms = [],
+                PartnerLabel = "No partner"
+            },
+            engine,
+            (_, _) => Task.CompletedTask);
+
+        await model.HandleEnterAsync();
+
+        Assert.Equal(MirrorState.Failed, model.State);
+        Assert.Contains("No partner", model.StatusMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, engine.RecordCount);
+        Assert.False(model.IsCloseRequested);
+    }
+
+    [Fact]
     public async Task FailedUpload_DoesNotSaveSentCopyBeforeUploadSucceeds()
     {
         var archive = new LocalArchive(Path.Combine(
@@ -172,11 +193,26 @@ public sealed class ScreenFaceMirrorViewModelTests
         Assert.True(model.HasTargetMenu);
         Assert.Collection(
             model.TargetOptions,
-            option => Assert.True(option.IsAll),
-            option => Assert.Equal("Main", option.Label),
-            option => Assert.Equal("Design", option.Label));
+            option =>
+            {
+                Assert.True(option.IsAll);
+                Assert.Equal("All rooms (2)", option.Label);
+                Assert.True(option.IsSelected);
+            },
+            option =>
+            {
+                Assert.Equal("Main", option.Label);
+                Assert.True(option.IsSelected);
+            },
+            option =>
+            {
+                Assert.Equal("Design", option.Label);
+                Assert.True(option.IsSelected);
+            });
 
         Assert.True(model.SelectTargetOption(model.TargetOptions[2]));
+        Assert.Equal("Design", model.PartnerLabel);
+        Assert.False(model.SelectTargetOption(model.TargetOptions[2]));
         Assert.Equal("Design", model.PartnerLabel);
     }
 
@@ -306,7 +342,7 @@ public sealed class ScreenFaceMirrorViewModelTests
             ],
             SenderUid: "sender",
             SenderNickname: "Sender",
-            PartnerLabel: "All rooms",
+            PartnerLabel: "All rooms (2)",
             AllowsLocalSave: true,
             SaveSentCopy: saveSentCopy);
 

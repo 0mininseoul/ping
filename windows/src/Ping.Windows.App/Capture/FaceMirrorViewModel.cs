@@ -117,6 +117,8 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
             state = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(StateText));
+            OnPropertyChanged(nameof(HintText));
+            OnPropertyChanged(nameof(HintOpacity));
             OnPropertyChanged(nameof(CanRecord));
             OnPropertyChanged(nameof(CanSelectTarget));
             OnPropertyChanged(nameof(RecordingCountdownOpacity));
@@ -145,8 +147,21 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
 
             statusMessage = value;
             OnPropertyChanged();
+            OnPropertyChanged(nameof(HintText));
         }
     }
+
+    public string HintText => State switch
+    {
+        MirrorState.Idle => "↵ Record · Esc Close",
+        MirrorState.Reviewing => "↵ Send · Backspace Redo · Esc Close",
+        MirrorState.Uploading => "Sending...",
+        MirrorState.Failed => StatusMessage,
+        MirrorState.Recording => string.Empty,
+        _ => StatusMessage
+    };
+
+    public double HintOpacity => State == MirrorState.Recording ? 0 : 1;
 
     public string RecordingCountdownText
     {
@@ -276,6 +291,13 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
 
         if (!CanRecord)
         {
+            return;
+        }
+
+        if (targetSelector.SelectedRooms.Count == 0)
+        {
+            State = MirrorState.Failed;
+            StatusMessage = "No partner is ready yet. Invite someone or join a room with another member, then press Enter to retry.";
             return;
         }
 
@@ -504,6 +526,7 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
 
         PartnerLabel = targetSelector.Label;
         OnPropertyChanged(nameof(IsAllTargetsSelected));
+        OnPropertyChanged(nameof(TargetOptions));
         return true;
     }
 
@@ -637,9 +660,10 @@ public sealed partial class FaceMirrorWindow : Window
         var flyout = new MenuFlyout();
         foreach (var option in viewModel.TargetOptions)
         {
-            var item = new MenuFlyoutItem
+            var item = new ToggleMenuFlyoutItem
             {
-                Text = option.Label
+                Text = option.Label,
+                IsChecked = option.IsSelected
             };
             item.Click += (_, _) => viewModel.SelectTargetOption(option);
             flyout.Items.Add(item);
@@ -698,7 +722,7 @@ public sealed partial class FaceMirrorWindow : Window
         var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
         var windowId = Win32Interop.GetWindowIdFromWindow(hwnd);
         appWindow = AppWindow.GetFromWindowId(windowId);
-        appWindow.Resize(new global::Windows.Graphics.SizeInt32(260, 270));
+        appWindow.Resize(new global::Windows.Graphics.SizeInt32(220, 220));
         appWindow.TitleBar.ExtendsContentIntoTitleBar = true;
         appWindow.SetPresenter(AppWindowPresenterKind.CompactOverlay);
         MoveToMirrorPosition(viewModel.MirrorPosition);
