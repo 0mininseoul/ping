@@ -150,19 +150,36 @@ public sealed class AppCoordinator : IDisposable
         switch (command)
         {
             case HotkeyCommand.FacePing:
-                _ = ShowFaceMirrorAsync();
+                _ = RunUiCommandAsync(ShowFaceMirrorAsync, "Face Ping");
                 break;
             case HotkeyCommand.ScreenFacePing:
-                _ = ShowScreenFaceMirrorAsync();
+                _ = RunUiCommandAsync(ShowScreenFaceMirrorAsync, "Screen+Face Ping");
                 break;
             case HotkeyCommand.QuickScreenFacePing:
-                _ = RunQuickScreenFacePingAsync();
+                _ = RunUiCommandAsync(RunQuickScreenFacePingAsync, "Quick Screen+Face Ping");
                 break;
             case HotkeyCommand.History:
                 OpenHistoryWindow();
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(command), command, "Unknown Ping hotkey command.");
+        }
+    }
+
+    private async Task RunUiCommandAsync(Func<Task> action, string title)
+    {
+        try
+        {
+            await action();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Ping {title} command failed: {ex}");
+            ShowBlockedState(
+                title,
+                $"{title} reached Ping, but the command failed before the mirror could open.",
+                ex.Message,
+                canRetry: true);
         }
     }
 
@@ -559,11 +576,11 @@ public sealed class AppCoordinator : IDisposable
             return;
         }
 
-        if (!await EnsureCaptureReadyAsync(CaptureMode.FaceOnly, "Face Ping", HotkeyCommand.FacePing))
-        {
-            return;
-        }
-
+        // Match macOS behavior: the capture mirror should open immediately and
+        // surface camera/microphone problems inside the mirror instead of doing
+        // a blocking MediaCapture preflight first. On Windows, MediaCapture
+        // initialization can hang or wait behind privacy/device prompts before
+        // any UI appears, which makes New face ping look dead.
         if (faceMirrorWindow is not null)
         {
             faceMirrorWindow.Activate();
@@ -610,11 +627,11 @@ public sealed class AppCoordinator : IDisposable
             return;
         }
 
-        if (!await EnsureCaptureReadyAsync(CaptureMode.ScreenFace, "Screen+Face Ping", HotkeyCommand.ScreenFacePing))
-        {
-            return;
-        }
-
+        // Keep screen+face consistent with macOS: show the mirror first, then let
+        // the preview/record path report unavailable camera, microphone, or
+        // screen capture state inside the mirror. Blocking preflight before the
+        // window opens makes the Windows command feel broken when permission or
+        // device checks stall.
         ShowScreenFaceMirror(new ScreenFaceMirrorContext(
             Rooms: sendableRooms,
             SenderUid: uid,
