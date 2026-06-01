@@ -11,8 +11,8 @@ settings:
   base:
     SWIFT_VERSION: "6.0"
     MACOSX_DEPLOYMENT_TARGET: "13.0"
-    MARKETING_VERSION: "0.3.38"
-    CURRENT_PROJECT_VERSION: "50"
+    MARKETING_VERSION: "0.3.39"
+    CURRENT_PROJECT_VERSION: "51"
     PRODUCT_NAME: Ping
     ENABLE_HARDENED_RUNTIME: YES
     CODE_SIGN_STYLE: Manual
@@ -66,8 +66,8 @@ targets:
     info:
       path: Ping/Info.plist
       properties:
-        LSUIElement: true
         LSMinimumSystemVersion: "13.0"
+        LSApplicationCategoryType: public.app-category.social-networking
         CFBundleName: Ping
         CFBundleDisplayName: Ping
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
@@ -155,6 +155,7 @@ targets:
           cp "$PROJECT_DIR/web/src/App.tsx" "$DST/App.tsx"
           cp "$PROJECT_DIR/web/src/routes.tsx" "$DST/routes.tsx"
           cp "$PROJECT_DIR/web/src/components/sections/FinalCTA.tsx" "$DST/FinalCTA.tsx"
+          cp "$PROJECT_DIR/windows/src/Ping.Windows.App/Package.appxmanifest" "$DST/Package.appxmanifest"
           cp "$PROJECT_DIR/scripts/build-release.sh" "$DST/build-release.sh"
           cp "$PROJECT_DIR/.gitignore" "$DST/.gitignore"
           cp "$PROJECT_DIR/scripts/generate-icons.swift" "$DST/generate-icons.swift"
@@ -229,6 +230,7 @@ targets:
           - "$(PROJECT_DIR)/web/src/App.tsx"
           - "$(PROJECT_DIR)/web/src/routes.tsx"
           - "$(PROJECT_DIR)/web/src/components/sections/FinalCTA.tsx"
+          - "$(PROJECT_DIR)/windows/src/Ping.Windows.App/Package.appxmanifest"
           - "$(PROJECT_DIR)/scripts/build-release.sh"
           - "$(PROJECT_DIR)/.gitignore"
           - "$(PROJECT_DIR)/scripts/generate-icons.swift"
@@ -303,6 +305,7 @@ targets:
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/App.tsx"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/routes.tsx"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/FinalCTA.tsx"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/Package.appxmanifest"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/build-release.sh"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/.gitignore"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/generate-icons.swift"

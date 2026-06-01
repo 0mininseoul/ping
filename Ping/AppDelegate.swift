@@ -50,8 +50,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         #endif
     }
 
-    func applicationDidFinishLaunching(_ notification: Notification) {
+    func applicationWillFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+    }
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
         PingAppearanceMode.applyCurrent()
         LocalArchive.migrateLegacyPreferencesIfNeeded()
         LocalArchive.ensureFolders()

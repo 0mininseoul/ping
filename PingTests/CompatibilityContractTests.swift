@@ -16,6 +16,31 @@ final class CompatibilityContractTests: XCTestCase {
         XCTAssertTrue(info.contains("<string>13.0</string>"))
     }
 
+    func testMacAppIsLaunchServicesSearchableWhileHidingDockAtRuntime() throws {
+        let project = try readFixture("project.yml")
+        let info = try readFixture("Ping/Info.plist")
+        let appDelegate = try readFixture("AppDelegate.swift")
+        let appTarget = try sourceSlice(in: project, from: "  Ping:", to: "  PingTests:")
+        let willFinish = try sourceSlice(
+            in: appDelegate,
+            from: "func applicationWillFinishLaunching",
+            to: "func applicationDidFinishLaunching"
+        )
+        let didFinish = try sourceSlice(
+            in: appDelegate,
+            from: "func applicationDidFinishLaunching",
+            to: "func applicationWillTerminate"
+        )
+
+        XCTAssertFalse(appTarget.contains("LSUIElement: true"))
+        XCTAssertFalse(info.contains("<key>LSUIElement</key>"))
+        XCTAssertTrue(appTarget.contains("LSApplicationCategoryType: public.app-category.social-networking"))
+        XCTAssertTrue(info.contains("<key>LSApplicationCategoryType</key>"))
+        XCTAssertTrue(info.contains("<string>public.app-category.social-networking</string>"))
+        XCTAssertTrue(willFinish.contains("NSApp.setActivationPolicy(.accessory)"))
+        XCTAssertFalse(didFinish.contains("NSApp.setActivationPolicy(.accessory)"))
+    }
+
     func testDocsDescribeMacOS13CompatibilityInsteadOfMacOS26Only() throws {
         let spec = try readFixture("PING_PROJECT_SPECIFICATION.md")
         let readme = try readFixture("README.md")

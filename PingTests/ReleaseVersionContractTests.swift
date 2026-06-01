@@ -11,8 +11,10 @@ final class ReleaseVersionContractTests: XCTestCase {
         let project = try readSourceFile("project.yml")
         let routes = try readSourceFile("routes.tsx")
         let readme = try readSourceFile("README.md")
+        let windowsManifest = try readSourceFile("Package.appxmanifest")
 
-        let version = try marketingVersion(in: project)
+        let version = try macMarketingVersion(in: project)
+        let windowsVersion = try windowsMarketingVersion(in: windowsManifest)
 
         XCTAssertTrue(
             routes.contains("MAC_APP_VERSION = \"v\(version)\""),
@@ -28,12 +30,26 @@ final class ReleaseVersionContractTests: XCTestCase {
         )
 
         // Windows ships on its own cadence; keep its references self-consistent.
-        XCTAssertTrue(routes.contains("WINDOWS_APP_VERSION = \"v0.3.28\""))
-        XCTAssertTrue(routes.contains("WINDOWS_DOWNLOAD_URL = \"/downloads/windows/PingSetup-v0.3.28.exe\""))
+        XCTAssertTrue(
+            routes.contains("WINDOWS_APP_VERSION = \"v\(windowsVersion)\""),
+            "routes.tsx WINDOWS_APP_VERSION must match Package.appxmanifest Identity.Version (v\(windowsVersion))"
+        )
+        XCTAssertTrue(
+            routes.contains("WINDOWS_DOWNLOAD_URL = \"/downloads/windows/PingSetup-v\(windowsVersion).exe\""),
+            "routes.tsx WINDOWS_DOWNLOAD_URL must point at /downloads/windows/PingSetup-v\(windowsVersion).exe"
+        )
+        XCTAssertTrue(
+            readme.contains("PingSetup-v\(windowsVersion).exe"),
+            "README must reference the released PingSetup-v\(windowsVersion).exe"
+        )
+        XCTAssertTrue(
+            readme.contains("Ping-Windows-v\(windowsVersion)-sideload.zip"),
+            "README must reference the released Ping-Windows-v\(windowsVersion)-sideload.zip"
+        )
     }
 
     /// Extracts the value of `MARKETING_VERSION: "x.y.z"` from project.yml.
-    private func marketingVersion(in projectYml: String) throws -> String {
+    private func macMarketingVersion(in projectYml: String) throws -> String {
         let value = projectYml
             .split(separator: "\n")
             .map { $0.trimmingCharacters(in: .whitespaces) }
@@ -45,6 +61,17 @@ final class ReleaseVersionContractTests: XCTestCase {
                 return String(line[line.index(after: open)..<close])
             }
         return try XCTUnwrap(value, "MARKETING_VERSION not found in project.yml")
+    }
+
+    /// Extracts `x.y.z` from the Windows `Identity Version="x.y.z.0"`.
+    private func windowsMarketingVersion(in manifest: String) throws -> String {
+        let marker = "Version=\""
+        let start = try XCTUnwrap(manifest.range(of: marker)?.upperBound, "Identity.Version not found")
+        let end = try XCTUnwrap(manifest[start...].firstIndex(of: "\""), "Identity.Version closing quote not found")
+        let fullVersion = String(manifest[start..<end])
+        let suffix = ".0"
+        XCTAssertTrue(fullVersion.hasSuffix(suffix), "Identity.Version must use major.minor.patch.0 format")
+        return String(fullVersion.dropLast(suffix.count))
     }
 
     private func readSourceFile(_ relativePath: String) throws -> String {

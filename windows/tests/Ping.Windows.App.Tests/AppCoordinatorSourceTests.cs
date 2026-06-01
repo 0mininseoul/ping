@@ -758,11 +758,12 @@ public sealed class AppCoordinatorSourceTests
         var final = File.ReadAllText(Path.Combine(root, "web", "src", "components", "sections", "FinalCTA.tsx"));
         var nav = File.ReadAllText(Path.Combine(root, "web", "src", "components", "sections", "SiteNav.tsx"));
         var index = File.ReadAllText(Path.Combine(root, "web", "index.html"));
+        var windowsVersion = WindowsMarketingVersion(root);
 
         Assert.Contains("MAC_DOWNLOAD_URL", routes, StringComparison.Ordinal);
         Assert.Contains("WINDOWS_DOWNLOAD_URL", routes, StringComparison.Ordinal);
-        Assert.Contains("/downloads/windows/PingSetup-v0.3.28.exe", routes, StringComparison.Ordinal);
-        Assert.Contains("PingSetup-v0.3.28.exe", routes, StringComparison.Ordinal);
+        Assert.Contains($"/downloads/windows/PingSetup-v{windowsVersion}.exe", routes, StringComparison.Ordinal);
+        Assert.Contains($"PingSetup-v{windowsVersion}.exe", routes, StringComparison.Ordinal);
         Assert.Contains("macDownloadUrl", landing, StringComparison.Ordinal);
         Assert.Contains("windowsDownloadUrl", landing, StringComparison.Ordinal);
         Assert.Contains("Download for macOS", hero, StringComparison.Ordinal);
@@ -1105,5 +1106,20 @@ public sealed class AppCoordinatorSourceTests
 
         return directory?.FullName
             ?? throw new DirectoryNotFoundException("Could not locate Ping repository root.");
+    }
+
+    private static string WindowsMarketingVersion(string root)
+    {
+        var manifest = XDocument.Load(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Package.appxmanifest"));
+        var identityVersion = manifest.Root?.Element(manifest.Root.GetDefaultNamespace() + "Identity")?.Attribute("Version")?.Value
+            ?? throw new InvalidOperationException("Package.appxmanifest Identity.Version is missing.");
+        const string suffix = ".0";
+        Assert.EndsWith(suffix, identityVersion, StringComparison.Ordinal);
+        return identityVersion[..^suffix.Length];
     }
 }
