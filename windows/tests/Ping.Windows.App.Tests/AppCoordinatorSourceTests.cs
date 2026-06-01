@@ -68,7 +68,9 @@ public sealed class AppCoordinatorSourceTests
         Assert.Contains("viewModel.RoomsChanged -= HandleRoomManagerRoomsChanged;", coordinator, StringComparison.Ordinal);
         Assert.Contains("private void HandleRoomManagerRoomsChanged", coordinator, StringComparison.Ordinal);
         Assert.Contains("_ = BootstrapAndLoadRoomsAsync();", coordinator, StringComparison.Ordinal);
-        Assert.Contains("A room needs at least two members before Ping can send", coordinator, StringComparison.Ordinal);
+        Assert.Contains("await SendableRoomsForCaptureAsync(uid)", coordinator, StringComparison.Ordinal);
+        Assert.Contains("rooms = await roomService.MyRoomsAsync();", coordinator, StringComparison.Ordinal);
+        Assert.Contains("0 => \"No partner\"", coordinator, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -315,6 +317,55 @@ public sealed class AppCoordinatorSourceTests
 
         Assert.Contains("viewModel.State is not (MirrorState.Reviewing or MirrorState.Failed)", face, StringComparison.Ordinal);
         Assert.Contains("viewModel.State is not (MirrorState.Reviewing or MirrorState.Failed)", screenFace, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MirrorWindowsUseMacStyleInPreviewOverlayLayout()
+    {
+        var root = RepoRoot();
+        var faceXaml = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Capture",
+            "FaceMirrorWindow.xaml"));
+        var screenFaceXaml = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Capture",
+            "ScreenFaceMirrorWindow.xaml"));
+        var faceCode = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Capture",
+            "FaceMirrorViewModel.cs"));
+        var screenFaceCode = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Capture",
+            "ScreenFaceMirrorViewModel.cs"));
+
+        Assert.Contains("Width=\"220\"", faceXaml, StringComparison.Ordinal);
+        Assert.Contains("Height=\"220\"", faceXaml, StringComparison.Ordinal);
+        Assert.Contains("VerticalAlignment=\"Bottom\"", faceXaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding HintText}\"", faceXaml, StringComparison.Ordinal);
+        Assert.Contains("appWindow.Resize(new global::Windows.Graphics.SizeInt32(220, 220));", faceCode, StringComparison.Ordinal);
+
+        Assert.Contains("Width=\"508\"", screenFaceXaml, StringComparison.Ordinal);
+        Assert.Contains("Height=\"298\"", screenFaceXaml, StringComparison.Ordinal);
+        Assert.Contains("Width=\"480\"", screenFaceXaml, StringComparison.Ordinal);
+        Assert.Contains("Height=\"270\"", screenFaceXaml, StringComparison.Ordinal);
+        Assert.Contains("FacePreviewBubble", screenFaceXaml, StringComparison.Ordinal);
+        Assert.Contains("VerticalAlignment=\"Bottom\"", screenFaceXaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"{Binding HintText}\"", screenFaceXaml, StringComparison.Ordinal);
+        Assert.Contains("appWindow.Resize(new global::Windows.Graphics.SizeInt32(508, 298));", screenFaceCode, StringComparison.Ordinal);
     }
 
     [Fact]

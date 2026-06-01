@@ -7,6 +7,7 @@
     <SolidColorBrush x:Key="PingBorderIdleBrush" Color="#4DFFFFFF" />
     <SolidColorBrush x:Key="PingBorderRecordingBrush" Color="#FFFF3B30" />
     <SolidColorBrush x:Key="PingBorderFailedBrush" Color="#FFFFCC00" />
+    <SolidColorBrush x:Key="PingCapsuleBrush" Color="#8C000000" />
 
     <CornerRadius x:Key="PingCornerRadius">16</CornerRadius>
     <CornerRadius x:Key="PingMirrorCornerRadius">100</CornerRadius>
@@ -17,4 +18,12 @@
         Center="100,100"
         RadiusX="100"
         RadiusY="100" />
+    <RectangleGeometry
+        x:Key="PingScreenFaceClip"
+        Rect="0,0,480,270" />
+    <EllipseGeometry
+        x:Key="PingFaceBubbleClip"
+        Center="41,41"
+        RadiusX="41"
+        RadiusY="41" />
 </ResourceDictionary>

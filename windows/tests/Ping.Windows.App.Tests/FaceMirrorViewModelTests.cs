@@ -130,6 +130,27 @@ public sealed class FaceMirrorViewModelTests
     }
 
     [Fact]
+    public async Task Enter_WithNoTargetShowsPartnerGuidanceWithoutRecording()
+    {
+        var recorder = new FakeFaceRecorder();
+        var model = new FaceMirrorViewModel(
+            FaceMirrorContextFor(saveSentCopy: false) with
+            {
+                Rooms = [],
+                PartnerLabel = "No partner"
+            },
+            recorder,
+            (_, _) => Task.CompletedTask);
+
+        await model.HandleEnterAsync();
+
+        Assert.Equal(MirrorState.Failed, model.State);
+        Assert.Contains("No partner", model.StatusMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, recorder.RecordCount);
+        Assert.False(model.IsCloseRequested);
+    }
+
+    [Fact]
     public async Task FailedUpload_DoesNotSaveSentCopyBeforeUploadSucceeds()
     {
         var archive = new LocalArchive(Path.Combine(
@@ -239,7 +260,7 @@ public sealed class FaceMirrorViewModelTests
                 return Task.CompletedTask;
             });
 
-        Assert.Equal("All rooms", model.PartnerLabel);
+        Assert.Equal("All rooms (2)", model.PartnerLabel);
         Assert.True(model.SelectTargetAtIndex(1));
         Assert.Equal("Design", model.PartnerLabel);
 
@@ -262,7 +283,7 @@ public sealed class FaceMirrorViewModelTests
             new FakeFaceRecorder(),
             (_, _) => Task.CompletedTask);
 
-        Assert.Equal("All rooms", model.PartnerLabel);
+        Assert.Equal("All rooms (2)", model.PartnerLabel);
         Assert.True(model.IsAllTargetsSelected);
         Assert.True(model.SelectNextTarget());
         Assert.Equal("Main", model.PartnerLabel);
@@ -270,12 +291,12 @@ public sealed class FaceMirrorViewModelTests
         Assert.True(model.SelectNextTarget());
         Assert.Equal("Design", model.PartnerLabel);
         Assert.True(model.SelectNextTarget());
-        Assert.Equal("All rooms", model.PartnerLabel);
+        Assert.Equal("All rooms (2)", model.PartnerLabel);
         Assert.True(model.IsAllTargetsSelected);
         Assert.True(model.SelectTargetAtIndex(0));
         Assert.False(model.IsAllTargetsSelected);
         Assert.True(model.SelectAllTargets());
-        Assert.Equal("All rooms", model.PartnerLabel);
+        Assert.Equal("All rooms (2)", model.PartnerLabel);
         Assert.True(model.IsAllTargetsSelected);
     }
 
@@ -293,7 +314,7 @@ public sealed class FaceMirrorViewModelTests
             option =>
             {
                 Assert.True(option.IsAll);
-                Assert.Equal("All rooms", option.Label);
+                Assert.Equal("All rooms (2)", option.Label);
             },
             option =>
             {
@@ -307,11 +328,14 @@ public sealed class FaceMirrorViewModelTests
             });
 
         Assert.True(model.SelectTargetOption(model.TargetOptions[2]));
-        Assert.Equal("Design", model.PartnerLabel);
+        Assert.Equal("Main", model.PartnerLabel);
         Assert.False(model.IsAllTargetsSelected);
-        Assert.True(model.SelectTargetOption(model.TargetOptions[0]));
-        Assert.Equal("All rooms", model.PartnerLabel);
+        Assert.True(model.SelectTargetOption(model.TargetOptions[2]));
+        Assert.Equal("All rooms (2)", model.PartnerLabel);
         Assert.True(model.IsAllTargetsSelected);
+        Assert.True(model.SelectTargetOption(model.TargetOptions[0]));
+        Assert.Equal("No partner", model.PartnerLabel);
+        Assert.False(model.IsAllTargetsSelected);
     }
 
     private static FaceMirrorContext FaceMirrorContextFor(bool saveSentCopy) =>
@@ -368,7 +392,7 @@ public sealed class FaceMirrorViewModelTests
             ],
             SenderUid: "sender",
             SenderNickname: "Sender",
-            PartnerLabel: "All rooms",
+            PartnerLabel: "All rooms (2)",
             AllowsLocalSave: true,
             SaveSentCopy: false);
 

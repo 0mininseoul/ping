@@ -6,13 +6,12 @@
     Title="Ping">
     <Grid
         x:Name="Root"
-        Width="260"
-        Height="270"
-        Padding="12"
+        Width="220"
+        Height="220"
+        Padding="10"
         Background="Transparent"
         IsTabStop="True"
-        KeyDown="HandleKeyDown"
-        RowSpacing="10">
+        KeyDown="HandleKeyDown">
         <Grid.Resources>
             <ResourceDictionary>
                 <ResourceDictionary.MergedDictionaries>
@@ -22,17 +21,12 @@
             </ResourceDictionary>
         </Grid.Resources>
 
-        <Grid.RowDefinitions>
-            <RowDefinition Height="200" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
-
         <Border
             x:Name="MirrorBorder"
             Width="{StaticResource PingMirrorDiameter}"
             Height="{StaticResource PingMirrorDiameter}"
             HorizontalAlignment="Center"
+            VerticalAlignment="Center"
             Background="{StaticResource PingSurfaceBrush}"
             BorderBrush="{StaticResource PingBorderIdleBrush}"
             BorderThickness="1"
@@ -64,6 +58,26 @@
                         Foreground="{StaticResource PingMutedTextBrush}"
                         Text="Preview" />
                 </StackPanel>
+
+                <Border
+                    x:Name="HintCapsule"
+                    Margin="0,14,0,0"
+                    Padding="10,5"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Top"
+                    Background="{StaticResource PingCapsuleBrush}"
+                    CornerRadius="12"
+                    Opacity="{Binding HintOpacity}">
+                    <TextBlock
+                        MaxWidth="168"
+                        FontSize="11"
+                        Foreground="{StaticResource PingTextBrush}"
+                        Text="{Binding HintText}"
+                        TextAlignment="Center"
+                        TextTrimming="CharacterEllipsis"
+                        TextWrapping="NoWrap" />
+                </Border>
+
                 <Border
                     Width="34"
                     Height="34"
@@ -83,33 +97,27 @@
                         Foreground="{StaticResource PingTextBrush}"
                         Text="{Binding RecordingCountdownText}" />
                 </Border>
+
+                <Border
+                    x:Name="PartnerChip"
+                    Margin="0,0,0,10"
+                    Padding="12,5"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Bottom"
+                    Background="{StaticResource PingSurfaceBrush}"
+                    BorderBrush="{StaticResource PingBorderIdleBrush}"
+                    BorderThickness="1"
+                    CornerRadius="{StaticResource PingCornerRadius}"
+                    IsTapEnabled="True"
+                    Tapped="PartnerChip_Tapped">
+                    <TextBlock
+                        MaxWidth="152"
+                        FontSize="12"
+                        Foreground="{StaticResource PingTextBrush}"
+                        Text="{Binding PartnerLabel}"
+                        TextTrimming="CharacterEllipsis" />
+                </Border>
             </Grid>
         </Border>
-
-        <Border
-            x:Name="PartnerChip"
-            Grid.Row="1"
-            HorizontalAlignment="Center"
-            Padding="12,5"
-            Background="{StaticResource PingSurfaceBrush}"
-            BorderBrush="{StaticResource PingBorderIdleBrush}"
-            BorderThickness="1"
-            CornerRadius="{StaticResource PingCornerRadius}"
-            IsTapEnabled="True"
-            Tapped="PartnerChip_Tapped">
-            <TextBlock
-                FontSize="12"
-                Foreground="{StaticResource PingTextBrush}"
-                Text="{Binding PartnerLabel}" />
-        </Border>
-
-        <TextBlock
-            Grid.Row="2"
-            HorizontalAlignment="Center"
-            FontSize="12"
-            Foreground="{StaticResource PingMutedTextBrush}"
-            Text="{Binding StatusMessage}"
-            TextAlignment="Center"
-            TextWrapping="WrapWholeWords" />
     </Grid>
 </Window>

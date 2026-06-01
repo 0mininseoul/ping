@@ -5,20 +5,27 @@ namespace Ping.Windows.App.Capture;
 public sealed record MirrorTargetOption(
     int Index,
     string Label,
-    bool IsAll);
+    bool IsAll,
+    bool IsSelected);
 
 internal sealed class MirrorTargetSelector
 {
     private readonly IReadOnlyList<Room> rooms;
     private readonly string fallbackLabel;
-    private bool isAllSelected;
-    private int selectedIndex;
+    private readonly HashSet<int> selectedIndexes = [];
 
     public MirrorTargetSelector(IReadOnlyCollection<Room> rooms, string fallbackLabel)
     {
         this.rooms = rooms.ToArray();
         this.fallbackLabel = string.IsNullOrWhiteSpace(fallbackLabel) ? "No partner" : fallbackLabel;
-        isAllSelected = this.rooms.Count > 1;
+        if (this.rooms.Count > 1)
+        {
+            selectedIndexes.UnionWith(Enumerable.Range(0, this.rooms.Count));
+        }
+        else if (this.rooms.Count == 1)
+        {
+            selectedIndexes.Add(0);
+        }
     }
 
     public string Label
@@ -30,16 +37,26 @@ internal sealed class MirrorTargetSelector
                 return fallbackLabel;
             }
 
-            if (isAllSelected)
+            if (selectedIndexes.Count == 0)
             {
-                return "All rooms";
+                return "No partner";
             }
 
-            return rooms.Count == 1 ? fallbackLabel : rooms[selectedIndex].Name;
+            if (IsAllSelected)
+            {
+                return rooms.Count == 1 ? fallbackLabel : $"All rooms ({rooms.Count})";
+            }
+
+            if (selectedIndexes.Count == 1)
+            {
+                return rooms[selectedIndexes.Min()].Name;
+            }
+
+            return $"{selectedIndexes.Count} rooms";
         }
     }
 
-    public bool IsAllSelected => rooms.Count > 1 && isAllSelected;
+    public bool IsAllSelected => rooms.Count > 1 && selectedIndexes.Count == rooms.Count;
 
     public bool HasMultipleTargets => rooms.Count > 1;
 
@@ -54,11 +71,11 @@ internal sealed class MirrorTargetSelector
 
             var options = new List<MirrorTargetOption>(rooms.Count + 1)
             {
-                new(-1, "All rooms", IsAll: true)
+                new(-1, $"All rooms ({rooms.Count})", IsAll: true, IsSelected: IsAllSelected)
             };
             for (var index = 0; index < rooms.Count; index += 1)
             {
-                options.Add(new MirrorTargetOption(index, rooms[index].Name, IsAll: false));
+                options.Add(new MirrorTargetOption(index, rooms[index].Name, IsAll: false, selectedIndexes.Contains(index)));
             }
 
             return options;
@@ -69,12 +86,12 @@ internal sealed class MirrorTargetSelector
     {
         get
         {
-            if (rooms.Count == 0)
+            if (rooms.Count == 0 || selectedIndexes.Count == 0)
             {
                 return [];
             }
 
-            return isAllSelected ? rooms : [rooms[selectedIndex]];
+            return selectedIndexes.Order().Select(index => rooms[index]).ToArray();
         }
     }
 
@@ -85,31 +102,36 @@ internal sealed class MirrorTargetSelector
             return false;
         }
 
-        if (isAllSelected)
+        if (selectedIndexes.Count != 1)
         {
-            isAllSelected = false;
-            selectedIndex = 0;
+            selectedIndexes.Clear();
+            selectedIndexes.Add(0);
             return true;
         }
 
+        var selectedIndex = selectedIndexes.First();
+        selectedIndexes.Clear();
         if (selectedIndex < rooms.Count - 1)
         {
-            selectedIndex += 1;
-            return true;
+            selectedIndexes.Add(selectedIndex + 1);
+        }
+        else
+        {
+            selectedIndexes.UnionWith(Enumerable.Range(0, rooms.Count));
         }
 
-        isAllSelected = true;
         return true;
     }
 
     public bool SelectAll()
     {
-        if (rooms.Count <= 1 || isAllSelected)
+        if (rooms.Count <= 1 || IsAllSelected)
         {
             return false;
         }
 
-        isAllSelected = true;
+        selectedIndexes.Clear();
+        selectedIndexes.UnionWith(Enumerable.Range(0, rooms.Count));
         return true;
     }
 
@@ -120,16 +142,51 @@ internal sealed class MirrorTargetSelector
             return false;
         }
 
-        if (!isAllSelected && selectedIndex == index)
+        if (selectedIndexes.Count == 1 && selectedIndexes.Contains(index))
         {
             return false;
         }
 
-        isAllSelected = false;
-        selectedIndex = index;
+        selectedIndexes.Clear();
+        selectedIndexes.Add(index);
         return true;
     }
 
     public bool SelectOption(MirrorTargetOption option) =>
-        option.IsAll ? SelectAll() : SelectIndex(option.Index);
+        option.IsAll ? ToggleAll() : ToggleIndex(option.Index);
+
+    private bool ToggleAll()
+    {
+        if (rooms.Count <= 1)
+        {
+            return false;
+        }
+
+        if (IsAllSelected)
+        {
+            selectedIndexes.Clear();
+        }
+        else
+        {
+            selectedIndexes.Clear();
+            selectedIndexes.UnionWith(Enumerable.Range(0, rooms.Count));
+        }
+
+        return true;
+    }
+
+    private bool ToggleIndex(int index)
+    {
+        if (index < 0 || index >= rooms.Count)
+        {
+            return false;
+        }
+
+        if (!selectedIndexes.Add(index))
+        {
+            selectedIndexes.Remove(index);
+        }
+
+        return true;
+    }
 }

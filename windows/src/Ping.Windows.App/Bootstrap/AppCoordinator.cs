@@ -551,16 +551,7 @@ public sealed class AppCoordinator : IDisposable
             return;
         }
 
-        var sendableRooms = SendableRoomsFor(uid);
-        if (sendableRooms.Length == 0)
-        {
-            ShowBlockedState(
-                "Face Ping",
-                $"{HotkeyLabel(HotkeyCommand.FacePing)} reached Ping, but there is no room with another member yet. Invite someone, accept an invite, or join a room that already has another member before sending.",
-                "No sendable room available. A room needs at least two members before Ping can send.");
-            OpenRoomManagerWindow();
-            return;
-        }
+        var sendableRooms = await SendableRoomsForCaptureAsync(uid);
 
         if (faceMirrorWindow is not null)
         {
@@ -583,7 +574,7 @@ public sealed class AppCoordinator : IDisposable
             Rooms: sendableRooms,
             SenderUid: uid,
             SenderNickname: CurrentNickname,
-            PartnerLabel: sendableRooms.Length == 1 ? sendableRooms[0].Name : "All rooms",
+            PartnerLabel: PartnerLabelFor(sendableRooms),
             AllowsLocalSave: quickSendSettings.Preferences.AllowsLocalSave,
             SaveSentCopy: quickSendSettings.Preferences.SaveSentCopy,
             InitialPosition: mirrorPlacementStore.Load(CaptureMode.FaceOnly),
@@ -611,16 +602,7 @@ public sealed class AppCoordinator : IDisposable
             return;
         }
 
-        var sendableRooms = SendableRoomsFor(uid);
-        if (sendableRooms.Length == 0)
-        {
-            ShowBlockedState(
-                "Screen+Face Ping",
-                $"{HotkeyLabel(HotkeyCommand.ScreenFacePing)} reached Ping, but there is no room with another member yet. Invite someone, accept an invite, or join a room that already has another member before sending.",
-                "No sendable room available. A room needs at least two members before Ping can send.");
-            OpenRoomManagerWindow();
-            return;
-        }
+        var sendableRooms = await SendableRoomsForCaptureAsync(uid);
 
         if (screenFaceMirrorWindow is not null)
         {
@@ -1111,8 +1093,33 @@ public sealed class AppCoordinator : IDisposable
             .Where(room => room.Id is not null && room.MemberUids.Contains(uid) && room.MemberUids.Count >= 2)
             .ToArray();
 
+    private async Task<Room[]> SendableRoomsForCaptureAsync(string uid)
+    {
+        var sendableRooms = SendableRoomsFor(uid);
+        if (sendableRooms.Length > 0)
+        {
+            return sendableRooms;
+        }
+
+        try
+        {
+            rooms = await roomService.MyRoomsAsync();
+        }
+        catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException or TaskCanceledException)
+        {
+            Debug.WriteLine($"Ping room refresh before capture failed: {ex}");
+        }
+
+        return SendableRoomsFor(uid);
+    }
+
     private static string PartnerLabelFor(IReadOnlyCollection<Room> sendableRooms) =>
-        sendableRooms.Count == 1 ? sendableRooms.First().Name : "All rooms";
+        sendableRooms.Count switch
+        {
+            0 => "No partner",
+            1 => sendableRooms.First().Name,
+            _ => "All rooms"
+        };
 
     private async Task BootstrapAndLoadRoomsAsync()
     {
