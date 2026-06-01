@@ -68,8 +68,8 @@ final class KeyboardRoutingContractTests: XCTestCase {
     func testMirrorHintsIncludeEscapeCloseGuidance() throws {
         let source = try readSourceFile("Ping/UI/Mirror/MirrorView.swift")
 
-        XCTAssertTrue(source.contains("↵ 녹화 시작 · Esc 닫기"))
-        XCTAssertTrue(source.contains("↵ 보내기 · ⌫ 다시 · Esc 닫기"))
+        XCTAssertTrue(source.contains("↵ 녹화 · Esc"))
+        XCTAssertTrue(source.contains("↵ 보내기 · ⌫ 다시 · Esc"))
     }
 
     func testMirrorSendsCheckedRoomTargets() throws {

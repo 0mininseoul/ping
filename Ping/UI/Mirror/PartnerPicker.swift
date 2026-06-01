@@ -1,5 +1,10 @@
 import SwiftUI
 
+enum PartnerPickerLayout {
+    static let dropdownMaxWidth: CGFloat = 164
+    static let dropdownMaxHeight: CGFloat = 104
+}
+
 struct PartnerPicker: View {
     @ObservedObject var appState: AppState
     @Binding var selectedRoomIds: Set<String>
@@ -20,42 +25,50 @@ struct PartnerPicker: View {
         Button {
             isExpanded.toggle()
         } label: {
-            GlassChip(chipLabel, isHover: isExpanded)
+            GlassChip(chipLabel, icon: chipIcon, isHover: isExpanded)
+                .frame(maxWidth: PartnerPickerLayout.dropdownMaxWidth)
         }
         .buttonStyle(.plain)
     }
 
     @ViewBuilder private var dropdown: some View {
-        VStack(spacing: 4) {
-            if activeRooms.count >= 2 {
-                optionRow(
-                    label: "🌐 모두에게",
-                    selected: selectedRoomIds.intersection(activeRoomIds).count == activeRoomIds.count
-                ) {
-                    setAllRoomsSelected(selectedRoomIds.intersection(activeRoomIds).count != activeRoomIds.count)
+        ScrollView(.vertical, showsIndicators: activeRooms.count >= 4) {
+            VStack(spacing: 2) {
+                if activeRooms.count >= 2 {
+                    optionRow(
+                        label: "모든 룸",
+                        selected: selectedRoomIds.intersection(activeRoomIds).count == activeRoomIds.count
+                    ) {
+                        setAllRoomsSelected(selectedRoomIds.intersection(activeRoomIds).count != activeRoomIds.count)
+                    }
+                    Rectangle()
+                        .fill(Color.white.opacity(0.16))
+                        .frame(height: 1)
+                        .padding(.vertical, 2)
                 }
-                Divider().opacity(0.3)
-            }
-            ForEach(Array(activeRooms.enumerated()), id: \.element.id) { index, room in
-                optionRow(
-                    label: "\(index + 1). \(partnerNickname(in: room))",
-                    selected: isSelected(room)
-                ) {
-                    setRoom(room, selected: !isSelected(room))
+                ForEach(Array(activeRooms.enumerated()), id: \.element.id) { index, room in
+                    optionRow(
+                        label: "\(index + 1). \(roomLabel(in: room))",
+                        selected: isSelected(room)
+                    ) {
+                        setRoom(room, selected: !isSelected(room))
+                    }
                 }
             }
+            .padding(6)
         }
-        .padding(8)
-        .frame(width: 220)
+        .frame(width: PartnerPickerLayout.dropdownMaxWidth)
+        .frame(maxHeight: PartnerPickerLayout.dropdownMaxHeight)
         .background {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(PingDesign.Surface.panelFill.opacity(0.94))
-                .pingGlassEffect()
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.black.opacity(0.68))
                 .overlay {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .strokeBorder(PingDesign.Surface.strongHairline.opacity(0.42), lineWidth: 0.8)
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(Color.white.opacity(0.16), lineWidth: 0.8)
                 }
         }
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .shadow(color: Color.black.opacity(0.18), radius: 8, y: 4)
     }
 
     private func optionRow(label: String, selected: Bool, action: @escaping () -> Void) -> some View {
@@ -68,11 +81,16 @@ struct PartnerPicker: View {
                 Text(label)
                     .font(PingFont.label)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.75)
+                    .minimumScaleFactor(0.72)
                 Spacer()
             }
-            .padding(.horizontal, 6)
-            .padding(.vertical, 4)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 5)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(selected ? Color.white.opacity(0.12) : Color.clear)
+            }
         }
         .buttonStyle(.plain)
     }
@@ -99,14 +117,25 @@ struct PartnerPicker: View {
         guard !selected.isEmpty else { return "파트너 없음" }
 
         if selected.count == 1, let room = selected.first {
-            return "👤 \(partnerNickname(in: room))"
+            return roomLabel(in: room)
         }
 
         if selected.count == activeRooms.count {
-            return "🌐 모두에게 (\(selected.count))"
+            return "모든 룸 (\(selected.count))"
         }
 
         return "👥 \(selected.count)개 룸"
+    }
+
+    private var chipIcon: String? {
+        let selected = selectedRooms
+        guard !selected.isEmpty else { return "person.crop.circle.badge.exclamationmark" }
+
+        if selected.count == activeRooms.count, activeRooms.count >= 2 {
+            return "globe"
+        }
+
+        return "person.2.fill"
     }
 
     private func isSelected(_ room: Room) -> Bool {
@@ -143,8 +172,7 @@ struct PartnerPicker: View {
         }
     }
 
-    private func partnerNickname(in room: Room) -> String {
-        guard let myUid = appState.currentUser?.id else { return "?" }
-        return room.memberNicknames.first(where: { $0.key != myUid })?.value ?? "?"
+    private func roomLabel(in room: Room) -> String {
+        return room.name
     }
 }

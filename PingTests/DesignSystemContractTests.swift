@@ -30,7 +30,6 @@ final class DesignSystemContractTests: XCTestCase {
         XCTAssertFalse(partnerPicker.contains(".glassEffect()"))
         XCTAssertFalse(mirrorView.contains(".glassEffect()"))
         XCTAssertTrue(glassChip.contains(".pingGlassEffect()"))
-        XCTAssertTrue(partnerPicker.contains(".pingGlassEffect()"))
         XCTAssertTrue(mirrorView.contains(".pingGlassEffect()"))
     }
 
@@ -116,6 +115,42 @@ final class DesignSystemContractTests: XCTestCase {
         // Shadow surface uses mode-aware mirrorShape (Circle for faceOnly, RoundedRectangle for screenFace)
         XCTAssertTrue(shadowSurface.contains("mirrorShape"))
         XCTAssertTrue(shadowSurface.contains(".pingShadow(PingDesign.Shadow.mirror)"))
+    }
+
+    func testMirrorOverlaysAreClippedToMirrorShapeAndUseCompactHints() throws {
+        let source = try readSourceFile("Ping/UI/Mirror/MirrorView.swift")
+        let mirrorContent = try sourceSlice(
+            in: source,
+            from: "private var mirrorContent",
+            to: "@ViewBuilder private var previewLayer"
+        )
+
+        XCTAssertTrue(mirrorContent.contains(".clipShape(mirrorShape)"))
+        XCTAssertTrue(source.contains("HintCapsuleView(text: \"↵ 녹화 · Esc\")"))
+        XCTAssertTrue(source.contains("HintCapsuleView(text: \"↵ 보내기 · ⌫ 다시 · Esc\")"))
+        XCTAssertTrue(source.contains(".font(.system(size: 11, weight: .medium))"))
+        XCTAssertTrue(source.contains(".frame(maxWidth: 156)"))
+    }
+
+    func testPartnerPickerMenuIsCompactScrollableAndRoomBased() throws {
+        let source = try readSourceFile("Ping/UI/Mirror/PartnerPicker.swift")
+        let dropdown = try sourceSlice(
+            in: source,
+            from: "@ViewBuilder private var dropdown",
+            to: "private func optionRow"
+        )
+
+        XCTAssertTrue(source.contains("enum PartnerPickerLayout"))
+        XCTAssertTrue(source.contains("static let dropdownMaxWidth: CGFloat = 164"))
+        XCTAssertTrue(source.contains("static let dropdownMaxHeight: CGFloat = 104"))
+        XCTAssertTrue(source.contains("ScrollView"))
+        XCTAssertTrue(source.contains("roomLabel(in: room)"))
+        XCTAssertTrue(source.contains("return room.name"))
+        XCTAssertTrue(source.contains("모든 룸"))
+        XCTAssertTrue(source.contains("RoundedRectangle(cornerRadius: 16"))
+        XCTAssertFalse(dropdown.contains(".pingGlassEffect()"))
+        XCTAssertFalse(source.contains("partnerNickname"))
+        XCTAssertFalse(source.contains(".frame(width: 220)"))
     }
 
     private func readSourceFile(_ relativePath: String) throws -> String {

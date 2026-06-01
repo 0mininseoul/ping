@@ -85,6 +85,7 @@ struct MirrorView: View {
             }
         }
         .frame(width: contentSize.width, height: contentSize.height)
+        .clipShape(mirrorShape)
     }
 
     @ViewBuilder private var previewLayer: some View {
@@ -104,8 +105,8 @@ struct MirrorView: View {
         switch viewModel.state {
         case .idle:
             if camera.isReady {
-                HintCapsuleView(text: "↵ 녹화 시작 · Esc 닫기")
-                    .padding(.top, 14)
+                HintCapsuleView(text: "↵ 녹화 · Esc")
+                    .padding(.top, 10)
             } else {
                 Text(camera.lastError ?? "카메라 준비 중")
                     .font(PingFont.caption)
@@ -126,8 +127,8 @@ struct MirrorView: View {
                     .padding(8)
             }
         case .reviewing:
-            HintCapsuleView(text: "↵ 보내기 · ⌫ 다시 · Esc 닫기")
-                .padding(.top, 14)
+            HintCapsuleView(text: "↵ 보내기 · ⌫ 다시 · Esc")
+                .padding(.top, 10)
         case .failed(let message):
             Text(message)
                 .font(PingFont.caption)
@@ -480,13 +481,16 @@ struct HintCapsuleView: View {
 
     var body: some View {
         Text(text)
-            .font(PingFont.caption)
+            .font(.system(size: 11, weight: .medium))
             .foregroundStyle(.white)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
+            .lineLimit(1)
+            .minimumScaleFactor(0.82)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .frame(maxWidth: 156)
             .background {
                 Capsule()
-                    .fill(Color.black.opacity(0.55))
+                    .fill(Color.black.opacity(0.50))
             }
             .opacity(opacity)
             .onAppear {
