@@ -86,3 +86,10 @@ import Testing
         #expect(url.absoluteString == "https://proj.supabase.co/storage/v1/object/authenticated/ping-videos/snd/vid-9.mp4")
     }
 }
+
+@Suite struct PingProductLinksTests {
+    @Test func desktopInstallPageIsCanonicalLandingPage() throws {
+        #expect(PingProductLinks.desktopInstallPage.absoluteString == "https://0minping.vercel.app")
+        #expect(PingProductLinks.desktopInstallPageText == "0minping.vercel.app")
+    }
+}
