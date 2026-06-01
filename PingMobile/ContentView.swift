@@ -18,7 +18,7 @@ struct ContentView: View {
                         }
                     }
             }
-            .task { await PushRegistrar.shared.registerIfPossible() }
+            .task { await PushRegistrar.shared.requestAuthorizationAndRegister() }
             .onAppear { consumePendingRoute() }
             .onChange(of: environment.pendingRoute) { _, _ in consumePendingRoute() }
         } else {
@@ -91,6 +91,6 @@ struct ContentView: View {
         }
         let account = PairedAccount(url: payload.url, anonKey: payload.anonKey, session: payload.session)
         environment.setPaired(account)
-        Task { await PushRegistrar.shared.registerIfPossible() }
+        Task { await PushRegistrar.shared.requestAuthorizationAndRegister() }
     }
 }

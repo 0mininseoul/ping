@@ -36,12 +36,6 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         )
         center.setNotificationCategories([category])
 
-        center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
-            guard granted else { return }
-            DispatchQueue.main.async {
-                application.registerForRemoteNotifications()
-            }
-        }
         return true
     }
 

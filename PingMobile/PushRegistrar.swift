@@ -1,5 +1,7 @@
 import Foundation
 import PingKit
+import UIKit
+import UserNotifications
 
 /// Holds the latest APNs device token and registers it with the backend once a
 /// paired identity exists. Re-runs after pairing (P4) so order doesn't matter.
@@ -8,7 +10,24 @@ final class PushRegistrar {
     static let shared = PushRegistrar()
 
     private let tokenKey = "apnsDeviceToken"
+    private var isRequestingAuthorizationAndRegistration = false
     private(set) var token: String?
+
+    func requestAuthorizationAndRegister() async {
+        guard !isRequestingAuthorizationAndRegistration else { return }
+        isRequestingAuthorizationAndRegistration = true
+        defer { isRequestingAuthorizationAndRegistration = false }
+
+        let granted = await withCheckedContinuation { continuation in
+            UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
+                continuation.resume(returning: granted)
+            }
+        }
+
+        guard granted else { return }
+        UIApplication.shared.registerForRemoteNotifications()
+        await registerIfPossible()
+    }
 
     func update(token: String) {
         self.token = token

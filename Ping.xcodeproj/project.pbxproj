@@ -98,6 +98,7 @@
 		89CA5CAC17D1B7BEC031CBF5 /* InvitationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E744CF82AF7E6266CD82F92 /* InvitationService.swift */; };
 		8B5A766E6D79F4D8014F7AB4 /* MirrorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23C125D42D4715B503E6E707 /* MirrorView.swift */; };
 		8C39D7D5F6F0FFC6649DB52C /* UpdaterBehaviorContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BFB39C830F5652627E5C107 /* UpdaterBehaviorContractTests.swift */; };
+		8EDDB07ABC21E39E4143D05E /* PingMobilePushPermissionContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BCE3102B1CB006C7BABB664 /* PingMobilePushPermissionContractTests.swift */; };
 		9187DD9F1F8EDEDD38CF6C4A /* PermissionUXContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C68B271420DEF87D935A0913 /* PermissionUXContractTests.swift */; };
 		92001E2E87BFA37ED088ED74 /* HistorySidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8DECA8FDBEC815880806715 /* HistorySidebar.swift */; };
 		9417A23D794D6424D2530EB3 /* ReactionPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3847490D60B97829AB0CA7B6 /* ReactionPickerView.swift */; };
@@ -271,6 +272,7 @@
 		599B87DE1571A0E649CE5582 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		5B86EF836E41F27EB9EA7504 /* PairingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingView.swift; sourceTree = "<group>"; };
 		5BB81E537D50111710D5B182 /* RoomService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomService.swift; sourceTree = "<group>"; };
+		5BCE3102B1CB006C7BABB664 /* PingMobilePushPermissionContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PingMobilePushPermissionContractTests.swift; sourceTree = "<group>"; };
 		5C56300160B566EFB16A4161 /* ScreenFaceLayoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenFaceLayoutTests.swift; sourceTree = "<group>"; };
 		5E744CF82AF7E6266CD82F92 /* InvitationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvitationService.swift; sourceTree = "<group>"; };
 		5ED8738899801C68C4659B20 /* ReactionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReactionService.swift; sourceTree = "<group>"; };
@@ -696,6 +698,7 @@
 				8F441B1B93C9D79CB77E24D4 /* PartnerCyclingTests.swift */,
 				C68B271420DEF87D935A0913 /* PermissionUXContractTests.swift */,
 				2225B62EC954CFD86429E093 /* PingMobileOnboardingContractTests.swift */,
+				5BCE3102B1CB006C7BABB664 /* PingMobilePushPermissionContractTests.swift */,
 				AC481CCD223682FF45732D26 /* PIPCompositorTests.swift */,
 				18CCBF09517648670FCCB72C /* PlaybackControlsContractTests.swift */,
 				DF791350460B22AC63D0CE32 /* PlaybackPrefetchContractTests.swift */,
@@ -1163,6 +1166,7 @@
 				5EE98B4867742225FE567CD4 /* PartnerCyclingTests.swift in Sources */,
 				9187DD9F1F8EDEDD38CF6C4A /* PermissionUXContractTests.swift in Sources */,
 				09D937C3A5246BE80AB78C1A /* PingMobileOnboardingContractTests.swift in Sources */,
+				8EDDB07ABC21E39E4143D05E /* PingMobilePushPermissionContractTests.swift in Sources */,
 				C37132F0098B315DD40EF93F /* PlaybackControlsContractTests.swift in Sources */,
 				489FD8469EFD7A09256A8F54 /* PlaybackPrefetchContractTests.swift in Sources */,
 				EE1A8480D0A1A17293759871 /* ReactionPersistenceContractTests.swift in Sources */,
