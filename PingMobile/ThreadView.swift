@@ -17,6 +17,12 @@ struct ThreadView: View {
     @State private var loadingVideoId: String?
     @State private var playable: PlayableVideo?
     @StateObject private var thumbnails = ThumbnailStore()
+    @State private var timestampRevealOffset: CGFloat = 0
+
+    private let timestampWidth: CGFloat = 64
+    private let timestampGap: CGFloat = 12
+    private let timestampResetAnimation: Animation = .easeOut(duration: 0.10)
+    private var timestampRevealMax: CGFloat { -(timestampWidth + timestampGap) }
 
     private var myUid: String { account.session.userId }
 
@@ -26,7 +32,7 @@ struct ThreadView: View {
                 ScrollView {
                     LazyVStack(spacing: 10) {
                         ForEach(items) { item in
-                            row(item).id(item.id)
+                            timestampRevealRow(for: item).id(item.id)
                         }
                     }
                     .padding(.horizontal, 14)
@@ -38,6 +44,7 @@ struct ThreadView: View {
                     if let last = items.last { proxy.scrollTo(last.id, anchor: .bottom) }
                 }
                 .overlay { if isLoading && items.isEmpty { ProgressView() } }
+                .simultaneousGesture(timestampRevealGesture)
             }
             replyBar
         }
@@ -53,6 +60,23 @@ struct ThreadView: View {
             if case let .chat(c) = item, c.senderUid != myUid { return c.senderNickname }
             return nil
         }.first ?? "대화"
+    }
+
+    private func timestampRevealRow(for item: ThreadItem) -> some View {
+        ZStack(alignment: .trailing) {
+            timestampLabel(for: item)
+            row(item)
+                .offset(x: timestampRevealOffset)
+        }
+    }
+
+    private func timestampLabel(for item: ThreadItem) -> some View {
+        Text(item.date.formatted(.dateTime.hour().minute()))
+            .font(.caption2)
+            .foregroundStyle(.tertiary)
+            .frame(width: timestampWidth, alignment: .leading)
+            .opacity(min(1, abs(timestampRevealOffset) / (timestampWidth * 0.7)))
+            .allowsHitTesting(false)
     }
 
     // MARK: - Rows
@@ -148,6 +172,38 @@ struct ThreadView: View {
     }
 
     // MARK: - Actions
+
+    private var timestampRevealGesture: some Gesture {
+        DragGesture(minimumDistance: 10)
+            .onChanged { value in
+                guard abs(value.translation.width) > abs(value.translation.height) else { return }
+
+                if value.translation.width < 0 || timestampRevealOffset != 0 {
+                    updateTimestampRevealOffset(value.translation.width)
+                }
+            }
+            .onEnded { _ in
+                resetTimestampRevealOffset()
+            }
+    }
+
+    private func updateTimestampRevealOffset(_ value: CGFloat) {
+        let clamped = min(0, max(timestampRevealMax, value))
+        guard abs(clamped - timestampRevealOffset) >= 0.5 else { return }
+
+        var transaction = Transaction()
+        transaction.animation = nil
+        withTransaction(transaction) {
+            timestampRevealOffset = clamped
+        }
+    }
+
+    private func resetTimestampRevealOffset() {
+        guard timestampRevealOffset != 0 else { return }
+        withAnimation(timestampResetAnimation) {
+            timestampRevealOffset = 0
+        }
+    }
 
     private func load() async {
         guard let client = AppEnvironment.shared.makeClient() else {
