@@ -10,6 +10,10 @@
 
 ---
 
+## Design Guardrail
+
+The iOS UI must stay within the existing Apple design system already used by `PingMobile`: native SwiftUI controls, SF Symbols, system typography, `Color(uiColor:)` semantic backgrounds, grouped/list-like hierarchy, and standard button styles. Do not introduce a marketing-page look, custom gradients, decorative illustration, custom typography, or non-native visual language.
+
 ## Current Review Summary
 
 - `PingMobile/ContentView.swift` currently shows a minimal unpaired screen with only "Mac과 연결하기", one sentence about Settings > Devices, and a "Mac QR 스캔" button. A new user has no visible install URL and no clear explanation that this is a desktop companion.
@@ -20,7 +24,7 @@
 
 ## UX Decision
 
-Recommended approach: a setup checklist screen, not a separate wizard.
+Recommended approach: a native setup checklist screen, not a separate wizard or landing-page style hero.
 
 The first screen should say: "Ping은 Mac용 Ping의 iPhone companion입니다." Then show three steps:
 
@@ -171,7 +175,7 @@ Expected: FAIL because `DesktopInstallGuideView.swift` does not exist.
 
 - [ ] **Step 3: Create the install guide view**
 
-Create `PingMobile/DesktopInstallGuideView.swift`:
+Create `PingMobile/DesktopInstallGuideView.swift`. Keep the UI native and Apple-system aligned: use SF Symbols, semantic UIKit colors, standard `Button`/`ShareLink`/`Link` styles, and compact grouped cards only where they match existing iOS settings/list conventions.
 
 ```swift
 import PingKit
