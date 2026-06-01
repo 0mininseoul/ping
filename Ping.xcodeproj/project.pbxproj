@@ -39,6 +39,7 @@
 		2F01792327B781BEF63AC173 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2AF4160B3B74FDD3CA18261B /* Assets.xcassets */; };
 		315501BEACA5034EC49BB7B3 /* InviteLinkContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CC9A5C9C5BA8FF0D9D30E0A /* InviteLinkContractTests.swift */; };
 		385227B9524A34105FB11714 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00EDA916E26BEAF2BAA3A0F3 /* NotificationService.swift */; };
+		39B71BEC21891E73BA4FCB96 /* PingMobileTimestampRevealContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0546AA276FA90796D5CD11E /* PingMobileTimestampRevealContractTests.swift */; };
 		3A42A12F85CF34A4D5F2F7CD /* OnboardingWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 050A0147A7508D00A8E2DE3B /* OnboardingWindow.swift */; };
 		3B5117F35AEE41A4224D9837 /* StorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0323B3DFE22413AC6BB3627D /* StorageService.swift */; };
 		3D8721EF1C7FF79A43DF7064 /* AppcastUpdateOfferParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F806032469E93F02C3C28D9 /* AppcastUpdateOfferParser.swift */; };
@@ -319,6 +320,7 @@
 		9B138D453327DB1DC53FA2EF /* VideoMessageCodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoMessageCodingTests.swift; sourceTree = "<group>"; };
 		9DA8354482E6065AA5CBDD0C /* PingWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PingWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9E1F6F2D8E154DB411DE015B /* WatchAppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchAppDelegate.swift; sourceTree = "<group>"; };
+		A0546AA276FA90796D5CD11E /* PingMobileTimestampRevealContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PingMobileTimestampRevealContractTests.swift; sourceTree = "<group>"; };
 		A442835C646C43BA7F20E0EA /* PingMobileApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PingMobileApp.swift; sourceTree = "<group>"; };
 		A4A1E99D8A2F055B3DD2924E /* KeyboardRoutingContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardRoutingContractTests.swift; sourceTree = "<group>"; };
 		A54D7D9F08655509CE5894FA /* MirrorWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MirrorWindow.swift; sourceTree = "<group>"; };
@@ -699,6 +701,7 @@
 				C68B271420DEF87D935A0913 /* PermissionUXContractTests.swift */,
 				2225B62EC954CFD86429E093 /* PingMobileOnboardingContractTests.swift */,
 				5BCE3102B1CB006C7BABB664 /* PingMobilePushPermissionContractTests.swift */,
+				A0546AA276FA90796D5CD11E /* PingMobileTimestampRevealContractTests.swift */,
 				AC481CCD223682FF45732D26 /* PIPCompositorTests.swift */,
 				18CCBF09517648670FCCB72C /* PlaybackControlsContractTests.swift */,
 				DF791350460B22AC63D0CE32 /* PlaybackPrefetchContractTests.swift */,
@@ -1167,6 +1170,7 @@
 				9187DD9F1F8EDEDD38CF6C4A /* PermissionUXContractTests.swift in Sources */,
 				09D937C3A5246BE80AB78C1A /* PingMobileOnboardingContractTests.swift in Sources */,
 				8EDDB07ABC21E39E4143D05E /* PingMobilePushPermissionContractTests.swift in Sources */,
+				39B71BEC21891E73BA4FCB96 /* PingMobileTimestampRevealContractTests.swift in Sources */,
 				C37132F0098B315DD40EF93F /* PlaybackControlsContractTests.swift in Sources */,
 				489FD8469EFD7A09256A8F54 /* PlaybackPrefetchContractTests.swift in Sources */,
 				EE1A8480D0A1A17293759871 /* ReactionPersistenceContractTests.swift in Sources */,
