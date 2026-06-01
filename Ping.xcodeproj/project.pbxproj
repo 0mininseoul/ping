@@ -1354,7 +1354,7 @@
 				CODE_SIGN_ENTITLEMENTS = PingMobile/PingMobile.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				DEVELOPMENT_TEAM = 878FAHTFQJ;
 				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = PingMobile/Info.plist;
@@ -1363,7 +1363,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.1.1;
 				OTHER_CODE_SIGN_FLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = com.youngminpark.ping.PingMobile;
 				PRODUCT_NAME = PingMobile;
@@ -1379,11 +1379,11 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				DEVELOPMENT_TEAM = 878FAHTFQJ;
 				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = PingWatch/Info.plist;
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.1.1;
 				OTHER_CODE_SIGN_FLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = com.youngminpark.ping.PingMobile.watchkitapp;
 				PRODUCT_NAME = PingWatch;
@@ -1417,7 +1417,7 @@
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				DEVELOPMENT_TEAM = 878FAHTFQJ;
 				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = PingPushService/Info.plist;
@@ -1427,7 +1427,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.1.1;
 				OTHER_CODE_SIGN_FLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = com.youngminpark.ping.PingMobile.PushService;
 				PRODUCT_NAME = PingPushService;
@@ -1480,7 +1480,7 @@
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				DEVELOPMENT_TEAM = 878FAHTFQJ;
 				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = PingPushService/Info.plist;
@@ -1490,7 +1490,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.1.1;
 				OTHER_CODE_SIGN_FLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = com.youngminpark.ping.PingMobile.PushService;
 				PRODUCT_NAME = PingPushService;
@@ -1507,11 +1507,11 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				DEVELOPMENT_TEAM = 878FAHTFQJ;
 				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = PingWatch/Info.plist;
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.1.1;
 				OTHER_CODE_SIGN_FLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = com.youngminpark.ping.PingMobile.watchkitapp;
 				PRODUCT_NAME = PingWatch;
@@ -1598,7 +1598,7 @@
 				CODE_SIGN_ENTITLEMENTS = PingMobile/PingMobile.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				DEVELOPMENT_TEAM = 878FAHTFQJ;
 				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = PingMobile/Info.plist;
@@ -1607,7 +1607,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.1.1;
 				OTHER_CODE_SIGN_FLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = com.youngminpark.ping.PingMobile;
 				PRODUCT_NAME = PingMobile;

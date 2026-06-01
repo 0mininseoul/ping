@@ -1,7 +1,7 @@
 # iOS / Apple Watch — App Store 심사 제출 체크리스트
 
 마지막 업데이트: 2026-05-30. 대상: **PingMobile**(`com.youngminpark.ping.PingMobile`) + 내장 watchOS 앱(PingWatch).
-TestFlight에 최신 빌드 **build 13**(버전 0.1.0) 업로드 예정. 아래는 App Store Connect(ASC) 웹에서 직접 해야 하는 액션이다 (대부분 웹 UI라 CLI로 대신 못 함).
+TestFlight에 최신 빌드 **build 14**(버전 0.1.1) 업로드 완료. 아래는 App Store Connect(ASC) 웹에서 직접 해야 하는 액션이다 (대부분 웹 UI라 CLI로 대신 못 함).
 
 준비된 자산:
 - 개인정보 처리방침 URL: `https://0minping.vercel.app/privacy`
@@ -27,7 +27,7 @@ TestFlight에 최신 빌드 **build 13**(버전 0.1.0) 업로드 예정. 아래�
 
 App Store Connect → My Apps → Ping → (없으면 `+` 새 앱 생성: 플랫폼 iOS, 번들 ID `com.youngminpark.ping.PingMobile`, SKU 임의, 기본 언어 한국어).
 
-- **빌드 선택**: 버전(0.1.0) → "빌드" 섹션에서 **build 13** 선택. (TestFlight 처리 완료 상태여야 함)
+- **빌드 선택**: 버전(0.1.1) → "빌드" 섹션에서 **build 14** 선택. (TestFlight 처리 완료 상태여야 함)
 - watchOS 앱은 iOS 앱에 내장되어 자동 포함된다(별도 제출 아님).
 
 ---
@@ -140,5 +140,5 @@ Video messages auto-delete after ~7 days. No ads, no third-party tracking.
 ## 빠른 요약 (해야 할 일 순서)
 1. **0번 데모 경로 구현 완료** (A안: 페어링 전 화면 하단의 "앱 기능 미리보기" 버튼 추가).
 2. 스크린샷 생성(iPhone 6.9" + 워치).
-3. ASC에서 2~8번 메타데이터/Privacy/연령/리뷰노트 입력 + build 13 선택.
+3. ASC에서 2~8번 메타데이터/Privacy/연령/리뷰노트 입력 + build 14 선택.
 4. **Submit for Review**.
