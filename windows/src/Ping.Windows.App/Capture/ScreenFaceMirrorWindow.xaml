@@ -92,7 +92,7 @@
                     BorderBrush="{StaticResource PingBorderIdleBrush}"
                     BorderThickness="1"
                     CornerRadius="41">
-                    <Grid Clip="{StaticResource PingFaceBubbleClip}">
+                    <Grid>
                         <MediaPlayerElement
                             x:Name="FacePreviewElement"
                             AreTransportControlsEnabled="False"

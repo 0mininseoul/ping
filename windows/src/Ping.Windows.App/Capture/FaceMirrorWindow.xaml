@@ -31,7 +31,7 @@
             BorderBrush="{StaticResource PingBorderIdleBrush}"
             BorderThickness="1"
             CornerRadius="{StaticResource PingMirrorCornerRadius}">
-            <Grid Clip="{StaticResource PingMirrorClip}">
+            <Grid>
                 <MediaPlayerElement
                     x:Name="PreviewElement"
                     AreTransportControlsEnabled="False"
