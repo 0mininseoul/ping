@@ -232,12 +232,14 @@ public sealed class AppCoordinatorSourceTests
 
         var handlerStart = source.IndexOf("private async Task HandleIncomingMessageAsync", StringComparison.Ordinal);
         Assert.True(handlerStart >= 0);
-        var nextMethodStart = source.IndexOf("private Task HandleIncomingChatAsync", handlerStart, StringComparison.Ordinal);
+        var nextMethodStart = source.IndexOf("private async Task HandleIncomingChatAsync", handlerStart, StringComparison.Ordinal);
         Assert.True(nextMethodStart > handlerStart);
         var handlerBody = source[handlerStart..nextMethodStart];
 
         Assert.Contains("notificationController.ShowIncoming(message)", handlerBody, StringComparison.Ordinal);
+        Assert.Contains("notificationResult == NotificationShowResult.Duplicate", handlerBody, StringComparison.Ordinal);
         Assert.Contains("await OpenIncomingPlaybackAsync(message, cancellationToken);", handlerBody, StringComparison.Ordinal);
+        Assert.DoesNotContain("Incoming notification is unavailable.", handlerBody, StringComparison.Ordinal);
         Assert.Contains("private async Task OpenIncomingPlaybackAsync", source, StringComparison.Ordinal);
         Assert.Contains("DownloadVideoForPlaybackAsync(message, cancellationToken)", source, StringComparison.Ordinal);
         Assert.Contains("RunOnUiThreadAsync(() => ShowPlayback(message, localVideoPath))", source, StringComparison.Ordinal);
@@ -265,7 +267,7 @@ public sealed class AppCoordinatorSourceTests
         Assert.Contains("public async Task RefreshNowAsync(CancellationToken cancellationToken = default)", historyWindow, StringComparison.Ordinal);
         Assert.Contains("public bool IsViewingRoom(string roomId)", historyWindow, StringComparison.Ordinal);
         Assert.Contains("await RefreshOpenHistoryRoomAsync(message.RoomId, cancellationToken);", coordinator, StringComparison.Ordinal);
-        Assert.Contains("_ = RefreshOpenHistoryRoomAsync(notification.Message.RoomId, cancellationToken);", coordinator, StringComparison.Ordinal);
+        Assert.Contains("await RefreshOpenHistoryRoomAsync(notification.Message.RoomId, cancellationToken);", coordinator, StringComparison.Ordinal);
         Assert.Contains("!window.IsViewingRoom(roomId)", coordinator, StringComparison.Ordinal);
         Assert.Contains("window.RefreshNowAsync(cancellationToken)", coordinator, StringComparison.Ordinal);
     }

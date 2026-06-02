@@ -928,6 +928,11 @@ public sealed class AppCoordinator : IDisposable
     private async Task HandleIncomingMessageAsync(VideoMessage message, CancellationToken cancellationToken)
     {
         var notificationResult = notificationController.ShowIncoming(message);
+        if (notificationResult == NotificationShowResult.Duplicate)
+        {
+            return;
+        }
+
         await RefreshOpenHistoryRoomAsync(message.RoomId, cancellationToken);
         try
         {
@@ -940,11 +945,6 @@ public sealed class AppCoordinator : IDisposable
                 throw new InvalidOperationException("Incoming notification and playback are unavailable.", ex);
             }
         }
-
-        if (notificationResult == NotificationShowResult.Unavailable)
-        {
-            throw new InvalidOperationException("Incoming notification is unavailable.");
-        }
     }
 
     private async Task OpenIncomingPlaybackAsync(VideoMessage message, CancellationToken cancellationToken)
@@ -953,15 +953,13 @@ public sealed class AppCoordinator : IDisposable
         await RunOnUiThreadAsync(() => ShowPlayback(message, localVideoPath));
     }
 
-    private Task HandleIncomingChatAsync(IncomingChatNotification notification, CancellationToken cancellationToken)
+    private async Task HandleIncomingChatAsync(IncomingChatNotification notification, CancellationToken cancellationToken)
     {
-        _ = RefreshOpenHistoryRoomAsync(notification.Message.RoomId, cancellationToken);
+        await RefreshOpenHistoryRoomAsync(notification.Message.RoomId, cancellationToken);
         if (notificationController.ShowIncomingChat(notification) == NotificationShowResult.Unavailable)
         {
             throw new InvalidOperationException("Incoming chat notification is unavailable.");
         }
-
-        return Task.CompletedTask;
     }
 
     private Task RefreshOpenHistoryRoomAsync(string? roomId, CancellationToken cancellationToken)
