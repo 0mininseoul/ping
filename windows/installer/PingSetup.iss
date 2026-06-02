@@ -1,7 +1,6 @@
 #define AppVersion GetEnv("PING_VERSION")
 #define PayloadRoot GetEnv("PING_INSTALLER_PAYLOAD_ROOT")
 #define OutputRoot GetEnv("PING_INSTALLER_OUTPUT_DIR")
-#define PackageBaseUrl GetEnv("PING_INSTALLER_PACKAGE_BASE_URL")
 
 [Setup]
 AppId={{4DD8F1D2-8C4E-4D0D-9A48-FE2B4A906F01}
@@ -29,15 +28,21 @@ SetupIconFile=app.ico
 
 [Tasks]
 Name: "desktopicon"; Description: "바탕 화면에 바로가기 만들기"; GroupDescription: "추가 옵션:"
-Name: "startmenu"; Description: "시작 메뉴에 Ping 폴더 및 바로가기 만들기"; GroupDescription: "추가 옵션:"; Flags: checkedonce
+Name: "startmenu"; Description: "시작 메뉴에 Ping 폴더 및 바로가기 만들기"; GroupDescription: "추가 옵션:"
 Name: "startup"; Description: "Windows 부팅 시 자동 시작 등록"; GroupDescription: "추가 옵션:"
-Name: "launch"; Description: "설치 완료 후 즉시 Ping 실행"; GroupDescription: "추가 옵션:"; Flags: checkedonce
+Name: "launch"; Description: "설치 후 Ping 열기"; GroupDescription: "추가 옵션:"
 
 [Files]
 Source: "{#PayloadRoot}\Ping-Windows-Sideload.cer"; DestDir: "{tmp}"; Flags: deleteafterinstall
 Source: "{#PayloadRoot}\Ping-Windows-Sideload.cer"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#PayloadRoot}\install-ping-windows.ps1"; DestDir: "{tmp}"; Flags: deleteafterinstall
 Source: "{#PayloadRoot}\uninstall-ping-windows.ps1"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#PayloadRoot}\Ping-Windows-v{#AppVersion}-x64.msix"; DestDir: "{tmp}"; Flags: deleteafterinstall
+Source: "{#PayloadRoot}\Ping-Windows-v{#AppVersion}-arm64.msix"; DestDir: "{tmp}"; Flags: deleteafterinstall
+Source: "{#PayloadRoot}\dependencies-x64.txt"; DestDir: "{tmp}"; Flags: deleteafterinstall
+Source: "{#PayloadRoot}\dependencies-arm64.txt"; DestDir: "{tmp}"; Flags: deleteafterinstall
+Source: "{#PayloadRoot}\Dependencies\x64\*"; DestDir: "{tmp}\Dependencies\x64"; Flags: recursesubdirs createallsubdirs deleteafterinstall
+Source: "{#PayloadRoot}\Dependencies\arm64\*"; DestDir: "{tmp}\Dependencies\arm64"; Flags: recursesubdirs createallsubdirs deleteafterinstall
 Source: "app.ico"; DestDir: "{tmp}"; Flags: deleteafterinstall
 Source: "app.ico"; DestDir: "{app}"; Flags: ignoreversion
 
@@ -59,8 +64,8 @@ begin
   Result := 'Ping-Windows-v{#AppVersion}-' + MsixArchitecture + '.msix';
 end;
 
-{ install-ping-windows.ps1에 전달할 인자. EXE는 작게 유지하고 MSIX/런타임
-  dependency는 공개 다운로드 서버에서 설치 중 내려받는다. }
+{ install-ping-windows.ps1에 전달할 인자. EXE는 MSIX와 런타임 dependency를
+  포함하므로 일반 설치 중 숨겨진 다운로드를 하지 않는다. }
 function GetInstallerParams: String;
 var
   Params: String;
@@ -69,7 +74,6 @@ begin
     '-Version "{#AppVersion}"' +
     ' -Architecture ' + MsixArchitecture +
     ' -PackageDirectory "' + ExpandConstant('{tmp}') + '"' +
-    ' -PackageBaseUrl "{#PackageBaseUrl}"' +
     ' -CertificatePath "' + ExpandConstant('{tmp}\Ping-Windows-Sideload.cer') + '"' +
     ' -IconPath "' + ExpandConstant('{tmp}\app.ico') + '"';
 

@@ -88,7 +88,7 @@ public sealed partial class HistoryWindow : Window
             return;
         }
 
-        viewModel.SelectedRoom = RoomsList.SelectedItem as Room;
+        viewModel.SelectedRoom = ConversationsList.SelectedItem as Room;
         if (await RunAsync(() => viewModel.LoadSelectedRoomAsync()))
         {
             ApplySelectionFromViewModel();
@@ -102,8 +102,8 @@ public sealed partial class HistoryWindow : Window
             return;
         }
 
-        viewModel.SelectedTimelineItem = VideosList.SelectedItem as TimelineHistoryItem;
-        viewModel.SelectedVideo = VideosList.SelectedItem switch
+        viewModel.SelectedTimelineItem = TimelineList.SelectedItem as TimelineHistoryItem;
+        viewModel.SelectedVideo = TimelineList.SelectedItem switch
         {
             VideoHistoryItem item => item,
             TimelineHistoryItem { Video: { } video } => video,
@@ -280,12 +280,12 @@ public sealed partial class HistoryWindow : Window
         isApplyingSelection = true;
         try
         {
-            RoomsList.SelectedItem = viewModel.SelectedRoom;
-            VideosList.SelectedItem = viewModel.SelectedTimelineItem;
+            ConversationsList.SelectedItem = viewModel.SelectedRoom;
+            TimelineList.SelectedItem = viewModel.SelectedTimelineItem;
             var currentRoomId = viewModel.SelectedRoom?.Id;
             if (viewModel.SelectedTimelineItem is not null)
             {
-                VideosList.ScrollIntoView(viewModel.SelectedTimelineItem);
+                TimelineList.ScrollIntoView(viewModel.SelectedTimelineItem);
             }
             else if (currentRoomId is not null && currentRoomId != lastScrolledRoomId)
             {
@@ -294,7 +294,7 @@ public sealed partial class HistoryWindow : Window
                 var newest = viewModel.Timeline.LastOrDefault();
                 if (newest is not null)
                 {
-                    DispatcherQueue.TryEnqueue(() => VideosList.ScrollIntoView(newest));
+                    DispatcherQueue.TryEnqueue(() => TimelineList.ScrollIntoView(newest));
                 }
             }
             if (currentRoomId is not null)

@@ -254,7 +254,7 @@ public sealed class AppCoordinator : IDisposable
         switch (command)
         {
             case TrayCommand.OpenPing:
-                ShowHomeShell();
+                OpenHistoryWindow();
                 break;
             case TrayCommand.NewFacePing:
                 Execute(HotkeyCommand.FacePing);
@@ -287,8 +287,8 @@ public sealed class AppCoordinator : IDisposable
     {
         mainWindow.ShellTitle.Text = "Ping";
         mainWindow.StateBadge.Text = "Ready";
-        mainWindow.StateTitle.Text = "Ping is running";
-        mainWindow.StateDetail.Text = "Close this window to keep Ping in the tray. Use the tray menu or hotkeys to send a ping.";
+        mainWindow.StateTitle.Text = "Recent conversations";
+        mainWindow.StateDetail.Text = "Open a room to continue the conversation or send a new ping.";
         mainWindow.StateBorder.BorderBrush = mainWindow.IdleBorderBrush;
         mainWindow.HistoryPanel.Visibility = Visibility.Visible;
         mainWindow.BlockedPanel.Visibility = Visibility.Collapsed;
@@ -381,7 +381,7 @@ public sealed class AppCoordinator : IDisposable
         _ = BootstrapAndLoadRoomsAsync();
     }
 
-    private void OpenHistoryWindow(string? preferredRoomId = null, string? preferredChatId = null)
+    public void OpenHistoryWindow(string? preferredRoomId = null, string? preferredChatId = null)
     {
         if (historyWindow is not null)
         {

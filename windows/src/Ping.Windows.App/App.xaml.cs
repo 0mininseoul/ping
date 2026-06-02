@@ -57,7 +57,7 @@ public partial class App : Application
             return;
         }
 
-        window.ShowShell();
+        coordinator.OpenHistoryWindow();
     }
 
     private void DrainPendingActivationArguments()
