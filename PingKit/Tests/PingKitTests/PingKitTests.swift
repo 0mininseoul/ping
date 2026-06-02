@@ -67,6 +67,53 @@ import Testing
     }
 }
 
+@Suite struct ChatMessageTests {
+    @Test func decodesImageAttachmentMetadataAndPreview() throws {
+        let json = """
+        {"id":"c-1","room_id":"r-1","sender_uid":"snd","sender_nickname":"n",
+         "body":"","media_path":"snd/chat-images/c-1.jpg","media_mime_type":"image/jpeg",
+         "media_width":1600,"media_height":1200,"media_file_name":"photo.jpg",
+         "created_at":"2026-05-29T00:00:00Z"}
+        """.data(using: .utf8)!
+
+        let message = try PingJSON.decoder.decode(PingChatMessage.self, from: json)
+        #expect(message.hasImage)
+        #expect(message.preview == "사진")
+        #expect(message.mediaWidth == 1600)
+        #expect(message.mediaHeight == 1200)
+        #expect(message.mediaFileName == "photo.jpg")
+        #expect(message.mediaFileExtension == "jpg")
+    }
+
+    @Test func decodesReplyTargets() throws {
+        let json = """
+        {"id":"c-2","room_id":"r-1","sender_uid":"snd","sender_nickname":"n",
+         "body":"답장입니다","reply_to_chat_id":"c-1","reply_to_video_id":null,
+         "created_at":"2026-05-29T00:00:00Z"}
+        """.data(using: .utf8)!
+
+        let message = try PingJSON.decoder.decode(PingChatMessage.self, from: json)
+        #expect(message.replyToChatId == "c-1")
+        #expect(message.replyToVideoId == nil)
+    }
+}
+
+@Suite struct MessageReactionTests {
+    @Test func decodesReactionAggregates() throws {
+        let json = """
+        {"target_kind":"chat","target_id":"c-1","emoji":"👍","total_count":2,"my_reacted":true}
+        """.data(using: .utf8)!
+
+        let reaction = try PingJSON.decoder.decode(PingMessageReaction.self, from: json)
+        #expect(reaction.targetKind == .chat)
+        #expect(reaction.targetId == "c-1")
+        #expect(reaction.emoji == "👍")
+        #expect(reaction.totalCount == 2)
+        #expect(reaction.myReacted)
+        #expect(reaction.id == "chat:c-1:👍")
+    }
+}
+
 @Suite struct ConfigurationTests {
     @Test func derivesSubpaths() {
         let config = PingConfiguration(url: URL(string: "https://proj.supabase.co")!, anonKey: "anon")

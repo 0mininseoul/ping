@@ -4,77 +4,50 @@ import UIKit
 
 struct DesktopInstallGuideView: View {
     let onScanQR: () -> Void
-    let onPreview: () -> Void
 
     @State private var copied = false
     @State private var copyResetTask: Task<Void, Never>?
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 24) {
-                Spacer(minLength: 12)
+            VStack(spacing: 20) {
+                Spacer(minLength: 92)
 
                 Image(systemName: "macbook.and.iphone")
-                    .font(.system(size: 58, weight: .semibold))
+                    .font(.system(size: 48, weight: .semibold))
                     .foregroundStyle(Color.accentColor)
                     .accessibilityHidden(true)
 
                 VStack(spacing: 8) {
-                    Text("Ping은 Mac용 Ping의 iPhone companion입니다")
+                    Text("Mac용 Ping과 연결해서 사용하는\niPhone 컴패니언 앱이에요")
                         .font(.title2.bold())
                         .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
 
-                    Text("Mac에서 3초 영상을 보내고, iPhone과 Apple Watch에서 바로 보고 답장해요. 먼저 Mac에 Ping을 설치한 뒤 QR로 연결하세요.")
+                    Text("Mac 앱을 설치한 뒤, QR 코드를 열고 스캔하세요")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.86)
                 }
 
-                VStack(alignment: .leading, spacing: 12) {
-                    setupStep(number: "1", title: "Mac에서 설치 페이지 열기", detail: PingProductLinks.desktopInstallPageText)
-                    setupStep(number: "2", title: "Ping 설치 후 기기 QR 표시", detail: "Mac Ping > 설정 > 기기")
-                    setupStep(number: "3", title: "이 iPhone으로 QR 스캔", detail: "같은 익명 계정으로 연결됩니다")
-                }
-                .padding(18)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(Color(uiColor: .secondarySystemBackground))
-                )
+                installPageRow
 
-                VStack(spacing: 10) {
-                    Button(action: copyInstallURL) {
-                        Label(copied ? "복사됐어요" : "Mac 설치 링크 복사", systemImage: copied ? "checkmark" : "doc.on.doc")
+                VStack(spacing: 8) {
+                    Button(action: onScanQR) {
+                        Label("QR 스캔", systemImage: "qrcode.viewfinder")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
 
-                    ViewThatFits(in: .horizontal) {
-                        HStack(spacing: 10) {
-                            shareButton
-                            safariLink
-                        }
-
-                        VStack(spacing: 10) {
-                            shareButton
-                            safariLink
-                        }
-                    }
-
-                    Button(action: onScanQR) {
-                        Label("설치 끝났어요, QR 스캔", systemImage: "qrcode.viewfinder")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.large)
+                    Text("Mac Ping > 설정 > 기기")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
 
-                Button("앱 기능 미리보기", action: onPreview)
-                    .font(.footnote)
-                    .foregroundStyle(.tertiary)
-                    .padding(.top, 8)
+                Spacer(minLength: 16)
             }
             .padding(24)
         }
@@ -85,40 +58,53 @@ struct DesktopInstallGuideView: View {
         }
     }
 
-    private var shareButton: some View {
-        ShareLink(item: PingProductLinks.desktopInstallPage) {
-            Label("Mac으로 공유", systemImage: "square.and.arrow.up")
-                .frame(maxWidth: .infinity)
-        }
-        .buttonStyle(.bordered)
-        .controlSize(.large)
-    }
-
-    private var safariLink: some View {
-        Link(destination: PingProductLinks.desktopInstallPage) {
-            Label("Safari에서 보기", systemImage: "safari")
-                .frame(maxWidth: .infinity)
-        }
-        .buttonStyle(.bordered)
-        .controlSize(.large)
-    }
-
-    private func setupStep(number: String, title: String, detail: String) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            Text(number)
-                .font(.caption.bold())
-                .foregroundStyle(.white)
-                .frame(width: 24, height: 24)
-                .background(Circle().fill(Color.accentColor))
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.subheadline.bold())
-                Text(detail)
+    private var installPageRow: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Mac 앱 설치 페이지")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+
+                Link(destination: PingProductLinks.desktopInstallPage) {
+                    Text(PingProductLinks.desktopInstallPageText)
+                        .font(.body.weight(.semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
+                }
             }
+
+            Spacer(minLength: 8)
+
+            Button(action: copyInstallURL) {
+                installActionImage(copied ? "checkmark" : "doc.on.doc")
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(copied ? "설치 주소 복사됨" : "설치 주소 복사")
+
+            ShareLink(item: PingProductLinks.desktopInstallPage) {
+                installActionImage("square.and.arrow.up")
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("설치 주소 공유")
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color(uiColor: .secondarySystemBackground))
+        )
+    }
+
+    private func installActionImage(_ systemName: String) -> some View {
+        Image(systemName: systemName)
+            .font(.system(size: 17, weight: .semibold))
+            .foregroundStyle(Color.accentColor)
+            .frame(width: 40, height: 40)
+            .background(
+                Circle()
+                    .fill(Color.accentColor.opacity(0.12))
+            )
     }
 
     private func copyInstallURL() {

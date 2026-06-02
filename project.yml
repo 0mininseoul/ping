@@ -177,6 +177,7 @@ targets:
           cp "$PROJECT_DIR/supabase/migrations/20260527000100_delete_shared_video_messages.sql" "$DST/20260527000100_delete_shared_video_messages.sql"
           cp "$PROJECT_DIR/supabase/migrations/20260527000200_delete_or_hide_video_message.sql" "$DST/20260527000200_delete_or_hide_video_message.sql"
           cp "$PROJECT_DIR/supabase/migrations/20260527000300_delete_video_message_rows_only.sql" "$DST/20260527000300_delete_video_message_rows_only.sql"
+          cp "$PROJECT_DIR/supabase/migrations/20260602000100_dedupe_sender_room_videos.sql" "$DST/20260602000100_dedupe_sender_room_videos.sql"
           cp "$PROJECT_DIR/project.yml" "$DST/project.yml"
           cp "$PROJECT_DIR/AGENTS.md" "$DST/AGENTS.md"
           cp "$PROJECT_DIR/PING_PROJECT_SPECIFICATION.md" "$DST/PING_PROJECT_SPECIFICATION.md"
@@ -252,6 +253,7 @@ targets:
           - "$(PROJECT_DIR)/supabase/migrations/20260527000100_delete_shared_video_messages.sql"
           - "$(PROJECT_DIR)/supabase/migrations/20260527000200_delete_or_hide_video_message.sql"
           - "$(PROJECT_DIR)/supabase/migrations/20260527000300_delete_video_message_rows_only.sql"
+          - "$(PROJECT_DIR)/supabase/migrations/20260602000100_dedupe_sender_room_videos.sql"
           - "$(PROJECT_DIR)/project.yml"
           - "$(PROJECT_DIR)/AGENTS.md"
           - "$(PROJECT_DIR)/PING_PROJECT_SPECIFICATION.md"
@@ -327,6 +329,7 @@ targets:
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/20260527000100_delete_shared_video_messages.sql"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/20260527000200_delete_or_hide_video_message.sql"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/20260527000300_delete_video_message_rows_only.sql"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/20260602000100_dedupe_sender_room_videos.sql"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/project.yml"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/AGENTS.md"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/PING_PROJECT_SPECIFICATION.md"
@@ -346,7 +349,7 @@ targets:
         DEVELOPMENT_TEAM: "878FAHTFQJ"
         PRODUCT_NAME: PingMobile
         MARKETING_VERSION: "0.1.1"
-        CURRENT_PROJECT_VERSION: "14"
+        CURRENT_PROJECT_VERSION: "18"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SWIFT_STRICT_CONCURRENCY: minimal
         CODE_SIGN_STYLE: Automatic
@@ -386,7 +389,7 @@ targets:
         DEVELOPMENT_TEAM: "878FAHTFQJ"
         PRODUCT_NAME: PingPushService
         MARKETING_VERSION: "0.1.1"
-        CURRENT_PROJECT_VERSION: "14"
+        CURRENT_PROJECT_VERSION: "18"
         SWIFT_VERSION: "5.0"
         SWIFT_STRICT_CONCURRENCY: minimal
         CODE_SIGN_STYLE: Automatic
@@ -415,7 +418,7 @@ targets:
         DEVELOPMENT_TEAM: "878FAHTFQJ"
         PRODUCT_NAME: PingWatch
         MARKETING_VERSION: "0.1.1"
-        CURRENT_PROJECT_VERSION: "14"
+        CURRENT_PROJECT_VERSION: "18"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SWIFT_STRICT_CONCURRENCY: minimal
         CODE_SIGN_STYLE: Automatic

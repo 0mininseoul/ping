@@ -45,6 +45,7 @@ final class HistoryViewModel: ObservableObject {
     private let storageService: StorageService
     private var loadedVideos: [VideoMessage] = []
     private var loadedChats: [ChatMessage] = []
+    private var videoPaginationCursor: Date?
 
     init(
         messageService: MessageService,
@@ -64,6 +65,7 @@ final class HistoryViewModel: ObservableObject {
         selectedRoomId = roomId
         loadedVideos = []
         loadedChats = []
+        videoPaginationCursor = nil
         groups = []
         reactionsByTargetId = [:]
         await loadMore()
@@ -76,14 +78,17 @@ final class HistoryViewModel: ObservableObject {
         isLoading = true
         defer { isLoading = false }
 
-        async let videosTask = messageService.roomMessages(roomId: roomId, beforeTimestamp: loadedVideos.last?.createdAt, limit: 50)
+        async let videosTask = messageService.roomMessages(roomId: roomId, beforeTimestamp: videoPaginationCursor, limit: 50)
         async let chatsTask = chatService.roomChatMessages(roomId: roomId, beforeTimestamp: loadedChats.last?.createdAt, limit: 50)
 
         do {
             let videos = try await videosTask
             let chats = try await chatsTask
             NSLog("History load OK: roomId=\(roomId) videos=\(videos.count) chats=\(chats.count)")
-            loadedVideos.append(contentsOf: videos)
+            if let nextVideoCursor = videos.last?.createdAt {
+                videoPaginationCursor = nextVideoCursor
+            }
+            loadedVideos = Self.dedupedSenderVideos(loadedVideos + videos, currentUid: appState.currentUser?.id)
             loadedChats.append(contentsOf: chats)
             groups = Self.groupTimelineByDay(videos: loadedVideos, chats: loadedChats, calendar: .current)
             await refreshReactions()
@@ -351,6 +356,26 @@ final class HistoryViewModel: ObservableObject {
             groups.append(DayGroup(date: currentDate, items: currentItems))
         }
         return groups
+    }
+
+    static func dedupedSenderVideos(_ videos: [VideoMessage], currentUid: String?) -> [VideoMessage] {
+        guard let currentUid else { return videos }
+
+        var seenSentVideoKeys = Set<String>()
+        var deduped: [VideoMessage] = []
+
+        for video in videos {
+            guard video.senderUid == currentUid else {
+                deduped.append(video)
+                continue
+            }
+
+            let key = "\(video.roomId)|\(video.videoUrl)"
+            guard seenSentVideoKeys.insert(key).inserted else { continue }
+            deduped.append(video)
+        }
+
+        return deduped
     }
 
     // Compatibility shim — callers updated in Task F4
