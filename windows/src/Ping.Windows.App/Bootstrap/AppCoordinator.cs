@@ -254,7 +254,7 @@ public sealed class AppCoordinator : IDisposable
         switch (command)
         {
             case TrayCommand.OpenPing:
-                OpenHistoryWindow();
+                ShowHomeShell();
                 break;
             case TrayCommand.NewFacePing:
                 Execute(HotkeyCommand.FacePing);
@@ -281,6 +281,19 @@ public sealed class AppCoordinator : IDisposable
     private void HandleHotkeyPressed(object? sender, HotkeyCommand command)
     {
         Execute(command);
+    }
+
+    private void ShowHomeShell()
+    {
+        mainWindow.ShellTitle.Text = "Ping";
+        mainWindow.StateBadge.Text = "Ready";
+        mainWindow.StateTitle.Text = "Ping is running";
+        mainWindow.StateDetail.Text = "Close this window to keep Ping in the tray. Use the tray menu or hotkeys to send a ping.";
+        mainWindow.StateBorder.BorderBrush = mainWindow.IdleBorderBrush;
+        mainWindow.HistoryPanel.Visibility = Visibility.Visible;
+        mainWindow.BlockedPanel.Visibility = Visibility.Collapsed;
+        mainWindow.SettingsPanel.Visibility = Visibility.Collapsed;
+        mainWindow.ShowShell();
     }
 
     private void ShowHistory(string detail)
@@ -912,26 +925,59 @@ public sealed class AppCoordinator : IDisposable
         incomingChatPollingCancellation = null;
     }
 
-    private Task HandleIncomingMessageAsync(VideoMessage message, CancellationToken cancellationToken)
+    private async Task HandleIncomingMessageAsync(VideoMessage message, CancellationToken cancellationToken)
     {
-        _ = cancellationToken;
-        if (notificationController.ShowIncoming(message) == NotificationShowResult.Unavailable)
+        var notificationResult = notificationController.ShowIncoming(message);
+        if (notificationResult == NotificationShowResult.Duplicate)
         {
-            throw new InvalidOperationException("Incoming notification is unavailable.");
+            return;
         }
 
-        return Task.CompletedTask;
+        await RefreshOpenHistoryRoomAsync(message.RoomId, cancellationToken);
+        try
+        {
+            await OpenIncomingPlaybackAsync(message, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            if (notificationResult == NotificationShowResult.Unavailable)
+            {
+                throw new InvalidOperationException("Incoming notification and playback are unavailable.", ex);
+            }
+        }
     }
 
-    private Task HandleIncomingChatAsync(IncomingChatNotification notification, CancellationToken cancellationToken)
+    private async Task OpenIncomingPlaybackAsync(VideoMessage message, CancellationToken cancellationToken)
     {
-        _ = cancellationToken;
+        var localVideoPath = await DownloadVideoForPlaybackAsync(message, cancellationToken);
+        await RunOnUiThreadAsync(() => ShowPlayback(message, localVideoPath));
+    }
+
+    private async Task HandleIncomingChatAsync(IncomingChatNotification notification, CancellationToken cancellationToken)
+    {
+        await RefreshOpenHistoryRoomAsync(notification.Message.RoomId, cancellationToken);
         if (notificationController.ShowIncomingChat(notification) == NotificationShowResult.Unavailable)
         {
             throw new InvalidOperationException("Incoming chat notification is unavailable.");
         }
+    }
 
-        return Task.CompletedTask;
+    private Task RefreshOpenHistoryRoomAsync(string? roomId, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(roomId) || historyWindow is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        return RunOnUiThreadAsync(() =>
+        {
+            if (historyWindow is not { } window || !window.IsViewingRoom(roomId))
+            {
+                return;
+            }
+
+            _ = window.RefreshNowAsync(cancellationToken);
+        });
     }
 
     private async Task OpenMessageFromNotificationAsync(string messageId, CancellationToken cancellationToken)

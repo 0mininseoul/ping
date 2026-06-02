@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace Ping.Windows.App.Tray;
@@ -20,13 +21,19 @@ public sealed class TrayIconController : IDisposable
     private const uint WmLButtonUp = 0x0202;
     private const uint WmRButtonUp = 0x0205;
     private const uint WmContextMenu = 0x007B;
+    private const uint WmNull = 0x0000;
     private const uint NinSelect = 0x0400;
+    private const uint ImageIcon = 1;
+    private const uint LrLoadFromFile = 0x0010;
+    private const uint LrDefaultSize = 0x0040;
+    private static readonly IntPtr SystemApplicationIcon = new(32512);
     private static readonly Dictionary<IntPtr, TrayIconController> ControllersByWindow = [];
     private static readonly WndProc WindowProcedure = StaticWindowProcedure;
     private readonly Action<TrayCommand> dispatch;
     private readonly IntPtr hwnd;
     private readonly uint taskbarCreatedMessage;
     private readonly IntPtr iconHandle;
+    private readonly bool ownsIconHandle;
     private bool iconVisible;
     private bool disposed;
 
@@ -41,7 +48,7 @@ public sealed class TrayIconController : IDisposable
 
         hwnd = CreateMessageWindow();
         taskbarCreatedMessage = RegisterWindowMessage("TaskbarCreated");
-        iconHandle = LoadIcon(IntPtr.Zero, new IntPtr(32512));
+        (iconHandle, ownsIconHandle) = LoadPingIcon();
         ControllersByWindow[hwnd] = this;
     }
 
@@ -84,6 +91,11 @@ public sealed class TrayIconController : IDisposable
 
         RemoveIcon();
         ControllersByWindow.Remove(hwnd);
+        if (ownsIconHandle && iconHandle != IntPtr.Zero)
+        {
+            DestroyIcon(iconHandle);
+        }
+
         DestroyWindow(hwnd);
         disposed = true;
     }
@@ -102,14 +114,21 @@ public sealed class TrayIconController : IDisposable
             return;
         }
 
-        var trayEvent = LowWord(lParam);
-        if (trayEvent is WmLButtonUp or NinSelect)
+        try
         {
-            dispatch(TrayCommand.OpenPing);
+            var trayEvent = LowWord(lParam);
+            if (trayEvent is WmLButtonUp or NinSelect)
+            {
+                dispatch(TrayCommand.OpenPing);
+            }
+            else if (trayEvent is WmRButtonUp or WmContextMenu)
+            {
+                ShowContextMenu();
+            }
         }
-        else if (trayEvent is WmRButtonUp or WmContextMenu)
+        catch (Exception exception)
         {
-            ShowContextMenu();
+            Debug.WriteLine($"Ping tray callback failed: {exception}");
         }
     }
 
@@ -147,6 +166,7 @@ public sealed class TrayIconController : IDisposable
             GetCursorPos(out var point);
             SetForegroundWindow(hwnd);
             var selected = TrackPopupMenu(menu, 0x0100, point.X, point.Y, 0, hwnd, IntPtr.Zero);
+            PostMessage(hwnd, WmNull, IntPtr.Zero, IntPtr.Zero);
             DispatchMenuSelection(selected);
         }
         finally
@@ -236,6 +256,33 @@ public sealed class TrayIconController : IDisposable
     }
 
     private static uint LowWord(IntPtr value) => (uint)(value.ToInt64() & 0xffff);
+
+    private static (IntPtr Handle, bool OwnsHandle) LoadPingIcon()
+    {
+        var iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Ping.ico");
+        if (File.Exists(iconPath))
+        {
+            var handle = LoadImage(
+                IntPtr.Zero,
+                iconPath,
+                ImageIcon,
+                0,
+                0,
+                LrLoadFromFile | LrDefaultSize);
+            if (handle != IntPtr.Zero)
+            {
+                return (handle, true);
+            }
+        }
+
+        var fallback = LoadIcon(IntPtr.Zero, SystemApplicationIcon);
+        if (fallback == IntPtr.Zero)
+        {
+            throw new Win32Exception(Marshal.GetLastWin32Error(), "Could not load Ping tray icon.");
+        }
+
+        return (fallback, false);
+    }
 
     private enum TrayMenuId : uint
     {
@@ -341,6 +388,18 @@ public sealed class TrayIconController : IDisposable
     [DllImport("user32.dll", SetLastError = true)]
     private static extern IntPtr LoadIcon(IntPtr hInstance, IntPtr lpIconName);
 
+    [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    private static extern IntPtr LoadImage(
+        IntPtr hInst,
+        string name,
+        uint type,
+        int cx,
+        int cy,
+        uint fuLoad);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool DestroyIcon(IntPtr hIcon);
+
     [DllImport("user32.dll", SetLastError = true)]
     private static extern IntPtr CreatePopupMenu();
 
@@ -358,6 +417,9 @@ public sealed class TrayIconController : IDisposable
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern uint TrackPopupMenu(IntPtr hMenu, uint uFlags, int x, int y, int nReserved, IntPtr hWnd, IntPtr prcRect);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool PostMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
 
     [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
     private static extern IntPtr GetModuleHandle(string? lpModuleName);

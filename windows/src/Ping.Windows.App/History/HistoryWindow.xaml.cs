@@ -148,7 +148,18 @@ public sealed partial class HistoryWindow : Window
     }
 
     private async void RefreshButton_Click(object sender, RoutedEventArgs args) =>
-        await RefreshAndSyncSelectionAsync();
+        await RefreshNowAsync();
+
+    public async Task RefreshNowAsync(CancellationToken cancellationToken = default)
+    {
+        if (await RunAsync(() => autoRefresh.RefreshOnceAsync(cancellationToken)))
+        {
+            ApplySelectionFromViewModel();
+        }
+    }
+
+    public bool IsViewingRoom(string roomId) =>
+        string.Equals(viewModel.SelectedRoom?.Id, roomId, StringComparison.Ordinal);
 
     private async void SendChatButton_Click(object sender, RoutedEventArgs args)
     {
@@ -261,14 +272,6 @@ public sealed partial class HistoryWindow : Window
         {
             ChatBox.Text = string.Empty;
             ClearSelectedImage();
-        }
-    }
-
-    private async Task RefreshAndSyncSelectionAsync()
-    {
-        if (await RunAsync(() => autoRefresh.RefreshOnceAsync()))
-        {
-            ApplySelectionFromViewModel();
         }
     }
 

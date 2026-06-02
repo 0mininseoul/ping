@@ -197,7 +197,7 @@ public sealed class BackendContractTests
         {
             Assert.Equal(HttpMethod.Get, request.Method);
             Assert.Equal(
-                "https://example.supabase.co/storage/v1/object/ping-videos/sender%20uid/video%20id.mp4",
+                "https://example.supabase.co/storage/v1/object/authenticated/ping-videos/sender%20uid/video%20id.mp4",
                 request.RequestUri?.AbsoluteUri);
             Assert.Equal("anon-key", request.Headers.GetValues("apikey").Single());
             Assert.Equal("Bearer", request.Headers.Authorization?.Scheme);
@@ -276,7 +276,7 @@ public sealed class BackendContractTests
 
             Assert.Equal(HttpMethod.Get, request.Method);
             Assert.Equal(
-                "https://example.supabase.co/storage/v1/object/ping-media/sender-uid/chat-images/message-id.png",
+                "https://example.supabase.co/storage/v1/object/authenticated/ping-media/sender-uid/chat-images/message-id.png",
                 request.RequestUri?.ToString());
             return new HttpResponseMessage(HttpStatusCode.OK)
             {

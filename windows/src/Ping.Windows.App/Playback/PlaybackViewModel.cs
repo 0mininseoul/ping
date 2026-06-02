@@ -8,6 +8,7 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
+using Ping.Windows.App.UI;
 #endif
 
 namespace Ping.Windows.App.Playback;
@@ -280,12 +281,14 @@ public sealed partial class PlaybackWindow : Window
             : new CornerRadius(size.Width / 2d);
         PlayerElement.Stretch = viewModel.IsScreenFace ? Stretch.Uniform : Stretch.UniformToFill;
         SenderChip.Visibility = viewModel.IsScreenFace ? Visibility.Visible : Visibility.Collapsed;
-        PlayerSurface.Clip = viewModel.IsScreenFace
-            ? null
-            : new RectangleGeometry
-            {
-                Rect = new global::Windows.Foundation.Rect(0, 0, size.Width, size.Height)
-            };
+        if (viewModel.IsScreenFace)
+        {
+            PlayerSurface.Clip = null;
+        }
+        else
+        {
+            RoundedCompositionClip.Apply(PlayerSurface, size.Width, size.Height, size.Width / 2d);
+        }
         appWindow.Resize(size);
         appWindow.TitleBar.ExtendsContentIntoTitleBar = true;
         appWindow.SetPresenter(AppWindowPresenterKind.CompactOverlay);
@@ -299,7 +302,7 @@ public sealed partial class PlaybackWindow : Window
             return new global::Windows.Graphics.SizeInt32(200, 200);
         }
 
-        const int width = 420;
+        const int width = 480;
         var height = Math.Max(120, (int)Math.Round(width / viewModel.AspectRatio));
         return new global::Windows.Graphics.SizeInt32(width, height);
     }

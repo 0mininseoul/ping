@@ -12,6 +12,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
+using Ping.Windows.App.UI;
 using Windows.Media.Core;
 using Windows.Media.Playback;
 #endif
@@ -749,8 +750,14 @@ public sealed partial class ScreenFaceMirrorWindow : Window
     private void HandleLoaded(object sender, RoutedEventArgs args)
     {
         Root.Focus(FocusState.Programmatic);
+        ApplyRoundedMediaClips();
         UpdatePositionFromWindow();
         _ = StartPreviewAsync();
+    }
+
+    private void ApplyRoundedMediaClips()
+    {
+        RoundedCompositionClip.Apply(FacePreviewElement, 82, 82, 41);
     }
 
     private void HandleViewModelPropertyChanged(object? sender, PropertyChangedEventArgs args)

@@ -36,6 +36,12 @@ public sealed partial class MainWindow : Window
         var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
         var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hwnd);
         appWindow = AppWindow.GetFromWindowId(windowId);
+        var iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Ping.ico");
+        if (File.Exists(iconPath))
+        {
+            appWindow.SetIcon(iconPath);
+        }
+
         appWindow.Closing += HandleAppWindowClosing;
     }
 

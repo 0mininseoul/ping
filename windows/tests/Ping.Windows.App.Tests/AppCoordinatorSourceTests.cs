@@ -168,6 +168,111 @@ public sealed class AppCoordinatorSourceTests
     }
 
     [Fact]
+    public void TrayOpenPingRestoresMainShellInsteadOfBypassingToHistoryWindow()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Bootstrap",
+            "AppCoordinator.cs"));
+
+        var switchStart = source.IndexOf("private void ExecuteTrayCommand", StringComparison.Ordinal);
+        Assert.True(switchStart >= 0);
+        var nextMethodStart = source.IndexOf("private void HandleHotkeyPressed", switchStart, StringComparison.Ordinal);
+        Assert.True(nextMethodStart > switchStart);
+        var executeTrayCommandBody = source[switchStart..nextMethodStart];
+        var openPingStart = executeTrayCommandBody.IndexOf("case TrayCommand.OpenPing:", StringComparison.Ordinal);
+        Assert.True(openPingStart >= 0);
+        var nextCaseStart = executeTrayCommandBody.IndexOf("case TrayCommand.NewFacePing:", openPingStart, StringComparison.Ordinal);
+        Assert.True(nextCaseStart > openPingStart);
+        var openPingCase = executeTrayCommandBody[openPingStart..nextCaseStart];
+
+        Assert.Contains("ShowHomeShell();", openPingCase, StringComparison.Ordinal);
+        Assert.DoesNotContain("OpenHistoryWindow();", openPingCase, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TrayControllerUsesPackagedPingIconAndDoesNotThrowFromMessageCallback()
+    {
+        var root = RepoRoot();
+        var traySource = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Tray",
+            "TrayIconController.cs"));
+        var project = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Ping.Windows.App.csproj"));
+
+        Assert.Contains("<ApplicationIcon>Assets\\Ping.ico</ApplicationIcon>", project, StringComparison.Ordinal);
+        Assert.Contains("LoadImage", traySource, StringComparison.Ordinal);
+        Assert.Contains("Assets", traySource, StringComparison.Ordinal);
+        Assert.DoesNotContain("LoadIcon(IntPtr.Zero, new IntPtr(32512))", traySource, StringComparison.Ordinal);
+        Assert.Contains("catch (Exception exception)", traySource, StringComparison.Ordinal);
+        Assert.Contains("PostMessage(hwnd, WmNull", traySource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void IncomingVideoMessagesOpenFloatingPlaybackWithoutNotificationClick()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Bootstrap",
+            "AppCoordinator.cs"));
+
+        var handlerStart = source.IndexOf("private async Task HandleIncomingMessageAsync", StringComparison.Ordinal);
+        Assert.True(handlerStart >= 0);
+        var nextMethodStart = source.IndexOf("private async Task HandleIncomingChatAsync", handlerStart, StringComparison.Ordinal);
+        Assert.True(nextMethodStart > handlerStart);
+        var handlerBody = source[handlerStart..nextMethodStart];
+
+        Assert.Contains("notificationController.ShowIncoming(message)", handlerBody, StringComparison.Ordinal);
+        Assert.Contains("notificationResult == NotificationShowResult.Duplicate", handlerBody, StringComparison.Ordinal);
+        Assert.Contains("await OpenIncomingPlaybackAsync(message, cancellationToken);", handlerBody, StringComparison.Ordinal);
+        Assert.DoesNotContain("Incoming notification is unavailable.", handlerBody, StringComparison.Ordinal);
+        Assert.Contains("private async Task OpenIncomingPlaybackAsync", source, StringComparison.Ordinal);
+        Assert.Contains("DownloadVideoForPlaybackAsync(message, cancellationToken)", source, StringComparison.Ordinal);
+        Assert.Contains("RunOnUiThreadAsync(() => ShowPlayback(message, localVideoPath))", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void IncomingMessagesRefreshVisibleHistoryRoomImmediately()
+    {
+        var root = RepoRoot();
+        var coordinator = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Bootstrap",
+            "AppCoordinator.cs"));
+        var historyWindow = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "History",
+            "HistoryWindow.xaml.cs"));
+
+        Assert.Contains("public async Task RefreshNowAsync(CancellationToken cancellationToken = default)", historyWindow, StringComparison.Ordinal);
+        Assert.Contains("public bool IsViewingRoom(string roomId)", historyWindow, StringComparison.Ordinal);
+        Assert.Contains("await RefreshOpenHistoryRoomAsync(message.RoomId, cancellationToken);", coordinator, StringComparison.Ordinal);
+        Assert.Contains("await RefreshOpenHistoryRoomAsync(notification.Message.RoomId, cancellationToken);", coordinator, StringComparison.Ordinal);
+        Assert.Contains("!window.IsViewingRoom(roomId)", coordinator, StringComparison.Ordinal);
+        Assert.Contains("window.RefreshNowAsync(cancellationToken)", coordinator, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void HistoryComposerSupportsEnterSendAndShiftEnterNewline()
     {
         var root = RepoRoot();
@@ -294,6 +399,47 @@ public sealed class AppCoordinatorSourceTests
         Assert.Contains("Closed += HandleClosed;", source, StringComparison.Ordinal);
         Assert.Contains("playerHost.Dispose();", source, StringComparison.Ordinal);
         Assert.Contains("CancelPausedCloseTimeout();", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void FacePlaybackAndCaptureUseWindowsSafeRoundedCompositionClips()
+    {
+        var root = RepoRoot();
+        var helper = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "UI",
+            "RoundedCompositionClip.cs"));
+        var playback = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Playback",
+            "PlaybackViewModel.cs"));
+        var face = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Capture",
+            "FaceMirrorViewModel.cs"));
+        var screenFace = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Capture",
+            "ScreenFaceMirrorViewModel.cs"));
+
+        Assert.Contains("CreateRoundedRectangleGeometry", helper, StringComparison.Ordinal);
+        Assert.Contains("CreateGeometricClip", helper, StringComparison.Ordinal);
+        Assert.Contains("RoundedCompositionClip.Apply(PlayerSurface, size.Width, size.Height, size.Width / 2d)", playback, StringComparison.Ordinal);
+        Assert.Contains("RoundedCompositionClip.Apply(PreviewElement, diameter, diameter, diameter / 2d)", face, StringComparison.Ordinal);
+        Assert.Contains("RoundedCompositionClip.Apply(ReviewElement, diameter, diameter, diameter / 2d)", face, StringComparison.Ordinal);
+        Assert.Contains("RoundedCompositionClip.Apply(FacePreviewElement, 82, 82, 41)", screenFace, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1044,9 +1190,23 @@ public sealed class AppCoordinatorSourceTests
             "PlaybackViewModel.cs"));
 
         Assert.Contains("new CornerRadius(size.Width / 2d)", source, StringComparison.Ordinal);
-        Assert.Contains("new RectangleGeometry", source, StringComparison.Ordinal);
-        Assert.Contains("new global::Windows.Foundation.Rect", source, StringComparison.Ordinal);
+        Assert.Contains("RoundedCompositionClip.Apply(PlayerSurface, size.Width, size.Height, size.Width / 2d)", source, StringComparison.Ordinal);
         Assert.DoesNotContain("new EllipseGeometry", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ScreenFacePlaybackUsesMacOSReferenceLongSide()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Playback",
+            "PlaybackViewModel.cs"));
+
+        Assert.Contains("const int width = 480;", source, StringComparison.Ordinal);
+        Assert.Contains("var height = Math.Max(120, (int)Math.Round(width / viewModel.AspectRatio));", source, StringComparison.Ordinal);
     }
 
     [Fact]

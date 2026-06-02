@@ -106,7 +106,7 @@ public sealed class SupabaseClient : ISupabaseRpcClient, IDisposable
     {
         var config = await LoadConfigurationAsync(cancellationToken).ConfigureAwait(false);
         var token = await AccessTokenAsync(cancellationToken).ConfigureAwait(false);
-        using var request = new HttpRequestMessage(HttpMethod.Get, ObjectUrl(config.StorageUrl, bucket, path));
+        using var request = new HttpRequestMessage(HttpMethod.Get, AuthenticatedObjectUrl(config.StorageUrl, bucket, path));
         request.Headers.Add("apikey", config.AnonKey);
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
@@ -317,6 +317,13 @@ public sealed class SupabaseClient : ISupabaseRpcClient, IDisposable
         var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries)
             .Select(Uri.EscapeDataString);
         return new Uri($"{storageUrl}/object/{Uri.EscapeDataString(bucket)}/{string.Join("/", segments)}");
+    }
+
+    private static Uri AuthenticatedObjectUrl(Uri storageUrl, string bucket, string path)
+    {
+        var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries)
+            .Select(Uri.EscapeDataString);
+        return new Uri($"{storageUrl}/object/authenticated/{Uri.EscapeDataString(bucket)}/{string.Join("/", segments)}");
     }
 
     private static string ErrorMessage(byte[] data)
