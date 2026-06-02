@@ -300,6 +300,29 @@ public sealed class AppCoordinatorSourceTests
     }
 
     [Fact]
+    public void HistoryWindowUsesMessengerRoomLayoutAndChatTimelineTokens()
+    {
+        var xaml = File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "History",
+            "HistoryWindow.xaml"));
+
+        Assert.Contains("Title=\"Ping Rooms\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Width=\"960\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("x:Key=\"PingSidebarBrush\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"Rooms\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"Chat and video pings\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"Room conversation\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Text=\"Live room timeline — text, reactions, and video pings\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("CornerRadius=\"22\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("PlaceholderText=\"Message this room — Enter to send, Shift+Enter for newline\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Content=\"Send\"", xaml, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void HistoryVideoRowsExposeMacStyleSaveActionWhenAllowed()
     {
         var root = RepoRoot();

@@ -2,161 +2,380 @@
     x:Class="Ping.Windows.App.History.HistoryWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Title="Ping History">
+    Title="Ping Rooms">
     <Grid
         x:Name="Root"
-        Width="820"
-        Height="560"
-        Padding="18"
-        Background="#121314"
-        ColumnSpacing="14">
+        Width="960"
+        Height="640"
+        Padding="20"
+        Background="#0F1012"
+        ColumnSpacing="16">
         <Grid.Resources>
-            <SolidColorBrush x:Key="PingSurfaceBrush" Color="#24272A" />
-            <SolidColorBrush x:Key="PingTextBrush" Color="#F5F7FA" />
-            <SolidColorBrush x:Key="PingMutedBrush" Color="#9DA3AA" />
-            <SolidColorBrush x:Key="PingIdleBrush" Color="#4DFFFFFF" />
+            <SolidColorBrush x:Key="PingPageBrush" Color="#0F1012" />
+            <SolidColorBrush x:Key="PingSidebarBrush" Color="#17191C" />
+            <SolidColorBrush x:Key="PingSurfaceBrush" Color="#202328" />
+            <SolidColorBrush x:Key="PingElevatedBrush" Color="#292D33" />
+            <SolidColorBrush x:Key="PingTextBrush" Color="#F6F7F9" />
+            <SolidColorBrush x:Key="PingMutedBrush" Color="#9DA5AE" />
+            <SolidColorBrush x:Key="PingSubtleBrush" Color="#69717A" />
+            <SolidColorBrush x:Key="PingAccentBrush" Color="#8BE9C8" />
+            <SolidColorBrush x:Key="PingIdleBrush" Color="#33FFFFFF" />
         </Grid.Resources>
 
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="230" />
+            <ColumnDefinition Width="288" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <Grid RowSpacing="10">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-                <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
+        <Border
+            Padding="14"
+            Background="{StaticResource PingSidebarBrush}"
+            BorderBrush="{StaticResource PingIdleBrush}"
+            BorderThickness="1"
+            CornerRadius="22">
+            <Grid RowSpacing="14">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
 
-            <TextBlock
-                FontSize="22"
-                FontWeight="SemiBold"
-                Foreground="{StaticResource PingTextBrush}"
-                Text="History" />
+                <StackPanel Spacing="4">
+                    <TextBlock
+                        FontSize="24"
+                        FontWeight="SemiBold"
+                        Foreground="{StaticResource PingTextBrush}"
+                        Text="Rooms" />
+                    <TextBlock
+                        FontSize="12"
+                        Foreground="{StaticResource PingMutedBrush}"
+                        Text="Chat and video pings" />
+                </StackPanel>
 
-            <ListView
-                x:Name="RoomsList"
-                Grid.Row="1"
-                ItemsSource="{Binding Rooms}"
-                SelectionChanged="RoomsList_SelectionChanged">
-                <ListView.ItemTemplate>
-                    <DataTemplate>
-                        <TextBlock Padding="4" Text="{Binding Name}" />
-                    </DataTemplate>
-                </ListView.ItemTemplate>
-            </ListView>
+                <Border
+                    Grid.Row="1"
+                    Padding="10,8"
+                    Background="#1D2025"
+                    BorderBrush="{StaticResource PingIdleBrush}"
+                    BorderThickness="1"
+                    CornerRadius="14">
+                    <TextBlock
+                        FontSize="12"
+                        Foreground="{StaticResource PingMutedBrush}"
+                        Text="Pick a room, then message or send video from the composer."
+                        TextWrapping="WrapWholeWords" />
+                </Border>
 
-            <TextBlock
-                Grid.Row="2"
-                FontSize="12"
-                Foreground="{StaticResource PingMutedBrush}"
-                Text="{Binding StatusMessage}"
-                TextWrapping="WrapWholeWords" />
-        </Grid>
+                <ListView
+                    x:Name="RoomsList"
+                    Grid.Row="2"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    ItemsSource="{Binding Rooms}"
+                    SelectionChanged="RoomsList_SelectionChanged"
+                    SelectionMode="Single">
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Padding="6" ColumnSpacing="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="44" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Border
+                                    Width="40"
+                                    Height="40"
+                                    Background="#243A34"
+                                    CornerRadius="20">
+                                    <TextBlock
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        FontSize="16"
+                                        FontWeight="SemiBold"
+                                        Foreground="{StaticResource PingAccentBrush}"
+                                        Text="●" />
+                                </Border>
+                                <StackPanel Grid.Column="1" Spacing="3">
+                                    <TextBlock
+                                        FontSize="14"
+                                        FontWeight="SemiBold"
+                                        Foreground="{StaticResource PingTextBrush}"
+                                        Text="{Binding Name}"
+                                        TextTrimming="CharacterEllipsis" />
+                                    <TextBlock
+                                        FontSize="11"
+                                        Foreground="{StaticResource PingMutedBrush}"
+                                        Text="Room conversation"
+                                        TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
 
-        <Grid Grid.Column="1" RowSpacing="12">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-                <RowDefinition Height="170" />
-            </Grid.RowDefinitions>
-
-            <Grid ColumnSpacing="8">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
                 <TextBlock
-                    FontSize="18"
-                    FontWeight="SemiBold"
-                    Foreground="{StaticResource PingTextBrush}"
-                    Text="{Binding SelectedRoomName}" />
-                <Button
-                    Grid.Column="1"
-                    Click="RefreshButton_Click"
-                    Content="Refresh" />
-                <Button
-                    Grid.Column="2"
-                    Click="PlayVideoButton_Click"
-                    Content="Play selected video" />
+                    Grid.Row="3"
+                    FontSize="12"
+                    Foreground="{StaticResource PingMutedBrush}"
+                    Text="{Binding StatusMessage}"
+                    TextWrapping="WrapWholeWords" />
             </Grid>
+        </Border>
+
+        <Grid Grid.Column="1" RowSpacing="14">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
 
             <Border
-                Grid.Row="1"
-                Padding="12"
+                Padding="16,14"
                 Background="{StaticResource PingSurfaceBrush}"
                 BorderBrush="{StaticResource PingIdleBrush}"
                 BorderThickness="1"
-                CornerRadius="12">
+                CornerRadius="22">
+                <Grid ColumnSpacing="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Spacing="3">
+                        <TextBlock
+                            FontSize="21"
+                            FontWeight="SemiBold"
+                            Foreground="{StaticResource PingTextBrush}"
+                            Text="{Binding SelectedRoomName}" />
+                        <TextBlock
+                            FontSize="12"
+                            Foreground="{StaticResource PingMutedBrush}"
+                            Text="Live room timeline — text, reactions, and video pings" />
+                    </StackPanel>
+                    <Button
+                        Grid.Column="1"
+                        Click="RefreshButton_Click"
+                        Content="Refresh" />
+                    <Button
+                        Grid.Column="2"
+                        Click="PlayVideoButton_Click"
+                        Content="Play selected video" />
+                </Grid>
+            </Border>
+
+            <Border
+                Grid.Row="1"
+                Padding="14"
+                Background="{StaticResource PingSurfaceBrush}"
+                BorderBrush="{StaticResource PingIdleBrush}"
+                BorderThickness="1"
+                CornerRadius="22">
                 <ListView
                     x:Name="VideosList"
+                    Background="Transparent"
+                    BorderThickness="0"
                     ItemsSource="{Binding Timeline}"
                     DoubleTapped="VideosList_DoubleTapped"
-                    SelectionChanged="VideosList_SelectionChanged">
+                    SelectionChanged="VideosList_SelectionChanged"
+                    SelectionMode="Single">
                     <ListView.ItemTemplate>
                         <DataTemplate>
-                            <StackPanel Padding="4" Spacing="8">
-                                <Grid
-                                    ColumnSpacing="8"
+                            <StackPanel Padding="4,8" Spacing="8">
+                                <Border
+                                    Padding="12"
+                                    Background="{StaticResource PingElevatedBrush}"
+                                    BorderBrush="{StaticResource PingIdleBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="18"
                                     Visibility="{Binding VideoVisibility}">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel Spacing="3">
-                                        <TextBlock
-                                            FontSize="13"
-                                            FontWeight="SemiBold"
-                                            Text="{Binding Video.SenderNickname}" />
+                                    <Grid ColumnSpacing="12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="176" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
                                         <Grid
-                                            Width="160"
-                                            Height="120"
-                                            Margin="0,2"
+                                            Width="176"
+                                            Height="132"
                                             HorizontalAlignment="Left">
                                             <Border
-                                                Background="#22808080"
-                                                CornerRadius="10"
+                                                Background="#31413E"
+                                                CornerRadius="18"
                                                 Visibility="{Binding Video.ThumbnailPlaceholderVisibility}" />
                                             <Image
                                                 Source="{Binding Video.ThumbnailSource}"
                                                 Stretch="UniformToFill"
                                                 Visibility="{Binding Video.ThumbnailVisibility}" />
-                                            <FontIcon
+                                            <Border
+                                                Width="46"
+                                                Height="46"
                                                 HorizontalAlignment="Center"
                                                 VerticalAlignment="Center"
-                                                FontFamily="Segoe Fluent Icons"
-                                                FontSize="20"
-                                                Foreground="White"
-                                                Glyph="&#xE768;"
-                                                Visibility="{Binding Video.ThumbnailVisibility}" />
+                                                Background="#B3000000"
+                                                CornerRadius="23">
+                                                <FontIcon
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center"
+                                                    FontFamily="Segoe Fluent Icons"
+                                                    FontSize="20"
+                                                    Foreground="White"
+                                                    Glyph="&#xE768;" />
+                                            </Border>
                                         </Grid>
+                                        <StackPanel Grid.Column="1" Spacing="7">
+                                            <TextBlock
+                                                FontSize="14"
+                                                FontWeight="SemiBold"
+                                                Foreground="{StaticResource PingTextBrush}"
+                                                Text="{Binding Video.SenderNickname}" />
+                                            <TextBlock
+                                                FontSize="12"
+                                                Foreground="{StaticResource PingMutedBrush}"
+                                                Text="{Binding Video.CaptureMode}" />
+                                            <TextBlock
+                                                FontSize="11"
+                                                Foreground="{StaticResource PingSubtleBrush}"
+                                                Text="Video ping" />
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <Button
+                                                    Padding="9,4"
+                                                    Click="PlayVideoItemButton_Click"
+                                                    Content="Play" />
+                                                <Button
+                                                    Padding="9,4"
+                                                    Click="ReplyVideoButton_Click"
+                                                    Content="Reply" />
+                                                <Button
+                                                    Padding="9,4"
+                                                    Click="SaveVideoButton_Click"
+                                                    Content="Save"
+                                                    Visibility="{Binding Video.SaveVisibility}" />
+                                                <Button
+                                                    Padding="9,4"
+                                                    Click="DeleteVideoButton_Click"
+                                                    Content="Delete" />
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                <ItemsControl ItemsSource="{Binding Video.Reactions}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <StackPanel Orientation="Horizontal" Spacing="4" />
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Button
+                                                                Padding="7,3"
+                                                                Click="ReactionButton_Click"
+                                                                Content="{Binding Display}" />
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                <ItemsControl ItemsSource="{Binding Video.QuickReactions}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <StackPanel Orientation="Horizontal" Spacing="4" />
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Button
+                                                                Padding="7,3"
+                                                                Click="ReactionButton_Click"
+                                                                Content="{Binding Emoji}" />
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                        </StackPanel>
                                         <TextBlock
-                                            FontSize="11"
-                                            Foreground="{StaticResource PingMutedBrush}"
+                                            Grid.Column="2"
+                                            Foreground="{StaticResource PingSubtleBrush}"
                                             Text="{Binding Video.VideoId}" />
-                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                    </Grid>
+                                </Border>
+
+                                <Border
+                                    Padding="12"
+                                    Background="#1B1E23"
+                                    BorderBrush="{StaticResource PingIdleBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="18"
+                                    Visibility="{Binding ChatVisibility}">
+                                    <StackPanel Spacing="8">
+                                        <Grid ColumnSpacing="8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Border
+                                                Width="28"
+                                                Height="28"
+                                                Background="#263238"
+                                                CornerRadius="14">
+                                                <TextBlock
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center"
+                                                    Foreground="{StaticResource PingAccentBrush}"
+                                                    Text="●" />
+                                            </Border>
+                                            <TextBlock
+                                                Grid.Column="1"
+                                                VerticalAlignment="Center"
+                                                FontWeight="SemiBold"
+                                                Foreground="{StaticResource PingTextBrush}"
+                                                Text="{Binding Chat.SenderNickname}" />
+                                        </Grid>
+                                        <Border
+                                            Padding="9,6"
+                                            Background="#15171A"
+                                            BorderBrush="{StaticResource PingIdleBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="10"
+                                            Visibility="{Binding Chat.ReplyPreviewVisibility}">
+                                            <TextBlock
+                                                FontSize="11"
+                                                Foreground="{StaticResource PingMutedBrush}"
+                                                Text="{Binding Chat.ReplyPreview}"
+                                                TextWrapping="WrapWholeWords" />
+                                        </Border>
+                                        <Border
+                                            Padding="8"
+                                            Background="#15171A"
+                                            BorderBrush="{StaticResource PingIdleBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="12"
+                                            Visibility="{Binding Chat.AttachmentVisibility}">
+                                            <StackPanel Spacing="5">
+                                                <Image
+                                                    MaxHeight="132"
+                                                    HorizontalAlignment="Left"
+                                                    Source="{Binding Chat.ImageSource}"
+                                                    Stretch="Uniform"
+                                                    Visibility="{Binding Chat.ImageVisibility}" />
+                                                <TextBlock
+                                                    FontSize="11"
+                                                    Foreground="{StaticResource PingMutedBrush}"
+                                                    Text="{Binding Chat.AttachmentStatus}" />
+                                            </StackPanel>
+                                        </Border>
+                                        <TextBlock
+                                            Foreground="{StaticResource PingTextBrush}"
+                                            Text="{Binding Chat.Body}"
+                                            TextWrapping="WrapWholeWords" />
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
                                             <Button
-                                                Padding="6,2"
-                                                Click="PlayVideoItemButton_Click"
-                                                Content="Play" />
-                                            <Button
-                                                Padding="6,2"
-                                                Click="ReplyVideoButton_Click"
+                                                Padding="9,4"
+                                                Click="ReplyChatButton_Click"
                                                 Content="Reply" />
                                             <Button
-                                                Padding="6,2"
-                                                Click="SaveVideoButton_Click"
-                                                Content="Save"
-                                                Visibility="{Binding Video.SaveVisibility}" />
-                                            <Button
-                                                Padding="6,2"
-                                                Click="DeleteVideoButton_Click"
-                                                Content="Delete" />
+                                                Padding="9,4"
+                                                Click="DeleteChatButton_Click"
+                                                Content="Delete"
+                                                Visibility="{Binding Chat.DeleteVisibility}" />
                                         </StackPanel>
                                         <StackPanel Orientation="Horizontal" Spacing="4">
-                                            <ItemsControl ItemsSource="{Binding Video.Reactions}">
+                                            <ItemsControl ItemsSource="{Binding Chat.Reactions}">
                                                 <ItemsControl.ItemsPanel>
                                                     <ItemsPanelTemplate>
                                                         <StackPanel Orientation="Horizontal" Spacing="4" />
@@ -165,13 +384,13 @@
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate>
                                                         <Button
-                                                            Padding="6,2"
+                                                            Padding="7,3"
                                                             Click="ReactionButton_Click"
                                                             Content="{Binding Display}" />
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
                                             </ItemsControl>
-                                            <ItemsControl ItemsSource="{Binding Video.QuickReactions}">
+                                            <ItemsControl ItemsSource="{Binding Chat.QuickReactions}">
                                                 <ItemsControl.ItemsPanel>
                                                     <ItemsPanelTemplate>
                                                         <StackPanel Orientation="Horizontal" Spacing="4" />
@@ -180,7 +399,7 @@
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate>
                                                         <Button
-                                                            Padding="6,2"
+                                                            Padding="7,3"
                                                             Click="ReactionButton_Click"
                                                             Content="{Binding Emoji}" />
                                                     </DataTemplate>
@@ -188,98 +407,7 @@
                                             </ItemsControl>
                                         </StackPanel>
                                     </StackPanel>
-                                    <TextBlock
-                                        Grid.Column="1"
-                                        VerticalAlignment="Center"
-                                        Foreground="{StaticResource PingMutedBrush}"
-                                        Text="{Binding Video.CaptureMode}" />
-                                </Grid>
-
-                                <StackPanel
-                                    Spacing="5"
-                                    Visibility="{Binding ChatVisibility}">
-                                    <TextBlock FontWeight="SemiBold" Text="{Binding Chat.SenderNickname}" />
-                                    <Border
-                                        Padding="8,5"
-                                        Background="#16181B"
-                                        BorderBrush="{StaticResource PingIdleBrush}"
-                                        BorderThickness="1"
-                                        CornerRadius="8"
-                                        Visibility="{Binding Chat.ReplyPreviewVisibility}">
-                                        <TextBlock
-                                            FontSize="11"
-                                            Foreground="{StaticResource PingMutedBrush}"
-                                            Text="{Binding Chat.ReplyPreview}"
-                                            TextWrapping="WrapWholeWords" />
-                                    </Border>
-                                    <Border
-                                        Padding="8"
-                                        Background="#1B1D20"
-                                        BorderBrush="{StaticResource PingIdleBrush}"
-                                        BorderThickness="1"
-                                        CornerRadius="8"
-                                        Visibility="{Binding Chat.AttachmentVisibility}">
-                                        <StackPanel Spacing="5">
-                                            <Image
-                                                MaxHeight="96"
-                                                HorizontalAlignment="Left"
-                                                Source="{Binding Chat.ImageSource}"
-                                                Stretch="Uniform"
-                                                Visibility="{Binding Chat.ImageVisibility}" />
-                                            <TextBlock
-                                                FontSize="11"
-                                                Foreground="{StaticResource PingMutedBrush}"
-                                                Text="{Binding Chat.AttachmentStatus}" />
-                                        </StackPanel>
-                                    </Border>
-                                    <TextBlock
-                                        Foreground="{StaticResource PingMutedBrush}"
-                                        Text="{Binding Chat.Body}"
-                                        TextWrapping="WrapWholeWords" />
-                                    <StackPanel Orientation="Horizontal" Spacing="4">
-                                        <Button
-                                            Padding="6,2"
-                                            Click="ReplyChatButton_Click"
-                                            Content="Reply" />
-                                        <Button
-                                            Padding="6,2"
-                                            Click="DeleteChatButton_Click"
-                                            Content="Delete"
-                                            Visibility="{Binding Chat.DeleteVisibility}" />
-                                    </StackPanel>
-                                    <StackPanel Orientation="Horizontal" Spacing="4">
-                                        <ItemsControl ItemsSource="{Binding Chat.Reactions}">
-                                            <ItemsControl.ItemsPanel>
-                                                <ItemsPanelTemplate>
-                                                    <StackPanel Orientation="Horizontal" Spacing="4" />
-                                                </ItemsPanelTemplate>
-                                            </ItemsControl.ItemsPanel>
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Button
-                                                        Padding="6,2"
-                                                        Click="ReactionButton_Click"
-                                                        Content="{Binding Display}" />
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                        <ItemsControl ItemsSource="{Binding Chat.QuickReactions}">
-                                            <ItemsControl.ItemsPanel>
-                                                <ItemsPanelTemplate>
-                                                    <StackPanel Orientation="Horizontal" Spacing="4" />
-                                                </ItemsPanelTemplate>
-                                            </ItemsControl.ItemsPanel>
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Button
-                                                        Padding="6,2"
-                                                        Click="ReactionButton_Click"
-                                                        Content="{Binding Emoji}" />
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </StackPanel>
-                                </StackPanel>
+                                </Border>
                             </StackPanel>
                         </DataTemplate>
                     </ListView.ItemTemplate>
@@ -292,58 +420,20 @@
                 Background="{StaticResource PingSurfaceBrush}"
                 BorderBrush="{StaticResource PingIdleBrush}"
                 BorderThickness="1"
-                CornerRadius="12">
-                <Grid ColumnSpacing="10">
+                CornerRadius="22">
+                <Grid ColumnSpacing="12">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="180" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
-                    <Grid RowSpacing="8">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="*" />
-                        </Grid.RowDefinitions>
-                        <TextBlock
-                            FontSize="14"
-                            FontWeight="SemiBold"
-                            Foreground="{StaticResource PingTextBrush}"
-                            Text="Reactions" />
-                        <ListView
-                            Grid.Row="1"
-                            ItemsSource="{Binding Reactions}">
-                            <ListView.ItemTemplate>
-                                <DataTemplate>
-                                    <Grid Padding="4" ColumnSpacing="8">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock FontWeight="SemiBold" Text="{Binding Emoji}" />
-                                        <TextBlock
-                                            Grid.Column="1"
-                                            Foreground="{StaticResource PingMutedBrush}"
-                                            Text="{Binding TargetKind}" />
-                                        <TextBlock
-                                            Grid.Column="2"
-                                            Foreground="{StaticResource PingMutedBrush}"
-                                            Text="{Binding TotalCount}" />
-                                    </Grid>
-                                </DataTemplate>
-                            </ListView.ItemTemplate>
-                        </ListView>
-                    </Grid>
-
-                    <StackPanel
-                        Grid.Column="1"
-                        Spacing="8">
+                    <StackPanel Spacing="8">
                         <Border
-                            Padding="8,6"
-                            Background="#1B1D20"
+                            Padding="9,6"
+                            Background="#15171A"
                             BorderBrush="{StaticResource PingIdleBrush}"
                             BorderThickness="1"
-                            CornerRadius="8"
+                            CornerRadius="10"
                             Visibility="{Binding ReplyPreviewVisibility}">
                             <Grid ColumnSpacing="8">
                                 <Grid.ColumnDefinitions>
@@ -367,26 +457,32 @@
                             FontSize="11"
                             Foreground="{StaticResource PingMutedBrush}"
                             TextWrapping="NoWrap" />
+                        <TextBox
+                            x:Name="ChatBox"
+                            MinHeight="42"
+                            MaxHeight="92"
+                            AcceptsReturn="True"
+                            KeyDown="ChatBox_KeyDown"
+                            TextWrapping="Wrap"
+                            PlaceholderText="Message this room — Enter to send, Shift+Enter for newline" />
+                    </StackPanel>
+
+                    <StackPanel
+                        Grid.Column="1"
+                        MinWidth="164"
+                        Spacing="8">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <Button
                                 Click="AttachImageButton_Click"
-                                Content="Attach image" />
+                                Content="Attach" />
                             <Button
                                 Click="ClearImageButton_Click"
                                 Content="Clear" />
                         </StackPanel>
-                        <TextBox
-                            x:Name="ChatBox"
-                            MinHeight="34"
-                            MaxHeight="74"
-                            AcceptsReturn="True"
-                            KeyDown="ChatBox_KeyDown"
-                            TextWrapping="Wrap"
-                            PlaceholderText="Message this room" />
                         <Button
-                            HorizontalAlignment="Right"
+                            HorizontalAlignment="Stretch"
                             Click="SendChatButton_Click"
-                            Content="Send chat" />
+                            Content="Send" />
                     </StackPanel>
                 </Grid>
             </Border>
