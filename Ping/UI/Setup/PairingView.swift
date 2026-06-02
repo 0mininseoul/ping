@@ -380,15 +380,13 @@ struct PairingView: View {
                 message: roomNameFieldMessage,
                 count: "\(viewModel.trimmedRoomName.count)/\(RoomLimits.maxRoomNameLength)",
                 isWarning: roomNameFieldIsWarning,
-                onSubmit: { viewModel.completeCreateRoom() }
+                onSubmit: submitCreateRoom
             )
 
             Spacer()
 
             footerButtons(showBack: true) {
-                primaryButton("룸 만들기", enabled: viewModel.canProceedFromCreateRoom) {
-                    viewModel.completeCreateRoom()
-                }
+                primaryButton("룸 만들기", enabled: viewModel.canProceedFromCreateRoom, action: submitCreateRoom)
             }
         }
         .onAppear { focusedField = .roomName }
@@ -476,12 +474,7 @@ struct PairingView: View {
 
             footerButtons(showBack: true) {
                 GlassButton(doneButtonTitle, isPrimary: true) {
-                    guard !viewModel.isCompleting else { return }
-                    guard let payload = viewModel.completionPayload else {
-                        viewModel.step = .connectionChoice
-                        return
-                    }
-                    onComplete(payload)
+                    submitCompletionIfReady()
                 }
                 .disabled(viewModel.isCompleting)
                 .opacity(viewModel.isCompleting ? 0.58 : 1)
@@ -545,7 +538,7 @@ struct PairingView: View {
 
     private var secondaryLaterButton: some View {
         Button {
-            viewModel.deferRoomSetup()
+            submitLater()
         } label: {
             Text("나중에 하기")
                 .font(PingFont.caption)
@@ -612,7 +605,7 @@ struct PairingView: View {
 
     private func joinRoomResult(_ room: Room) -> some View {
         Button {
-            viewModel.selectRoomForJoin(room)
+            submitJoinRoom(room)
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: "person.2.fill")
@@ -649,6 +642,32 @@ struct PairingView: View {
             }
         }
         .buttonStyle(.plain)
+    }
+
+    private func submitCreateRoom() {
+        viewModel.completeCreateRoom()
+        submitCompletionIfReady()
+    }
+
+    private func submitJoinRoom(_ room: Room) {
+        viewModel.selectRoomForJoin(room)
+        submitCompletionIfReady()
+    }
+
+    private func submitLater() {
+        viewModel.deferRoomSetup()
+        submitCompletionIfReady()
+    }
+
+    private func submitCompletionIfReady() {
+        guard !viewModel.isCompleting else { return }
+        guard let payload = viewModel.completionPayload else {
+            if viewModel.step == .done {
+                viewModel.step = .connectionChoice
+            }
+            return
+        }
+        onComplete(payload)
     }
 
     private func emptyJoinRooms(_ message: String) -> some View {

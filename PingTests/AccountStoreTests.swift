@@ -81,6 +81,28 @@ final class AccountStoreTests: XCTestCase {
         XCTAssertEqual(loaded.activeUserId, "real")
     }
 
+    func testLoadRepairsAccountsFileWithMissingActiveUser() throws {
+        let account = StoredAccount(session: session("saved-uid"), nickname: "수성", addedAt: Date())
+        let data = try JSONEncoder().encode(AccountsFile(accounts: [account], activeUserId: nil))
+        try data.write(to: tempDir.appendingPathComponent("Accounts.json"))
+
+        let loaded = makeStore().load()
+
+        XCTAssertEqual(loaded.activeUserId, "saved-uid")
+        XCTAssertEqual(loaded.activeAccount?.nickname, "수성")
+    }
+
+    func testLoadRepairsAccountsFileWithUnknownActiveUser() throws {
+        let account = StoredAccount(session: session("saved-uid"), nickname: "수성", addedAt: Date())
+        let data = try JSONEncoder().encode(AccountsFile(accounts: [account], activeUserId: "ghost"))
+        try data.write(to: tempDir.appendingPathComponent("Accounts.json"))
+
+        let loaded = makeStore().load()
+
+        XCTAssertEqual(loaded.activeUserId, "saved-uid")
+        XCTAssertEqual(loaded.activeAccount?.userId, "saved-uid")
+    }
+
     func testSaveWritesLegacyMirrorForActiveAccount() throws {
         let store = makeStore()
         let other = StoredAccount(session: session("other"), nickname: "x", addedAt: Date())

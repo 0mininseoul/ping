@@ -138,6 +138,13 @@ private struct ComposerTextEditor: NSViewRepresentable {
 
     func updateNSView(_ scroll: NSScrollView, context: Context) {
         guard let textView = scroll.documentView as? NSTextView else { return }
+        context.coordinator.parent = self
+        guard !textView.hasMarkedText() else {
+            Task { @MainActor in
+                recalculateHeight(textView: textView)
+            }
+            return
+        }
         if textView.string != text {
             let selected = textView.selectedRange()
             textView.string = text

@@ -59,6 +59,17 @@ struct AccountsFile: Codable, Equatable {
         accounts.first { $0.userId == activeUserId }
     }
 
+    func repairingActiveAccountForLoad() -> AccountsFile {
+        guard !accounts.isEmpty else {
+            return activeUserId == nil ? self : .empty
+        }
+        guard let activeUserId,
+              accounts.contains(where: { $0.userId == activeUserId }) else {
+            return AccountsFile(accounts: accounts, activeUserId: accounts.first?.userId)
+        }
+        return self
+    }
+
     /// 레거시 단일 세션을 계정 #1로 이전한다.
     static func migrating(from legacy: SupabaseSession?) -> AccountsFile {
         guard let legacy else { return .empty }
@@ -153,7 +164,11 @@ final class AccountStore: @unchecked Sendable {
 
     func load() -> AccountsFile {
         if let file = readAccountsFile() {
-            return file
+            let repaired = file.repairingActiveAccountForLoad()
+            if repaired != file {
+                save(repaired)
+            }
+            return repaired
         }
         let migrated = AccountsFile.migrating(from: loadLegacySession())
         if !migrated.accounts.isEmpty {

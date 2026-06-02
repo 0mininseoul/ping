@@ -83,6 +83,19 @@ final class OnboardingInputContractTests: XCTestCase {
         XCTAssertTrue(viewSource.contains("처리 중..."))
     }
 
+    func testCreateJoinAndLaterActionsSubmitWithoutRequiringDoneScreen() throws {
+        let viewSource = try readSourceFile("Ping/UI/Setup/PairingView.swift")
+
+        XCTAssertTrue(viewSource.contains("private func submitCreateRoom()"))
+        XCTAssertTrue(viewSource.contains("private func submitJoinRoom(_ room: Room)"))
+        XCTAssertTrue(viewSource.contains("private func submitLater()"))
+        XCTAssertTrue(viewSource.contains("private func submitCompletionIfReady()"))
+        XCTAssertTrue(viewSource.contains("onComplete(payload)"))
+        XCTAssertTrue(viewSource.contains("action: submitCreateRoom"))
+        XCTAssertTrue(viewSource.contains("submitJoinRoom(room)"))
+        XCTAssertTrue(viewSource.contains("submitLater()"))
+    }
+
     func testFirstRoomNameDoesNotUsePlaceholderCopy() throws {
         let source = try readSourceFile("Ping/UI/Setup/PairingView.swift")
 
