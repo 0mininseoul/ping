@@ -4,7 +4,7 @@
 
 **Ping**은 macOS 13 Ventura 이상에서 동작하는 3초 영상 메시지 메뉴바 앱이며, Windows 11 24H2 이상용 네이티브 클라이언트를 같은 Supabase 룸/메시지 계약으로 제공한다. macOS는 Option+P/Option+L, Windows는 Alt+P/Alt+L로 거울을 띄우고, Enter로 정확히 3초 녹화한 뒤 review 재생에서 Enter로 Supabase를 통해 파트너에게 전송한다. 수신자는 로컬 알림을 클릭하면 발신자가 보낸 위치 또는 해당 플랫폼의 playback surface에서 3초 재생창을 본다.
 
-> 현재 구현(v0.3.39)은 v0.2.1 amendment를 반영해 녹화 길이를 3초로 사용한다. Option+P는 얼굴만, Option+L은 화면+얼굴 캡쳐, Option+O는 내 룸/히스토리 창 진입점이다. Windows 클라이언트는 Alt+P, Alt+L, Alt+O와 Alt+Shift+L quick screen+face send를 대응 단축키로 사용한다.
+> 현재 구현(v0.3.41)은 v0.2.1 amendment를 반영해 녹화 길이를 3초로 사용한다. Option+P는 얼굴만, Option+L은 화면+얼굴 캡쳐, Option+O는 내 룸/히스토리 창 진입점이다. Windows 클라이언트는 Alt+P, Alt+L, Alt+O와 Alt+Shift+L quick screen+face send를 대응 단축키로 사용한다.
 > v0.3.39는 macOS 메뉴바 앱 동작을 유지하면서 Launchpad/Spotlight 검색 색인에 잡히도록 번들 `LSUIElement` 분류를 제거하고 런타임 accessory activation을 사용한다. v0.3.28은 Sparkle scheduled update 알림을 버전별 1회로 제한하고, 더 최신 버전이 나오면 기존 업데이트 알림을 최신 버전 알림 하나로 교체한다. v0.3.27은 룸 알림 정리, 최신 메시지 스크롤, Enter 전송/Shift+Enter 줄바꿈, 채팅 사진 첨부를 포함한다. v0.3.26은 화면+얼굴 메시지 확대 재생 크기를 키우고, 확대 시 해당 영상 하단이 보이도록 자동 스크롤한다. v0.3.25는 내 룸 화면에서 화면+얼굴 메시지를 확대할 때 영상이 사라지지 않도록 확장 overlay를 룸 매니저 루트에서 렌더링한다. v0.3.24는 화면+얼굴 프리뷰와 실제 저장 영상의 얼굴 PIP 비율을 같은 레이아웃 계약으로 통일하고, 히스토리 확대 재생 시 사이드바 폭을 유지한 채 영상이 사이드바 위로 확장되어 전체 화면이 잘리지 않게 한다. 발신자 제어형 로컬 저장 권한 설정도 포함한다. v0.3.23은 온보딩 권한 화면에서 macOS 권한 재확인이 지연돼도 이후 3~7단계를 계속 볼 수 있게 하고, 릴리즈 앱의 ad-hoc designated requirement를 bundle id 기준으로 고정해 업데이트 후 TCC 권한 판정이 빌드 해시 변화에 흔들리지 않도록 한다. v0.3.22의 온보딩 header/progress 고정, 미니멀 권한 체크리스트, 알림 프롬프트 시작 시점 소모 방지도 포함한다. 화면 녹화 권한의 passive check는 시스템 프롬프트를 띄우지 않는 CoreGraphics preflight만 사용하며, macOS가 요구하는 앱 재시작 안내를 표시한다. 기존 v0.3.21의 히스토리 타임스탬프 swipe reveal, 인라인 영상 재생 안정화, 그룹 룸 sender label, 다크모드 날짜 header 정리, 컴팩트 사이드바와 로컬 아카이브 fallback도 포함한다.
 
 ### 초기 검증 환경
@@ -57,7 +57,7 @@ macOS 26 이상에서는 `.pingGlassEffect()` wrapper가 SwiftUI 네이티브 `.
 - 트레이 상주 앱: Win32 `Shell_NotifyIcon` 기반 notification area icon.
 - 알림: Windows App SDK app notifications. Elevated/admin 실행에서는 알림이 지원되지 않으므로 일반 권한 재실행을 안내한다.
 - 히스토리: 열린 룸은 Supabase chat/video RPC를 짧은 주기로 polling해 macOS Realtime 히스토리와 유사하게 채팅, 첨부 이미지, 답장, 반응 변경을 반영하며, 채팅 알림 클릭 시 해당 룸의 알림 대상 채팅 row를 선택한다. 채팅 입력은 Enter 전송, Shift+Enter 줄바꿈을 사용한다.
-- 패키징: Windows App SDK packaged full-trust MSIX. 비용 없는 직접 배포는 signed MSIX를 `PingSetup-v0.3.29.exe` 웹 설치파일로 감싸고, 설치 중 `https://0minping.vercel.app/downloads/windows/`에서 PC 아키텍처에 맞는 MSIX를 내려받는 랜딩페이지 다운로드를 기본 UX로 사용한다. sideload zip은 fallback/debug 경로로 유지한다. Windows는 Sparkle을 사용하지 않고 MSIX/App Installer 또는 Store 업데이트 채널을 사용한다.
+- 패키징: Windows App SDK packaged full-trust MSIX. 비용 없는 직접 배포는 signed MSIX를 `PingSetup-v0.3.30.exe` 웹 설치파일로 감싸고, 설치 중 `https://0minping.vercel.app/downloads/windows/`에서 PC 아키텍처에 맞는 MSIX를 내려받는 랜딩페이지 다운로드를 기본 UX로 사용한다. sideload zip은 fallback/debug 경로로 유지한다. Windows는 Sparkle을 사용하지 않고 MSIX/App Installer 또는 Store 업데이트 채널을 사용한다.
 
 ### 권한
 
