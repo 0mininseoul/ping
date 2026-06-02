@@ -19,11 +19,23 @@ public extension PingSupabaseClient {
 
     /// Send a text chat (the STT reply target) to a room. Returns the chat id.
     @discardableResult
-    func sendChat(roomId: String, body text: String) async throws -> String {
-        try await rpcValue("ping_send_chat", body: [
+    func sendChat(
+        roomId: String,
+        body text: String,
+        replyToChatId: String? = nil,
+        replyToVideoId: String? = nil
+    ) async throws -> String {
+        var body: [String: any Sendable] = [
             "room_uuid": roomId,
             "body_text": text
-        ])
+        ]
+        if let replyToChatId {
+            body["reply_chat_uuid"] = replyToChatId
+        }
+        if let replyToVideoId {
+            body["reply_video_uuid"] = replyToVideoId
+        }
+        return try await rpcValue("ping_send_chat", body: body)
     }
 
     /// Fetch the latest metadata for a single message (e.g. from a push payload).
@@ -42,6 +54,11 @@ public extension PingSupabaseClient {
     /// Download the 3-second clip's bytes from the private `ping-videos` bucket.
     func downloadVideo(_ message: VideoMessage) async throws -> Data {
         try await downloadData(bucket: "ping-videos", path: message.storagePath)
+    }
+
+    /// Download a private chat image attachment from the `ping-media` bucket.
+    func downloadChatMedia(path: String) async throws -> Data {
+        try await downloadData(bucket: "ping-media", path: path)
     }
 
     // MARK: - Inbox / thread reads (iOS companion)
@@ -64,6 +81,24 @@ public extension PingSupabaseClient {
         try await rpcArray("ping_room_chat_messages", body: [
             "room_uuid": roomId,
             "page_limit": limit
+        ])
+    }
+
+    /// Toggle an emoji reaction for a chat or video message.
+    @discardableResult
+    func toggleReaction(target kind: PingMessageReaction.TargetKind, targetId: String, emoji: String) async throws -> Bool {
+        try await rpcValue("ping_react", body: [
+            "target_kind": kind.rawValue,
+            "target_uuid": targetId,
+            "emoji_text": emoji
+        ])
+    }
+
+    /// Fetch grouped reaction counts for currently visible thread items.
+    func messageReactions(chatIds: [String], videoIds: [String]) async throws -> [PingMessageReaction] {
+        try await rpcArray("ping_message_reactions", body: [
+            "chat_ids": chatIds,
+            "video_ids": videoIds
         ])
     }
 

@@ -18,11 +18,14 @@ struct ThreadView: View {
     @State private var playable: PlayableVideo?
     @StateObject private var thumbnails = ThumbnailStore()
     @State private var timestampRevealOffset: CGFloat = 0
+    @State private var replyTarget: ReplyTarget?
+    @State private var reactionsByTargetId: [String: [String: ThreadReactionAggregate]] = [:]
 
     private let timestampWidth: CGFloat = 64
     private let timestampGap: CGFloat = 12
     private let timestampResetAnimation: Animation = .easeOut(duration: 0.10)
     private var timestampRevealMax: CGFloat { -(timestampWidth + timestampGap) }
+    private let quickReactionEmojis = ["👍", "❤️", "😂", "😮", "😢", "🙏"]
 
     private var myUid: String { account.session.userId }
 
@@ -110,6 +113,23 @@ struct ThreadView: View {
                         )
                 }
                 .buttonStyle(.plain)
+                .contextMenu {
+                    messageContextMenu(
+                        target: .video,
+                        targetId: message.id,
+                        onReply: {
+                            replyTarget = .video(
+                                id: message.id,
+                                sender: message.senderNickname,
+                                preview: videoReplyPreview(message)
+                            )
+                        }
+                    )
+                }
+                let reactions = reactions(for: .video, targetId: message.id)
+                if !reactions.isEmpty {
+                    reactionStrip(reactions, target: .video, targetId: message.id)
+                }
             }
             if !mine { Spacer(minLength: 60) }
         }
@@ -134,14 +154,38 @@ struct ThreadView: View {
                 if !mine {
                     Text(chat.senderNickname).font(.caption2).foregroundStyle(.secondary)
                 }
-                Text(chat.preview.isEmpty ? " " : chat.preview)
-                    .font(.body)
-                    .foregroundStyle(mine ? .white : Color(uiColor: .label))
-                    .padding(.horizontal, 12).padding(.vertical, 8)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(mine ? Color.accentColor : Color.gray.opacity(0.18))
+                if let preview = replyPreview(for: chat) {
+                    quotedReplyPreview(preview, mine: mine)
+                }
+                VStack(alignment: mine ? .trailing : .leading, spacing: 6) {
+                    if chat.hasImage {
+                        ChatImageAttachmentView(message: chat)
+                    }
+
+                    if !chat.body.isEmpty {
+                        Text(chat.body)
+                            .font(.body)
+                            .foregroundStyle(mine ? .white : Color(uiColor: .label))
+                            .padding(.horizontal, 12).padding(.vertical, 8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(mine ? Color.accentColor : Color.gray.opacity(0.18))
+                            )
+                    }
+                }
+                .contextMenu {
+                    messageContextMenu(
+                        target: .chat,
+                        targetId: chat.id,
+                        onReply: {
+                            replyTarget = .chat(id: chat.id, sender: chat.senderNickname, preview: chat.preview)
+                        }
                     )
+                }
+                let reactions = reactions(for: .chat, targetId: chat.id)
+                if !reactions.isEmpty {
+                    reactionStrip(reactions, target: .chat, targetId: chat.id)
+                }
             }
             if !mine { Spacer(minLength: 40) }
         }
@@ -150,20 +194,53 @@ struct ThreadView: View {
     // MARK: - Reply bar
 
     private var replyBar: some View {
-        HStack(spacing: 10) {
-            TextField("메시지 입력 (마이크로 받아쓰기)", text: $draft, axis: .vertical)
-                .textFieldStyle(.plain)
-                .padding(.horizontal, 14).padding(.vertical, 9)
-                .background(Capsule().fill(Color(uiColor: .secondarySystemBackground)))
-                .lineLimit(1...4)
-            Button { send() } label: {
-                Image(systemName: "arrow.up.circle.fill")
-                    .font(.system(size: 30))
-                    .foregroundStyle(canSend ? Color.accentColor : Color.secondary)
+        VStack(spacing: 6) {
+            if let replyTarget {
+                HStack(spacing: 8) {
+                    Rectangle()
+                        .fill(Color.accentColor.opacity(0.65))
+                        .frame(width: 3)
+                        .clipShape(Capsule())
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(replyTarget.sender)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        Text(replyTarget.preview)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                    Spacer()
+                    Button {
+                        self.replyTarget = nil
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.body)
+                            .foregroundStyle(.tertiary)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 14)
+                .padding(.top, 8)
             }
-            .disabled(!canSend)
+
+            HStack(spacing: 10) {
+                TextField("메시지 입력 (마이크로 받아쓰기)", text: $draft, axis: .vertical)
+                    .textFieldStyle(.plain)
+                    .padding(.horizontal, 14).padding(.vertical, 9)
+                    .background(Capsule().fill(Color(uiColor: .secondarySystemBackground)))
+                    .lineLimit(1...4)
+                Button { send() } label: {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.system(size: 30))
+                        .foregroundStyle(canSend ? Color.accentColor : Color.secondary)
+                }
+                .disabled(!canSend)
+            }
+            .padding(.horizontal, 12)
+            .padding(.bottom, 8)
+            .padding(.top, replyTarget == nil ? 8 : 0)
         }
-        .padding(.horizontal, 12).padding(.vertical, 8)
         .background(.bar)
     }
 
@@ -217,6 +294,7 @@ struct ThreadView: View {
         items = merged
         isLoading = false
         thumbnails.prefetch(videos)
+        await refreshReactions()
         try? await client.markRoomRead(roomId: roomId)
     }
 
@@ -225,9 +303,24 @@ struct ThreadView: View {
         guard !text.isEmpty else { return }
         draft = ""
         sending = true
+        let target = replyTarget
+        replyTarget = nil
         Task {
             if let client = AppEnvironment.shared.makeClient() {
-                try? await client.sendChat(roomId: roomId, body: text)
+                let replyChatId: String?
+                let replyVideoId: String?
+                switch target {
+                case .chat(let id, _, _):
+                    replyChatId = id
+                    replyVideoId = nil
+                case .video(let id, _, _):
+                    replyChatId = nil
+                    replyVideoId = id
+                case .none:
+                    replyChatId = nil
+                    replyVideoId = nil
+                }
+                _ = try? await client.sendChat(roomId: roomId, body: text, replyToChatId: replyChatId, replyToVideoId: replyVideoId)
             }
             await load()
             sending = false
@@ -246,6 +339,167 @@ struct ThreadView: View {
                 try? await client.markSeen(messageId: message.id)
             }
         }
+    }
+
+    private func refreshReactions() async {
+        guard let client = AppEnvironment.shared.makeClient() else { return }
+        let chatIds = items.compactMap { item -> String? in
+            if case .chat(let message) = item { return message.id }
+            return nil
+        }
+        let videoIds = items.compactMap { item -> String? in
+            if case .video(let message) = item { return message.id }
+            return nil
+        }
+        guard !chatIds.isEmpty || !videoIds.isEmpty else {
+            reactionsByTargetId = [:]
+            return
+        }
+        guard let reactions = try? await client.messageReactions(chatIds: chatIds, videoIds: videoIds) else { return }
+        var next: [String: [String: ThreadReactionAggregate]] = [:]
+        for reaction in reactions {
+            let key = reactionKey(target: reaction.targetKind, targetId: reaction.targetId)
+            next[key, default: [:]][reaction.emoji] = ThreadReactionAggregate(
+                emoji: reaction.emoji,
+                count: reaction.totalCount,
+                myReacted: reaction.myReacted
+            )
+        }
+        reactionsByTargetId = next
+    }
+
+    private func toggleReaction(target kind: PingMessageReaction.TargetKind, targetId: String, emoji: String) {
+        Task {
+            guard let client = AppEnvironment.shared.makeClient() else { return }
+            _ = try? await client.toggleReaction(target: kind, targetId: targetId, emoji: emoji)
+            await refreshReactions()
+        }
+    }
+
+    @ViewBuilder
+    private func messageContextMenu(
+        target kind: PingMessageReaction.TargetKind,
+        targetId: String,
+        onReply: @escaping () -> Void
+    ) -> some View {
+        Button {
+            onReply()
+        } label: {
+            Label("답장", systemImage: "arrowshape.turn.up.left")
+        }
+
+        Menu {
+            ForEach(quickReactionEmojis, id: \.self) { emoji in
+                Button(emoji) {
+                    toggleReaction(target: kind, targetId: targetId, emoji: emoji)
+                }
+            }
+        } label: {
+            Label("이모지 반응", systemImage: "face.smiling")
+        }
+    }
+
+    private func reactionStrip(
+        _ reactions: [ThreadReactionAggregate],
+        target kind: PingMessageReaction.TargetKind,
+        targetId: String
+    ) -> some View {
+        HStack(spacing: 4) {
+            ForEach(reactions, id: \.emoji) { reaction in
+                Button {
+                    toggleReaction(target: kind, targetId: targetId, emoji: reaction.emoji)
+                } label: {
+                    HStack(spacing: 2) {
+                        Text(reaction.emoji)
+                        if reaction.count > 1 {
+                            Text("\(reaction.count)")
+                                .font(.caption2.weight(.medium))
+                        }
+                    }
+                    .font(.caption)
+                    .foregroundStyle(Color(uiColor: .label))
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(
+                        Capsule()
+                            .fill(reaction.myReacted ? Color.accentColor.opacity(0.20) : Color(uiColor: .secondarySystemBackground))
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private func reactions(
+        for kind: PingMessageReaction.TargetKind,
+        targetId: String
+    ) -> [ThreadReactionAggregate] {
+        let key = reactionKey(target: kind, targetId: targetId)
+        let values = reactionsByTargetId[key].map { Array($0.values) } ?? []
+        return values.sorted {
+            if $0.count == $1.count { return $0.emoji < $1.emoji }
+            return $0.count > $1.count
+        }
+    }
+
+    private func reactionKey(target kind: PingMessageReaction.TargetKind, targetId: String) -> String {
+        "\(kind.rawValue):\(targetId)"
+    }
+
+    private func replyPreview(for chat: PingChatMessage) -> ReplyPreview? {
+        if let replyToChatId = chat.replyToChatId {
+            if let target = findChat(id: replyToChatId) {
+                return ReplyPreview(sender: target.senderNickname, preview: target.preview)
+            }
+            return ReplyPreview(sender: "답장", preview: "이전 메시지")
+        }
+        if let replyToVideoId = chat.replyToVideoId {
+            if let target = findVideo(id: replyToVideoId) {
+                return ReplyPreview(sender: target.senderNickname, preview: videoReplyPreview(target))
+            }
+            return ReplyPreview(sender: "답장", preview: "영상 메시지")
+        }
+        return nil
+    }
+
+    private func quotedReplyPreview(_ preview: ReplyPreview, mine: Bool) -> some View {
+        HStack(spacing: 5) {
+            Rectangle()
+                .fill(Color.secondary.opacity(0.38))
+                .frame(width: 2)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(preview.sender)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Text(preview.preview)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(Color(uiColor: .secondarySystemBackground).opacity(0.75))
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .frame(maxWidth: 260, alignment: mine ? .trailing : .leading)
+    }
+
+    private func findChat(id: String) -> PingChatMessage? {
+        items.compactMap { item -> PingChatMessage? in
+            if case .chat(let message) = item, message.id == id { return message }
+            return nil
+        }.first
+    }
+
+    private func findVideo(id: String) -> VideoMessage? {
+        items.compactMap { item -> VideoMessage? in
+            if case .video(let message) = item, message.id == id { return message }
+            return nil
+        }.first
+    }
+
+    private func videoReplyPreview(_ message: VideoMessage) -> String {
+        message.captureMode == "screen_face" ? "화면+얼굴 영상" : "얼굴 영상"
     }
 }
 
@@ -267,6 +521,36 @@ private enum ThreadItem: Identifiable {
         case .chat(let c): return c.createdAt
         }
     }
+}
+
+private enum ReplyTarget: Hashable {
+    case chat(id: String, sender: String, preview: String)
+    case video(id: String, sender: String, preview: String)
+
+    var sender: String {
+        switch self {
+        case .chat(_, let sender, _), .video(_, let sender, _):
+            return sender
+        }
+    }
+
+    var preview: String {
+        switch self {
+        case .chat(_, _, let preview), .video(_, _, let preview):
+            return preview
+        }
+    }
+}
+
+private struct ReplyPreview: Hashable {
+    let sender: String
+    let preview: String
+}
+
+private struct ThreadReactionAggregate: Hashable {
+    let emoji: String
+    let count: Int
+    let myReacted: Bool
 }
 
 /// A downloaded clip ready to play.
