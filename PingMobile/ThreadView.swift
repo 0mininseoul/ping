@@ -19,6 +19,7 @@ struct ThreadView: View {
     @StateObject private var thumbnails = ThumbnailStore()
     @State private var timestampRevealOffset: CGFloat = 0
     @State private var replyTarget: ReplyTarget?
+    @State private var reactionPickerTarget: ReactionPickerTarget?
     @State private var reactionsByTargetId: [String: [String: ThreadReactionAggregate]] = [:]
 
     private let timestampWidth: CGFloat = 64
@@ -53,6 +54,8 @@ struct ThreadView: View {
         }
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
+        .overlay { reactionPickerOverlay }
+        .animation(.spring(response: 0.24, dampingFraction: 0.88), value: reactionPickerTarget?.id)
         .task { await load() }
         .fullScreenCover(item: $playable) { VideoPlayerScreen(video: $0) }
     }
@@ -196,32 +199,9 @@ struct ThreadView: View {
     private var replyBar: some View {
         VStack(spacing: 6) {
             if let replyTarget {
-                HStack(spacing: 8) {
-                    Rectangle()
-                        .fill(Color.accentColor.opacity(0.65))
-                        .frame(width: 3)
-                        .clipShape(Capsule())
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(replyTarget.sender)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                        Text(replyTarget.preview)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    }
-                    Spacer()
-                    Button {
-                        self.replyTarget = nil
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.body)
-                            .foregroundStyle(.tertiary)
-                    }
-                    .buttonStyle(.plain)
-                }
-                .padding(.horizontal, 14)
-                .padding(.top, 8)
+                compactReplyTargetBar(replyTarget)
+                    .padding(.horizontal, 12)
+                    .padding(.top, 7)
             }
 
             HStack(spacing: 10) {
@@ -242,6 +222,34 @@ struct ThreadView: View {
             .padding(.top, replyTarget == nil ? 8 : 0)
         }
         .background(.bar)
+    }
+
+    private func compactReplyTargetBar(_ target: ReplyTarget) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: "arrowshape.turn.up.left")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Color.accentColor)
+            Text(target.sender)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+            Text(target.preview)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+            Spacer(minLength: 8)
+            Button {
+                replyTarget = nil
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.footnote)
+                    .foregroundStyle(.tertiary)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Capsule().fill(Color(uiColor: .secondarySystemBackground)))
     }
 
     private var canSend: Bool {
@@ -388,15 +396,55 @@ struct ThreadView: View {
             Label("답장", systemImage: "arrowshape.turn.up.left")
         }
 
-        Menu {
-            ForEach(quickReactionEmojis, id: \.self) { emoji in
-                Button(emoji) {
-                    toggleReaction(target: kind, targetId: targetId, emoji: emoji)
-                }
-            }
+        Button {
+            reactionPickerTarget = ReactionPickerTarget(kind: kind, targetId: targetId)
         } label: {
             Label("이모지 반응", systemImage: "face.smiling")
         }
+    }
+
+    @ViewBuilder
+    private var reactionPickerOverlay: some View {
+        if let reactionPickerTarget {
+            ZStack(alignment: .bottom) {
+                Color.black.opacity(0.001)
+                    .ignoresSafeArea()
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        self.reactionPickerTarget = nil
+                    }
+
+                horizontalReactionPicker(for: reactionPickerTarget)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 74)
+            }
+            .transition(.opacity)
+        }
+    }
+
+    private func horizontalReactionPicker(for target: ReactionPickerTarget) -> some View {
+        HStack(spacing: 16) {
+            ForEach(quickReactionEmojis, id: \.self) { emoji in
+                Button {
+                    toggleReaction(target: target.kind, targetId: target.targetId, emoji: emoji)
+                    reactionPickerTarget = nil
+                } label: {
+                    Text(emoji)
+                        .font(.system(size: 31))
+                        .frame(width: 38, height: 38)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text("\(emoji) 반응"))
+            }
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 10)
+        .background(.ultraThinMaterial, in: Capsule())
+        .overlay(
+            Capsule()
+                .strokeBorder(Color.white.opacity(0.38), lineWidth: 0.5)
+        )
+        .shadow(color: Color.black.opacity(0.14), radius: 20, x: 0, y: 12)
     }
 
     private func reactionStrip(
@@ -540,6 +588,13 @@ private enum ReplyTarget: Hashable {
             return preview
         }
     }
+}
+
+private struct ReactionPickerTarget: Identifiable {
+    let kind: PingMessageReaction.TargetKind
+    let targetId: String
+
+    var id: String { "\(kind.rawValue):\(targetId)" }
 }
 
 private struct ReplyPreview: Hashable {

@@ -19,6 +19,8 @@ final class PingMobileThreadInteractionsContractTests: XCTestCase {
 
         XCTAssertTrue(source.contains("@State private var replyTarget"))
         XCTAssertTrue(source.contains("ReplyTarget"))
+        XCTAssertTrue(source.contains("compactReplyTargetBar"))
+        XCTAssertTrue(source.contains(".lineLimit(1)"))
         XCTAssertTrue(source.contains("replyPreview(for:"))
         XCTAssertTrue(source.contains("quotedReplyPreview"))
         XCTAssertTrue(source.contains("sendChat(roomId: roomId, body: text, replyToChatId: replyChatId, replyToVideoId: replyVideoId)"))
@@ -34,9 +36,32 @@ final class PingMobileThreadInteractionsContractTests: XCTestCase {
         XCTAssertTrue(source.contains("refreshReactions()"))
     }
 
+    func testThreadViewUsesHorizontalEmojiReactionPickerInsteadOfVerticalMenu() throws {
+        let source = try readProjectSource("PingMobile/ThreadView.swift")
+        let contextMenuBody = try extract(
+            "private func messageContextMenu",
+            through: "private var reactionPickerOverlay",
+            from: source
+        )
+
+        XCTAssertTrue(source.contains("@State private var reactionPickerTarget"))
+        XCTAssertTrue(source.contains("ReactionPickerTarget"))
+        XCTAssertTrue(source.contains("reactionPickerOverlay"))
+        XCTAssertTrue(source.contains("horizontalReactionPicker"))
+        XCTAssertTrue(source.contains("HStack(spacing: 16)"))
+        XCTAssertFalse(contextMenuBody.contains("\n        Menu {"))
+    }
+
     private func readProjectSource(_ relativePath: String) throws -> String {
         let testsDir = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
         let projectRoot = testsDir.deletingLastPathComponent()
         return try String(contentsOf: projectRoot.appendingPathComponent(relativePath), encoding: .utf8)
+    }
+
+    private func extract(_ start: String, through end: String, from contents: String) throws -> String {
+        let startRange = try XCTUnwrap(contents.range(of: start))
+        let tail = contents[startRange.lowerBound...]
+        let endRange = try XCTUnwrap(tail.range(of: end))
+        return String(tail[..<endRange.upperBound])
     }
 }

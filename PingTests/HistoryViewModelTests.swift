@@ -52,6 +52,34 @@ final class HistoryViewModelTests: XCTestCase {
         XCTAssertEqual(groups[0].items.map(\.id), ["video:v1", "chat:c1"])
     }
 
+    func test_dedupedSenderVideosKeepsOneSentRowPerRoomVideoUrl() {
+        let now = Date()
+        let videos = [
+            makeMsg(id: "sent-1", createdAt: now, roomId: "room-a", senderUid: "me", receiverUid: "member-1", videoUrl: "me/shared.mp4"),
+            makeMsg(id: "sent-2", createdAt: now.addingTimeInterval(1), roomId: "room-a", senderUid: "me", receiverUid: "member-2", videoUrl: "me/shared.mp4"),
+            makeMsg(id: "sent-other-room", createdAt: now.addingTimeInterval(2), roomId: "room-b", senderUid: "me", receiverUid: "member-3", videoUrl: "me/shared.mp4"),
+            makeMsg(id: "incoming", createdAt: now.addingTimeInterval(3), roomId: "room-a", senderUid: "other", receiverUid: "me", videoUrl: "other/shared.mp4")
+        ]
+
+        let deduped = HistoryViewModel.dedupedSenderVideos(videos, currentUid: "me")
+
+        XCTAssertEqual(deduped.compactMap(\.id), ["sent-1", "sent-other-room", "incoming"])
+    }
+
+    func test_loadMoreUsesRawVideoPaginationCursorAfterDedupe() throws {
+        let source = try readProjectSource("Ping/UI/History/HistoryViewModel.swift")
+        let loadMoreBody = try extract(
+            "func loadMore() async",
+            through: "await refreshReactions()",
+            from: source
+        )
+
+        XCTAssertTrue(source.contains("private var videoPaginationCursor: Date?"))
+        XCTAssertTrue(loadMoreBody.contains("beforeTimestamp: videoPaginationCursor"))
+        XCTAssertTrue(loadMoreBody.contains("videoPaginationCursor = nextVideoCursor"))
+        XCTAssertTrue(loadMoreBody.contains("Self.dedupedSenderVideos(loadedVideos + videos"))
+    }
+
     func test_deleteVideoClearsExpandedScreenFaceOverlayState() throws {
         let source = try readProjectSource("Ping/UI/History/HistoryViewModel.swift")
         let deleteBody = try extract(
@@ -96,15 +124,22 @@ final class HistoryViewModelTests: XCTestCase {
         XCTAssertFalse(deleteBody.contains("delete from storage.objects"))
     }
 
-    private func makeMsg(id: String, createdAt: Date) -> VideoMessage {
+    private func makeMsg(
+        id: String,
+        createdAt: Date,
+        roomId: String = "r",
+        senderUid: String = "u",
+        receiverUid: String = "r",
+        videoUrl: String = "u/v.mp4"
+    ) -> VideoMessage {
         VideoMessage(
             id: id,
-            roomId: "r",
-            senderUid: "u",
-            receiverUid: "r",
+            roomId: roomId,
+            senderUid: senderUid,
+            receiverUid: receiverUid,
             senderNickname: "nick",
             videoId: "v",
-            videoUrl: "u/v.mp4",
+            videoUrl: videoUrl,
             durationMs: 3000,
             mirrorPosition: MirrorPosition(xRatio: 0.5, yRatio: 0.5),
             status: .uploaded,
