@@ -41,8 +41,7 @@ struct ContentView: View {
             onScanQR: {
                 pairError = nil
                 showScanner = true
-            },
-            onPreview: loadDemo
+            }
         )
         .overlay(alignment: .bottom) {
             if let pairError {
@@ -63,24 +62,6 @@ struct ContentView: View {
             }
             .ignoresSafeArea()
         }
-    }
-
-    /// Loads a pre-seeded demo account so App Store reviewers can explore the
-    /// companion UI without needing a paired Mac.
-    private func loadDemo() {
-        guard let url = URL(string: "https://qxjtprxvjmaxlbtljcjw.supabase.co") else { return }
-        let session = SupabaseSession(
-            accessToken: "",
-            refreshToken: "4ba67vbxrxzo",
-            expiresAt: Date(timeIntervalSince1970: 0),
-            userId: "c91fbdbd-ab5c-461e-a74d-e66b99d0d651"
-        )
-        let account = PairedAccount(
-            url: url,
-            anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4anRwcnh2am1heGxidGxqY2p3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg5MzcxNjQsImV4cCI6MjA5NDUxMzE2NH0.z3mxwdHQrII5CeI0UFlnBKqkWP0jfXbB3iyjBVJ97vI",
-            session: session
-        )
-        environment.setPaired(account)
     }
 
     private func handleScanned(_ code: String) {
