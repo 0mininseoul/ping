@@ -34,6 +34,19 @@ final class PingMobileOnboardingContractTests: XCTestCase {
         XCTAssertFalse(unpaired.contains("onPreview"))
     }
 
+    func testQRScannerSheetUsesOnlySystemDragIndicator() throws {
+        let source = try readProjectSource("PingMobile/ContentView.swift")
+        let scannerSheet = try extract(
+            ".sheet(isPresented: $showScanner)",
+            through: "private func handleScanned",
+            from: source
+        )
+
+        XCTAssertTrue(scannerSheet.contains(".presentationDragIndicator(.visible)"))
+        XCTAssertFalse(scannerSheet.contains("chevron.down"))
+        XCTAssertFalse(scannerSheet.contains("xmark"))
+    }
+
     private func readProjectSource(_ relativePath: String) throws -> String {
         let testsDir = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
         let projectRoot = testsDir.deletingLastPathComponent()

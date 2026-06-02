@@ -61,6 +61,7 @@ struct ContentView: View {
                 handleScanned(code)
             }
             .ignoresSafeArea()
+            .presentationDragIndicator(.visible)
         }
     }
 
