@@ -65,6 +65,44 @@ import Testing
         #expect(message.status == "seen")
         #expect(message.captureMode == nil)
     }
+
+    @Test func dedupesSenderRowsByRoomAndVideoPathForMobileThreads() {
+        let now = Date(timeIntervalSince1970: 0)
+        let messages = [
+            makeVideo(id: "sent-1", roomId: "room-a", senderUid: "me", receiverUid: "member-1", videoUrl: "me/shared.mp4", createdAt: now),
+            makeVideo(id: "sent-2", roomId: "room-a", senderUid: "me", receiverUid: "member-2", videoUrl: "me/shared.mp4", createdAt: now.addingTimeInterval(1)),
+            makeVideo(id: "same-file-other-room", roomId: "room-b", senderUid: "me", receiverUid: "member-3", videoUrl: "me/shared.mp4", createdAt: now.addingTimeInterval(2)),
+            makeVideo(id: "incoming", roomId: "room-a", senderUid: "other", receiverUid: "me", videoUrl: "other/shared.mp4", createdAt: now.addingTimeInterval(3))
+        ]
+
+        let deduped = VideoMessage.dedupedSenderRows(messages, currentUid: "me")
+
+        #expect(deduped.map(\.id) == ["sent-1", "same-file-other-room", "incoming"])
+    }
+
+    private func makeVideo(
+        id: String,
+        roomId: String,
+        senderUid: String,
+        receiverUid: String,
+        videoUrl: String,
+        createdAt: Date
+    ) -> VideoMessage {
+        VideoMessage(
+            id: id,
+            roomId: roomId,
+            senderUid: senderUid,
+            receiverUid: receiverUid,
+            senderNickname: "n",
+            videoId: "v",
+            videoUrl: videoUrl,
+            durationMs: 3000,
+            status: "uploaded",
+            createdAt: createdAt,
+            captureMode: "face_only",
+            aspectRatio: nil
+        )
+    }
 }
 
 @Suite struct ChatMessageTests {

@@ -70,10 +70,11 @@ public extension PingSupabaseClient {
 
     /// Recent video messages in a room (backend returns newest-first).
     func roomMessages(roomId: String, limit: Int = 50) async throws -> [VideoMessage] {
-        try await rpcArray("ping_room_messages", body: [
+        let messages: [VideoMessage] = try await rpcArray("ping_room_messages", body: [
             "room_uuid": roomId,
             "page_limit": limit
         ])
+        return VideoMessage.dedupedSenderRows(messages, currentUid: currentSession().userId)
     }
 
     /// Recent text chat in a room.

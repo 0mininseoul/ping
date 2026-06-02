@@ -33,4 +33,22 @@ public struct VideoMessage: Codable, Sendable, Identifiable, Equatable {
 
     /// Storage object path inside the `ping-videos` bucket: `<senderUid>/<videoId>.mp4`.
     public var storagePath: String { "\(senderUid)/\(videoId).mp4" }
+
+    static func dedupedSenderRows(_ messages: [VideoMessage], currentUid: String?) -> [VideoMessage] {
+        guard let currentUid else { return messages }
+
+        var seenSenderVideos = Set<String>()
+        var deduped: [VideoMessage] = []
+        for message in messages {
+            guard message.senderUid == currentUid else {
+                deduped.append(message)
+                continue
+            }
+
+            let key = "\(message.roomId)|\(message.videoUrl)"
+            guard seenSenderVideos.insert(key).inserted else { continue }
+            deduped.append(message)
+        }
+        return deduped
+    }
 }
