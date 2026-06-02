@@ -10,8 +10,8 @@ struct DesktopInstallGuideView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 22) {
-                Spacer(minLength: 20)
+            VStack(spacing: 20) {
+                Spacer(minLength: 92)
 
                 Image(systemName: "macbook.and.iphone")
                     .font(.system(size: 48, weight: .semibold))
@@ -19,16 +19,17 @@ struct DesktopInstallGuideView: View {
                     .accessibilityHidden(true)
 
                 VStack(spacing: 8) {
-                    Text("Mac용 Ping과 연결하는 iPhone 앱이에요")
+                    Text("Mac용 Ping과 연결해서 사용하는\niPhone 컴패니언 앱이에요")
                         .font(.title2.bold())
                         .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
 
-                    Text("Mac에 Ping을 설치한 뒤, Mac 앱에서 QR 코드를 열고 스캔하세요.")
+                    Text("Mac 앱을 설치한 뒤, QR 코드를 열고 스캔하세요")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.86)
                 }
 
                 installPageRow
