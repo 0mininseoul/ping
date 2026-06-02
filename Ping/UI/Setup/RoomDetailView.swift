@@ -54,7 +54,7 @@ struct RoomDetailView: View {
                         if isEditing(room) {
                             inlineRoomNameEditor(for: room)
                         } else {
-                            Text(RoomLimits.sanitizedRoomName(room.name))
+                            Text(room.name)
                                 .font(.headline)
                                 .lineLimit(1)
                         }
@@ -202,7 +202,7 @@ struct RoomDetailView: View {
                     }
                 }
         } else {
-            Text(RoomLimits.sanitizedRoomName(room.name))
+            Text(room.name)
                 .font(.headline)
                 .lineLimit(1)
         }

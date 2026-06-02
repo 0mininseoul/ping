@@ -11,7 +11,7 @@ struct PairedAccount: Codable, Sendable {
 /// A deep-link target set when the user taps a notification, consumed by
 /// `ContentView` to push the matching screen.
 enum PingRoute: Hashable {
-    case thread(roomId: String)
+    case thread(roomId: String, roomName: String?)
 }
 
 /// App-wide state: holds the paired account, persists it, and builds a

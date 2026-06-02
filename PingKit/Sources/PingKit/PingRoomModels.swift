@@ -18,13 +18,12 @@ public struct PingRoom: Codable, Sendable, Identifiable, Equatable {
         case createdAt = "created_at"
     }
 
-    /// The room's display title from `myUid`'s perspective: the other members'
-    /// nicknames, falling back to the room's own name.
+    /// The backend returns the same canonical room title to every client.
+    public var displayTitle: String { name }
+
+    /// Kept for older call sites; room titles are no longer derived locally.
     public func title(excluding myUid: String) -> String {
-        let others = memberUids
-            .filter { $0 != myUid }
-            .compactMap { memberNicknames[$0] }
-        return others.isEmpty ? name : others.joined(separator: ", ")
+        return name
     }
 }
 

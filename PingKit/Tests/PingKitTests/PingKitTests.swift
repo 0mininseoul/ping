@@ -37,6 +37,23 @@ import Testing
     }
 }
 
+@Suite struct RoomTitleTests {
+    @Test func titleUsesCanonicalServerNameForEveryClient() {
+        let room = PingRoom(
+            id: "room",
+            name: "A, B, C",
+            ownerUid: "a",
+            memberUids: ["a", "b", "c"],
+            memberNicknames: ["a": "A", "b": "B", "c": "C"],
+            createdAt: nil
+        )
+
+        #expect(room.displayTitle == "A, B, C")
+        #expect(room.title(excluding: "a") == "A, B, C")
+        #expect(room.title(excluding: "b") == "A, B, C")
+    }
+}
+
 @Suite struct VideoMessageTests {
     @Test func decodesRPCRowAndDerivesStoragePath() throws {
         let json = """

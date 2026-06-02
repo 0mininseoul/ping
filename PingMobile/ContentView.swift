@@ -13,8 +13,8 @@ struct ContentView: View {
                 InboxView(account: paired)
                     .navigationDestination(for: PingRoute.self) { route in
                         switch route {
-                        case .thread(let roomId):
-                            ThreadView(account: paired, roomId: roomId)
+                        case .thread(let roomId, let roomName):
+                            ThreadView(account: paired, roomId: roomId, roomName: roomName)
                         }
                     }
             }

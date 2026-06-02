@@ -303,7 +303,7 @@ struct RoomManagerView: View {
                 } else {
                     ForEach(appState.rooms, id: \.id) { room in
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(RoomLimits.sanitizedRoomName(room.name))
+                            Text(room.name)
                                 .font(.callout.weight(.semibold))
                                 .lineLimit(1)
                                 .truncationMode(.tail)

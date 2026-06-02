@@ -242,7 +242,7 @@ struct RoomSearchView: View {
                 .frame(width: 28)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(RoomLimits.sanitizedRoomName(room.name))
+                Text(room.name)
                     .font(PingFont.body)
                     .lineLimit(1)
                 Text("방장: \(ownerName(for: room))")

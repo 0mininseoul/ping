@@ -110,7 +110,7 @@ struct RoomListView: View {
                     if isEditing(room) {
                         inlineRoomNameEditor(for: room)
                     } else {
-                        Text(RoomLimits.sanitizedRoomName(room.name))
+                        Text(room.name)
                             .font(.system(size: 21, weight: .semibold))
                             .foregroundStyle(Color.primary.opacity(0.92))
                             .lineLimit(1)
@@ -213,7 +213,7 @@ struct RoomListView: View {
                     }
                 }
         } else {
-            Text(RoomLimits.sanitizedRoomName(room.name))
+            Text(room.name)
                 .font(.system(size: 21, weight: .semibold))
                 .foregroundStyle(Color.primary.opacity(0.92))
                 .lineLimit(1)

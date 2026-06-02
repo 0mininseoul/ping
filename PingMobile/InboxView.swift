@@ -19,7 +19,7 @@ struct InboxView: View {
                 List {
                     Section {
                         ForEach(rooms) { room in
-                            NavigationLink(value: PingRoute.thread(roomId: room.id)) {
+                            NavigationLink(value: PingRoute.thread(roomId: room.id, roomName: room.name)) {
                                 roomRow(room)
                             }
                         }
@@ -50,7 +50,7 @@ struct InboxView: View {
             if isLoading && rooms.isEmpty { ProgressView() }
         }
         .refreshable { await load() }
-        .task { await load() }
+        .task { await pollRooms() }
         .confirmationDialog("연결 해제", isPresented: $showDisconnectConfirmation, titleVisibility: .visible) {
             Button("연결 해제", role: .destructive) {
                 AppEnvironment.shared.disconnect()
@@ -74,6 +74,7 @@ struct InboxView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(room.title(excluding: account.session.userId))
                     .font(.body.weight(.semibold))
+                    .lineLimit(1)
                 Text("받은 ping과 대화 보기")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -148,5 +149,12 @@ struct InboxView: View {
         let fetched = (try? await client.myRooms()) ?? []
         rooms = fetched.sorted { ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast) }
         isLoading = false
+    }
+
+    private func pollRooms() async {
+        while !Task.isCancelled {
+            await load()
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+        }
     }
 }

@@ -107,7 +107,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         // Default tap (or dismiss): open the room's thread if we know the room.
         Task { @MainActor in
             if let roomId {
-                AppEnvironment.shared.pendingRoute = .thread(roomId: roomId)
+                AppEnvironment.shared.pendingRoute = .thread(roomId: roomId, roomName: nil)
             }
             handler.value()
         }

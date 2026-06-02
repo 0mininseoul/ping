@@ -10,6 +10,7 @@ struct ThreadView: View {
     let account: PairedAccount
     let roomId: String
 
+    @State private var roomName: String
     @State private var items: [ThreadItem] = []
     @State private var draft = ""
     @State private var isLoading = true
@@ -29,6 +30,12 @@ struct ThreadView: View {
     private let quickReactionEmojis = ["👍", "❤️", "😂", "😮", "😢", "🙏"]
 
     private var myUid: String { account.session.userId }
+
+    init(account: PairedAccount, roomId: String, roomName: String?) {
+        self.account = account
+        self.roomId = roomId
+        _roomName = State(initialValue: roomName ?? "대화")
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -52,20 +59,13 @@ struct ThreadView: View {
             }
             replyBar
         }
-        .navigationTitle(title)
+        .navigationTitle(roomName)
         .navigationBarTitleDisplayMode(.inline)
         .overlay { reactionPickerOverlay }
         .animation(.spring(response: 0.24, dampingFraction: 0.88), value: reactionPickerTarget?.id)
         .task { await load() }
+        .task { await pollRoomName() }
         .fullScreenCover(item: $playable) { VideoPlayerScreen(video: $0) }
-    }
-
-    private var title: String {
-        items.compactMap { item -> String? in
-            if case let .video(m) = item, m.senderUid != myUid { return m.senderNickname }
-            if case let .chat(c) = item, c.senderUid != myUid { return c.senderNickname }
-            return nil
-        }.first ?? "대화"
     }
 
     private func timestampRevealRow(for item: ThreadItem) -> some View {
@@ -295,6 +295,7 @@ struct ThreadView: View {
             isLoading = false
             return
         }
+        await refreshRoomName(client: client)
         let videos = (try? await client.roomMessages(roomId: roomId)) ?? []
         let chats = (try? await client.roomChatMessages(roomId: roomId)) ?? []
         var merged: [ThreadItem] = videos.map { .video($0) } + chats.map { .chat($0) }
@@ -304,6 +305,21 @@ struct ThreadView: View {
         thumbnails.prefetch(videos)
         await refreshReactions()
         try? await client.markRoomRead(roomId: roomId)
+    }
+
+    private func pollRoomName() async {
+        guard let client = AppEnvironment.shared.makeClient() else { return }
+
+        while !Task.isCancelled {
+            await refreshRoomName(client: client)
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+        }
+    }
+
+    private func refreshRoomName(client: PingSupabaseClient) async {
+        guard let rooms = try? await client.myRooms(),
+              let room = rooms.first(where: { $0.id == roomId }) else { return }
+        roomName = room.name
     }
 
     private func send() {

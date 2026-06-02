@@ -78,7 +78,7 @@ final class RoomManagerUXContractTests: XCTestCase {
         XCTAssertTrue(roomManagerSource.contains("private var sidebarWidth"))
         XCTAssertTrue(roomManagerSource.contains(".navigationSplitViewColumnWidth(min: 148, ideal: sidebarWidth, max: 240)"))
         XCTAssertTrue(roomManagerSource.contains("RoomLimits.sanitizedRoomName($0.name).count"))
-        XCTAssertTrue(roomManagerSource.contains("RoomLimits.sanitizedRoomName(room.name)"))
+        XCTAssertTrue(roomManagerSource.contains("Text(room.name)"))
         XCTAssertTrue(roomListSource.contains("limitRoomNameInput"))
         XCTAssertTrue(roomListSource.contains("RoomLimits.sanitizedRoomName(editingName)"))
         XCTAssertTrue(roomDetailSource.contains("limitRoomNameInput"))
