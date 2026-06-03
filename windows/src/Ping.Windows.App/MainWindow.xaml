@@ -5,8 +5,8 @@
     Title="Ping">
     <Grid
         x:Name="Root"
-        MinWidth="420"
-        MinHeight="360"
+        MinWidth="760"
+        MinHeight="560"
         Padding="12"
         Background="#0F1012"
         RowSpacing="10"
@@ -122,15 +122,19 @@
                             Text="Pick a conversation, start a ping, or keep Ping in the background like a messenger." />
                     </StackPanel>
                     <Button
+                        x:Name="ManageRoomsButton"
                         Grid.Column="1"
                         Style="{StaticResource MessengerPillButton}"
                         Click="HandleOpenRoomsClicked"
-                        Content="Rooms" />
+                        Content="Manage rooms" />
                 </Grid>
 
+                <ScrollViewer
+                    Grid.Row="1"
+                    HorizontalScrollBarVisibility="Disabled"
+                    VerticalScrollBarVisibility="Auto">
                 <Grid
                     x:Name="MessengerHomeShell"
-                    Grid.Row="1"
                     ColumnSpacing="12">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition x:Name="HomeListColumn" Width="0.95*" MinWidth="220" />
@@ -163,6 +167,7 @@
                                     </StackPanel>
                                 </Grid>
                                 <Button
+                                    x:Name="PrimaryConversationsButton"
                                     HorizontalAlignment="Stretch"
                                     Style="{StaticResource MessengerPillButton}"
                                     Click="HandleOpenHistoryClicked"
@@ -237,6 +242,7 @@
                         </Grid>
                     </Border>
                 </Grid>
+                </ScrollViewer>
 
                 <Border
                     x:Name="BlockedPanel"

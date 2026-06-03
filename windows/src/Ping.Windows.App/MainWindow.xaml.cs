@@ -8,6 +8,12 @@ namespace Ping.Windows.App;
 
 public sealed partial class MainWindow : Window
 {
+    private const int InitialHomeWidth = 900;
+    private const int InitialHomeHeight = 680;
+    private const int MinimumHomeWidth = 760;
+    private const int MinimumHomeHeight = 560;
+    private const int DisplayMargin = 48;
+
     private AppWindow? appWindow;
     private bool allowClose;
     private bool isUpdatingSettingsControls;
@@ -44,8 +50,34 @@ public sealed partial class MainWindow : Window
             appWindow.SetIcon(iconPath);
         }
 
-        appWindow.Resize(new SizeInt32(640, 500));
+        ResizeToInitialHomeSize();
         appWindow.Closing += HandleAppWindowClosing;
+    }
+
+    private void ResizeToInitialHomeSize()
+    {
+        if (appWindow is null)
+        {
+            return;
+        }
+
+        var area = DisplayArea.GetFromWindowId(appWindow.Id, DisplayAreaFallback.Nearest);
+        var workArea = area.WorkArea;
+        var width = ClampWindowDimension(InitialHomeWidth, MinimumHomeWidth, workArea.Width - DisplayMargin * 2);
+        var height = ClampWindowDimension(InitialHomeHeight, MinimumHomeHeight, workArea.Height - DisplayMargin * 2);
+        var left = workArea.X + Math.Max(0, (workArea.Width - width) / 2);
+        var top = workArea.Y + Math.Max(0, (workArea.Height - height) / 2);
+        appWindow.MoveAndResize(new RectInt32(left, top, width, height));
+    }
+
+    private static int ClampWindowDimension(int preferred, int minimum, int available)
+    {
+        if (available <= 0)
+        {
+            return minimum;
+        }
+
+        return Math.Max(Math.Min(preferred, available), Math.Min(minimum, available));
     }
 
     public void ShowShell()
@@ -122,7 +154,7 @@ public sealed partial class MainWindow : Window
 
     private void HandleRootSizeChanged(object sender, SizeChangedEventArgs args)
     {
-        var compact = args.NewSize.Width < 700;
+        var compact = args.NewSize.Width < 820;
         SelectedRoomPreview.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
         CompactRoomsButton.Visibility = compact ? Visibility.Visible : Visibility.Collapsed;
         HomePreviewColumn.MinWidth = compact ? 0 : 240;

@@ -31,8 +31,13 @@ namespace
     {
         if (targetMonitorIndex < 0)
         {
-            POINT origin{};
-            return MonitorFromPoint(origin, MONITOR_DEFAULTTOPRIMARY);
+            POINT cursor{};
+            if (!GetCursorPos(&cursor))
+            {
+                cursor = POINT{};
+            }
+
+            return MonitorFromPoint(cursor, MONITOR_DEFAULTTONEAREST);
         }
 
         std::vector<HMONITOR> monitors;

@@ -33,7 +33,9 @@ public sealed class AppCoordinatorSourceTests
         Assert.Contains("Content=\"Create / Join room\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Click=\"HandleOpenRoomsClicked\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Content=\"Open conversations\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"PrimaryConversationsButton\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Click=\"HandleOpenHistoryClicked\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"ManageRoomsButton\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Content=\"대화방 보기\"", xaml, StringComparison.Ordinal);
         Assert.Contains("x:Name=\"CompactRoomsButton\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Content=\"New face ping\"", xaml, StringComparison.Ordinal);
@@ -41,21 +43,31 @@ public sealed class AppCoordinatorSourceTests
         Assert.Contains("Content=\"Settings\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Click=\"HandleOpenSettingsClicked\"", xaml, StringComparison.Ordinal);
         Assert.Contains("public event EventHandler? OpenRoomsRequested;", code, StringComparison.Ordinal);
+        Assert.Contains("public event EventHandler? OpenHistoryRequested;", code, StringComparison.Ordinal);
         Assert.Contains("OpenRoomsRequested += HandleOpenRoomsRequested", coordinator, StringComparison.Ordinal);
+        Assert.Contains("OpenHistoryRequested += HandleOpenHistoryRequested", coordinator, StringComparison.Ordinal);
         Assert.Contains("OpenRoomManagerWindow();", coordinator, StringComparison.Ordinal);
+        Assert.Contains("OpenHistoryWindow();", coordinator, StringComparison.Ordinal);
+        Assert.DoesNotContain("sendable room(s)", xaml, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Connected.", xaml, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public void CompactMessengerHomeAdaptsInsteadOfCroppingPrimaryActions()
+    public void StartupMessengerHomeOpensLargeEnoughAndNeverCropsPrimaryActions()
     {
         var root = RepoRoot();
         var xaml = File.ReadAllText(Path.Combine(root, "windows", "src", "Ping.Windows.App", "MainWindow.xaml"));
         var code = File.ReadAllText(Path.Combine(root, "windows", "src", "Ping.Windows.App", "MainWindow.xaml.cs"));
 
-        Assert.Contains("MinWidth=\"420\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("MinHeight=\"360\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("MinWidth=\"760\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("MinHeight=\"560\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("HorizontalScrollBarVisibility=\"Disabled\"", xaml, StringComparison.Ordinal);
         Assert.Contains("SizeChanged=\"HandleRootSizeChanged\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("appWindow.Resize(new SizeInt32(640, 500));", code, StringComparison.Ordinal);
+        Assert.DoesNotContain("appWindow.Resize(new SizeInt32(640, 500));", code, StringComparison.Ordinal);
+        Assert.Contains("private const int InitialHomeWidth = 900;", code, StringComparison.Ordinal);
+        Assert.Contains("private const int InitialHomeHeight = 680;", code, StringComparison.Ordinal);
+        Assert.Contains("ResizeToInitialHomeSize();", code, StringComparison.Ordinal);
+        Assert.Contains("appWindow.MoveAndResize", code, StringComparison.Ordinal);
         Assert.Contains("SelectedRoomPreview.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;", code, StringComparison.Ordinal);
         Assert.Contains("CompactRoomsButton.Visibility = compact ? Visibility.Visible : Visibility.Collapsed;", code, StringComparison.Ordinal);
         Assert.Contains("HomePreviewColumn.Width = compact ? new GridLength(0)", code, StringComparison.Ordinal);
@@ -78,12 +90,37 @@ public sealed class AppCoordinatorSourceTests
     }
 
     [Fact]
+    public void ScreenFaceCaptureDefaultsToCurrentMonitorInsteadOfOriginCrop()
+    {
+        var nativeCapture = File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            "windows",
+            "src",
+            "Ping.Windows.NativeCapture",
+            "src",
+            "MonitorCapture.cpp"));
+
+        Assert.DoesNotContain("POINT origin{};", nativeCapture, StringComparison.Ordinal);
+        Assert.Contains("GetCursorPos", nativeCapture, StringComparison.Ordinal);
+        Assert.Contains("MONITOR_DEFAULTTONEAREST", nativeCapture, StringComparison.Ordinal);
+        Assert.Contains("CreateForMonitor", nativeCapture, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void PackagedLogoAssetsUseRealPingIconInsteadOfPlaceholderSquare()
     {
-        var assets = Path.Combine(RepoRoot(), "windows", "src", "Ping.Windows.App", "Assets");
+        var root = RepoRoot();
+        var assets = Path.Combine(root, "windows", "src", "Ping.Windows.App", "Assets");
         Assert.True(IsNonPlaceholderPng(Path.Combine(assets, "Square44x44Logo.png")));
         Assert.True(IsNonPlaceholderPng(Path.Combine(assets, "Square150x150Logo.png")));
         Assert.True(IsNonPlaceholderPng(Path.Combine(assets, "StoreLogo.png")));
+        Assert.True(File.Exists(Path.Combine(assets, "Square44x44Logo.targetsize-16.png")));
+        Assert.True(File.Exists(Path.Combine(assets, "Square44x44Logo.targetsize-32.png")));
+        Assert.True(File.Exists(Path.Combine(assets, "Square44x44Logo.targetsize-48.png")));
+        Assert.True(File.Exists(Path.Combine(assets, "Square44x44Logo.targetsize-256.png")));
+        Assert.Equal(
+            File.ReadAllBytes(Path.Combine(assets, "Ping.ico")),
+            File.ReadAllBytes(Path.Combine(root, "windows", "installer", "app.ico")));
     }
 
     [Fact]
