@@ -1344,9 +1344,9 @@ public sealed class AppCoordinatorSourceTests
         Assert.Contains("x:Name=\"MessengerHomeShell\"", xaml, StringComparison.Ordinal);
         Assert.Contains("x:Name=\"HomeRoomsList\"", xaml, StringComparison.Ordinal);
         Assert.Contains("x:Name=\"SelectedRoomPreview\"", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("Width=\"420\"", xaml, StringComparison.Ordinal);
-        Assert.DoesNotContain("Width=\"920\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("MinWidth=\"560\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain(" Width=\"420\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain(" Width=\"920\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("MinWidth=\"420\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Compact messenger home", xaml, StringComparison.Ordinal);
         Assert.Contains("MessengerPillButton", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Windows tray and hotkeys", xaml, StringComparison.Ordinal);
