@@ -5,11 +5,12 @@
     Title="Ping">
     <Grid
         x:Name="Root"
-        MinWidth="560"
-        MinHeight="420"
-        Padding="14"
+        MinWidth="420"
+        MinHeight="360"
+        Padding="12"
         Background="#0F1012"
-        RowSpacing="12">
+        RowSpacing="10"
+        SizeChanged="HandleRootSizeChanged">
         <Grid.Resources>
             <SolidColorBrush x:Key="PingBackgroundBrush" Color="#0F1012" />
             <SolidColorBrush x:Key="PingSurfaceBrush" Color="#1B1D21" />
@@ -132,8 +133,8 @@
                     Grid.Row="1"
                     ColumnSpacing="12">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition x:Name="HomeListColumn" Width="0.9*" MinWidth="210" />
-                        <ColumnDefinition x:Name="HomePreviewColumn" Width="1.1*" MinWidth="260" />
+                        <ColumnDefinition x:Name="HomeListColumn" Width="0.95*" MinWidth="220" />
+                        <ColumnDefinition x:Name="HomePreviewColumn" Width="1.05*" MinWidth="240" />
                     </Grid.ColumnDefinitions>
 
                     <StackPanel
@@ -181,6 +182,14 @@
                             Foreground="{StaticResource PingMutedBrush}"
                             Text="Global shortcuts are syncing…"
                             TextWrapping="WrapWholeWords" />
+                        <Button
+                            x:Name="CompactRoomsButton"
+                            x:FieldModifier="public"
+                            HorizontalAlignment="Stretch"
+                            Style="{StaticResource MessengerPillButton}"
+                            Click="HandleOpenHistoryClicked"
+                            Content="대화방 보기"
+                            Visibility="Collapsed" />
                     </StackPanel>
 
                     <Border

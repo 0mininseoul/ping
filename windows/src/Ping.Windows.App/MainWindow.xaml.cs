@@ -1,5 +1,6 @@
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using global::Windows.Graphics;
 using Microsoft.UI.Xaml.Media;
 
@@ -43,7 +44,7 @@ public sealed partial class MainWindow : Window
             appWindow.SetIcon(iconPath);
         }
 
-        appWindow.Resize(new SizeInt32(760, 540));
+        appWindow.Resize(new SizeInt32(640, 500));
         appWindow.Closing += HandleAppWindowClosing;
     }
 
@@ -117,5 +118,15 @@ public sealed partial class MainWindow : Window
     private void HandleOpenSettingsClicked(object sender, RoutedEventArgs args)
     {
         OpenSettingsRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void HandleRootSizeChanged(object sender, SizeChangedEventArgs args)
+    {
+        var compact = args.NewSize.Width < 700;
+        SelectedRoomPreview.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+        CompactRoomsButton.Visibility = compact ? Visibility.Visible : Visibility.Collapsed;
+        HomePreviewColumn.MinWidth = compact ? 0 : 240;
+        HomePreviewColumn.Width = compact ? new GridLength(0) : new GridLength(1.05, GridUnitType.Star);
+        HomeListColumn.Width = compact ? new GridLength(1, GridUnitType.Star) : new GridLength(0.95, GridUnitType.Star);
     }
 }

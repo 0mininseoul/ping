@@ -34,6 +34,8 @@ public sealed class AppCoordinatorSourceTests
         Assert.Contains("Click=\"HandleOpenRoomsClicked\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Content=\"Open conversations\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Click=\"HandleOpenHistoryClicked\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Content=\"대화방 보기\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"CompactRoomsButton\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Content=\"New face ping\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Click=\"HandleNewPingClicked\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Content=\"Settings\"", xaml, StringComparison.Ordinal);
@@ -41,6 +43,47 @@ public sealed class AppCoordinatorSourceTests
         Assert.Contains("public event EventHandler? OpenRoomsRequested;", code, StringComparison.Ordinal);
         Assert.Contains("OpenRoomsRequested += HandleOpenRoomsRequested", coordinator, StringComparison.Ordinal);
         Assert.Contains("OpenRoomManagerWindow();", coordinator, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void CompactMessengerHomeAdaptsInsteadOfCroppingPrimaryActions()
+    {
+        var root = RepoRoot();
+        var xaml = File.ReadAllText(Path.Combine(root, "windows", "src", "Ping.Windows.App", "MainWindow.xaml"));
+        var code = File.ReadAllText(Path.Combine(root, "windows", "src", "Ping.Windows.App", "MainWindow.xaml.cs"));
+
+        Assert.Contains("MinWidth=\"420\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("MinHeight=\"360\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("SizeChanged=\"HandleRootSizeChanged\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("appWindow.Resize(new SizeInt32(640, 500));", code, StringComparison.Ordinal);
+        Assert.Contains("SelectedRoomPreview.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;", code, StringComparison.Ordinal);
+        Assert.Contains("CompactRoomsButton.Visibility = compact ? Visibility.Visible : Visibility.Collapsed;", code, StringComparison.Ordinal);
+        Assert.Contains("HomePreviewColumn.Width = compact ? new GridLength(0)", code, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ScreenFaceMirrorDoesNotAssignStaticResourceClipThatCrashesPackagedWinUI()
+    {
+        var root = RepoRoot();
+        var xaml = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Capture",
+            "ScreenFaceMirrorWindow.xaml"));
+
+        Assert.DoesNotContain("Clip=\"{StaticResource PingScreenFaceClip}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Screen+Face", xaml, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PackagedLogoAssetsUseRealPingIconInsteadOfPlaceholderSquare()
+    {
+        var assets = Path.Combine(RepoRoot(), "windows", "src", "Ping.Windows.App", "Assets");
+        Assert.True(IsNonPlaceholderPng(Path.Combine(assets, "Square44x44Logo.png")));
+        Assert.True(IsNonPlaceholderPng(Path.Combine(assets, "Square150x150Logo.png")));
+        Assert.True(IsNonPlaceholderPng(Path.Combine(assets, "StoreLogo.png")));
     }
 
     [Fact]
@@ -1348,6 +1391,15 @@ public sealed class AppCoordinatorSourceTests
 
         return directory?.FullName
             ?? throw new DirectoryNotFoundException("Could not locate Ping repository root.");
+    }
+
+    private static bool IsNonPlaceholderPng(string path)
+    {
+        var bytes = File.ReadAllBytes(path);
+        var pngSignature = new byte[] { 0x89, (byte)'P', (byte)'N', (byte)'G', 0x0D, 0x0A, 0x1A, 0x0A };
+        Assert.True(bytes.Length > 1000, $"{Path.GetFileName(path)} should be a rendered Ping logo, not a tiny solid-color placeholder.");
+        Assert.True(bytes.Take(pngSignature.Length).SequenceEqual(pngSignature));
+        return true;
     }
 
     private static string WindowsMarketingVersion(string root)
