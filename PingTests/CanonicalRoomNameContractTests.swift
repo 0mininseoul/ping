@@ -22,6 +22,16 @@ final class CanonicalRoomNameContractTests: XCTestCase {
         XCTAssertTrue(migration.contains("for room_to_refresh in"))
     }
 
+    func testProfileUpsertQualifiesRoomMemberNicknameToAvoidReturnColumnAmbiguity() throws {
+        let migration = try readProjectSource("supabase/migrations/20260603052554_fix_profile_upsert_nickname_ambiguity.sql")
+
+        XCTAssertTrue(migration.contains("create or replace function public.ping_upsert_profile"))
+        XCTAssertTrue(migration.contains("update public.room_members as rm_profile"))
+        XCTAssertTrue(migration.contains("where rm_profile.user_id = current_uid"))
+        XCTAssertTrue(migration.contains("and rm_profile.nickname <> nickname_text"))
+        XCTAssertFalse(migration.contains("and nickname <> nickname_text"))
+    }
+
     func testRoomSearchNormalizationMatchesClientWhitespaceRemoval() throws {
         let migration = try readProjectSource("supabase/migrations/20260602094828_canonical_room_searchable_names.sql")
 
