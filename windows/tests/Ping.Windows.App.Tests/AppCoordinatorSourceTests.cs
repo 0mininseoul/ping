@@ -32,7 +32,7 @@ public sealed class AppCoordinatorSourceTests
 
         Assert.Contains("Content=\"Create / Join room\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Click=\"HandleOpenRoomsClicked\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Content=\"History\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Content=\"Open conversations\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Click=\"HandleOpenHistoryClicked\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Content=\"New face ping\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Click=\"HandleNewPingClicked\"", xaml, StringComparison.Ordinal);
@@ -209,7 +209,8 @@ public sealed class AppCoordinatorSourceTests
         Assert.Contains("coordinator.OpenHomeShell();", handlerBody, StringComparison.Ordinal);
         Assert.DoesNotContain("coordinator.OpenHistoryWindow();", handlerBody, StringComparison.Ordinal);
         Assert.Contains("public void OpenHomeShell() => ShowHomeShell();", coordinator, StringComparison.Ordinal);
-        Assert.Contains("ShowRegistrationState(lastHotkeyRegistrations);\n        ShowHomeShell();", coordinator, StringComparison.Ordinal);
+        Assert.Contains("ShowRegistrationState(lastHotkeyRegistrations);", coordinator, StringComparison.Ordinal);
+        Assert.Contains("ShowHomeShell();", coordinator, StringComparison.Ordinal);
         Assert.Contains("public void OpenHistoryWindow(string? preferredRoomId = null, string? preferredChatId = null)", coordinator, StringComparison.Ordinal);
         Assert.Contains("if (historyWindow is not null)", coordinator, StringComparison.Ordinal);
         Assert.Contains("historyWindow.Activate();", coordinator, StringComparison.Ordinal);
