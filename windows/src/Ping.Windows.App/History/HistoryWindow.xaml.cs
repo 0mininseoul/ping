@@ -1,4 +1,6 @@
 using System.Runtime.InteropServices;
+using Microsoft.UI.Windowing;
+using global::Windows.Graphics;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
@@ -45,12 +47,22 @@ public sealed partial class HistoryWindow : Window
         this.initialRoomId = initialRoomId;
         this.initialChatId = initialChatId;
         InitializeComponent();
+        ConfigureWindowSize();
         Root.DataContext = viewModel;
         autoRefresh = new HistoryAutoRefreshCoordinator(
             TimeSpan.FromSeconds(5),
             token => RunAsync(() => viewModel.LoadSelectedRoomAsync(token)));
         Root.Loaded += HandleLoaded;
         Closed += async (_, _) => await autoRefresh.StopAsync();
+    }
+
+
+    private void ConfigureWindowSize()
+    {
+        var hwnd = WindowNative.GetWindowHandle(this);
+        var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hwnd);
+        var appWindow = AppWindow.GetFromWindowId(windowId);
+        appWindow.Resize(new SizeInt32(900, 600));
     }
 
     private async void HandleLoaded(object sender, RoutedEventArgs args)

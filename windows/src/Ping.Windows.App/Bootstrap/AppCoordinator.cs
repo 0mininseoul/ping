@@ -122,6 +122,7 @@ public sealed class AppCoordinator : IDisposable
         TryAddOrUpdateTrayIcon();
         notificationController.Start();
         ShowRegistrationState(lastHotkeyRegistrations);
+        ShowHomeShell();
         MaybeOpenOnboardingAtStartup(lastHotkeyRegistrations);
         _ = BootstrapAndLoadRoomsAsync();
     }
@@ -254,7 +255,7 @@ public sealed class AppCoordinator : IDisposable
         switch (command)
         {
             case TrayCommand.OpenPing:
-                OpenHistoryWindow();
+                OpenHomeShell();
                 break;
             case TrayCommand.NewFacePing:
                 Execute(HotkeyCommand.FacePing);
@@ -282,6 +283,8 @@ public sealed class AppCoordinator : IDisposable
     {
         Execute(command);
     }
+
+    public void OpenHomeShell() => ShowHomeShell();
 
     private void ShowHomeShell()
     {

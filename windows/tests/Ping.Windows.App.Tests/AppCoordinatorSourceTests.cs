@@ -168,7 +168,7 @@ public sealed class AppCoordinatorSourceTests
     }
 
     [Fact]
-    public void TrayOpenPingFocusesReusableHistoryWindow()
+    public void TrayOpenPingFocusesMessengerHomeInsteadOfForcingRoomsWindow()
     {
         var source = File.ReadAllText(Path.Combine(
             RepoRoot(),
@@ -189,12 +189,12 @@ public sealed class AppCoordinatorSourceTests
         Assert.True(nextCaseStart > openPingStart);
         var openPingCase = executeTrayCommandBody[openPingStart..nextCaseStart];
 
-        Assert.Contains("OpenHistoryWindow();", openPingCase, StringComparison.Ordinal);
-        Assert.DoesNotContain("ShowHomeShell();", openPingCase, StringComparison.Ordinal);
+        Assert.Contains("OpenHomeShell();", openPingCase, StringComparison.Ordinal);
+        Assert.DoesNotContain("OpenHistoryWindow();", openPingCase, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void StartMenuActivationFocusesReusableHistoryWindowInsteadOfSecondShell()
+    public void StartMenuActivationFocusesCompactHomeInsteadOfForcingRoomsWindow()
     {
         var root = RepoRoot();
         var app = File.ReadAllText(Path.Combine(root, "windows", "src", "Ping.Windows.App", "App.xaml.cs"));
@@ -206,8 +206,10 @@ public sealed class AppCoordinatorSourceTests
         Assert.True(nextMethodStart > handlerStart);
         var handlerBody = app[handlerStart..nextMethodStart];
 
-        Assert.Contains("coordinator.OpenHistoryWindow();", handlerBody, StringComparison.Ordinal);
-        Assert.DoesNotContain("window.ShowShell();", handlerBody, StringComparison.Ordinal);
+        Assert.Contains("coordinator.OpenHomeShell();", handlerBody, StringComparison.Ordinal);
+        Assert.DoesNotContain("coordinator.OpenHistoryWindow();", handlerBody, StringComparison.Ordinal);
+        Assert.Contains("public void OpenHomeShell() => ShowHomeShell();", coordinator, StringComparison.Ordinal);
+        Assert.Contains("ShowRegistrationState(lastHotkeyRegistrations);\n        ShowHomeShell();", coordinator, StringComparison.Ordinal);
         Assert.Contains("public void OpenHistoryWindow(string? preferredRoomId = null, string? preferredChatId = null)", coordinator, StringComparison.Ordinal);
         Assert.Contains("if (historyWindow is not null)", coordinator, StringComparison.Ordinal);
         Assert.Contains("historyWindow.Activate();", coordinator, StringComparison.Ordinal);
@@ -1299,6 +1301,10 @@ public sealed class AppCoordinatorSourceTests
         Assert.Contains("x:Name=\"HomeRoomsList\"", xaml, StringComparison.Ordinal);
         Assert.Contains("x:Name=\"SelectedRoomPreview\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Width=\"420\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Width=\"920\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("MinWidth=\"560\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Compact messenger home", xaml, StringComparison.Ordinal);
+        Assert.Contains("MessengerPillButton", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Windows tray and hotkeys", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Ping is ready", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Ping is running", xaml, StringComparison.Ordinal);
@@ -1316,10 +1322,17 @@ public sealed class AppCoordinatorSourceTests
         Assert.Contains("x:Name=\"ComposerBar\"", xaml, StringComparison.Ordinal);
         Assert.Contains("OutgoingBubbleStyle", xaml, StringComparison.Ordinal);
         Assert.Contains("IncomingBubbleStyle", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Width=\"920\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Height=\"620\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("MinWidth=\"640\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("MessengerIconButton", xaml, StringComparison.Ordinal);
+        Assert.Contains("ReactionChipButton", xaml, StringComparison.Ordinal);
+        Assert.Contains("ToolTipService.ToolTip=\"Delete\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Play selected video", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Text=\"{Binding Video.VideoId}\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Text=\"Reactions\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("Content=\"Reply\"", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Content=\"Delete\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("ItemsSource=\"{Binding Video.QuickReactions}\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("ItemsSource=\"{Binding Chat.QuickReactions}\"", xaml, StringComparison.Ordinal);
     }

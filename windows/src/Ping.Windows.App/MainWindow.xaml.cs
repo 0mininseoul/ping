@@ -1,5 +1,6 @@
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using global::Windows.Graphics;
 using Microsoft.UI.Xaml.Media;
 
 namespace Ping.Windows.App;
@@ -42,6 +43,7 @@ public sealed partial class MainWindow : Window
             appWindow.SetIcon(iconPath);
         }
 
+        appWindow.Resize(new SizeInt32(760, 540));
         appWindow.Closing += HandleAppWindowClosing;
     }
 
