@@ -47,6 +47,7 @@ public sealed class NativeCaptureEngineTests
             "Ping.Windows.NativeCapture.vcxproj"));
 
         Assert.Contains("NOMINMAX", project, StringComparison.Ordinal);
+        Assert.Contains("_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS", project, StringComparison.Ordinal);
         Assert.Contains("/FS", project, StringComparison.Ordinal);
     }
 
