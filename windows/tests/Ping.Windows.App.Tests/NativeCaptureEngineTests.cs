@@ -51,6 +51,21 @@ public sealed class NativeCaptureEngineTests
     }
 
     [Fact]
+    public void NativeCaptureProject_TargetsVs2026ToolsetForNet10Packaging()
+    {
+        var project = File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            "windows",
+            "src",
+            "Ping.Windows.NativeCapture",
+            "Ping.Windows.NativeCapture.vcxproj"));
+
+        Assert.Contains("<VCProjectVersion>18.0</VCProjectVersion>", project, StringComparison.Ordinal);
+        Assert.Contains("<PlatformToolset>v145</PlatformToolset>", project, StringComparison.Ordinal);
+        Assert.DoesNotContain("<PlatformToolset>v143</PlatformToolset>", project, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void MonitorCapture_UsesFullyQualifiedWinRtWindowsNamespaces()
     {
         var source = File.ReadAllText(Path.Combine(
