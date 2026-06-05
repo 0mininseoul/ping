@@ -5,23 +5,30 @@
     Title="Ping">
     <Grid
         x:Name="Root"
-        Width="420"
-        MinHeight="520"
-        Padding="18"
-        Background="#121314"
-        RowSpacing="14">
+        MinWidth="760"
+        MinHeight="560"
+        Padding="12"
+        Background="#0F1012"
+        RowSpacing="10"
+        SizeChanged="HandleRootSizeChanged">
         <Grid.Resources>
-            <SolidColorBrush x:Key="PingBackgroundBrush" Color="#121314" />
-            <SolidColorBrush x:Key="PingSurfaceBrush" Color="#24272A" />
-            <SolidColorBrush x:Key="PingMutedBrush" Color="#9DA3AA" />
-            <SolidColorBrush x:Key="PingTextBrush" Color="#F5F7FA" />
-            <SolidColorBrush x:Key="PingIdleBrush" Color="#4DFFFFFF" />
+            <SolidColorBrush x:Key="PingBackgroundBrush" Color="#0F1012" />
+            <SolidColorBrush x:Key="PingSurfaceBrush" Color="#1B1D21" />
+            <SolidColorBrush x:Key="PingElevatedBrush" Color="#24272D" />
+            <SolidColorBrush x:Key="PingMutedBrush" Color="#9BA3AF" />
+            <SolidColorBrush x:Key="PingTextBrush" Color="#F6F8FB" />
+            <SolidColorBrush x:Key="PingIdleBrush" Color="#33FFFFFF" />
+            <SolidColorBrush x:Key="PingAccentBrush" Color="#4D8CFF" />
             <SolidColorBrush x:Key="PingWarningBrush" Color="#FFFFCC00" />
-            <SolidColorBrush x:Key="PingRedBrush" Color="#FFFF3B30" />
+            <SolidColorBrush x:Key="PingRedBrush" Color="#FFFF453A" />
+            <Style x:Key="MessengerPillButton" TargetType="Button">
+                <Setter Property="Padding" Value="12,7" />
+                <Setter Property="CornerRadius" Value="18" />
+                <Setter Property="MinHeight" Value="34" />
+            </Style>
         </Grid.Resources>
 
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
@@ -29,28 +36,43 @@
 
         <Grid ColumnSpacing="12">
             <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <StackPanel Spacing="4">
+            <Border
+                Width="42"
+                Height="42"
+                Background="{StaticResource PingAccentBrush}"
+                CornerRadius="21">
+                <TextBlock
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    FontSize="20"
+                    FontWeight="SemiBold"
+                    Foreground="White"
+                    Text="P" />
+            </Border>
+
+            <StackPanel Grid.Column="1" Spacing="1">
                 <TextBlock
                     x:Name="ShellTitle"
                     x:FieldModifier="public"
-                    FontSize="22"
+                    FontSize="20"
                     FontWeight="SemiBold"
                     Foreground="{StaticResource PingTextBrush}"
                     Text="Ping" />
                 <TextBlock
                     FontSize="12"
                     Foreground="{StaticResource PingMutedBrush}"
-                    Text="Windows tray and hotkeys" />
+                    Text="Messenger for quick face and screen pings" />
             </StackPanel>
 
             <Border
-                Grid.Column="1"
+                Grid.Column="2"
                 Padding="10,5"
-                Background="{StaticResource PingSurfaceBrush}"
+                Background="{StaticResource PingElevatedBrush}"
                 BorderBrush="{StaticResource PingIdleBrush}"
                 BorderThickness="1"
                 CornerRadius="14">
@@ -59,127 +81,168 @@
                     x:FieldModifier="public"
                     FontSize="12"
                     Foreground="{StaticResource PingTextBrush}"
-                    Text="History" />
+                    Text="Home" />
             </Border>
-        </Grid>
-
-        <Grid
-            Grid.Row="1"
-            ColumnSpacing="8"
-            RowSpacing="8">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-
-            <Button
-                Grid.Row="0"
-                Grid.Column="0"
-                HorizontalAlignment="Stretch"
-                Click="HandleOpenRoomsClicked"
-                Content="Create / Join room" />
-            <Button
-                Grid.Row="0"
-                Grid.Column="1"
-                HorizontalAlignment="Stretch"
-                Click="HandleOpenHistoryClicked"
-                Content="History" />
-            <Button
-                Grid.Row="1"
-                Grid.Column="0"
-                HorizontalAlignment="Stretch"
-                Click="HandleNewPingClicked"
-                Content="New face ping" />
-            <Button
-                Grid.Row="1"
-                Grid.Column="1"
-                HorizontalAlignment="Stretch"
-                Click="HandleOpenSettingsClicked"
-                Content="Settings" />
         </Grid>
 
         <Border
             x:Name="StateBorder"
             x:FieldModifier="public"
-            Grid.Row="2"
-            Padding="16"
+            Grid.Row="1"
+            Padding="12"
             Background="{StaticResource PingSurfaceBrush}"
             BorderBrush="{StaticResource PingIdleBrush}"
             BorderThickness="1"
-            CornerRadius="16">
-            <Grid RowSpacing="16">
+            CornerRadius="22">
+            <Grid RowSpacing="12">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
 
-                <StackPanel Spacing="6">
-                    <TextBlock
-                        x:Name="StateTitle"
-                        x:FieldModifier="public"
-                        FontSize="18"
-                        FontWeight="SemiBold"
-                        Foreground="{StaticResource PingTextBrush}"
-                        Text="Rooms and recent pings" />
-                    <TextBlock
-                        x:Name="StateDetail"
-                        x:FieldModifier="public"
-                        FontSize="13"
-                        Foreground="{StaticResource PingMutedBrush}"
-                        TextWrapping="WrapWholeWords"
-                        Text="Ping is running from the tray." />
-                </StackPanel>
+                <Grid ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Spacing="3">
+                        <TextBlock
+                            x:Name="StateTitle"
+                            x:FieldModifier="public"
+                            FontSize="17"
+                            FontWeight="SemiBold"
+                            Foreground="{StaticResource PingTextBrush}"
+                            Text="Home" />
+                        <TextBlock
+                            x:Name="StateDetail"
+                            x:FieldModifier="public"
+                            FontSize="12"
+                            Foreground="{StaticResource PingMutedBrush}"
+                            TextWrapping="WrapWholeWords"
+                            Text="Pick a conversation, start a ping, or keep Ping in the background like a messenger." />
+                    </StackPanel>
+                    <Button
+                        x:Name="ManageRoomsButton"
+                        Grid.Column="1"
+                        Style="{StaticResource MessengerPillButton}"
+                        Click="HandleOpenRoomsClicked"
+                        Content="Manage rooms" />
+                </Grid>
 
-                <StackPanel
-                    x:Name="HistoryPanel"
-                    x:FieldModifier="public"
+                <ScrollViewer
                     Grid.Row="1"
-                    Spacing="10">
+                    HorizontalScrollBarVisibility="Disabled"
+                    VerticalScrollBarVisibility="Auto">
+                <Grid
+                    x:Name="MessengerHomeShell"
+                    ColumnSpacing="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition x:Name="HomeListColumn" Width="0.95*" MinWidth="220" />
+                        <ColumnDefinition x:Name="HomePreviewColumn" Width="1.05*" MinWidth="240" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel
+                        x:Name="HistoryPanel"
+                        x:FieldModifier="public"
+                        Spacing="10">
+                        <Border
+                            x:Name="HomeRoomsList"
+                            Padding="10"
+                            Background="{StaticResource PingElevatedBrush}"
+                            BorderBrush="{StaticResource PingIdleBrush}"
+                            BorderThickness="1"
+                            CornerRadius="18">
+                            <StackPanel Spacing="9">
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Width="34" Height="34" Background="#334D8CFF" CornerRadius="17">
+                                        <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White" Text="💬" />
+                                    </Border>
+                                    <StackPanel Grid.Column="1" Spacing="1">
+                                        <TextBlock Foreground="{StaticResource PingTextBrush}" FontWeight="SemiBold" Text="Recent rooms" />
+                                        <TextBlock Foreground="{StaticResource PingMutedBrush}" FontSize="12" Text="Open the room timeline" />
+                                    </StackPanel>
+                                </Grid>
+                                <Button
+                                    x:Name="PrimaryConversationsButton"
+                                    HorizontalAlignment="Stretch"
+                                    Style="{StaticResource MessengerPillButton}"
+                                    Click="HandleOpenHistoryClicked"
+                                    Content="Open conversations" />
+                                <Button
+                                    HorizontalAlignment="Stretch"
+                                    Style="{StaticResource MessengerPillButton}"
+                                    Click="HandleOpenRoomsClicked"
+                                    Content="Create / Join room" />
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock
+                            x:Name="HotkeyState"
+                            x:FieldModifier="public"
+                            FontSize="11"
+                            Foreground="{StaticResource PingMutedBrush}"
+                            Text="Global shortcuts are syncing…"
+                            TextWrapping="WrapWholeWords" />
+                        <Button
+                            x:Name="CompactRoomsButton"
+                            x:FieldModifier="public"
+                            HorizontalAlignment="Stretch"
+                            Style="{StaticResource MessengerPillButton}"
+                            Click="HandleOpenHistoryClicked"
+                            Content="대화방 보기"
+                            Visibility="Collapsed" />
+                    </StackPanel>
+
                     <Border
+                        x:Name="SelectedRoomPreview"
+                        Grid.Column="1"
                         Padding="12"
-                        Background="#1AFFFFFF"
+                        Background="{StaticResource PingElevatedBrush}"
                         BorderBrush="{StaticResource PingIdleBrush}"
                         BorderThickness="1"
-                        CornerRadius="12">
-                        <StackPanel Spacing="5">
-                            <TextBlock
-                                FontSize="13"
-                                FontWeight="SemiBold"
-                                Foreground="{StaticResource PingTextBrush}"
-                                Text="Ping is ready" />
-                            <TextBlock
-                                FontSize="12"
-                                Foreground="{StaticResource PingMutedBrush}"
-                                Text="Rooms and recent activity are ready."
-                                TextWrapping="WrapWholeWords" />
-                        </StackPanel>
+                        CornerRadius="18">
+                        <Grid RowSpacing="10">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <StackPanel VerticalAlignment="Center" Spacing="8">
+                                <TextBlock
+                                    FontSize="16"
+                                    FontWeight="SemiBold"
+                                    Foreground="{StaticResource PingTextBrush}"
+                                    Text="Compact messenger home" />
+                                <TextBlock
+                                    FontSize="13"
+                                    Foreground="{StaticResource PingMutedBrush}"
+                                    Text="Ping starts here first; room timelines open only when you ask for conversations or tap an incoming notification."
+                                    TextWrapping="WrapWholeWords" />
+                            </StackPanel>
+                            <Grid Grid.Row="1" ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Button
+                                    HorizontalAlignment="Stretch"
+                                    Style="{StaticResource MessengerPillButton}"
+                                    Click="HandleNewPingClicked"
+                                    Content="New face ping" />
+                                <Button
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Stretch"
+                                    Style="{StaticResource MessengerPillButton}"
+                                    Click="HandleOpenSettingsClicked"
+                                    Content="Settings" />
+                            </Grid>
+                        </Grid>
                     </Border>
-                    <Border
-                        Padding="12"
-                        Background="#1AFFFFFF"
-                        BorderBrush="{StaticResource PingIdleBrush}"
-                        BorderThickness="1"
-                        CornerRadius="12">
-                        <StackPanel Spacing="5">
-                            <TextBlock
-                                FontSize="13"
-                                FontWeight="SemiBold"
-                                Foreground="{StaticResource PingTextBrush}"
-                                Text="Hotkeys" />
-                            <TextBlock
-                                x:Name="HotkeyState"
-                                x:FieldModifier="public"
-                                FontSize="12"
-                                Foreground="{StaticResource PingMutedBrush}"
-                                Text="Registering global hotkeys..."
-                                TextWrapping="WrapWholeWords" />
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
+                </Grid>
+                </ScrollViewer>
 
                 <Border
                     x:Name="BlockedPanel"
@@ -189,14 +252,10 @@
                     Background="#22FFCC00"
                     BorderBrush="{StaticResource PingWarningBrush}"
                     BorderThickness="1"
-                    CornerRadius="12"
+                    CornerRadius="16"
                     Visibility="Collapsed">
                     <StackPanel Spacing="8">
-                        <TextBlock
-                            FontSize="13"
-                            FontWeight="SemiBold"
-                            Foreground="{StaticResource PingTextBrush}"
-                            Text="Command reached Ping" />
+                        <TextBlock FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource PingTextBrush}" Text="Ping needs attention" />
                         <TextBlock
                             x:Name="BlockedReason"
                             x:FieldModifier="public"
@@ -208,72 +267,51 @@
                             x:Name="BlockedRetryButton"
                             x:FieldModifier="public"
                             HorizontalAlignment="Left"
+                            Style="{StaticResource MessengerPillButton}"
                             Click="HandleBlockedRetryClicked"
                             Content="다시 시도"
                             Visibility="Collapsed" />
                     </StackPanel>
                 </Border>
 
-                <StackPanel
-                    x:Name="SettingsPanel"
+                <ScrollViewer
+                    x:Name="SettingsScroller"
                     x:FieldModifier="public"
                     Grid.Row="1"
-                    Spacing="12"
                     Visibility="Collapsed">
-                    <ToggleSwitch
-                        x:Name="QuickSendToggle"
-                        Header="화면+얼굴 빠른 전송 사용"
-                        OffContent="미러 먼저 열기"
-                        OnContent="즉시 녹화/전송"
-                        Toggled="HandleQuickSendToggleToggled" />
-
-                    <Border
-                        Padding="12"
-                        Background="#1AFFFFFF"
-                        BorderBrush="{StaticResource PingIdleBrush}"
-                        BorderThickness="1"
-                        CornerRadius="12">
-                        <StackPanel Spacing="5">
-                            <TextBlock
-                                FontSize="13"
-                                FontWeight="SemiBold"
-                                Foreground="{StaticResource PingTextBrush}"
-                                Text="Default room" />
-                            <TextBlock
-                                x:Name="QuickSendDefaultRoom"
-                                FontSize="12"
-                                Foreground="{StaticResource PingMutedBrush}"
-                                Text="No sendable default room"
-                                TextWrapping="WrapWholeWords" />
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
+                    <StackPanel
+                        x:Name="SettingsPanel"
+                        x:FieldModifier="public"
+                        Spacing="12">
+                        <ToggleSwitch
+                            x:Name="QuickSendToggle"
+                            Header="화면+얼굴 빠른 전송 사용"
+                            OffContent="미러 먼저 열기"
+                            OnContent="즉시 녹화/전송"
+                            Toggled="HandleQuickSendToggleToggled" />
+                        <Border Padding="12" Background="{StaticResource PingElevatedBrush}" BorderBrush="{StaticResource PingIdleBrush}" BorderThickness="1" CornerRadius="14">
+                            <StackPanel Spacing="5">
+                                <TextBlock FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource PingTextBrush}" Text="Default room" />
+                                <TextBlock
+                                    x:Name="QuickSendDefaultRoom"
+                                    FontSize="12"
+                                    Foreground="{StaticResource PingMutedBrush}"
+                                    Text="No sendable default room"
+                                    TextWrapping="WrapWholeWords" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
             </Grid>
         </Border>
 
-        <Grid Grid.Row="3" ColumnSpacing="8">
+        <Grid Grid.Row="2" ColumnSpacing="8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <TextBlock
-                VerticalAlignment="Center"
-                FontSize="12"
-                Foreground="{StaticResource PingMutedBrush}"
-                Text="Tray icon active" />
-            <StackPanel
-                Grid.Column="1"
-                Orientation="Horizontal"
-                Spacing="6">
-                <Ellipse
-                    Width="8"
-                    Height="8"
-                    Fill="{StaticResource PingIdleBrush}" />
-                <TextBlock
-                    FontSize="12"
-                    Foreground="{StaticResource PingMutedBrush}"
-                    Text="Ready" />
-            </StackPanel>
+            <TextBlock VerticalAlignment="Center" FontSize="11" Foreground="{StaticResource PingMutedBrush}" Text="Runs quietly in background when closed" />
+            <TextBlock Grid.Column="1" VerticalAlignment="Center" FontSize="11" Foreground="{StaticResource PingMutedBrush}" Text="Ready" />
         </Grid>
     </Grid>
 </Window>

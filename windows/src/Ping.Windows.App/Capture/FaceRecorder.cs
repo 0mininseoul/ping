@@ -121,16 +121,7 @@ public sealed class FaceRecorder : IFaceRecorder
             throw;
         }
 
-        var frameSource = capture.FrameSources
-            .FirstOrDefault(source =>
-                source.Value.Info.MediaStreamType == MediaStreamType.VideoPreview
-                && source.Value.Info.SourceKind == MediaFrameSourceKind.Color)
-            .Value
-            ?? capture.FrameSources
-                .FirstOrDefault(source =>
-                    source.Value.Info.MediaStreamType == MediaStreamType.VideoRecord
-                    && source.Value.Info.SourceKind == MediaFrameSourceKind.Color)
-                .Value;
+        var frameSource = ResolvePreviewFrameSource(capture);
         if (frameSource is null)
         {
             throw new InvalidOperationException("No camera preview stream is available.");
@@ -140,11 +131,24 @@ public sealed class FaceRecorder : IFaceRecorder
         previewPlayer = new MediaPlayer
         {
             RealTimePlayback = true,
-            AutoPlay = false,
+            AutoPlay = true,
             Source = MediaSource.CreateFromMediaFrameSource(frameSource)
         };
         preview.SetMediaPlayer(previewPlayer);
         previewPlayer.Play();
+    }
+
+    private static MediaFrameSource? ResolvePreviewFrameSource(MediaCapture capture)
+    {
+        static bool IsVideo(MediaFrameSource source) =>
+            source.Info.MediaStreamType == MediaStreamType.VideoPreview
+            || source.Info.MediaStreamType == MediaStreamType.VideoRecord;
+
+        return capture.FrameSources.Values
+            .Where(IsVideo)
+            .OrderBy(source => source.Info.MediaStreamType == MediaStreamType.VideoPreview ? 0 : 1)
+            .ThenBy(source => source.Info.SourceKind == MediaFrameSourceKind.Color ? 0 : 1)
+            .FirstOrDefault();
     }
 
     public Task StopPreviewAsync(MediaPlayerElement preview)

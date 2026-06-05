@@ -3,7 +3,7 @@ param(
     [string]$Version,
     [string]$DistRoot = (Join-Path $PSScriptRoot "..\dist"),
     [string]$PayloadRoot,
-    [string]$PackageBaseUrl = "https://0minping.vercel.app/downloads/windows",
+    [string]$PackageBaseUrl,
     [string]$InnoSetupCompilerPath,
     [string]$InnoScriptPath = (Join-Path $PSScriptRoot "..\installer\PingSetup.iss")
 )
@@ -123,7 +123,12 @@ try {
     $env:PING_VERSION = $Version
     $env:PING_INSTALLER_PAYLOAD_ROOT = $resolvedPayloadRoot
     $env:PING_INSTALLER_OUTPUT_DIR = $resolvedDistRoot
-    $env:PING_INSTALLER_PACKAGE_BASE_URL = $PackageBaseUrl
+    if ([string]::IsNullOrWhiteSpace($PackageBaseUrl)) {
+        Remove-Item Env:\PING_INSTALLER_PACKAGE_BASE_URL -ErrorAction SilentlyContinue
+    }
+    else {
+        $env:PING_INSTALLER_PACKAGE_BASE_URL = $PackageBaseUrl
+    }
 
     & $compiler $InnoScriptPath
     if ($LASTEXITCODE -ne 0) {

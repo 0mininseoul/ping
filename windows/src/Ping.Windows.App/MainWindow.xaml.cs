@@ -1,11 +1,19 @@
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using global::Windows.Graphics;
 using Microsoft.UI.Xaml.Media;
 
 namespace Ping.Windows.App;
 
 public sealed partial class MainWindow : Window
 {
+    private const int InitialHomeWidth = 960;
+    private const int InitialHomeHeight = 720;
+    private const int MinimumHomeWidth = 760;
+    private const int MinimumHomeHeight = 560;
+    private const int DisplayMargin = 48;
+
     private AppWindow? appWindow;
     private bool allowClose;
     private bool isUpdatingSettingsControls;
@@ -42,11 +50,69 @@ public sealed partial class MainWindow : Window
             appWindow.SetIcon(iconPath);
         }
 
+        ResizeToInitialHomeSize();
         appWindow.Closing += HandleAppWindowClosing;
+    }
+
+    private void ResizeToInitialHomeSize()
+    {
+        if (appWindow is null)
+        {
+            return;
+        }
+
+        var area = DisplayArea.GetFromWindowId(appWindow.Id, DisplayAreaFallback.Nearest);
+        var workArea = area.WorkArea;
+        var scale = RasterizationScale();
+        var preferredWidth = ScaleEffectivePixels(InitialHomeWidth, scale);
+        var preferredHeight = ScaleEffectivePixels(InitialHomeHeight, scale);
+        var minimumWidth = ScaleEffectivePixels(MinimumHomeWidth, scale);
+        var minimumHeight = ScaleEffectivePixels(MinimumHomeHeight, scale);
+        var margin = ScaleEffectivePixels(DisplayMargin, scale);
+        var width = ClampWindowDimension(preferredWidth, minimumWidth, workArea.Width - margin * 2);
+        var height = ClampWindowDimension(preferredHeight, minimumHeight, workArea.Height - margin * 2);
+        var left = workArea.X + Math.Max(0, (workArea.Width - width) / 2);
+        var top = workArea.Y + Math.Max(0, (workArea.Height - height) / 2);
+        appWindow.MoveAndResize(new RectInt32(left, top, width, height));
+    }
+
+    private void EnsureUsableHomeWindowSize()
+    {
+        if (appWindow is null)
+        {
+            return;
+        }
+
+        var scale = RasterizationScale();
+        var minimumWidth = ScaleEffectivePixels(MinimumHomeWidth, scale);
+        var minimumHeight = ScaleEffectivePixels(MinimumHomeHeight, scale);
+        var current = appWindow.Size;
+        var width = Math.Max(current.Width, minimumWidth);
+        var height = Math.Max(current.Height, minimumHeight);
+        if (width != current.Width || height != current.Height)
+        {
+            appWindow.Resize(new SizeInt32(width, height));
+        }
+    }
+
+    private double RasterizationScale() => Math.Max(1d, Root.XamlRoot?.RasterizationScale ?? 1d);
+
+    private static int ScaleEffectivePixels(int value, double scale) =>
+        (int)Math.Ceiling(value * scale);
+
+    private static int ClampWindowDimension(int preferred, int minimum, int available)
+    {
+        if (available <= 0)
+        {
+            return minimum;
+        }
+
+        return Math.Max(Math.Min(preferred, available), Math.Min(minimum, available));
     }
 
     public void ShowShell()
     {
+        EnsureUsableHomeWindowSize();
         appWindow?.Show(true);
         Activate();
     }
@@ -115,5 +181,15 @@ public sealed partial class MainWindow : Window
     private void HandleOpenSettingsClicked(object sender, RoutedEventArgs args)
     {
         OpenSettingsRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void HandleRootSizeChanged(object sender, SizeChangedEventArgs args)
+    {
+        var compact = args.NewSize.Width < 820;
+        SelectedRoomPreview.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+        CompactRoomsButton.Visibility = compact ? Visibility.Visible : Visibility.Collapsed;
+        HomePreviewColumn.MinWidth = compact ? 0 : 240;
+        HomePreviewColumn.Width = compact ? new GridLength(0) : new GridLength(1.05, GridUnitType.Star);
+        HomeListColumn.Width = compact ? new GridLength(1, GridUnitType.Star) : new GridLength(0.95, GridUnitType.Star);
     }
 }

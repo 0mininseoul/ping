@@ -122,6 +122,7 @@ public sealed class AppCoordinator : IDisposable
         TryAddOrUpdateTrayIcon();
         notificationController.Start();
         ShowRegistrationState(lastHotkeyRegistrations);
+        ShowHomeShell();
         MaybeOpenOnboardingAtStartup(lastHotkeyRegistrations);
         _ = BootstrapAndLoadRoomsAsync();
     }
@@ -246,7 +247,30 @@ public sealed class AppCoordinator : IDisposable
             results.Add(hotkeys.Register(pair.Key, pair.Value));
         }
 
+        RegisterLegacyCtrlHotkeyAliases(bindings, results);
         return results;
+    }
+
+    private static IReadOnlyDictionary<HotkeyCommand, HotkeyBinding> LegacyCtrlHotkeyAliases() =>
+        new Dictionary<HotkeyCommand, HotkeyBinding>
+        {
+            [HotkeyCommand.FacePing] = HotkeyBinding.Control("P"),
+            [HotkeyCommand.ScreenFacePing] = HotkeyBinding.Control("L")
+        };
+
+    private void RegisterLegacyCtrlHotkeyAliases(
+        IReadOnlyDictionary<HotkeyCommand, HotkeyBinding> bindings,
+        List<HotkeyRegistrationResult> results)
+    {
+        foreach (var pair in LegacyCtrlHotkeyAliases())
+        {
+            if (bindings.TryGetValue(pair.Key, out var primaryBinding) && primaryBinding == pair.Value)
+            {
+                continue;
+            }
+
+            results.Add(hotkeys.RegisterAdditional(pair.Key, pair.Value));
+        }
     }
 
     private void ExecuteTrayCommand(TrayCommand command)
@@ -254,7 +278,7 @@ public sealed class AppCoordinator : IDisposable
         switch (command)
         {
             case TrayCommand.OpenPing:
-                ShowHomeShell();
+                OpenDefaultHistoryFromTray();
                 break;
             case TrayCommand.NewFacePing:
                 Execute(HotkeyCommand.FacePing);
@@ -283,15 +307,43 @@ public sealed class AppCoordinator : IDisposable
         Execute(command);
     }
 
+    public void OpenHomeShell() => ShowHomeShell();
+
+    private void OpenDefaultHistoryFromTray()
+    {
+        var preferredRoom = PreferredHistoryRoomForTray();
+        OpenHistoryWindow(preferredRoom?.Id);
+    }
+
+    private Room? PreferredHistoryRoomForTray()
+    {
+        var uid = currentUid;
+        if (uid is not null)
+        {
+            var preferredSendableRoom = ResolvePreferredDefaultRoom(SendableRoomsFor(uid));
+            if (preferredSendableRoom is not null)
+            {
+                return preferredSendableRoom;
+            }
+        }
+
+        return rooms
+            .Where(room => !string.IsNullOrWhiteSpace(room.Id))
+            .OrderByDescending(room => room.CreatedAt ?? DateTimeOffset.MinValue)
+            .ThenBy(room => room.Name, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault();
+    }
+
     private void ShowHomeShell()
     {
         mainWindow.ShellTitle.Text = "Ping";
         mainWindow.StateBadge.Text = "Ready";
-        mainWindow.StateTitle.Text = "Ping is running";
-        mainWindow.StateDetail.Text = "Close this window to keep Ping in the tray. Use the tray menu or hotkeys to send a ping.";
+        mainWindow.StateTitle.Text = "Recent conversations";
+        mainWindow.StateDetail.Text = "Open a room to continue the conversation or send a new ping.";
         mainWindow.StateBorder.BorderBrush = mainWindow.IdleBorderBrush;
         mainWindow.HistoryPanel.Visibility = Visibility.Visible;
         mainWindow.BlockedPanel.Visibility = Visibility.Collapsed;
+        mainWindow.SettingsScroller.Visibility = Visibility.Collapsed;
         mainWindow.SettingsPanel.Visibility = Visibility.Collapsed;
         mainWindow.ShowShell();
     }
@@ -305,6 +357,7 @@ public sealed class AppCoordinator : IDisposable
         mainWindow.StateBorder.BorderBrush = mainWindow.IdleBorderBrush;
         mainWindow.HistoryPanel.Visibility = Visibility.Visible;
         mainWindow.BlockedPanel.Visibility = Visibility.Collapsed;
+        mainWindow.SettingsScroller.Visibility = Visibility.Collapsed;
         mainWindow.SettingsPanel.Visibility = Visibility.Collapsed;
         mainWindow.ShowShell();
     }
@@ -320,6 +373,7 @@ public sealed class AppCoordinator : IDisposable
         mainWindow.StateBorder.BorderBrush = mainWindow.WarningBorderBrush;
         mainWindow.HistoryPanel.Visibility = Visibility.Collapsed;
         mainWindow.BlockedPanel.Visibility = Visibility.Visible;
+        mainWindow.SettingsScroller.Visibility = Visibility.Collapsed;
         mainWindow.SettingsPanel.Visibility = Visibility.Collapsed;
         mainWindow.ShowShell();
     }
@@ -337,6 +391,7 @@ public sealed class AppCoordinator : IDisposable
         mainWindow.StateBorder.BorderBrush = mainWindow.IdleBorderBrush;
         mainWindow.HistoryPanel.Visibility = Visibility.Collapsed;
         mainWindow.BlockedPanel.Visibility = Visibility.Collapsed;
+        mainWindow.SettingsScroller.Visibility = Visibility.Visible;
         mainWindow.SettingsPanel.Visibility = Visibility.Visible;
         mainWindow.ConfigureQuickSendSettings(
             quickSendSettings.Preferences.IsEnabled,
@@ -381,7 +436,7 @@ public sealed class AppCoordinator : IDisposable
         _ = BootstrapAndLoadRoomsAsync();
     }
 
-    private void OpenHistoryWindow(string? preferredRoomId = null, string? preferredChatId = null)
+    public void OpenHistoryWindow(string? preferredRoomId = null, string? preferredChatId = null)
     {
         if (historyWindow is not null)
         {
@@ -524,7 +579,7 @@ public sealed class AppCoordinator : IDisposable
 
         if (failures.Length == 0)
         {
-            mainWindow.HotkeyState.Text = HotkeyStatusText.Summary(preferencesStore.Load());
+            mainWindow.HotkeyState.Text = HomeHotkeySummary(preferencesStore.Load());
             return;
         }
 
@@ -545,7 +600,7 @@ public sealed class AppCoordinator : IDisposable
         bindings[command] = binding;
         preferencesStore.Save(bindings);
         UpdateHotkeyRegistrationResult(result);
-        mainWindow.HotkeyState.Text = HotkeyStatusText.Summary(bindings);
+        mainWindow.HotkeyState.Text = HomeHotkeySummary(bindings);
         if (command == HotkeyCommand.QuickScreenFacePing && mainWindow.SettingsPanel.Visibility == Visibility.Visible)
         {
             mainWindow.StateDetail.Text = QuickSendSettingsDetail(bindings);
@@ -565,6 +620,9 @@ public sealed class AppCoordinator : IDisposable
 
     private string HotkeyLabel(HotkeyCommand command) =>
         HotkeyStatusText.BindingLabel(preferencesStore.Load(), command);
+
+    private static string HomeHotkeySummary(IReadOnlyDictionary<HotkeyCommand, HotkeyBinding> bindings) =>
+        $"{HotkeyStatusText.Summary(bindings)} · Ctrl+P face / Ctrl+L screen+face also work when available";
 
     private static string QuickSendSettingsDetail(IReadOnlyDictionary<HotkeyCommand, HotkeyBinding> bindings) =>
         $"Configure screen+face quick send for {HotkeyStatusText.BindingLabel(bindings, HotkeyCommand.QuickScreenFacePing)}.";

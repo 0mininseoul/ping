@@ -1,4 +1,6 @@
 using System.Runtime.InteropServices;
+using Microsoft.UI.Windowing;
+using global::Windows.Graphics;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
@@ -45,12 +47,22 @@ public sealed partial class HistoryWindow : Window
         this.initialRoomId = initialRoomId;
         this.initialChatId = initialChatId;
         InitializeComponent();
+        ConfigureWindowSize();
         Root.DataContext = viewModel;
         autoRefresh = new HistoryAutoRefreshCoordinator(
             TimeSpan.FromSeconds(5),
             token => RunAsync(() => viewModel.LoadSelectedRoomAsync(token)));
         Root.Loaded += HandleLoaded;
         Closed += async (_, _) => await autoRefresh.StopAsync();
+    }
+
+
+    private void ConfigureWindowSize()
+    {
+        var hwnd = WindowNative.GetWindowHandle(this);
+        var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hwnd);
+        var appWindow = AppWindow.GetFromWindowId(windowId);
+        appWindow.Resize(new SizeInt32(900, 600));
     }
 
     private async void HandleLoaded(object sender, RoutedEventArgs args)
@@ -88,7 +100,7 @@ public sealed partial class HistoryWindow : Window
             return;
         }
 
-        viewModel.SelectedRoom = RoomsList.SelectedItem as Room;
+        viewModel.SelectedRoom = ConversationsList.SelectedItem as Room;
         if (await RunAsync(() => viewModel.LoadSelectedRoomAsync()))
         {
             ApplySelectionFromViewModel();
@@ -102,8 +114,8 @@ public sealed partial class HistoryWindow : Window
             return;
         }
 
-        viewModel.SelectedTimelineItem = VideosList.SelectedItem as TimelineHistoryItem;
-        viewModel.SelectedVideo = VideosList.SelectedItem switch
+        viewModel.SelectedTimelineItem = TimelineList.SelectedItem as TimelineHistoryItem;
+        viewModel.SelectedVideo = TimelineList.SelectedItem switch
         {
             VideoHistoryItem item => item,
             TimelineHistoryItem { Video: { } video } => video,
@@ -280,12 +292,12 @@ public sealed partial class HistoryWindow : Window
         isApplyingSelection = true;
         try
         {
-            RoomsList.SelectedItem = viewModel.SelectedRoom;
-            VideosList.SelectedItem = viewModel.SelectedTimelineItem;
+            ConversationsList.SelectedItem = viewModel.SelectedRoom;
+            TimelineList.SelectedItem = viewModel.SelectedTimelineItem;
             var currentRoomId = viewModel.SelectedRoom?.Id;
             if (viewModel.SelectedTimelineItem is not null)
             {
-                VideosList.ScrollIntoView(viewModel.SelectedTimelineItem);
+                TimelineList.ScrollIntoView(viewModel.SelectedTimelineItem);
             }
             else if (currentRoomId is not null && currentRoomId != lastScrolledRoomId)
             {
@@ -294,7 +306,7 @@ public sealed partial class HistoryWindow : Window
                 var newest = viewModel.Timeline.LastOrDefault();
                 if (newest is not null)
                 {
-                    DispatcherQueue.TryEnqueue(() => VideosList.ScrollIntoView(newest));
+                    DispatcherQueue.TryEnqueue(() => TimelineList.ScrollIntoView(newest));
                 }
             }
             if (currentRoomId is not null)

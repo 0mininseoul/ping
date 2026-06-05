@@ -52,7 +52,7 @@ on:
 jobs:
   build:
     name: Build and test Windows client
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
     env:
       DOTNET_NOLOGO: true
       DOTNET_CLI_TELEMETRY_OPTOUT: true
