@@ -25,6 +25,8 @@ public sealed record HotkeyBinding(HotkeyModifiers Modifiers, string Key)
 {
     public static HotkeyBinding Alt(string key) => FromParts(HotkeyModifiers.Alt, key);
 
+    public static HotkeyBinding Control(string key) => FromParts(HotkeyModifiers.Control, key);
+
     public static HotkeyBinding AltShift(string key) => FromParts(HotkeyModifiers.Alt | HotkeyModifiers.Shift, key);
 
     public static HotkeyBinding FromParts(HotkeyModifiers modifiers, string key)

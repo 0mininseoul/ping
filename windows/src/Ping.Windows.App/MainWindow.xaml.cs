@@ -8,8 +8,8 @@ namespace Ping.Windows.App;
 
 public sealed partial class MainWindow : Window
 {
-    private const int InitialHomeWidth = 900;
-    private const int InitialHomeHeight = 680;
+    private const int InitialHomeWidth = 960;
+    private const int InitialHomeHeight = 720;
     private const int MinimumHomeWidth = 760;
     private const int MinimumHomeHeight = 560;
     private const int DisplayMargin = 48;
@@ -63,12 +63,42 @@ public sealed partial class MainWindow : Window
 
         var area = DisplayArea.GetFromWindowId(appWindow.Id, DisplayAreaFallback.Nearest);
         var workArea = area.WorkArea;
-        var width = ClampWindowDimension(InitialHomeWidth, MinimumHomeWidth, workArea.Width - DisplayMargin * 2);
-        var height = ClampWindowDimension(InitialHomeHeight, MinimumHomeHeight, workArea.Height - DisplayMargin * 2);
+        var scale = RasterizationScale();
+        var preferredWidth = ScaleEffectivePixels(InitialHomeWidth, scale);
+        var preferredHeight = ScaleEffectivePixels(InitialHomeHeight, scale);
+        var minimumWidth = ScaleEffectivePixels(MinimumHomeWidth, scale);
+        var minimumHeight = ScaleEffectivePixels(MinimumHomeHeight, scale);
+        var margin = ScaleEffectivePixels(DisplayMargin, scale);
+        var width = ClampWindowDimension(preferredWidth, minimumWidth, workArea.Width - margin * 2);
+        var height = ClampWindowDimension(preferredHeight, minimumHeight, workArea.Height - margin * 2);
         var left = workArea.X + Math.Max(0, (workArea.Width - width) / 2);
         var top = workArea.Y + Math.Max(0, (workArea.Height - height) / 2);
         appWindow.MoveAndResize(new RectInt32(left, top, width, height));
     }
+
+    private void EnsureUsableHomeWindowSize()
+    {
+        if (appWindow is null)
+        {
+            return;
+        }
+
+        var scale = RasterizationScale();
+        var minimumWidth = ScaleEffectivePixels(MinimumHomeWidth, scale);
+        var minimumHeight = ScaleEffectivePixels(MinimumHomeHeight, scale);
+        var current = appWindow.Size;
+        var width = Math.Max(current.Width, minimumWidth);
+        var height = Math.Max(current.Height, minimumHeight);
+        if (width != current.Width || height != current.Height)
+        {
+            appWindow.Resize(new SizeInt32(width, height));
+        }
+    }
+
+    private double RasterizationScale() => Math.Max(1d, Root.XamlRoot?.RasterizationScale ?? 1d);
+
+    private static int ScaleEffectivePixels(int value, double scale) =>
+        (int)Math.Ceiling(value * scale);
 
     private static int ClampWindowDimension(int preferred, int minimum, int available)
     {
@@ -82,6 +112,7 @@ public sealed partial class MainWindow : Window
 
     public void ShowShell()
     {
+        EnsureUsableHomeWindowSize();
         appWindow?.Show(true);
         Activate();
     }

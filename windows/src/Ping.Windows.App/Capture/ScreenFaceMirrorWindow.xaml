@@ -93,9 +93,8 @@
                     BorderThickness="1"
                     CornerRadius="41">
                     <Grid>
-                        <MediaPlayerElement
+                        <CaptureElement
                             x:Name="FacePreviewElement"
-                            AreTransportControlsEnabled="False"
                             Stretch="UniformToFill" />
                         <TextBlock
                             x:Name="FacePreviewPlaceholder"

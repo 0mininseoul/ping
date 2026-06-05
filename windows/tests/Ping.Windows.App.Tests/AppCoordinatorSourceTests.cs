@@ -64,13 +64,52 @@ public sealed class AppCoordinatorSourceTests
         Assert.Contains("HorizontalScrollBarVisibility=\"Disabled\"", xaml, StringComparison.Ordinal);
         Assert.Contains("SizeChanged=\"HandleRootSizeChanged\"", xaml, StringComparison.Ordinal);
         Assert.DoesNotContain("appWindow.Resize(new SizeInt32(640, 500));", code, StringComparison.Ordinal);
-        Assert.Contains("private const int InitialHomeWidth = 900;", code, StringComparison.Ordinal);
-        Assert.Contains("private const int InitialHomeHeight = 680;", code, StringComparison.Ordinal);
+        Assert.Contains("private const int InitialHomeWidth = 960;", code, StringComparison.Ordinal);
+        Assert.Contains("private const int InitialHomeHeight = 720;", code, StringComparison.Ordinal);
         Assert.Contains("ResizeToInitialHomeSize();", code, StringComparison.Ordinal);
+        Assert.Contains("EnsureUsableHomeWindowSize();", code, StringComparison.Ordinal);
+        Assert.Contains("RasterizationScale", code, StringComparison.Ordinal);
+        Assert.Contains("ScaleEffectivePixels(InitialHomeWidth, scale)", code, StringComparison.Ordinal);
         Assert.Contains("appWindow.MoveAndResize", code, StringComparison.Ordinal);
         Assert.Contains("SelectedRoomPreview.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;", code, StringComparison.Ordinal);
         Assert.Contains("CompactRoomsButton.Visibility = compact ? Visibility.Visible : Visibility.Collapsed;", code, StringComparison.Ordinal);
         Assert.Contains("HomePreviewColumn.Width = compact ? new GridLength(0)", code, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void HiddenSettingsScrollerDoesNotInterceptMessengerHomeClicks()
+    {
+        var root = RepoRoot();
+        var xaml = File.ReadAllText(Path.Combine(root, "windows", "src", "Ping.Windows.App", "MainWindow.xaml"));
+        var coordinator = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Bootstrap",
+            "AppCoordinator.cs"));
+
+        Assert.Contains("x:Name=\"SettingsScroller\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("x:FieldModifier=\"public\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Visibility=\"Collapsed\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("mainWindow.SettingsScroller.Visibility = Visibility.Collapsed;", coordinator, StringComparison.Ordinal);
+        Assert.Contains("mainWindow.SettingsScroller.Visibility = Visibility.Visible;", coordinator, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TrayPrimaryClickOpensRecentRoomHistoryInsteadOfStaticHome()
+    {
+        var coordinator = File.ReadAllText(Path.Combine(
+            RepoRoot(),
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Bootstrap",
+            "AppCoordinator.cs"));
+
+        Assert.Contains("case TrayCommand.OpenPing:", coordinator, StringComparison.Ordinal);
+        Assert.Contains("OpenDefaultHistoryFromTray();", coordinator, StringComparison.Ordinal);
+        Assert.Contains("private void OpenDefaultHistoryFromTray()", coordinator, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -118,6 +157,10 @@ public sealed class AppCoordinatorSourceTests
         Assert.True(File.Exists(Path.Combine(assets, "Square44x44Logo.targetsize-32.png")));
         Assert.True(File.Exists(Path.Combine(assets, "Square44x44Logo.targetsize-48.png")));
         Assert.True(File.Exists(Path.Combine(assets, "Square44x44Logo.targetsize-256.png")));
+        Assert.True(File.Exists(Path.Combine(assets, "Square44x44Logo.targetsize-16_altform-unplated.png")));
+        Assert.True(File.Exists(Path.Combine(assets, "Square44x44Logo.targetsize-32_altform-unplated.png")));
+        Assert.True(File.Exists(Path.Combine(assets, "Square44x44Logo.targetsize-48_altform-unplated.png")));
+        Assert.True(File.Exists(Path.Combine(assets, "Square44x44Logo.targetsize-256_altform-unplated.png")));
         Assert.Equal(
             File.ReadAllBytes(Path.Combine(assets, "Ping.ico")),
             File.ReadAllBytes(Path.Combine(root, "windows", "installer", "app.ico")));
@@ -215,6 +258,76 @@ public sealed class AppCoordinatorSourceTests
     }
 
     [Fact]
+    public void LegacyCtrlHotkeysAlsoReachFaceAndScreenFaceCommands()
+    {
+        var root = RepoRoot();
+        var coordinator = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Bootstrap",
+            "AppCoordinator.cs"));
+        var manager = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Hotkeys",
+            "GlobalHotkeyManager.cs"));
+        var binding = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Hotkeys",
+            "HotkeyBinding.cs"));
+
+        Assert.Contains("public static HotkeyBinding Control(string key)", binding, StringComparison.Ordinal);
+        Assert.Contains("RegisterAdditional(HotkeyCommand command, HotkeyBinding binding)", manager, StringComparison.Ordinal);
+        Assert.Contains("RegisterLegacyCtrlHotkeyAliases(bindings, results);", coordinator, StringComparison.Ordinal);
+        Assert.Contains("[HotkeyCommand.FacePing] = HotkeyBinding.Control(\"P\")", coordinator, StringComparison.Ordinal);
+        Assert.Contains("[HotkeyCommand.ScreenFacePing] = HotkeyBinding.Control(\"L\")", coordinator, StringComparison.Ordinal);
+        Assert.Contains("Ctrl+P face / Ctrl+L screen+face", coordinator, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void FacePreviewUsesCaptureElementInsteadOfFrameSourceMediaPlayerPreview()
+    {
+        var root = RepoRoot();
+        var faceXaml = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Capture",
+            "FaceMirrorWindow.xaml"));
+        var screenXaml = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Capture",
+            "ScreenFaceMirrorWindow.xaml"));
+        var recorder = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "Capture",
+            "FaceRecorder.cs"));
+
+        Assert.Contains("<CaptureElement", faceXaml, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"PreviewElement\"", faceXaml, StringComparison.Ordinal);
+        Assert.Contains("<CaptureElement", screenXaml, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"FacePreviewElement\"", screenXaml, StringComparison.Ordinal);
+        Assert.Contains("StartPreviewAsync(CaptureElement preview", recorder, StringComparison.Ordinal);
+        Assert.Contains("preview.Source = capture;", recorder, StringComparison.Ordinal);
+        Assert.Contains("await capture.StartPreviewAsync();", recorder, StringComparison.Ordinal);
+        Assert.DoesNotContain("MediaSource.CreateFromMediaFrameSource", recorder, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void SenderFlowsUseSavedProfileNickname()
     {
         var source = File.ReadAllText(Path.Combine(
@@ -248,7 +361,7 @@ public sealed class AppCoordinatorSourceTests
     }
 
     [Fact]
-    public void TrayOpenPingFocusesMessengerHomeInsteadOfForcingRoomsWindow()
+    public void TrayOpenPingFocusesRecentRoomHistoryInsteadOfStaticHome()
     {
         var source = File.ReadAllText(Path.Combine(
             RepoRoot(),
@@ -269,8 +382,10 @@ public sealed class AppCoordinatorSourceTests
         Assert.True(nextCaseStart > openPingStart);
         var openPingCase = executeTrayCommandBody[openPingStart..nextCaseStart];
 
-        Assert.Contains("OpenHomeShell();", openPingCase, StringComparison.Ordinal);
-        Assert.DoesNotContain("OpenHistoryWindow();", openPingCase, StringComparison.Ordinal);
+        Assert.Contains("OpenDefaultHistoryFromTray();", openPingCase, StringComparison.Ordinal);
+        Assert.Contains("private void OpenDefaultHistoryFromTray()", source, StringComparison.Ordinal);
+        Assert.Contains("OpenHistoryWindow(preferredRoom?.Id);", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("OpenHomeShell();", openPingCase, StringComparison.Ordinal);
     }
 
     [Fact]

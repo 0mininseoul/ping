@@ -274,12 +274,15 @@
                     </StackPanel>
                 </Border>
 
-                <ScrollViewer Grid.Row="1" x:Name="SettingsScroller">
+                <ScrollViewer
+                    x:Name="SettingsScroller"
+                    x:FieldModifier="public"
+                    Grid.Row="1"
+                    Visibility="Collapsed">
                     <StackPanel
                         x:Name="SettingsPanel"
                         x:FieldModifier="public"
-                        Spacing="12"
-                        Visibility="Collapsed">
+                        Spacing="12">
                         <ToggleSwitch
                             x:Name="QuickSendToggle"
                             Header="화면+얼굴 빠른 전송 사용"

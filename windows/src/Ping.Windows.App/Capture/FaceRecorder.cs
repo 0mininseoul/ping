@@ -1,9 +1,6 @@
 #if WINDOWS
 using Windows.Media.Capture;
-using Windows.Media.Capture.Frames;
-using Windows.Media.Core;
 using Windows.Media.MediaProperties;
-using Windows.Media.Playback;
 using Windows.Storage;
 using Microsoft.UI.Xaml.Controls;
 #endif
@@ -14,8 +11,9 @@ public sealed class FaceRecorder : IFaceRecorder
 {
     private static readonly string TemporaryDirectory = Path.Combine(Path.GetTempPath(), "Ping");
     private MediaCapture? previewCapture;
-    private MediaPlayer? previewPlayer;
+    private CaptureElement? previewElement;
     private bool isPreviewCaptureInitialized;
+    private bool isPreviewing;
 
     public async Task<FaceRecordingResult> RecordAsync(
         TimeSpan duration,
@@ -96,7 +94,7 @@ public sealed class FaceRecorder : IFaceRecorder
     }
 
 #if WINDOWS
-    public async Task StartPreviewAsync(MediaPlayerElement preview, CancellationToken cancellationToken = default)
+    public async Task StartPreviewAsync(CaptureElement preview, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(preview);
         cancellationToken.ThrowIfCancellationRequested();
@@ -112,61 +110,51 @@ public sealed class FaceRecorder : IFaceRecorder
                 });
                 isPreviewCaptureInitialized = true;
             }
+
+            cancellationToken.ThrowIfCancellationRequested();
+            preview.Source = capture;
+            await capture.StartPreviewAsync();
+            previewElement = preview;
+            isPreviewing = true;
         }
         catch
         {
+            preview.Source = null;
+            previewElement = null;
             previewCapture?.Dispose();
             previewCapture = null;
             isPreviewCaptureInitialized = false;
+            isPreviewing = false;
             throw;
         }
-
-        var frameSource = capture.FrameSources
-            .FirstOrDefault(source =>
-                source.Value.Info.MediaStreamType == MediaStreamType.VideoPreview
-                && source.Value.Info.SourceKind == MediaFrameSourceKind.Color)
-            .Value
-            ?? capture.FrameSources
-                .FirstOrDefault(source =>
-                    source.Value.Info.MediaStreamType == MediaStreamType.VideoRecord
-                    && source.Value.Info.SourceKind == MediaFrameSourceKind.Color)
-                .Value;
-        if (frameSource is null)
-        {
-            throw new InvalidOperationException("No camera preview stream is available.");
-        }
-
-        previewPlayer?.Dispose();
-        previewPlayer = new MediaPlayer
-        {
-            RealTimePlayback = true,
-            AutoPlay = false,
-            Source = MediaSource.CreateFromMediaFrameSource(frameSource)
-        };
-        preview.SetMediaPlayer(previewPlayer);
-        previewPlayer.Play();
     }
 
-    public Task StopPreviewAsync(MediaPlayerElement preview)
+    public async Task StopPreviewAsync(CaptureElement preview)
     {
         try
         {
-            previewPlayer?.Pause();
+            if (isPreviewing && previewCapture is not null)
+            {
+                await previewCapture.StopPreviewAsync();
+            }
         }
         catch (Exception)
         {
         }
         finally
         {
-            preview.SetMediaPlayer(null);
-            previewPlayer?.Dispose();
-            previewPlayer = null;
+            preview.Source = null;
+            if (previewElement is not null && !ReferenceEquals(previewElement, preview))
+            {
+                previewElement.Source = null;
+            }
+
+            previewElement = null;
             previewCapture?.Dispose();
             previewCapture = null;
             isPreviewCaptureInitialized = false;
+            isPreviewing = false;
         }
-
-        return Task.CompletedTask;
     }
 #endif
 

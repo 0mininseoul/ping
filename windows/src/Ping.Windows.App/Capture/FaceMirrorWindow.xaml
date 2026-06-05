@@ -32,9 +32,8 @@
             BorderThickness="1"
             CornerRadius="{StaticResource PingMirrorCornerRadius}">
             <Grid>
-                <MediaPlayerElement
+                <CaptureElement
                     x:Name="PreviewElement"
-                    AreTransportControlsEnabled="False"
                     Stretch="UniformToFill" />
                 <MediaPlayerElement
                     x:Name="ReviewElement"

@@ -10,6 +10,7 @@ public sealed class GlobalHotkeyManager : IDisposable
     private readonly Dictionary<HotkeyCommand, int> commandIds = [];
     private readonly Dictionary<int, HotkeyCommand> idCommands = [];
     private readonly Dictionary<HotkeyCommand, HotkeyBinding> commandBindings = [];
+    private readonly HashSet<int> registeredIds = [];
     private int nextId = 0x5100;
     private bool disposed;
 
@@ -44,12 +45,32 @@ public sealed class GlobalHotkeyManager : IDisposable
             if (commandIds.Remove(command, out var existingId))
             {
                 idCommands.Remove(existingId);
+                registeredIds.Remove(existingId);
                 registrar.Unregister(existingId);
             }
 
             commandIds[command] = id;
             idCommands[id] = command;
             commandBindings[command] = binding;
+            registeredIds.Add(id);
+            return HotkeyRegistrationResult.Success(command, binding);
+        }
+
+        return registrarResult.Status == HotkeyRegistrarStatus.Conflict
+            ? HotkeyRegistrationResult.Conflict(command, binding, registrarResult.Message)
+            : HotkeyRegistrationResult.Error(command, binding, registrarResult.Message);
+    }
+
+    public HotkeyRegistrationResult RegisterAdditional(HotkeyCommand command, HotkeyBinding binding)
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+
+        var id = nextId++;
+        var registrarResult = registrar.Register(id, binding);
+        if (registrarResult.Status == HotkeyRegistrarStatus.Success)
+        {
+            registeredIds.Add(id);
+            idCommands[id] = command;
             return HotkeyRegistrationResult.Success(command, binding);
         }
 
@@ -60,7 +81,7 @@ public sealed class GlobalHotkeyManager : IDisposable
 
     public void UnregisterAll()
     {
-        foreach (var id in commandIds.Values)
+        foreach (var id in registeredIds)
         {
             registrar.Unregister(id);
         }
@@ -68,6 +89,7 @@ public sealed class GlobalHotkeyManager : IDisposable
         commandIds.Clear();
         idCommands.Clear();
         commandBindings.Clear();
+        registeredIds.Clear();
     }
 
     public void Dispose()
