@@ -292,7 +292,7 @@ public sealed class AppCoordinatorSourceTests
     }
 
     [Fact]
-    public void FacePreviewUsesCaptureElementInsteadOfFrameSourceMediaPlayerPreview()
+    public void FacePreviewUsesWinUiCompatibleMediaPlayerElementWithBroadFrameSourceFallback()
     {
         var root = RepoRoot();
         var faceXaml = File.ReadAllText(Path.Combine(
@@ -317,14 +317,17 @@ public sealed class AppCoordinatorSourceTests
             "Capture",
             "FaceRecorder.cs"));
 
-        Assert.Contains("<CaptureElement", faceXaml, StringComparison.Ordinal);
+        Assert.Contains("<MediaPlayerElement", faceXaml, StringComparison.Ordinal);
         Assert.Contains("x:Name=\"PreviewElement\"", faceXaml, StringComparison.Ordinal);
-        Assert.Contains("<CaptureElement", screenXaml, StringComparison.Ordinal);
+        Assert.Contains("<MediaPlayerElement", screenXaml, StringComparison.Ordinal);
         Assert.Contains("x:Name=\"FacePreviewElement\"", screenXaml, StringComparison.Ordinal);
-        Assert.Contains("StartPreviewAsync(CaptureElement preview", recorder, StringComparison.Ordinal);
-        Assert.Contains("preview.Source = capture;", recorder, StringComparison.Ordinal);
-        Assert.Contains("await capture.StartPreviewAsync();", recorder, StringComparison.Ordinal);
-        Assert.DoesNotContain("MediaSource.CreateFromMediaFrameSource", recorder, StringComparison.Ordinal);
+        Assert.DoesNotContain("<CaptureElement", faceXaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("<CaptureElement", screenXaml, StringComparison.Ordinal);
+        Assert.Contains("StartPreviewAsync(MediaPlayerElement preview", recorder, StringComparison.Ordinal);
+        Assert.Contains("ResolvePreviewFrameSource", recorder, StringComparison.Ordinal);
+        Assert.Contains("source.Info.MediaStreamType == MediaStreamType.VideoPreview", recorder, StringComparison.Ordinal);
+        Assert.Contains("source.Info.MediaStreamType == MediaStreamType.VideoRecord", recorder, StringComparison.Ordinal);
+        Assert.Contains("MediaSource.CreateFromMediaFrameSource(frameSource)", recorder, StringComparison.Ordinal);
     }
 
     [Fact]
