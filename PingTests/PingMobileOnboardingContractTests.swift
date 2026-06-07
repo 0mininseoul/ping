@@ -47,6 +47,22 @@ final class PingMobileOnboardingContractTests: XCTestCase {
         XCTAssertFalse(scannerSheet.contains("xmark"))
     }
 
+    func testPairedInboxDoesNotShowConnectedEmptyStateDuringInitialRoomLoad() throws {
+        let source = try readProjectSource("PingMobile/InboxView.swift")
+        let body = try extract(
+            "var body: some View",
+            through: ".refreshable",
+            from: source
+        )
+
+        XCTAssertTrue(body.contains("if isLoading && rooms.isEmpty"))
+        XCTAssertTrue(source.contains("private var loadingState: some View"))
+        let loadingRange = try XCTUnwrap(body.range(of: "if isLoading && rooms.isEmpty"))
+        let emptyRange = try XCTUnwrap(body.range(of: "else if rooms.isEmpty"))
+        XCTAssertLessThan(loadingRange.lowerBound, emptyRange.lowerBound)
+        XCTAssertFalse(body.contains("if isLoading && rooms.isEmpty { ProgressView() }"))
+    }
+
     private func readProjectSource(_ relativePath: String) throws -> String {
         let testsDir = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
         let projectRoot = testsDir.deletingLastPathComponent()

@@ -13,7 +13,9 @@ struct InboxView: View {
 
     var body: some View {
         Group {
-            if rooms.isEmpty {
+            if isLoading && rooms.isEmpty {
+                loadingState
+            } else if rooms.isEmpty {
                 emptyState
             } else {
                 List {
@@ -45,9 +47,6 @@ struct InboxView: View {
                     .labelStyle(.titleAndIcon)
                     .foregroundStyle(.green)
             }
-        }
-        .overlay {
-            if isLoading && rooms.isEmpty { ProgressView() }
         }
         .refreshable { await load() }
         .task { await pollRooms() }
@@ -86,6 +85,13 @@ struct InboxView: View {
     private func initial(for room: PingRoom) -> String {
         let title = room.title(excluding: account.session.userId)
         return title.isEmpty ? "?" : String(title.prefix(1))
+    }
+
+    private var loadingState: some View {
+        ProgressView()
+            .controlSize(.large)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(uiColor: .systemGroupedBackground))
     }
 
     private var emptyState: some View {
