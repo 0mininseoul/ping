@@ -48,4 +48,10 @@ final class AppState: ObservableObject {
         sendMode = .singlePartner
         pendingInvitations = []
     }
+
+    func markRoomReadLocally(roomId: String) {
+        guard let index = rooms.firstIndex(where: { $0.id == roomId }) else { return }
+        rooms[index].unreadCount = 0
+        rooms[index].latestUnreadAt = nil
+    }
 }

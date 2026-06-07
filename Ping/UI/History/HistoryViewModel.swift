@@ -69,7 +69,12 @@ final class HistoryViewModel: ObservableObject {
         groups = []
         reactionsByTargetId = [:]
         await loadMore()
-        try? await chatService.markRoomRead(roomId: roomId)
+        do {
+            try await chatService.markRoomRead(roomId: roomId)
+            appState.markRoomReadLocally(roomId: roomId)
+        } catch {
+            NSLog("Mark room read failed: \(error) — roomId=\(roomId)")
+        }
         ClientEventService.shared.log("chat_received_view", properties: ["room_id": roomId])
     }
 

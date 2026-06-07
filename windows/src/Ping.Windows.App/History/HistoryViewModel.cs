@@ -234,7 +234,10 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         RebuildTimeline();
         RestoreSelectedTimelineItem(previousSelectedSortKind, previousSelectedSortId);
         await LoadChatImagesAsync(cancellationToken);
-        await MarkSelectedRoomReadAsync(roomId, cancellationToken);
+        if (await MarkSelectedRoomReadAsync(roomId, cancellationToken))
+        {
+            ClearSelectedRoomUnreadBadge(roomId);
+        }
         StatusMessage = $"{Videos.Count} videos, {Chats.Count} chats, {Reactions.Count} reactions.";
     }
 
@@ -454,14 +457,47 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         }
     }
 
-    private async Task MarkSelectedRoomReadAsync(string roomId, CancellationToken cancellationToken)
+    private async Task<bool> MarkSelectedRoomReadAsync(string roomId, CancellationToken cancellationToken)
     {
         try
         {
             await chatService.MarkRoomReadAsync(roomId, cancellationToken);
+            return true;
         }
         catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException)
         {
+            return false;
+        }
+    }
+
+    private void ClearSelectedRoomUnreadBadge(string roomId)
+    {
+        for (var index = 0; index < Rooms.Count; index++)
+        {
+            var room = Rooms[index];
+            if (!string.Equals(room.Id, roomId, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (room.UnreadCount == 0 && room.LatestUnreadAt is null)
+            {
+                return;
+            }
+
+            var cleared = room with
+            {
+                UnreadCount = 0,
+                LatestUnreadAt = null
+            };
+            Rooms[index] = cleared;
+
+            if (string.Equals(SelectedRoom?.Id, roomId, StringComparison.Ordinal))
+            {
+                SelectedRoom = cleared;
+            }
+
+            return;
         }
     }
 

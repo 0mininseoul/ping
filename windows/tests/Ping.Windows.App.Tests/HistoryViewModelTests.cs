@@ -20,6 +20,10 @@ public sealed class HistoryViewModelTests
 
         Assert.Equal("room-2", viewModel.SelectedRoom?.Id);
         Assert.Equal("Project", viewModel.SelectedRoomName);
+        Assert.Equal(0, viewModel.SelectedRoom?.UnreadCount);
+        Assert.Null(viewModel.SelectedRoom?.LatestUnreadAt);
+        Assert.Equal(0, viewModel.Rooms.Single(room => room.Id == "room-2").UnreadCount);
+        Assert.Null(viewModel.Rooms.Single(room => room.Id == "room-2").LatestUnreadAt);
         Assert.Collection(
             viewModel.Videos,
             video =>
@@ -385,8 +389,8 @@ public sealed class HistoryViewModelTests
             {
                 "ping_my_rooms" => new[]
                 {
-                    Room("room-1", "Main"),
-                    Room("room-2", "Project")
+                    Room("room-1", "Main", unreadCount: 1),
+                    Room("room-2", "Project", unreadCount: 2)
                 },
                 "ping_room_messages" => RoomId(body) switch
                 {
@@ -453,7 +457,7 @@ public sealed class HistoryViewModelTests
             return Task.CompletedTask;
         }
 
-        private static Room Room(string id, string name) =>
+        private static Room Room(string id, string name, int unreadCount = 0) =>
             new(
                 Id: id,
                 Name: name,
@@ -465,7 +469,9 @@ public sealed class HistoryViewModelTests
                     ["sender"] = "Sender",
                     ["receiver"] = "Receiver"
                 },
-                Status: RoomStatus.Open);
+                Status: RoomStatus.Open,
+                UnreadCount: unreadCount,
+                LatestUnreadAt: unreadCount > 0 ? BaseTime.AddMinutes(3) : null);
 
         private static IReadOnlyList<MessageReaction> ReactionsFor(object? body)
         {

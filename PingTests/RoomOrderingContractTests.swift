@@ -16,6 +16,24 @@ final class RoomOrderingContractTests: XCTestCase {
         XCTAssertTrue(migration.contains("order by (coalesce(chat_unread.unread_count, 0) + coalesce(video_unread.unread_count, 0) > 0) desc"))
     }
 
+    func testMarkRoomReadClearsChatAndVideoUnreadState() throws {
+        let migrations = try readSupabaseMigrationSources()
+        guard let start = migrations.range(
+            of: "create or replace function public.ping_mark_room_read",
+            options: .backwards
+        ) else {
+            return XCTFail("ping_mark_room_read RPC is missing")
+        }
+        let functionSource = String(migrations[start.lowerBound...])
+
+        XCTAssertTrue(functionSource.contains("last_read_chat_at"))
+        XCTAssertTrue(functionSource.contains("update public.messages"))
+        XCTAssertTrue(functionSource.contains("set status = 'seen'"))
+        XCTAssertTrue(functionSource.contains("receiver_uid = me"))
+        XCTAssertTrue(functionSource.contains("room_id = room_uuid"))
+        XCTAssertTrue(functionSource.contains("status = 'uploaded'"))
+    }
+
     func testSharedRoomModelsDecodeOrderAndUnreadMetadata() throws {
         let macModels = try readSourceFile("Ping/Core/Models.swift")
         let pingKitModels = try readSourceFile("PingKit/Sources/PingKit/PingRoomModels.swift")
@@ -80,9 +98,40 @@ final class RoomOrderingContractTests: XCTestCase {
         XCTAssertTrue(windowsXaml.contains("UnreadCount"))
     }
 
+    func testOpeningRoomClearsLocalUnreadBadgeAcrossDesktopClients() throws {
+        let macAppState = try readSourceFile("Ping/Core/AppState.swift")
+        let macHistoryViewModel = try readSourceFile("Ping/UI/History/HistoryViewModel.swift")
+        let windowsHistoryViewModel = try readSourceFile("windows/src/Ping.Windows.App/History/HistoryViewModel.cs")
+
+        XCTAssertTrue(macAppState.contains("func markRoomReadLocally(roomId: String)"))
+        XCTAssertTrue(macAppState.contains("unreadCount = 0"))
+        XCTAssertTrue(macAppState.contains("latestUnreadAt = nil"))
+        XCTAssertTrue(macHistoryViewModel.contains("appState.markRoomReadLocally(roomId: roomId)"))
+
+        XCTAssertTrue(windowsHistoryViewModel.contains("ClearSelectedRoomUnreadBadge(roomId)"))
+        XCTAssertTrue(windowsHistoryViewModel.contains("UnreadCount = 0"))
+        XCTAssertTrue(windowsHistoryViewModel.contains("LatestUnreadAt = null"))
+    }
+
     private func readSourceFile(_ relativePath: String) throws -> String {
         let testsDir = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
         let projectRoot = testsDir.deletingLastPathComponent()
         return try String(contentsOf: projectRoot.appendingPathComponent(relativePath), encoding: .utf8)
+    }
+
+    private func readSupabaseMigrationSources() throws -> String {
+        let testsDir = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+        let projectRoot = testsDir.deletingLastPathComponent()
+        let migrationsURL = projectRoot.appendingPathComponent("supabase/migrations")
+        let migrationFiles = try FileManager.default.contentsOfDirectory(
+            at: migrationsURL,
+            includingPropertiesForKeys: nil
+        )
+        .filter { $0.pathExtension == "sql" }
+        .sorted { $0.lastPathComponent < $1.lastPathComponent }
+
+        return try migrationFiles
+            .map { try String(contentsOf: $0, encoding: .utf8) }
+            .joined(separator: "\n")
     }
 }
