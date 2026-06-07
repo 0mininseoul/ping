@@ -372,13 +372,6 @@ struct RoomListView: View {
 
         appState.rooms[index].name = newName
         appState.rooms[index].searchableName = SearchableText.normalize(newName)
-        sortRooms()
-    }
-
-    private func sortRooms() {
-        appState.rooms.sort { lhs, rhs in
-            lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
-        }
     }
 
     private func leave(_ room: Room) {

@@ -9,6 +9,9 @@ public struct PingRoom: Codable, Sendable, Identifiable, Equatable {
     public let memberUids: [String]
     public let memberNicknames: [String: String]
     public let createdAt: Date?
+    public let roomOrder: Int?
+    public let unreadCount: Int
+    public let latestUnreadAt: Date?
 
     enum CodingKeys: String, CodingKey {
         case id, name
@@ -16,6 +19,44 @@ public struct PingRoom: Codable, Sendable, Identifiable, Equatable {
         case memberUids = "member_uids"
         case memberNicknames = "member_nicknames"
         case createdAt = "created_at"
+        case roomOrder = "room_order"
+        case unreadCount = "unread_count"
+        case latestUnreadAt = "latest_unread_at"
+    }
+
+    public init(
+        id: String,
+        name: String,
+        ownerUid: String,
+        memberUids: [String],
+        memberNicknames: [String: String],
+        createdAt: Date?,
+        roomOrder: Int? = nil,
+        unreadCount: Int = 0,
+        latestUnreadAt: Date? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.ownerUid = ownerUid
+        self.memberUids = memberUids
+        self.memberNicknames = memberNicknames
+        self.createdAt = createdAt
+        self.roomOrder = roomOrder
+        self.unreadCount = unreadCount
+        self.latestUnreadAt = latestUnreadAt
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        ownerUid = try c.decode(String.self, forKey: .ownerUid)
+        memberUids = try c.decode([String].self, forKey: .memberUids)
+        memberNicknames = try c.decode([String: String].self, forKey: .memberNicknames)
+        createdAt = try c.decodeIfPresent(Date.self, forKey: .createdAt)
+        roomOrder = try c.decodeIfPresent(Int.self, forKey: .roomOrder)
+        unreadCount = try c.decodeIfPresent(Int.self, forKey: .unreadCount) ?? 0
+        latestUnreadAt = try c.decodeIfPresent(Date.self, forKey: .latestUnreadAt)
     }
 
     /// The backend returns the same canonical room title to every client.

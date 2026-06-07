@@ -34,7 +34,7 @@ final class RoomService {
                     let intervalState = signposter.beginInterval("rooms-poll-cycle")
                     do {
                         let rooms: [Room] = try await client.rpcArray("ping_my_rooms")
-                        continuation.yield(rooms.sorted { $0.name < $1.name })
+                        continuation.yield(rooms)
                     } catch {
                         continuation.yield([])
                     }
@@ -80,6 +80,12 @@ final class RoomService {
             "room_uuid": roomId,
             "new_name": roomName,
             "new_searchable_name": SearchableText.normalize(roomName)
+        ])
+    }
+
+    func reorderRooms(roomIds: [String]) async throws {
+        try await client.rpcVoid("ping_reorder_my_rooms", body: [
+            "room_ids": roomIds
         ])
     }
 }

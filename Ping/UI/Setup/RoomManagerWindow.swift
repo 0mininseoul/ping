@@ -302,18 +302,27 @@ struct RoomManagerView: View {
                         .padding(.vertical, 4)
                 } else {
                     ForEach(appState.rooms, id: \.id) { room in
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(room.name)
-                                .font(.callout.weight(.semibold))
-                                .lineLimit(1)
-                                .truncationMode(.tail)
-                            Text("\(room.memberUids.count)명")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
+                        HStack(spacing: 8) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(room.name)
+                                    .font(.callout.weight(.semibold))
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
+                                Text("\(room.memberUids.count)명")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            Spacer(minLength: 4)
+
+                            if room.unreadCount > 0 {
+                                UnreadRoomBadge(count: room.unreadCount)
+                            }
                         }
                         .padding(.vertical, 4)
                         .tag(room.id)
                     }
+                    .onMove(perform: moveRooms)
                 }
             }
         }
@@ -365,6 +374,19 @@ struct RoomManagerView: View {
         }
 
         selectedRoomId = appState.defaultRoom?.id ?? appState.rooms.first?.id
+    }
+
+    private func moveRooms(from source: IndexSet, to destination: Int) {
+        appState.rooms.move(fromOffsets: source, toOffset: destination)
+        let orderedRoomIds = appState.rooms.compactMap(\.id)
+
+        Task { @MainActor in
+            do {
+                try await roomService.reorderRooms(roomIds: orderedRoomIds)
+            } catch {
+                appState.backendStatusMessage = error.localizedDescription
+            }
+        }
     }
 
     private func updateScreenFaceExpansion(
@@ -460,10 +482,6 @@ struct RoomManagerView: View {
             appState.rooms[index] = room
         } else {
             appState.rooms.append(room)
-        }
-
-        appState.rooms.sort { lhs, rhs in
-            lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
         }
     }
 

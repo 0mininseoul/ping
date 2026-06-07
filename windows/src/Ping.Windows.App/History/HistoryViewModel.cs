@@ -135,7 +135,7 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
     public async Task LoadAsync(string? preferredRoomId = null, CancellationToken cancellationToken = default)
     {
         Rooms.Clear();
-        foreach (var room in (await roomService.MyRoomsAsync(cancellationToken)).OrderBy(room => room.Name, StringComparer.OrdinalIgnoreCase))
+        foreach (var room in await roomService.MyRoomsAsync(cancellationToken))
         {
             Rooms.Add(room);
         }

@@ -68,6 +68,11 @@ public extension PingSupabaseClient {
         try await rpcArray("ping_my_rooms")
     }
 
+    /// Persist the user's manual room order across Ping clients.
+    func reorderMyRooms(roomIds: [String]) async throws {
+        try await rpcVoid("ping_reorder_my_rooms", body: ["room_ids": roomIds])
+    }
+
     /// Recent video messages in a room (backend returns newest-first).
     func roomMessages(roomId: String, limit: Int = 50) async throws -> [VideoMessage] {
         let messages: [VideoMessage] = try await rpcArray("ping_room_messages", body: [

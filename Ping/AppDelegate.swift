@@ -838,10 +838,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             appState.rooms.append(room)
         }
-
-        appState.rooms.sort { lhs, rhs in
-            lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
-        }
     }
 
     private func showTransientAlert(title: String, message: String) {

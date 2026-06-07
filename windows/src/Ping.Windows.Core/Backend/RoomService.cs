@@ -22,6 +22,14 @@ public sealed class RoomService(ISupabaseRpcClient client)
     public Task<IReadOnlyList<Room>> MyRoomsAsync(CancellationToken cancellationToken = default) =>
         client.RpcArrayAsync<Room>("ping_my_rooms", cancellationToken: cancellationToken);
 
+    public Task ReorderMyRoomsAsync(
+        IReadOnlyList<string> roomIds,
+        CancellationToken cancellationToken = default) =>
+        client.RpcVoidAsync(
+            "ping_reorder_my_rooms",
+            new RoomIdsRpcBody(roomIds),
+            cancellationToken);
+
     public Task<IReadOnlyList<Room>> SearchOpenRoomsAsync(
         string prefix,
         CancellationToken cancellationToken = default) =>
@@ -83,6 +91,9 @@ public sealed record JoinRoomRpcBody(
 
 public sealed record RoomIdRpcBody(
     [property: JsonPropertyName("room_uuid")] string RoomUuid);
+
+public sealed record RoomIdsRpcBody(
+    [property: JsonPropertyName("room_ids")] IReadOnlyList<string> RoomIds);
 
 public sealed record RenameRoomRpcBody(
     [property: JsonPropertyName("room_uuid")] string RoomUuid,

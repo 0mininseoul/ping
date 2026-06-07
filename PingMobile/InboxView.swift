@@ -25,6 +25,7 @@ struct InboxView: View {
                                 roomRow(room)
                             }
                         }
+                        .onMove(perform: moveRooms)
                     } footer: {
                         Text("ping 영상은 Mac·PC에서 보내요. 여기선 받은 ping을 보고 빠르게 답할 수 있어요.")
                             .font(.footnote)
@@ -35,7 +36,9 @@ struct InboxView: View {
         }
         .navigationTitle("Ping")
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
+            ToolbarItemGroup(placement: .topBarLeading) {
+                EditButton()
+
                 Button("연결 해제") {
                     showDisconnectConfirmation = true
                 }
@@ -77,6 +80,12 @@ struct InboxView: View {
                 Text("받은 ping과 대화 보기")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+            }
+
+            Spacer(minLength: 8)
+
+            if room.unreadCount > 0 {
+                UnreadRoomBadge(count: room.unreadCount)
             }
         }
         .padding(.vertical, 4)
@@ -152,9 +161,19 @@ struct InboxView: View {
             isLoading = false
             return
         }
-        let fetched = (try? await client.myRooms()) ?? []
-        rooms = fetched.sorted { ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast) }
+        rooms = (try? await client.myRooms()) ?? []
         isLoading = false
+    }
+
+    private func moveRooms(from source: IndexSet, to destination: Int) {
+        rooms.move(fromOffsets: source, toOffset: destination)
+        let orderedRoomIds = rooms.map(\.id)
+
+        Task {
+            guard let client = AppEnvironment.shared.makeClient() else { return }
+            try? await client.reorderMyRooms(roomIds: orderedRoomIds)
+            await load()
+        }
     }
 
     private func pollRooms() async {
@@ -162,5 +181,20 @@ struct InboxView: View {
             await load()
             try? await Task.sleep(nanoseconds: 2_000_000_000)
         }
+    }
+}
+
+private struct UnreadRoomBadge: View {
+    let count: Int
+
+    var body: some View {
+        Text(count > 99 ? "99+" : "\(count)")
+            .font(.caption2.weight(.bold))
+            .foregroundStyle(.white)
+            .monospacedDigit()
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(Capsule().fill(Color.red))
+            .accessibilityLabel("읽지 않은 메시지 \(count)개")
     }
 }

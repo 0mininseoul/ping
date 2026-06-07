@@ -272,9 +272,6 @@ struct RoomDetailView: View {
 
         appState.rooms[index].name = newName
         appState.rooms[index].searchableName = SearchableText.normalize(newName)
-        appState.rooms.sort { lhs, rhs in
-            lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
-        }
     }
 
     private func leaveRoom(_ room: Room) {

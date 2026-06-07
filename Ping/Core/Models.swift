@@ -53,6 +53,9 @@ struct Room: Codable, Identifiable, Hashable {
     var memberNicknames: [String: String]
     var status: RoomStatus
     var createdAt: Date?
+    var roomOrder: Int?
+    var unreadCount: Int
+    var latestUnreadAt: Date?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -63,6 +66,9 @@ struct Room: Codable, Identifiable, Hashable {
         case memberNicknames = "member_nicknames"
         case status
         case createdAt = "created_at"
+        case roomOrder = "room_order"
+        case unreadCount = "unread_count"
+        case latestUnreadAt = "latest_unread_at"
     }
 
     init(
@@ -73,7 +79,10 @@ struct Room: Codable, Identifiable, Hashable {
         memberUids: [String],
         memberNicknames: [String: String],
         status: RoomStatus,
-        createdAt: Date? = nil
+        createdAt: Date? = nil,
+        roomOrder: Int? = nil,
+        unreadCount: Int = 0,
+        latestUnreadAt: Date? = nil
     ) {
         self.id = id
         self.name = name
@@ -83,6 +92,24 @@ struct Room: Codable, Identifiable, Hashable {
         self.memberNicknames = memberNicknames
         self.status = status
         self.createdAt = createdAt
+        self.roomOrder = roomOrder
+        self.unreadCount = unreadCount
+        self.latestUnreadAt = latestUnreadAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decodeIfPresent(String.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        searchableName = try c.decode(String.self, forKey: .searchableName)
+        ownerUid = try c.decode(String.self, forKey: .ownerUid)
+        memberUids = try c.decode([String].self, forKey: .memberUids)
+        memberNicknames = try c.decode([String: String].self, forKey: .memberNicknames)
+        status = try c.decode(RoomStatus.self, forKey: .status)
+        createdAt = try c.decodeIfPresent(Date.self, forKey: .createdAt)
+        roomOrder = try c.decodeIfPresent(Int.self, forKey: .roomOrder)
+        unreadCount = try c.decodeIfPresent(Int.self, forKey: .unreadCount) ?? 0
+        latestUnreadAt = try c.decodeIfPresent(Date.self, forKey: .latestUnreadAt)
     }
 }
 

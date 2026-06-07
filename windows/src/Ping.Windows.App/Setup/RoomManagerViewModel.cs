@@ -85,6 +85,8 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
             OnPropertyChanged();
             OnPropertyChanged(nameof(SelectedRoomName));
             OnPropertyChanged(nameof(SelectedRoomMembers));
+            OnPropertyChanged(nameof(CanMoveSelectedRoomUp));
+            OnPropertyChanged(nameof(CanMoveSelectedRoomDown));
         }
     }
 
@@ -124,6 +126,12 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
         SelectedRoom is null
             ? "Create, join, or select a room."
             : string.Join(", ", SelectedRoom.MemberNicknames.Values.OrderBy(value => value, StringComparer.OrdinalIgnoreCase));
+
+    public bool CanMoveSelectedRoomUp =>
+        SelectedRoom is not null && Rooms.IndexOf(SelectedRoom) > 0;
+
+    public bool CanMoveSelectedRoomDown =>
+        SelectedRoom is not null && Rooms.IndexOf(SelectedRoom) >= 0 && Rooms.IndexOf(SelectedRoom) < Rooms.Count - 1;
 
     public void ApplyProfileNickname(string updatedNickname)
     {
@@ -200,6 +208,33 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
         await ReloadRoomsAsync(cancellationToken);
         RoomsChanged?.Invoke(this, EventArgs.Empty);
         StatusMessage = "Left room.";
+    }
+
+    public async Task MoveSelectedRoomAsync(int delta, CancellationToken cancellationToken = default)
+    {
+        if (SelectedRoom is not { } room)
+        {
+            return;
+        }
+
+        var currentIndex = Rooms.IndexOf(room);
+        var newIndex = currentIndex + delta;
+        if (currentIndex < 0 || newIndex < 0 || newIndex >= Rooms.Count)
+        {
+            return;
+        }
+
+        Rooms.Move(currentIndex, newIndex);
+        var orderedRoomIds = Rooms
+            .Select(candidate => candidate.Id)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Select(id => id!)
+            .ToArray();
+
+        await roomService.ReorderMyRoomsAsync(orderedRoomIds, cancellationToken).ConfigureAwait(false);
+        SelectedRoom = room;
+        RoomsChanged?.Invoke(this, EventArgs.Empty);
+        StatusMessage = "Room order updated.";
     }
 
     public async Task InviteUserAsync(string userId, string fallbackRoomName, CancellationToken cancellationToken = default)
@@ -325,7 +360,7 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
     {
         var previousSelectedId = SelectedRoom?.Id;
         Rooms.Clear();
-        foreach (var room in (await roomService.MyRoomsAsync(cancellationToken)).OrderBy(room => room.Name, StringComparer.OrdinalIgnoreCase))
+        foreach (var room in await roomService.MyRoomsAsync(cancellationToken))
         {
             Rooms.Add(room);
         }
@@ -407,6 +442,12 @@ public sealed partial class RoomManagerWindow : Window
 
     private async void LeaveRoomButton_Click(object sender, RoutedEventArgs args) =>
         await RunAsync(() => viewModel.LeaveSelectedRoomAsync());
+
+    private async void MoveUpRoomButton_Click(object sender, RoutedEventArgs args) =>
+        await RunAsync(() => viewModel.MoveSelectedRoomAsync(-1));
+
+    private async void MoveDownRoomButton_Click(object sender, RoutedEventArgs args) =>
+        await RunAsync(() => viewModel.MoveSelectedRoomAsync(1));
 
     private async void SearchButton_Click(object sender, RoutedEventArgs args) =>
         await RunAsync(() => viewModel.SearchRoomsAsync(SearchBox.Text));

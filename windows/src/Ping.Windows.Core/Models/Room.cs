@@ -16,4 +16,7 @@ public sealed record Room(
     [property: JsonPropertyName("member_uids")] IReadOnlyList<string> MemberUids,
     [property: JsonPropertyName("member_nicknames")] IReadOnlyDictionary<string, string> MemberNicknames,
     [property: JsonPropertyName("status")] RoomStatus Status,
-    [property: JsonPropertyName("created_at")] DateTimeOffset? CreatedAt = null);
+    [property: JsonPropertyName("created_at")] DateTimeOffset? CreatedAt = null,
+    [property: JsonPropertyName("room_order")] int? RoomOrder = null,
+    [property: JsonPropertyName("unread_count")] int UnreadCount = 0,
+    [property: JsonPropertyName("latest_unread_at")] DateTimeOffset? LatestUnreadAt = null);

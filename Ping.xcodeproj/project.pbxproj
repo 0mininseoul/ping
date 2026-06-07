@@ -45,6 +45,7 @@
 		39B71BEC21891E73BA4FCB96 /* PingMobileTimestampRevealContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0546AA276FA90796D5CD11E /* PingMobileTimestampRevealContractTests.swift */; };
 		3A42A12F85CF34A4D5F2F7CD /* OnboardingWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 050A0147A7508D00A8E2DE3B /* OnboardingWindow.swift */; };
 		3B5117F35AEE41A4224D9837 /* StorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0323B3DFE22413AC6BB3627D /* StorageService.swift */; };
+		3CDBE2E32C24C4B30FEC1870 /* RoomOrderingContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D52664C4393A5DF13065298 /* RoomOrderingContractTests.swift */; };
 		3D8721EF1C7FF79A43DF7064 /* AppcastUpdateOfferParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F806032469E93F02C3C28D9 /* AppcastUpdateOfferParser.swift */; };
 		3E8747EC3C02819DE0808A7E /* GlassButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8841413A695A3C64F0B3F247 /* GlassButton.swift */; };
 		3F281D7BAAC12DAA86E5E838 /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = 1A17C43CDDC3D0D57F6CA5D4 /* Realtime */; };
@@ -54,6 +55,7 @@
 		43072A8619301C054B30BC7C /* OnboardingFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05A1A2EA9F9A191DE3263C29 /* OnboardingFlowTests.swift */; };
 		44DC21E6B318CF6969918DE9 /* CompatibilityContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7BA291155ACBFF85185B36B /* CompatibilityContractTests.swift */; };
 		45CDCD2993C1E53FB62356A1 /* StatusMenuBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CAAECC60F6BE44D405DF213 /* StatusMenuBuilder.swift */; };
+		46082337F49EFA825645368A /* UnreadRoomBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 677595AB315664F0B4C3E4B7 /* UnreadRoomBadge.swift */; };
 		46F9E8AA666F9112513C36A2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 552333A6E0C0847053D21F1B /* Assets.xcassets */; };
 		4798C5AABBEC8C3D9F10A217 /* AccountsFileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFA1291A4824203978317290 /* AccountsFileTests.swift */; };
 		4817EF4ACB6DAD760DDDF3E2 /* OnboardingCopyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F542186B03D30E2C8BE833E /* OnboardingCopyTests.swift */; };
@@ -255,6 +257,7 @@
 		260A034212C7DCDAE4B05B4E /* UserService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserService.swift; sourceTree = "<group>"; };
 		2823CB8CE254CF54DFA45E9C /* GlassEffectCompat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassEffectCompat.swift; sourceTree = "<group>"; };
 		2AF4160B3B74FDD3CA18261B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		2D52664C4393A5DF13065298 /* RoomOrderingContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomOrderingContractTests.swift; sourceTree = "<group>"; };
 		2F806032469E93F02C3C28D9 /* AppcastUpdateOfferParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppcastUpdateOfferParser.swift; sourceTree = "<group>"; };
 		307DEEFD9006672888B273CE /* WatchSessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSessionStore.swift; sourceTree = "<group>"; };
 		311483C170DA8C628A197596 /* DeviceHandoffPayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceHandoffPayload.swift; sourceTree = "<group>"; };
@@ -291,6 +294,7 @@
 		61B40DAFC4A8F76E67E6335E /* StoragePolicyContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoragePolicyContractTests.swift; sourceTree = "<group>"; };
 		62D2F7B67DB16ADA6741BD44 /* PingError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PingError.swift; sourceTree = "<group>"; };
 		6738F61355D4A77DC9EF4E07 /* ChatImageAttachmentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatImageAttachmentView.swift; sourceTree = "<group>"; };
+		677595AB315664F0B4C3E4B7 /* UnreadRoomBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnreadRoomBadge.swift; sourceTree = "<group>"; };
 		6AAF79DFB70494C0A9C2E18B /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
 		6B5BE5E27DBD69263538CCD7 /* RoomSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomSearchView.swift; sourceTree = "<group>"; };
 		6BB8B40BB61BAE16EB12E239 /* ReleaseVersionContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReleaseVersionContractTests.swift; sourceTree = "<group>"; };
@@ -662,6 +666,7 @@
 				B2F526895AEBD9128DA1538F /* RoomManagerWindow.swift */,
 				6B5BE5E27DBD69263538CCD7 /* RoomSearchView.swift */,
 				0046D5141DDF76BC6DD5F048 /* SettingsScene.swift */,
+				677595AB315664F0B4C3E4B7 /* UnreadRoomBadge.swift */,
 			);
 			path = Setup;
 			sourceTree = "<group>";
@@ -726,6 +731,7 @@
 				6BB8B40BB61BAE16EB12E239 /* ReleaseVersionContractTests.swift */,
 				186228D198F99431A3E1EBCE /* RoomCapacityContractTests.swift */,
 				90A916C7BE813E0B77E80E22 /* RoomManagerUXContractTests.swift */,
+				2D52664C4393A5DF13065298 /* RoomOrderingContractTests.swift */,
 				46E75CCE637B32C4D8C02DF3 /* RoomVideoDeduplicationContractTests.swift */,
 				0DB8EE7896F96DFAC0EFCA86 /* ScreenCoordinatesTests.swift */,
 				5C56300160B566EFB16A4161 /* ScreenFaceLayoutTests.swift */,
@@ -1208,6 +1214,7 @@
 				00F43118BC5391A2FE1ABD0C /* ReleaseVersionContractTests.swift in Sources */,
 				0C63FD5926C2755B5048FA20 /* RoomCapacityContractTests.swift in Sources */,
 				20190C7134FAB36ACA18CBBC /* RoomManagerUXContractTests.swift in Sources */,
+				3CDBE2E32C24C4B30FEC1870 /* RoomOrderingContractTests.swift in Sources */,
 				D6AEB2C5D651AED89D60A3EE /* RoomVideoDeduplicationContractTests.swift in Sources */,
 				BE3551EEFED3B34395960150 /* ScreenCoordinatesTests.swift in Sources */,
 				EFB2B0047CDF9C0ECEE1B2D6 /* ScreenFaceLayoutTests.swift in Sources */,
@@ -1307,6 +1314,7 @@
 				3B5117F35AEE41A4224D9837 /* StorageService.swift in Sources */,
 				BD4B27A9FA26170478465688 /* SupabaseClient.swift in Sources */,
 				18F76346F0F837EF6E0BA48D /* Typography.swift in Sources */,
+				46082337F49EFA825645368A /* UnreadRoomBadge.swift in Sources */,
 				AB2E62FD9D04CB1415A796F5 /* UpdateReminderStore.swift in Sources */,
 				C928EDBE9BA49D5188B218A3 /* UpdaterController.swift in Sources */,
 				15FA5EA0B50E0383E9791360 /* UserPreferences.swift in Sources */,
@@ -1386,7 +1394,7 @@
 				CODE_SIGN_ENTITLEMENTS = PingMobile/PingMobile.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 22;
+				CURRENT_PROJECT_VERSION = 23;
 				DEVELOPMENT_TEAM = 878FAHTFQJ;
 				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = PingMobile/Info.plist;
@@ -1411,7 +1419,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 22;
+				CURRENT_PROJECT_VERSION = 23;
 				DEVELOPMENT_TEAM = 878FAHTFQJ;
 				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = PingWatch/Info.plist;
@@ -1449,7 +1457,7 @@
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 22;
+				CURRENT_PROJECT_VERSION = 23;
 				DEVELOPMENT_TEAM = 878FAHTFQJ;
 				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = PingPushService/Info.plist;
@@ -1512,7 +1520,7 @@
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 22;
+				CURRENT_PROJECT_VERSION = 23;
 				DEVELOPMENT_TEAM = 878FAHTFQJ;
 				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = PingPushService/Info.plist;
@@ -1539,7 +1547,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 22;
+				CURRENT_PROJECT_VERSION = 23;
 				DEVELOPMENT_TEAM = 878FAHTFQJ;
 				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = PingWatch/Info.plist;
@@ -1630,7 +1638,7 @@
 				CODE_SIGN_ENTITLEMENTS = PingMobile/PingMobile.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 22;
+				CURRENT_PROJECT_VERSION = 23;
 				DEVELOPMENT_TEAM = 878FAHTFQJ;
 				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = PingMobile/Info.plist;
