@@ -34,6 +34,22 @@ final class RoomOrderingContractTests: XCTestCase {
         XCTAssertTrue(functionSource.contains("status = 'uploaded'"))
     }
 
+    func testIncomingVideoNotificationsIgnoreMessagesAlreadyReadByRoomTimestamp() throws {
+        let migrations = try readSupabaseMigrationSources()
+        guard let start = migrations.range(
+            of: "create or replace function public.ping_incoming_messages()",
+            options: .backwards
+        ) else {
+            return XCTFail("ping_incoming_messages RPC is missing")
+        }
+        let functionSource = String(migrations[start.lowerBound...])
+
+        XCTAssertTrue(functionSource.contains("last_read_chat_at"))
+        XCTAssertTrue(functionSource.contains("read_map"))
+        XCTAssertTrue(functionSource.contains("read_map ->> m.room_id::text"))
+        XCTAssertTrue(functionSource.contains("m.created_at > coalesce"))
+    }
+
     func testSharedRoomModelsDecodeOrderAndUnreadMetadata() throws {
         let macModels = try readSourceFile("Ping/Core/Models.swift")
         let pingKitModels = try readSourceFile("PingKit/Sources/PingKit/PingRoomModels.swift")

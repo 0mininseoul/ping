@@ -139,6 +139,21 @@ final class HistoryViewModelTests: XCTestCase {
         XCTAssertLessThan(cachedThumbRange.lowerBound, remoteDownloadRange.lowerBound)
     }
 
+    func test_selectRoomRecordsLoadedIncomingVideosInNotificationLedger() throws {
+        let source = try readProjectSource("Ping/UI/History/HistoryViewModel.swift")
+        let selectBody = try extract(
+            "func selectRoom(_ roomId: String) async",
+            through: "ClientEventService.shared.log",
+            from: source
+        )
+
+        XCTAssertTrue(source.contains("private let notificationLedger: NotificationLedger"))
+        XCTAssertTrue(selectBody.contains("rememberLoadedIncomingVideosRead()"))
+        XCTAssertTrue(source.contains("private func rememberLoadedIncomingVideosRead()"))
+        XCTAssertTrue(source.contains("video.receiverUid == uid"))
+        XCTAssertTrue(source.contains("notificationLedger.remember(.video, uid: uid, id: id)"))
+    }
+
     private func makeMsg(
         id: String,
         createdAt: Date,

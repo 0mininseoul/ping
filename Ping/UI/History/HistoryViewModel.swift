@@ -43,6 +43,7 @@ final class HistoryViewModel: ObservableObject {
     private let chatService: ChatMessageService
     private let reactionService: ReactionService
     private let storageService: StorageService
+    private let notificationLedger: NotificationLedger
     private var loadedVideos: [VideoMessage] = []
     private var loadedChats: [ChatMessage] = []
     private var videoPaginationCursor: Date?
@@ -52,13 +53,15 @@ final class HistoryViewModel: ObservableObject {
         appState: AppState,
         chatService: ChatMessageService = ChatMessageService(),
         reactionService: ReactionService = ReactionService(),
-        storageService: StorageService = StorageService()
+        storageService: StorageService = StorageService(),
+        notificationLedger: NotificationLedger = NotificationLedger()
     ) {
         self.messageService = messageService
         self.appState = appState
         self.chatService = chatService
         self.reactionService = reactionService
         self.storageService = storageService
+        self.notificationLedger = notificationLedger
     }
 
     func selectRoom(_ roomId: String) async {
@@ -69,6 +72,7 @@ final class HistoryViewModel: ObservableObject {
         groups = []
         reactionsByTargetId = [:]
         await loadMore()
+        rememberLoadedIncomingVideosRead()
         do {
             try await chatService.markRoomRead(roomId: roomId)
             appState.markRoomReadLocally(roomId: roomId)
@@ -117,6 +121,14 @@ final class HistoryViewModel: ObservableObject {
             }
             lastErrorMessage = errorMsg
             NSLog("History load failed: \(error) — roomId=\(roomId)")
+        }
+    }
+
+    private func rememberLoadedIncomingVideosRead() {
+        guard let uid = appState.currentUser?.id else { return }
+        for video in loadedVideos where video.receiverUid == uid {
+            guard let id = video.id else { continue }
+            notificationLedger.remember(.video, uid: uid, id: id)
         }
     }
 
