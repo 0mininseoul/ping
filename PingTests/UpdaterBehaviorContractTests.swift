@@ -45,6 +45,14 @@ final class UpdaterBehaviorContractTests: XCTestCase {
         XCTAssertTrue(notifications.contains("\"version\": version"))
     }
 
+    func testUpdatePromptsDoNotPromoteMenuBarAppToDockApp() throws {
+        let updater = try readSourceFile("UpdaterController.swift")
+
+        XCTAssertFalse(updater.contains("NSApp.setActivationPolicy(.regular)"))
+        XCTAssertFalse(updater.contains("NSApp.dockTile.badgeLabel"))
+        XCTAssertTrue(updater.contains("NSApp.setActivationPolicy(.accessory)"))
+    }
+
     private func readSourceFile(_ relativePath: String) throws -> String {
         let fileName = URL(fileURLWithPath: relativePath).lastPathComponent
         let fileURL = try XCTUnwrap(Bundle(for: Self.self).resourceURL?.appendingPathComponent(fileName))

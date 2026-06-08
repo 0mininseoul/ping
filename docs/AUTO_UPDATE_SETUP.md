@@ -41,7 +41,7 @@ Ping은 [Sparkle 2](https://sparkle-project.org/) 로 사용자 측 자동 업�
 
 - 앱 실행 시 Sparkle이 백그라운드로 appcast을 폴링한다 (`SUScheduledCheckInterval = 3600` = 1시간).
 - 새 버전 감지 → 표준 Sparkle 다이얼로그가 떠서 사용자에게 업데이트 여부를 묻는다.
-- Ping은 Dock-less 메뉴바 앱이라 Sparkle gentle reminder delegate를 구현한다. scheduled update가 감지되면 Dock badge와 Notification Center 알림을 함께 띄우고, 알림 클릭 시 표준 Sparkle 다이얼로그로 이동한다.
+- Ping은 Dock-less 메뉴바 앱이라 Sparkle gentle reminder delegate를 구현한다. scheduled update가 감지되면 Notification Center 알림만 띄우고, 알림 클릭 시 표준 Sparkle 다이얼로그로 이동한다.
 - 같은 업데이트 버전은 한 번만 알리고, 더 최신 버전이 감지되면 기존 업데이트 알림을 최신 버전 알림 하나로 교체한다.
 - 사용자가 승인하면 다운로드/설치/재시작까지 진행된다.
 - Ping이 다운로드 폴더, 디스크 이미지, App Translocation 경로에서 실행 중이면 Sparkle 업데이트를 바로 적용할 수 없다. 이 경우 Ping은 appcast에서 최신 버전을 확인한 뒤 최신 DMG 다운로드를 제안하고, 사용자가 `Ping.app`을 응용 프로그램 폴더로 옮겨 다시 실행하도록 안내한다.

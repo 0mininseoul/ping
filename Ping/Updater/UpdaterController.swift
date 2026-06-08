@@ -30,10 +30,9 @@ final class UpdaterController: NSObject, @preconcurrency SPUStandardUserDriverDe
         forUpdate update: SUAppcastItem,
         state: SPUUserUpdateState
     ) {
-        NSApp.setActivationPolicy(.regular)
+        NSApp.setActivationPolicy(.accessory)
 
         guard !state.userInitiated else { return }
-        NSApp.dockTile.badgeLabel = "1"
         guard updateReminderStore.shouldNotify(version: update.displayVersionString) else { return }
 
         LocalNotificationCenter.shared.notifyUpdateAvailable(version: update.displayVersionString)
@@ -66,13 +65,12 @@ final class UpdaterController: NSObject, @preconcurrency SPUStandardUserDriverDe
     }
 
     private func clearUpdateReminder() {
-        NSApp.dockTile.badgeLabel = ""
         LocalNotificationCenter.shared.clearUpdateAvailableNotification()
     }
 
     private func showManualDownloadUpdateOffer() async {
         let offer = await latestManualUpdateOffer()
-        NSApp.setActivationPolicy(.regular)
+        NSApp.setActivationPolicy(.accessory)
         NSApp.activate(ignoringOtherApps: true)
 
         let alert = NSAlert()
