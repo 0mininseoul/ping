@@ -10,7 +10,7 @@
   <Identity
     Name="YoungminPark.PingWindows"
     Publisher="CN=Youngmin Park"
-    Version="0.3.43.0" />
+    Version="0.3.44.0" />
   <Properties>
     <DisplayName>Ping</DisplayName>
     <PublisherDisplayName>Youngmin Park</PublisherDisplayName>
