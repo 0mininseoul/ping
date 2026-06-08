@@ -220,7 +220,7 @@ public sealed class AppCoordinatorSourceTests
     }
 
     [Fact]
-    public void IncomingVideoMessagesOpenFloatingPlaybackWithoutNotificationClick()
+    public void IncomingVideoMessagesWaitForNotificationClickBeforeDownloadingPlayback()
     {
         var source = File.ReadAllText(Path.Combine(
             RepoRoot(),
@@ -238,9 +238,10 @@ public sealed class AppCoordinatorSourceTests
 
         Assert.Contains("notificationController.ShowIncoming(message)", handlerBody, StringComparison.Ordinal);
         Assert.Contains("notificationResult == NotificationShowResult.Duplicate", handlerBody, StringComparison.Ordinal);
-        Assert.Contains("await OpenIncomingPlaybackAsync(message, cancellationToken);", handlerBody, StringComparison.Ordinal);
-        Assert.DoesNotContain("Incoming notification is unavailable.", handlerBody, StringComparison.Ordinal);
-        Assert.Contains("private async Task OpenIncomingPlaybackAsync", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("OpenIncomingPlaybackAsync", handlerBody, StringComparison.Ordinal);
+        Assert.DoesNotContain("DownloadVideoForPlaybackAsync(message, cancellationToken)", handlerBody, StringComparison.Ordinal);
+        Assert.DoesNotContain("private async Task OpenIncomingPlaybackAsync", source, StringComparison.Ordinal);
+        Assert.Contains("private async Task OpenMessageFromNotificationAsync", source, StringComparison.Ordinal);
         Assert.Contains("DownloadVideoForPlaybackAsync(message, cancellationToken)", source, StringComparison.Ordinal);
         Assert.Contains("RunOnUiThreadAsync(() => ShowPlayback(message, localVideoPath))", source, StringComparison.Ordinal);
     }

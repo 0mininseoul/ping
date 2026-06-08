@@ -20,7 +20,7 @@ final class ScreenFaceRecorder: NSObject {
             .appendingPathComponent("ping-sf-\(UUID().uuidString).mp4")
         try? FileManager.default.removeItem(at: outputURL)
 
-        let longSide: CGFloat = 720
+        let longSide: CGFloat = 540
         let scale = longSide / max(screenSize.width, screenSize.height)
         let outW = Int((screenSize.width * scale).rounded())
         let outH = Int((screenSize.height * scale).rounded())
@@ -33,7 +33,7 @@ final class ScreenFaceRecorder: NSObject {
             AVVideoWidthKey: outW,
             AVVideoHeightKey: outH,
             AVVideoCompressionPropertiesKey: [
-                AVVideoAverageBitRateKey: 4_000_000,
+                AVVideoAverageBitRateKey: 1_200_000,
                 AVVideoExpectedSourceFrameRateKey: 30,
                 AVVideoMaxKeyFrameIntervalKey: 30
             ]
@@ -45,7 +45,7 @@ final class ScreenFaceRecorder: NSObject {
             AVFormatIDKey: kAudioFormatMPEG4AAC,
             AVNumberOfChannelsKey: 1,
             AVSampleRateKey: 44_100,
-            AVEncoderBitRateKey: 96_000
+            AVEncoderBitRateKey: 64_000
         ])
         audioInput.expectsMediaDataInRealTime = true
 

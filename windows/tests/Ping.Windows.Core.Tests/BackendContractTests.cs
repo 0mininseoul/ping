@@ -285,6 +285,7 @@ public sealed class BackendContractTests
         });
         using var client = files.CreateClient(handler);
         var service = new StorageService(client);
+        TryDeleteTempCache("media", "sender-uid-chat-images-message-id.png");
 
         var upload = await service.UploadChatImageAsync(localImagePath, "sender-uid", "message-id");
         var downloaded = await service.DownloadChatMediaAsync(upload.Path, "png");
@@ -294,6 +295,38 @@ public sealed class BackendContractTests
         Assert.Equal("message.png", upload.FileName);
         Assert.Equal([0x01, 0x02, 0x03], await File.ReadAllBytesAsync(downloaded));
         Assert.Equal(2, handler.Requests.Count);
+    }
+
+    [Fact]
+    public async Task StorageServiceReusesDownloadedVideoCache()
+    {
+        using var files = new SupabaseTestFiles();
+        await files.SaveSessionAsync(new SupabaseSession(
+            AccessToken: "access-token",
+            RefreshToken: "refresh-token",
+            ExpiresAt: DateTimeOffset.UtcNow.AddHours(1),
+            UserId: "user-id"));
+        TryDeleteTempCache("playback", "sender-uid-video-id.mp4");
+        var handler = new RecordingHttpMessageHandler(request =>
+        {
+            Assert.Equal(HttpMethod.Get, request.Method);
+            Assert.Equal(
+                "https://example.supabase.co/storage/v1/object/authenticated/ping-videos/sender-uid/video-id.mp4",
+                request.RequestUri?.ToString());
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new ByteArrayContent([0x01, 0x02, 0x03])
+            };
+        });
+        using var client = files.CreateClient(handler);
+        var service = new StorageService(client);
+
+        var first = await service.DownloadVideoAsync("sender-uid/video-id.mp4");
+        var second = await service.DownloadVideoAsync("sender-uid/video-id.mp4");
+
+        Assert.Equal(first, second);
+        Assert.Equal([0x01, 0x02, 0x03], await File.ReadAllBytesAsync(second));
+        Assert.Single(handler.Requests);
     }
 
     [Fact]
@@ -830,6 +863,10 @@ public sealed class BackendContractTests
             Assert.Equal("sender-uid", senderUid);
             Assert.Equal("shared-video-id", videoId);
             Assert.Equal(new[] { "receiver-uid" }, authorizedReceiverUids);
+            Assert.InRange(
+                expiresAt,
+                DateTimeOffset.UtcNow.AddHours(23),
+                DateTimeOffset.UtcNow.AddHours(25));
             return Task.FromResult(storagePath);
         }
 
@@ -847,6 +884,21 @@ public sealed class BackendContractTests
         {
             Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
         };
+    }
+
+    private static void TryDeleteTempCache(string kind, string fileName)
+    {
+        try
+        {
+            var path = Path.Combine(Path.GetTempPath(), "Ping", kind, fileName);
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+        }
     }
 
     private sealed class RecordingHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> responder) : HttpMessageHandler

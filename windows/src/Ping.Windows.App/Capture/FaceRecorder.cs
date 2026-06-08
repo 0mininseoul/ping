@@ -45,7 +45,7 @@ public sealed class FaceRecorder : IFaceRecorder
                 });
             }
 
-            var profile = MediaEncodingProfile.CreateMp4(VideoEncodingQuality.HD1080p);
+            var profile = MediaEncodingProfile.CreateMp4(VideoEncodingQuality.HD720p);
             profile.Video.Subtype = MediaEncodingSubtypes.H264;
             profile.Audio.Subtype = MediaEncodingSubtypes.Aac;
 

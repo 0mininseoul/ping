@@ -225,7 +225,7 @@ Windows도 Settings > General의 닉네임 저장 시 `ping_upsert_profile`을 �
 
 ### 수신 플로우
 
-1. 앱 시작 후 `ping_incoming_messages()`를 2초 간격으로 polling한다.
+1. 앱 시작 후 `ping_incoming_messages()`를 10초 간격으로 polling한다.
 2. 세션 내 `yieldedIds`와 앱 전역 `notifiedMessageIds`로 중복 알림을 막는다.
 3. 알림 클릭 시 `ping_get_message(message_uuid)`로 최신 메타데이터를 읽는다.
 4. Storage 객체를 다운로드하고 원형 playback window를 연다.

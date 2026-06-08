@@ -934,23 +934,6 @@ public sealed class AppCoordinator : IDisposable
         }
 
         await RefreshOpenHistoryRoomAsync(message.RoomId, cancellationToken);
-        try
-        {
-            await OpenIncomingPlaybackAsync(message, cancellationToken);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            if (notificationResult == NotificationShowResult.Unavailable)
-            {
-                throw new InvalidOperationException("Incoming notification and playback are unavailable.", ex);
-            }
-        }
-    }
-
-    private async Task OpenIncomingPlaybackAsync(VideoMessage message, CancellationToken cancellationToken)
-    {
-        var localVideoPath = await DownloadVideoForPlaybackAsync(message, cancellationToken);
-        await RunOnUiThreadAsync(() => ShowPlayback(message, localVideoPath));
     }
 
     private async Task HandleIncomingChatAsync(IncomingChatNotification notification, CancellationToken cancellationToken)

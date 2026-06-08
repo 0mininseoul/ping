@@ -12,7 +12,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var settingsWindow: SettingsWindow?
     private var playbackWindows: [PlaybackWindow] = []
     private var playbackCache: [String: URL] = [:]
-    private var playbackPrefetchTasks: [String: Task<URL, Error>] = [:]
 
     private let appState = AppState.shared
     private let camera = CameraManager()
@@ -248,7 +247,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 guard let id = message.id, shouldNotify(messageId: id, uid: uid, message: message) else {
                     continue
                 }
-                prefetchMessageVideo(message)
                 ledger.remember(.video, uid: uid, id: id)
                 LocalNotificationCenter.shared.notifyIncomingMessage(
                     senderNickname: message.senderNickname,
@@ -536,30 +534,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func prefetchMessageVideo(_ message: VideoMessage) {
-        guard let messageId = message.id,
-              playbackCache[messageId] == nil,
-              playbackPrefetchTasks[messageId] == nil else {
-            return
-        }
-
-        let task = Task { @MainActor [weak self] () throws -> URL in
-            guard let self else { throw CancellationError() }
-            return try await self.downloadMessageVideo(message)
-        }
-        playbackPrefetchTasks[messageId] = task
-
-        Task { @MainActor [weak self] in
-            do {
-                let url = try await task.value
-                self?.playbackCache[messageId] = url
-            } catch {
-                NSLog("Video prefetch failed: \(error)")
-            }
-            self?.playbackPrefetchTasks[messageId] = nil
-        }
-    }
-
     private func cachedVideoURL(for message: VideoMessage) async throws -> URL {
         guard let messageId = message.id else {
             return try await downloadMessageVideo(message)
@@ -568,12 +542,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let cachedURL = playbackCache[messageId],
            FileManager.default.fileExists(atPath: cachedURL.path) {
             return cachedURL
-        }
-
-        if let prefetchTask = playbackPrefetchTasks[messageId] {
-            let url = try await prefetchTask.value
-            playbackCache[messageId] = url
-            return url
         }
 
         let url = try await downloadMessageVideo(message)
@@ -991,8 +959,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         for window in playbackWindows { window.orderOut(nil) }
         playbackWindows.removeAll()
-        playbackPrefetchTasks.values.forEach { $0.cancel() }
-        playbackPrefetchTasks.removeAll()
         playbackCache.removeAll()
 
         notifiedChatMessageIds.removeAll()

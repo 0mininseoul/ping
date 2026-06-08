@@ -222,7 +222,7 @@ namespace Ping::Windows::NativeCapture
         if (SUCCEEDED(hr)) hr = MFCreateMediaType(&videoOutputType);
         if (SUCCEEDED(hr)) hr = videoOutputType->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video);
         if (SUCCEEDED(hr)) hr = videoOutputType->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_H264);
-        if (SUCCEEDED(hr)) hr = SetMediaTypeUInt32(videoOutputType.Get(), MF_MT_AVG_BITRATE, 8'000'000);
+        if (SUCCEEDED(hr)) hr = SetMediaTypeUInt32(videoOutputType.Get(), MF_MT_AVG_BITRATE, 2'000'000);
         if (SUCCEEDED(hr)) hr = MFSetAttributeSize(videoOutputType.Get(), MF_MT_FRAME_SIZE, layout.Width, layout.Height);
         if (SUCCEEDED(hr)) hr = MFSetAttributeRatio(videoOutputType.Get(), MF_MT_FRAME_RATE, FramesPerSecond, 1);
         if (SUCCEEDED(hr)) hr = MFSetAttributeRatio(videoOutputType.Get(), MF_MT_PIXEL_ASPECT_RATIO, 1, 1);

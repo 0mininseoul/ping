@@ -29,7 +29,7 @@ Windows tray commands should map to the same product actions. `Open Ping` should
 
 - Incoming video observer yields `VideoMessage`s.
 - Duplicate/expired/missing-date messages are suppressed through an account-scoped ledger.
-- Video is prefetched before notification.
+- Video is not downloaded until the notification click playback path.
 - Notification title: `{senderNickname}님이 영상을 보냈습니다`.
 - Notification user info includes `messageId` and `room_id`.
 - Clicking notification calls the same playback path as direct incoming playback.

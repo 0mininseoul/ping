@@ -1,12 +1,12 @@
 import XCTest
 
 final class PlaybackPrefetchContractTests: XCTestCase {
-    func testIncomingNotificationPrefetchesVideoBeforeClickPlayback() throws {
+    func testIncomingNotificationDoesNotDownloadVideoBeforeClickPlayback() throws {
         let appDelegateSource = try readSourceFile("Ping/AppDelegate.swift")
 
         XCTAssertTrue(appDelegateSource.contains("playbackCache"))
-        XCTAssertTrue(appDelegateSource.contains("playbackPrefetchTasks"))
-        XCTAssertTrue(appDelegateSource.contains("prefetchMessageVideo(message)"))
+        XCTAssertFalse(appDelegateSource.contains("playbackPrefetchTasks"))
+        XCTAssertFalse(appDelegateSource.contains("prefetchMessageVideo(message)"))
         XCTAssertTrue(appDelegateSource.contains("cachedVideoURL(for: message)"))
     }
 

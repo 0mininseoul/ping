@@ -12,7 +12,7 @@ namespace Ping.Windows.App.Notifications;
 
 public sealed class IncomingMessagePoller
 {
-    private static readonly TimeSpan DefaultInterval = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan DefaultInterval = TimeSpan.FromSeconds(10);
     private readonly Func<CancellationToken, Task<IReadOnlyList<VideoMessage>>> loadMessagesAsync;
     private readonly Func<TimeSpan, CancellationToken, Task> delayAsync;
     private readonly TimeSpan interval;

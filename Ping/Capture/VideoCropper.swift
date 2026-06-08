@@ -67,7 +67,7 @@ enum VideoCropper {
 
         guard let exporter = AVAssetExportSession(
             asset: composition,
-            presetName: AVAssetExportPresetHighestQuality
+            presetName: AVAssetExportPresetMediumQuality
         ) else {
             return inputURL
         }

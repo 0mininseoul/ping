@@ -39,7 +39,7 @@ final class RoomService {
                         continuation.yield([])
                     }
                     signposter.endInterval("rooms-poll-cycle", intervalState)
-                    try? await Task.sleep(nanoseconds: 2_000_000_000)
+                    try? await Task.sleep(nanoseconds: 10_000_000_000)
                 }
 
                 continuation.finish()

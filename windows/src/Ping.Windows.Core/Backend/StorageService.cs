@@ -61,7 +61,21 @@ public sealed class StorageService(SupabaseClient client) : IStorageService, ICh
         Directory.CreateDirectory(PlaybackCacheDirectory);
         var fileName = string.Join("-", remotePath.Split('/', StringSplitOptions.RemoveEmptyEntries));
         var localPath = Path.Combine(PlaybackCacheDirectory, fileName);
-        await client.DownloadObjectAsync(Bucket, remotePath, localPath, cancellationToken).ConfigureAwait(false);
+        if (ExistingNonEmptyFile(localPath))
+        {
+            return localPath;
+        }
+
+        var tempPath = $"{localPath}.{Guid.NewGuid():N}.tmp";
+        try
+        {
+            await client.DownloadObjectAsync(Bucket, remotePath, tempPath, cancellationToken).ConfigureAwait(false);
+            File.Move(tempPath, localPath, overwrite: true);
+        }
+        finally
+        {
+            TryDelete(tempPath);
+        }
         return localPath;
     }
 
@@ -98,8 +112,26 @@ public sealed class StorageService(SupabaseClient client) : IStorageService, ICh
         ValidateChatMediaPath(remotePath);
         var safeExtension = NormalizeSafeExtension(fileExtension);
         Directory.CreateDirectory(MediaCacheDirectory);
-        var localPath = Path.Combine(MediaCacheDirectory, $"ping-media-{Guid.NewGuid():N}.{safeExtension}");
-        await client.DownloadObjectAsync(MediaBucket, remotePath, localPath, cancellationToken).ConfigureAwait(false);
+        var fileName = string.Join("-", remotePath.Split('/', StringSplitOptions.RemoveEmptyEntries));
+        var localFileName = fileName.EndsWith($".{safeExtension}", StringComparison.OrdinalIgnoreCase)
+            ? fileName
+            : $"{fileName}.{safeExtension}";
+        var localPath = Path.Combine(MediaCacheDirectory, localFileName);
+        if (ExistingNonEmptyFile(localPath))
+        {
+            return localPath;
+        }
+
+        var tempPath = $"{localPath}.{Guid.NewGuid():N}.tmp";
+        try
+        {
+            await client.DownloadObjectAsync(MediaBucket, remotePath, tempPath, cancellationToken).ConfigureAwait(false);
+            File.Move(tempPath, localPath, overwrite: true);
+        }
+        finally
+        {
+            TryDelete(tempPath);
+        }
         return localPath;
     }
 
@@ -234,6 +266,33 @@ public sealed class StorageService(SupabaseClient client) : IStorageService, ICh
         }
 
         return normalized;
+    }
+
+    private static bool ExistingNonEmptyFile(string path)
+    {
+        try
+        {
+            var file = new FileInfo(path);
+            return file.Exists && file.Length > 0;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            return false;
+        }
+    }
+
+    private static void TryDelete(string path)
+    {
+        try
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+        }
     }
 }
 

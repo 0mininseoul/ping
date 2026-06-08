@@ -47,7 +47,7 @@ final class MessageService {
         let authorizedReceiverUids = Array(Set(sendableRooms.flatMap { room in
             room.memberUids.filter { $0 != input.senderUid }
         })).sorted()
-        let expiresAt = Date().addingTimeInterval(30 * 24 * 60 * 60)
+        let expiresAt = Date().addingTimeInterval(24 * 60 * 60)
         let videoStoragePath = try await storage.uploadVideo(
             localURL: input.localVideoURL,
             senderUid: input.senderUid,
@@ -103,7 +103,7 @@ final class MessageService {
                         NSLog("Incoming message polling failed: \(error)")
                     }
                     signposter.endInterval("messages-poll-cycle", intervalState)
-                    try? await Task.sleep(nanoseconds: 2_000_000_000)
+                    try? await Task.sleep(nanoseconds: 10_000_000_000)
                 }
 
                 continuation.finish()

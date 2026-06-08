@@ -52,7 +52,7 @@ final class InvitationService {
                         continuation.yield([])
                     }
                     signposter.endInterval("invitations-poll-cycle", intervalState)
-                    try? await Task.sleep(nanoseconds: 2_000_000_000)
+                    try? await Task.sleep(nanoseconds: 10_000_000_000)
                 }
 
                 continuation.finish()
