@@ -46,7 +46,7 @@ Bundle ID는 macOS 권한과 앱 식별의 기준이므로 임의 변경하지 �
 ### Supabase 설정
 현재 구현은 Supabase Free 플랜 기준입니다. 앱 런타임에는 `Resources/Supabase.plist`가 필요하고, 이 파일은 git에 커밋하지 않습니다. 형식은 `Resources/Supabase.example.plist`를 따릅니다.
 
-Supabase CLI 작업은 `npx supabase`로 수행합니다. 새 계정/프로젝트에 링크하려면 `npx supabase login --no-browser` 또는 `npx supabase link --project-ref <ref>`가 필요합니다.
+Supabase CLI 작업은 반드시 `./scripts/supabase-ping.sh` wrapper로 수행합니다. 이 wrapper는 현재 Ping 원격 프로젝트 `qxjtprxvjmaxlbtljcjw` / org `nvyhcwxyemylsqjlbdpo` / 프로젝트명 `Ping`에 접근 가능한 `supabase` CLI profile만 허용하고, 다른 project ref로 `link`하거나 `SUPABASE_ACCESS_TOKEN`으로 계정을 덮어쓰는 실행을 차단합니다. 새 계정/프로젝트에 링크해야 하는 예외 상황은 먼저 사용자에게 명시적으로 확인받고, 이 wrapper의 pinned 값을 함께 변경하세요.
 
 ### Supabase Free 저장소
 영상은 Supabase Storage의 비공개 `ping-videos` 버킷에 `<senderUid>/<videoId>.mp4` 경로로 저장합니다. 테이블/RLS/RPC/Storage 정책은 `supabase/migrations/20260517000100_create_ping_backend.sql`이 단일 진실 출처입니다. 서버 예약 작업 없이 앱 실행 시 `ping_cleanup_expired_data()` RPC로 만료 데이터를 best-effort 정리합니다.
@@ -67,7 +67,8 @@ xcode-select -p                    # /Applications/Xcode.app/Contents/Developer 
 xcodebuild -version                # Xcode 16.0+ (Swift 6 컴파일러 포함)
 swift --version                    # Swift 6.0+
 brew install xcodegen create-dmg   # 누락 시 즉시 설치
-npx supabase --version             # Supabase CLI
+npx supabase --version             # Supabase CLI 설치 확인
+./scripts/supabase-ping.sh projects list  # Ping 계정/프로젝트 guard 확인
 ```
 
 ### 빌드/실행 사이클
@@ -149,7 +150,7 @@ ping/
 - **Anonymous Auth 만 사용** — 이메일/소셜 로그인 추가 금지 (v0.2 이후).
 - **Edge Functions 없음** — 무료 플랜 유지와 단순성을 위해 클라이언트 + Postgres RPC + RLS로 처리.
 - **Storage는 비공개 버킷** — `ping-videos` 객체는 소유자 prefix 업로드, 메시지 sender/receiver 읽기 정책으로 제한.
-- **마이그레이션 변경 시 즉시 적용**: `npx supabase db push`.
+- **마이그레이션 변경 시 즉시 적용**: `./scripts/supabase-ping.sh db push`.
 - **RPC 인자 이름을 Swift 호출과 맞출 것** — PostgREST named args라 SQL 인자명 변경은 런타임 오류로 이어집니다.
 
 ---
@@ -199,7 +200,7 @@ Day 4 Task 4.3 에서 임시 EmptyView로 윈도우를 만든 뒤 `contentView` 
 ## 9. 자주 묻는 질문
 
 **Q: 빌드는 되는데 Supabase가 동작 안 합니다.**
-A: 1) `Resources/Supabase.plist` 가 있는지, 2) `SUPABASE_URL`/`SUPABASE_ANON_KEY`가 맞는지, 3) Supabase Dashboard에서 Anonymous sign-ins가 활성화됐는지, 4) `npx supabase db push`가 적용됐는지 확인.
+A: 1) `Resources/Supabase.plist` 가 있는지, 2) `SUPABASE_URL`/`SUPABASE_ANON_KEY`가 맞는지, 3) Supabase Dashboard에서 Anonymous sign-ins가 활성화됐는지, 4) `./scripts/supabase-ping.sh db push`가 적용됐는지 확인.
 
 **Q: `.glassEffect()` 가 unknown identifier 라고 합니다.**
 A: `Ping/UI/Glass/GlassEffectCompat.swift` 를 컴파일하는 Xcode Command Line Tools 가 macOS 26 SDK를 포함하지 않은 구버전입니다. Xcode 16+ 를 설치하거나 `xcode-select` 로 경로를 바꾸세요. **API를 다른 것으로 교체하지 말고 `.pingGlassEffect()` wrapper를 유지하세요.**
@@ -225,5 +226,6 @@ A: ad-hoc 서명이라 정상입니다. **우클릭 → 열기 → 다시 열기
 - [ ] `git status` 깨끗한가? 또는 어디까지 진행됐는가?
 - [ ] 사용자가 Supabase 프로젝트를 만들었는가? Project URL, anon key, project ref 확인됨?
 - [ ] 필수 도구(xcodegen, create-dmg, npx supabase) 모두 설치됨?
+- [ ] `./scripts/supabase-ping.sh projects list` 가 Ping 프로젝트 `qxjtprxvjmaxlbtljcjw`를 통과함?
 
 준비 OK면 플랜의 해당 Task부터 진행하세요.

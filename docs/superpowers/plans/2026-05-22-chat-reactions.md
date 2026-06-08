@@ -449,7 +449,7 @@ alter publication supabase_realtime add table public.message_reactions;
 - [ ] **Step 2: Apply migration**
 
 ```bash
-npx supabase db push
+./scripts/supabase-ping.sh db push
 ```
 
 Expected: success. If `add table public.chat_messages` to publication fails because publication doesn't exist on this project, that's OK — Realtime will fall back to polling. Ignore that error and continue.

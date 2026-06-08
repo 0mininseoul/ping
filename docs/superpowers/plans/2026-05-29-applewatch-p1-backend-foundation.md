@@ -16,8 +16,8 @@ Design source: `docs/superpowers/specs/2026-05-29-applewatch-push-stt-design.md`
 
 ## Prerequisites
 
-- **Docker running** (for `npx supabase start` / `npx supabase test db`). Verify: `docker info` succeeds.
-- Supabase CLI via `npx supabase` (already used in repo).
+- **Docker running** (for `./scripts/supabase-ping.sh start` / `./scripts/supabase-ping.sh test db`). Verify: `docker info` succeeds.
+- Supabase CLI via `./scripts/supabase-ping.sh` (guarded for this repo).
 - **Vercel CLI** for Tasks 3 & 8: `npm i -g vercel` (or `npx vercel`). Project is already linked (`.vercel/project.json`, project `ping`).
 - **Apple secrets** (needed only for Task 8 live verification, not for unit tests): an APNs Auth Key `.p8` from the Apple Developer portal (Keys → new key with "Apple Push Notifications service" enabled), its `Key ID`, the `Team ID`, and the iOS bundle id (will be `com.youngminpark.ping.PingMobile`, finalized in P3). Tasks 1–7 do **not** need these.
 
@@ -122,8 +122,8 @@ rollback;
 - [ ] **Step 2: Run the test to verify it fails**
 
 ```bash
-docker info >/dev/null && npx supabase start
-npx supabase test db
+docker info >/dev/null && ./scripts/supabase-ping.sh start
+./scripts/supabase-ping.sh test db
 ```
 
 Expected: FAIL — the suite errors/fails because `public.device_tokens` and the RPCs do not exist yet (e.g. `relation "public.device_tokens" does not exist` / `has_table … not ok`).
@@ -206,7 +206,7 @@ grant execute on function public.ping_remove_device_token(text) to authenticated
 - [ ] **Step 2: Run the test to verify it passes**
 
 ```bash
-npx supabase test db
+./scripts/supabase-ping.sh test db
 ```
 
 Expected: PASS — `device_tokens_test.sql .. ok` with `All 10 subtests passed` (the CLI applies migrations to a fresh test DB, then runs pgTAP).

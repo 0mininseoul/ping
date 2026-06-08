@@ -9,7 +9,7 @@ This records the live wiring for the Apple Watch push pipeline so P3/P6 can repr
 ## Supabase project
 
 - Project ref: `qxjtprxvjmaxlbtljcjw` (URL `https://qxjtprxvjmaxlbtljcjw.supabase.co`).
-- This repo is linked to that ref (`supabase link`). Apply schema changes with `npx supabase db push` (the DB password is stored in the OS keychain by `link`; a Personal Access Token is only needed for the initial link).
+- This repo is linked to that ref through `./scripts/supabase-ping.sh link --project-ref qxjtprxvjmaxlbtljcjw`. Apply schema changes with `./scripts/supabase-ping.sh db push` (the DB password is stored in the OS keychain by `link`; a Personal Access Token is only needed for the initial link).
 - Migration `20260529000100_device_tokens_and_push.sql` is applied and recorded in remote migration history. It is idempotent (`drop policy if exists` before each policy), so it is safe to re-run.
 
 ## Vercel environment variables (Project `ping`, Production)

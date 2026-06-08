@@ -150,7 +150,7 @@
   - `ping_register_device_token(token, platform, environment)` — upsert.
   - `ping_remove_device_token(token)` — 삭제(로그아웃/언레지스터 시).
 - **Database Webhook**: `messages` AFTER INSERT → Vercel URL. (Supabase Dashboard 또는 `supabase_functions.http_request` 트리거로 선언; 마이그레이션에 포함 가능.)
-- 적용: `npx supabase db push`(원격 링크/로그인 필요 시 사용자에게 요청 — AGENTS.md §2).
+- 적용: `./scripts/supabase-ping.sh db push`(원격 링크/로그인 필요 시 사용자에게 요청 — AGENTS.md §2).
 
 ---
 

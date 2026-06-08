@@ -162,8 +162,8 @@ Windows packaged client는 Windows 11 24H2 미만에서는 설치 대상이 아�
 원격 프로젝트 적용:
 
 ```bash
-npx supabase link --project-ref YOUR_PROJECT_REF
-npx supabase db push
+./scripts/supabase-ping.sh link --project-ref qxjtprxvjmaxlbtljcjw
+./scripts/supabase-ping.sh db push
 ```
 
 Supabase Dashboard에서 Anonymous sign-ins가 켜져 있어야 한다.

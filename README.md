@@ -24,8 +24,8 @@ cp Resources/Supabase.example.plist Resources/Supabase.plist
 스키마는 `supabase/migrations/20260517000100_create_ping_backend.sql`에 있다. 원격 프로젝트에 연결한 뒤 적용한다.
 
 ```bash
-npx supabase link --project-ref YOUR_PROJECT_REF
-npx supabase db push
+./scripts/supabase-ping.sh link --project-ref qxjtprxvjmaxlbtljcjw
+./scripts/supabase-ping.sh db push
 ```
 
 Supabase Dashboard의 Authentication 설정에서 Anonymous sign-ins가 켜져 있어야 한다.
