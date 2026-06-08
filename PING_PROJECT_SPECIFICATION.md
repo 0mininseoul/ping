@@ -235,7 +235,7 @@ Windows도 Settings > General의 닉네임 저장 시 `ping_upsert_profile`을 �
 
 - 서버 예약 작업은 사용하지 않는다.
 - 앱 실행 중 `ping_cleanup_expired_data()`를 best-effort로 호출한다.
-- 만료 기준은 messages와 영상 24시간, invitations와 invite links 7일이다.
+- 만료 기준은 messages와 영상 30일, invitations와 invite links 7일이다.
 
 ## 로컬 저장
 

@@ -47,7 +47,7 @@ final class MessageService {
         let authorizedReceiverUids = Array(Set(sendableRooms.flatMap { room in
             room.memberUids.filter { $0 != input.senderUid }
         })).sorted()
-        let expiresAt = Date().addingTimeInterval(24 * 60 * 60)
+        let expiresAt = Date().addingTimeInterval(30 * 24 * 60 * 60)
         let videoStoragePath = try await storage.uploadVideo(
             localURL: input.localVideoURL,
             senderUid: input.senderUid,

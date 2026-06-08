@@ -70,7 +70,7 @@ public sealed class MessageService(ISupabaseRpcClient client, IStorageService st
             .Distinct(StringComparer.Ordinal)
             .OrderBy(uid => uid, StringComparer.Ordinal)
             .ToArray();
-        var expiresAt = DateTimeOffset.UtcNow.AddDays(1);
+        var expiresAt = DateTimeOffset.UtcNow.AddDays(30);
         var videoStoragePath = await storage.UploadVideoAsync(
             input.LocalVideoPath,
             input.SenderUid,

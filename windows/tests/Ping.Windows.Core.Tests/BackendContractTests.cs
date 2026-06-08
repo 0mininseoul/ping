@@ -865,8 +865,8 @@ public sealed class BackendContractTests
             Assert.Equal(new[] { "receiver-uid" }, authorizedReceiverUids);
             Assert.InRange(
                 expiresAt,
-                DateTimeOffset.UtcNow.AddHours(23),
-                DateTimeOffset.UtcNow.AddHours(25));
+                DateTimeOffset.UtcNow.AddDays(29),
+                DateTimeOffset.UtcNow.AddDays(31));
             return Task.FromResult(storagePath);
         }
 

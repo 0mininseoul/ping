@@ -8,6 +8,7 @@ final class StorageService {
     static let mediaBucket = "ping-media"
     private let maxVideoBytes = 50 * 1024 * 1024
     private let maxImageBytes = 15 * 1024 * 1024
+    private static let maxDownloadCacheBytes: Int64 = 500 * 1024 * 1024
 
     private let client: SupabaseClient
 
@@ -33,6 +34,16 @@ final class StorageService {
         fileExtension: String
     ) -> String {
         "\(senderUid)/chat-images/\(messageId).\(fileExtension)"
+    }
+
+    static func cachedDownloadURL(remotePath: String) -> URL {
+        downloadCacheDirectory()
+            .appendingPathComponent(cacheFileName(remotePath: remotePath, fallbackExtension: "mp4"))
+    }
+
+    static func cachedChatMediaURL(remotePath: String, fileExtension: String) -> URL {
+        downloadCacheDirectory()
+            .appendingPathComponent(cacheFileName(remotePath: remotePath, fallbackExtension: fileExtension))
     }
 
     func uploadVideo(
@@ -65,11 +76,27 @@ final class StorageService {
             throw PingError.invalidStorageURL
         }
 
+        let cachedURL = Self.cachedDownloadURL(remotePath: storageLocation)
+        if FileManager.default.fileExists(atPath: cachedURL.path) {
+            try copyCachedFile(from: cachedURL, to: localURL)
+            return
+        }
+
+        let tempURL = localURL
+            .deletingLastPathComponent()
+            .appendingPathComponent(".\(localURL.lastPathComponent).\(UUID().uuidString).tmp")
+        try FileManager.default.createDirectory(
+            at: tempURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
         try await client.downloadObject(
             bucket: Self.bucket,
             path: storageLocation,
-            to: localURL
+            to: tempURL
         )
+        try replaceItem(at: localURL, with: tempURL)
+        try copyCachedFile(from: localURL, to: cachedURL)
+        Task { await Self.evictDownloadCacheIfNeeded() }
     }
 
     func downloadVideo(remotePath: String) async throws -> URL {
@@ -77,14 +104,22 @@ final class StorageService {
             throw PingError.invalidStorageURL
         }
 
-        let tempURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent("ping-dl-\(UUID().uuidString).mp4")
+        let cachedURL = Self.cachedDownloadURL(remotePath: remotePath)
+        if FileManager.default.fileExists(atPath: cachedURL.path) {
+            return cachedURL
+        }
+
+        let tempURL = cachedURL
+            .deletingLastPathComponent()
+            .appendingPathComponent(".\(cachedURL.lastPathComponent).\(UUID().uuidString).tmp")
         try await client.downloadObject(
             bucket: Self.bucket,
             path: remotePath,
             to: tempURL
         )
-        return tempURL
+        try replaceItem(at: cachedURL, with: tempURL)
+        Task { await Self.evictDownloadCacheIfNeeded() }
+        return cachedURL
     }
 
     func deleteVideo(remotePath: String) async throws {
@@ -146,14 +181,91 @@ final class StorageService {
             throw PingError.invalidStorageURL
         }
 
-        let tempURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent("ping-media-\(UUID().uuidString).\(fileExtension)")
+        let cachedURL = Self.cachedChatMediaURL(remotePath: remotePath, fileExtension: fileExtension)
+        if FileManager.default.fileExists(atPath: cachedURL.path) {
+            return cachedURL
+        }
+
+        let tempURL = cachedURL
+            .deletingLastPathComponent()
+            .appendingPathComponent(".\(cachedURL.lastPathComponent).\(UUID().uuidString).tmp")
         try await client.downloadObject(
             bucket: Self.mediaBucket,
             path: remotePath,
             to: tempURL
         )
-        return tempURL
+        try replaceItem(at: cachedURL, with: tempURL)
+        Task { await Self.evictDownloadCacheIfNeeded() }
+        return cachedURL
+    }
+
+    private func replaceItem(at destination: URL, with source: URL) throws {
+        try FileManager.default.createDirectory(
+            at: destination.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try? FileManager.default.removeItem(at: destination)
+        try FileManager.default.moveItem(at: source, to: destination)
+    }
+
+    private func copyCachedFile(from source: URL, to destination: URL) throws {
+        try FileManager.default.createDirectory(
+            at: destination.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        if source.standardizedFileURL == destination.standardizedFileURL {
+            return
+        }
+        try? FileManager.default.removeItem(at: destination)
+        try FileManager.default.copyItem(at: source, to: destination)
+    }
+
+    private static func downloadCacheDirectory() -> URL {
+        let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
+        let directory = caches
+            .appendingPathComponent("Ping", isDirectory: true)
+            .appendingPathComponent("storage-cache", isDirectory: true)
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return directory
+    }
+
+    private static func cacheFileName(remotePath: String, fallbackExtension: String) -> String {
+        let sanitized = remotePath
+            .split(separator: "/", omittingEmptySubsequences: true)
+            .joined(separator: "-")
+        let fileName = sanitized.isEmpty ? UUID().uuidString : String(sanitized)
+        if fileName.contains(".") {
+            return fileName
+        }
+
+        let ext = fallbackExtension.trimmingCharacters(in: CharacterSet(charactersIn: "."))
+        return ext.isEmpty ? fileName : "\(fileName).\(ext)"
+    }
+
+    private static func evictDownloadCacheIfNeeded() async {
+        let directory = downloadCacheDirectory()
+        let files = (try? FileManager.default.subpathsOfDirectory(atPath: directory.path)) ?? []
+        var attrs: [(URL, Date, Int64)] = []
+        for sub in files {
+            let url = directory.appendingPathComponent(sub)
+            guard let a = try? FileManager.default.attributesOfItem(atPath: url.path),
+                  let size = a[.size] as? Int64,
+                  let mtime = a[.modificationDate] as? Date,
+                  let type = a[.type] as? FileAttributeType,
+                  type == .typeRegular else { continue }
+            attrs.append((url, mtime, size))
+        }
+
+        let total = attrs.map(\.2).reduce(0, +)
+        guard total > maxDownloadCacheBytes else { return }
+
+        let sorted = attrs.sorted { $0.1 < $1.1 }
+        var remaining = total
+        for (url, _, size) in sorted {
+            if remaining <= maxDownloadCacheBytes { break }
+            try? FileManager.default.removeItem(at: url)
+            remaining -= size
+        }
     }
 
     private func imageContent(localURL: URL) throws -> (mimeType: String, fileExtension: String) {

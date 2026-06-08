@@ -41,7 +41,8 @@ final class HistoryCacheService {
     func storeDownload(roomId: String, messageId: String, sourceTemp: URL) throws -> URL {
         let dest = localURL(roomId: roomId, messageId: messageId)
         try? FileManager.default.removeItem(at: dest)
-        try FileManager.default.moveItem(at: sourceTemp, to: dest)
+        try FileManager.default.copyItem(at: sourceTemp, to: dest)
+        removeIfTemporaryFile(sourceTemp)
         Task { await evictIfNeeded() }
         return dest
     }
@@ -58,9 +59,18 @@ final class HistoryCacheService {
             fileExtension: fileExtension
         )
         try? FileManager.default.removeItem(at: dest)
-        try FileManager.default.moveItem(at: sourceTemp, to: dest)
+        try FileManager.default.copyItem(at: sourceTemp, to: dest)
+        removeIfTemporaryFile(sourceTemp)
         Task { await evictIfNeeded() }
         return dest
+    }
+
+    private func removeIfTemporaryFile(_ url: URL) {
+        let tempRoot = FileManager.default.temporaryDirectory.standardizedFileURL.path
+        let path = url.standardizedFileURL.path
+        guard path.hasPrefix(tempRoot) else { return }
+
+        try? FileManager.default.removeItem(at: url)
     }
 
     func evictIfNeeded() async {
