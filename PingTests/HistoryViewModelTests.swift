@@ -124,6 +124,21 @@ final class HistoryViewModelTests: XCTestCase {
         XCTAssertFalse(deleteBody.contains("delete from storage.objects"))
     }
 
+    func test_videoThumbnailsUseDedicatedDiskCacheBeforeRemoteFetch() throws {
+        let cacheSource = try readProjectSource("Ping/Backend/HistoryCacheService.swift")
+        let thumbnailSource = try readProjectSource("Ping/UI/History/VideoThumbnailView.swift")
+
+        XCTAssertTrue(cacheSource.contains("func thumbnailLocalURL(roomId: String, messageId: String) -> URL"))
+        XCTAssertTrue(cacheSource.contains("func cachedThumbnail(roomId: String, messageId: String) -> URL?"))
+        XCTAssertTrue(cacheSource.contains("func storeThumbnail(_ image: NSImage, roomId: String, messageId: String) throws -> URL"))
+        XCTAssertTrue(thumbnailSource.contains("cacheService.cachedThumbnail(roomId: message.roomId, messageId: id)"))
+        XCTAssertTrue(thumbnailSource.contains("cacheService.storeThumbnail(extracted, roomId: roomId, messageId: messageId)"))
+
+        let cachedThumbRange = try XCTUnwrap(thumbnailSource.range(of: "cacheService.cachedThumbnail(roomId: message.roomId, messageId: id)"))
+        let remoteDownloadRange = try XCTUnwrap(thumbnailSource.range(of: "storage.downloadVideo(remotePath: message.videoUrl)"))
+        XCTAssertLessThan(cachedThumbRange.lowerBound, remoteDownloadRange.lowerBound)
+    }
+
     private func makeMsg(
         id: String,
         createdAt: Date,

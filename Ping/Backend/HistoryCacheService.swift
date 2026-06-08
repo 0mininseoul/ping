@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 
 @MainActor
@@ -28,6 +29,12 @@ final class HistoryCacheService {
         return roomDir.appendingPathComponent("\(messageId)-attachment.\(ext)")
     }
 
+    func thumbnailLocalURL(roomId: String, messageId: String) -> URL {
+        let roomDir = baseDir.appendingPathComponent(roomId)
+        try? FileManager.default.createDirectory(at: roomDir, withIntermediateDirectories: true)
+        return roomDir.appendingPathComponent("\(messageId)-thumbnail.jpg")
+    }
+
     func cachedFile(roomId: String, messageId: String) -> URL? {
         let url = localURL(roomId: roomId, messageId: messageId)
         return FileManager.default.fileExists(atPath: url.path) ? url : nil
@@ -35,6 +42,11 @@ final class HistoryCacheService {
 
     func cachedAttachmentFile(roomId: String, messageId: String, fileExtension: String) -> URL? {
         let url = attachmentLocalURL(roomId: roomId, messageId: messageId, fileExtension: fileExtension)
+        return FileManager.default.fileExists(atPath: url.path) ? url : nil
+    }
+
+    func cachedThumbnail(roomId: String, messageId: String) -> URL? {
+        let url = thumbnailLocalURL(roomId: roomId, messageId: messageId)
         return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
 
@@ -63,6 +75,27 @@ final class HistoryCacheService {
         removeIfTemporaryFile(sourceTemp)
         Task { await evictIfNeeded() }
         return dest
+    }
+
+    func storeThumbnail(_ image: NSImage, roomId: String, messageId: String) throws -> URL {
+        let dest = thumbnailLocalURL(roomId: roomId, messageId: messageId)
+        guard let data = jpegData(for: image) else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+
+        try? FileManager.default.removeItem(at: dest)
+        try data.write(to: dest, options: .atomic)
+        Task { await evictIfNeeded() }
+        return dest
+    }
+
+    private func jpegData(for image: NSImage) -> Data? {
+        guard let tiff = image.tiffRepresentation,
+              let bitmap = NSBitmapImageRep(data: tiff) else {
+            return nil
+        }
+
+        return bitmap.representation(using: .jpeg, properties: [.compressionFactor: 0.72])
     }
 
     private func removeIfTemporaryFile(_ url: URL) {

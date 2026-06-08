@@ -56,15 +56,19 @@ struct VideoThumbnailView: View {
     private func load() async {
         guard let id = message.id else { hasFailed = true; return }
 
-        // 1) Try cache first
+        if let thumbnailURL = cacheService.cachedThumbnail(roomId: message.roomId, messageId: id),
+           let cachedThumbnail = NSImage(contentsOf: thumbnailURL) {
+            thumbnail = cachedThumbnail
+            return
+        }
+
+        // 1) Try video cache first
         if let cached = cacheService.cachedFile(roomId: message.roomId, messageId: id) {
-            thumbnail = await extractFrame(from: cached)
-            if thumbnail == nil { hasFailed = true }
+            await loadThumbnail(from: cached, roomId: message.roomId, messageId: id)
             return
         }
         if let archived = archivedVideoURL() {
-            thumbnail = await extractFrame(from: archived)
-            if thumbnail == nil { hasFailed = true }
+            await loadThumbnail(from: archived, roomId: message.roomId, messageId: id)
             return
         }
 
@@ -79,12 +83,21 @@ struct VideoThumbnailView: View {
             let storage = StorageService()
             let temp = try await storage.downloadVideo(remotePath: message.videoUrl)
             let local = try cacheService.storeDownload(roomId: message.roomId, messageId: id, sourceTemp: temp)
-            thumbnail = await extractFrame(from: local)
-            if thumbnail == nil { hasFailed = true }
+            await loadThumbnail(from: local, roomId: message.roomId, messageId: id)
         } catch {
             NSLog("VideoThumbnailView: download failed for \(id): \(error)")
             hasFailed = true
         }
+    }
+
+    private func loadThumbnail(from url: URL, roomId: String, messageId: String) async {
+        guard let extracted = await extractFrame(from: url) else {
+            hasFailed = true
+            return
+        }
+
+        _ = try? cacheService.storeThumbnail(extracted, roomId: roomId, messageId: messageId)
+        thumbnail = extracted
     }
 
     private func extractFrame(from url: URL) async -> NSImage? {
