@@ -12,6 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var settingsWindow: SettingsWindow?
     private var playbackWindows: [PlaybackWindow] = []
     private var playbackCache: [String: URL] = [:]
+    private var playbackPrefetchTasks: [String: Task<URL?, Never>] = [:]
 
     private let appState = AppState.shared
     private let camera = CameraManager()
@@ -78,6 +79,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         roomObserverTask?.cancel()
         invitationObserverTask?.cancel()
         incomingMessageTask?.cancel()
+        cancelPlaybackPrefetches()
         cameraStartTask?.cancel()
         camera.stop()
         Task { await chatRealtime.unsubscribeAll() }
@@ -195,6 +197,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         roomObserverTask?.cancel()
         invitationObserverTask?.cancel()
         incomingMessageTask?.cancel()
+        cancelPlaybackPrefetches()
 
         roomObserverTask = Task { @MainActor in
             var didHandleInitialSnapshot = false
@@ -248,6 +251,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     continue
                 }
                 ledger.remember(.video, uid: uid, id: id)
+                await prefetchMessageVideo(message)
                 LocalNotificationCenter.shared.notifyIncomingMessage(
                     senderNickname: message.senderNickname,
                     messageId: id,
@@ -544,9 +548,55 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return cachedURL
         }
 
+        if let prefetchTask = playbackPrefetchTasks[messageId],
+           let prefetchedURL = await prefetchTask.value,
+           FileManager.default.fileExists(atPath: prefetchedURL.path) {
+            playbackCache[messageId] = prefetchedURL
+            return prefetchedURL
+        }
+
         let url = try await downloadMessageVideo(message)
         playbackCache[messageId] = url
         return url
+    }
+
+    @discardableResult
+    private func prefetchMessageVideo(_ message: VideoMessage) async -> URL? {
+        guard let messageId = message.id else {
+            return try? await cachedVideoURL(for: message)
+        }
+
+        if let cachedURL = playbackCache[messageId],
+           FileManager.default.fileExists(atPath: cachedURL.path) {
+            return cachedURL
+        }
+
+        if let prefetchTask = playbackPrefetchTasks[messageId] {
+            return await prefetchTask.value
+        }
+
+        let task = Task { @MainActor [weak self] () -> URL? in
+            guard let self else { return nil }
+
+            do {
+                return try await self.cachedVideoURL(for: message)
+            } catch {
+                NSLog("Video prefetch failed: \(error)")
+                return nil
+            }
+        }
+
+        playbackPrefetchTasks[messageId] = task
+        let url = await task.value
+        playbackPrefetchTasks[messageId] = nil
+        return url
+    }
+
+    private func cancelPlaybackPrefetches() {
+        for task in playbackPrefetchTasks.values {
+            task.cancel()
+        }
+        playbackPrefetchTasks.removeAll()
     }
 
     private func downloadMessageVideo(_ message: VideoMessage) async throws -> URL {
@@ -951,6 +1001,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         roomObserverTask?.cancel(); roomObserverTask = nil
         invitationObserverTask?.cancel(); invitationObserverTask = nil
         incomingMessageTask?.cancel(); incomingMessageTask = nil
+        cancelPlaybackPrefetches()
         chatCatchUpTask?.cancel(); chatCatchUpTask = nil
 
         if mirrorWindow != nil { closeMirrorWindow() }
