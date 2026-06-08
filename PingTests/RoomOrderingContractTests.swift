@@ -50,6 +50,23 @@ final class RoomOrderingContractTests: XCTestCase {
         XCTAssertTrue(functionSource.contains("m.created_at > coalesce"))
     }
 
+    func testIncomingVideoNotificationsArePersistentlyDeliveredOnce() throws {
+        let migrations = try readSupabaseMigrationSources()
+        let messageService = try readSourceFile("Ping/Backend/MessageService.swift")
+        let appDelegate = try readSourceFile("Ping/AppDelegate.swift")
+
+        XCTAssertTrue(migrations.contains("add column if not exists notified_at"))
+        XCTAssertTrue(migrations.contains("create or replace function public.ping_mark_message_notified"))
+        XCTAssertTrue(migrations.contains("set notified_at = coalesce(notified_at, now())"))
+        XCTAssertTrue(migrations.contains("m.notified_at is null"))
+        XCTAssertTrue(messageService.contains("func markNotified(messageId: String) async throws"))
+        XCTAssertTrue(messageService.contains("\"ping_mark_message_notified\""))
+
+        let markRange = try XCTUnwrap(appDelegate.range(of: "try? await messageService.markNotified(messageId: id)"))
+        let notifyRange = try XCTUnwrap(appDelegate.range(of: "LocalNotificationCenter.shared.notifyIncomingMessage"))
+        XCTAssertLessThan(markRange.lowerBound, notifyRange.lowerBound)
+    }
+
     func testSharedRoomModelsDecodeOrderAndUnreadMetadata() throws {
         let macModels = try readSourceFile("Ping/Core/Models.swift")
         let pingKitModels = try readSourceFile("PingKit/Sources/PingKit/PingRoomModels.swift")

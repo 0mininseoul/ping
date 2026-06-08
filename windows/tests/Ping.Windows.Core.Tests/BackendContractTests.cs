@@ -581,6 +581,7 @@ public sealed class BackendContractTests
         var incoming = await service.IncomingAsync();
         var message = await service.GetAsync("message-id");
         await service.MarkSeenAsync("message-id");
+        await service.MarkNotifiedAsync("message-id");
         var roomMessages = await service.RoomMessagesAsync("room-id", limit: 25);
         await service.DeleteMessageAsync("message-id");
         await service.HideMessageForReceiverAsync("message-id");
@@ -601,24 +602,30 @@ public sealed class BackendContractTests
             {"message_uuid":"message-id"}
             """,
             JsonSerializer.Serialize(rpc.Calls[2].Body, JsonOptions.Supabase));
-        Assert.Equal("ping_room_messages", rpc.Calls[3].Function);
-        Assert.Equal(
-            """
-            {"room_uuid":"room-id","before_ts":null,"page_limit":25}
-            """,
-            JsonSerializer.Serialize(rpc.Calls[3].Body, JsonOptions.Supabase));
-        Assert.Equal("ping_delete_message", rpc.Calls[4].Function);
+        Assert.Equal("ping_mark_message_notified", rpc.Calls[3].Function);
         Assert.Equal(
             """
             {"message_uuid":"message-id"}
             """,
+            JsonSerializer.Serialize(rpc.Calls[3].Body, JsonOptions.Supabase));
+        Assert.Equal("ping_room_messages", rpc.Calls[4].Function);
+        Assert.Equal(
+            """
+            {"room_uuid":"room-id","before_ts":null,"page_limit":25}
+            """,
             JsonSerializer.Serialize(rpc.Calls[4].Body, JsonOptions.Supabase));
-        Assert.Equal("ping_hide_message_for_receiver", rpc.Calls[5].Function);
+        Assert.Equal("ping_delete_message", rpc.Calls[5].Function);
         Assert.Equal(
             """
             {"message_uuid":"message-id"}
             """,
             JsonSerializer.Serialize(rpc.Calls[5].Body, JsonOptions.Supabase));
+        Assert.Equal("ping_hide_message_for_receiver", rpc.Calls[6].Function);
+        Assert.Equal(
+            """
+            {"message_uuid":"message-id"}
+            """,
+            JsonSerializer.Serialize(rpc.Calls[6].Body, JsonOptions.Supabase));
     }
 
     [Fact]

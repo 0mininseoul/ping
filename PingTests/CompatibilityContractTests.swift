@@ -37,8 +37,11 @@ final class CompatibilityContractTests: XCTestCase {
         XCTAssertTrue(appTarget.contains("LSApplicationCategoryType: public.app-category.social-networking"))
         XCTAssertTrue(info.contains("<key>LSApplicationCategoryType</key>"))
         XCTAssertTrue(info.contains("<string>public.app-category.social-networking</string>"))
-        XCTAssertTrue(willFinish.contains("NSApp.setActivationPolicy(.accessory)"))
-        XCTAssertFalse(didFinish.contains("NSApp.setActivationPolicy(.accessory)"))
+        XCTAssertTrue(willFinish.contains("enforceAccessoryActivationPolicy()"))
+        XCTAssertTrue(didFinish.contains("enforceAccessoryActivationPolicySoon()"))
+        XCTAssertTrue(appDelegate.contains("func applicationDidBecomeActive"))
+        XCTAssertTrue(appDelegate.contains("func applicationShouldHandleReopen"))
+        XCTAssertTrue(appDelegate.contains("NSApp.setActivationPolicy(.accessory)"))
     }
 
     func testDocsDescribeMacOS13CompatibilityInsteadOfMacOS26Only() throws {

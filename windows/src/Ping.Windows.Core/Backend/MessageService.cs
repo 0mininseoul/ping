@@ -31,6 +31,12 @@ public sealed class MessageService(ISupabaseRpcClient client, IStorageService st
             new MessageIdRpcBody(messageId),
             cancellationToken);
 
+    public Task MarkNotifiedAsync(string messageId, CancellationToken cancellationToken = default) =>
+        client.RpcVoidAsync(
+            "ping_mark_message_notified",
+            new MessageIdRpcBody(messageId),
+            cancellationToken);
+
     public Task<IReadOnlyList<VideoMessage>> RoomMessagesAsync(
         string roomId,
         DateTimeOffset? beforeTimestamp = null,

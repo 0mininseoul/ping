@@ -236,7 +236,11 @@ public sealed class AppCoordinatorSourceTests
         Assert.True(nextMethodStart > handlerStart);
         var handlerBody = source[handlerStart..nextMethodStart];
 
+        Assert.Contains("await messageService.MarkNotifiedAsync(messageId, cancellationToken)", handlerBody, StringComparison.Ordinal);
         Assert.Contains("notificationController.ShowIncoming(message)", handlerBody, StringComparison.Ordinal);
+        Assert.True(
+            handlerBody.IndexOf("MarkNotifiedAsync", StringComparison.Ordinal) <
+            handlerBody.IndexOf("ShowIncoming", StringComparison.Ordinal));
         Assert.Contains("notificationResult == NotificationShowResult.Duplicate", handlerBody, StringComparison.Ordinal);
         Assert.DoesNotContain("OpenIncomingPlaybackAsync", handlerBody, StringComparison.Ordinal);
         Assert.DoesNotContain("DownloadVideoForPlaybackAsync(message, cancellationToken)", handlerBody, StringComparison.Ordinal);

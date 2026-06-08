@@ -51,10 +51,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillFinishLaunching(_ notification: Notification) {
-        NSApp.setActivationPolicy(.accessory)
+        enforceAccessoryActivationPolicy()
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        enforceAccessoryActivationPolicySoon()
         PingAppearanceMode.applyCurrent()
         LocalArchive.migrateLegacyPreferencesIfNeeded()
         LocalArchive.ensureFolders()
@@ -74,6 +75,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    func applicationDidBecomeActive(_ notification: Notification) {
+        enforceAccessoryActivationPolicySoon()
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        enforceAccessoryActivationPolicySoon()
+        return false
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
         bootstrapTask?.cancel()
         roomObserverTask?.cancel()
@@ -91,6 +101,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         acceptInviteLink(token: token)
+    }
+
+    private func enforceAccessoryActivationPolicy() {
+        NSApp.setActivationPolicy(.accessory)
+    }
+
+    private func enforceAccessoryActivationPolicySoon() {
+        enforceAccessoryActivationPolicy()
+        Task { @MainActor [weak self] in
+            await Task.yield()
+            self?.enforceAccessoryActivationPolicy()
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            self?.enforceAccessoryActivationPolicy()
+        }
     }
 
     private func setupStatusBar() {
@@ -198,6 +222,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         invitationObserverTask?.cancel()
         incomingMessageTask?.cancel()
         cancelPlaybackPrefetches()
+        seedVideoNotificationLedgerFromHistoryCache(uid: uid)
 
         roomObserverTask = Task { @MainActor in
             var didHandleInitialSnapshot = false
@@ -251,6 +276,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     continue
                 }
                 ledger.remember(.video, uid: uid, id: id)
+                try? await messageService.markNotified(messageId: id)
                 await prefetchMessageVideo(message)
                 LocalNotificationCenter.shared.notifyIncomingMessage(
                     senderNickname: message.senderNickname,
@@ -258,6 +284,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     roomId: message.roomId
                 )
             }
+        }
+    }
+
+    private func seedVideoNotificationLedgerFromHistoryCache(uid: String) {
+        for id in HistoryCacheService.shared.cachedVideoMessageIds() {
+            ledger.remember(.video, uid: uid, id: id)
         }
     }
 

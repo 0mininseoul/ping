@@ -927,6 +927,11 @@ public sealed class AppCoordinator : IDisposable
 
     private async Task HandleIncomingMessageAsync(VideoMessage message, CancellationToken cancellationToken)
     {
+        if (message.Id is { } messageId)
+        {
+            await messageService.MarkNotifiedAsync(messageId, cancellationToken);
+        }
+
         var notificationResult = notificationController.ShowIncoming(message);
         if (notificationResult == NotificationShowResult.Duplicate)
         {

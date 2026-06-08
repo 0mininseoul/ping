@@ -126,6 +126,12 @@ final class MessageService {
         ])
     }
 
+    func markNotified(messageId: String) async throws {
+        try await client.rpcVoid("ping_mark_message_notified", body: [
+            "message_uuid": messageId
+        ])
+    }
+
     func roomMessages(roomId: String, beforeTimestamp: Date? = nil, limit: Int = 50) async throws -> [VideoMessage] {
         var body: [String: Any] = [
             "room_uuid": roomId,

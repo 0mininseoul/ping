@@ -53,6 +53,19 @@ final class UpdaterBehaviorContractTests: XCTestCase {
         XCTAssertTrue(updater.contains("NSApp.setActivationPolicy(.accessory)"))
     }
 
+    func testAppReappliesAccessoryPolicyAfterLaunchActivationAndDockReopen() throws {
+        let appDelegate = try readSourceFile("AppDelegate.swift")
+
+        XCTAssertTrue(appDelegate.contains("func applicationWillFinishLaunching"))
+        XCTAssertTrue(appDelegate.contains("func applicationDidFinishLaunching"))
+        XCTAssertTrue(appDelegate.contains("func applicationDidBecomeActive"))
+        XCTAssertTrue(appDelegate.contains("func applicationShouldHandleReopen"))
+        XCTAssertTrue(appDelegate.contains("private func enforceAccessoryActivationPolicySoon()"))
+        XCTAssertTrue(appDelegate.contains("NSApp.setActivationPolicy(.accessory)"))
+        XCTAssertTrue(appDelegate.contains("try? await Task.sleep(nanoseconds: 500_000_000)"))
+        XCTAssertTrue(appDelegate.contains("return false"))
+    }
+
     private func readSourceFile(_ relativePath: String) throws -> String {
         let fileName = URL(fileURLWithPath: relativePath).lastPathComponent
         let fileURL = try XCTUnwrap(Bundle(for: Self.self).resourceURL?.appendingPathComponent(fileName))

@@ -131,6 +131,9 @@ final class HistoryViewModelTests: XCTestCase {
         XCTAssertTrue(cacheSource.contains("func thumbnailLocalURL(roomId: String, messageId: String) -> URL"))
         XCTAssertTrue(cacheSource.contains("func cachedThumbnail(roomId: String, messageId: String) -> URL?"))
         XCTAssertTrue(cacheSource.contains("func storeThumbnail(_ image: NSImage, roomId: String, messageId: String) throws -> URL"))
+        XCTAssertTrue(cacheSource.contains("func cachedVideoMessageIds() -> Set<String>"))
+        XCTAssertTrue(cacheSource.contains("ext == \"mp4\""))
+        XCTAssertTrue(cacheSource.contains("name.hasSuffix(\"-thumbnail\")"))
         XCTAssertTrue(thumbnailSource.contains("cacheService.cachedThumbnail(roomId: message.roomId, messageId: id)"))
         XCTAssertTrue(thumbnailSource.contains("cacheService.storeThumbnail(extracted, roomId: roomId, messageId: messageId)"))
 
@@ -152,6 +155,20 @@ final class HistoryViewModelTests: XCTestCase {
         XCTAssertTrue(source.contains("private func rememberLoadedIncomingVideosRead()"))
         XCTAssertTrue(source.contains("video.receiverUid == uid"))
         XCTAssertTrue(source.contains("notificationLedger.remember(.video, uid: uid, id: id)"))
+    }
+
+    func test_appDelegateSeedsVideoNotificationLedgerFromHistoryCacheBeforePolling() throws {
+        let source = try readProjectSource("Ping/AppDelegate.swift")
+        let startBody = try extract(
+            "private func startObservers(uid: String",
+            through: "roomObserverTask = Task",
+            from: source
+        )
+
+        XCTAssertTrue(source.contains("private func seedVideoNotificationLedgerFromHistoryCache(uid: String)"))
+        XCTAssertTrue(source.contains("HistoryCacheService.shared.cachedVideoMessageIds()"))
+        XCTAssertTrue(source.contains("ledger.remember(.video, uid: uid, id: id)"))
+        XCTAssertTrue(startBody.contains("seedVideoNotificationLedgerFromHistoryCache(uid: uid)"))
     }
 
     private func makeMsg(

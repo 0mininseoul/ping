@@ -50,6 +50,28 @@ final class HistoryCacheService {
         return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
 
+    func cachedVideoMessageIds() -> Set<String> {
+        let files = (try? FileManager.default.subpathsOfDirectory(atPath: baseDir.path)) ?? []
+        var ids = Set<String>()
+
+        for subpath in files {
+            let url = URL(fileURLWithPath: subpath)
+            let name = url.deletingPathExtension().lastPathComponent
+            let ext = url.pathExtension.lowercased()
+
+            if ext == "mp4", !name.isEmpty {
+                ids.insert(name)
+            } else if ext == "jpg", name.hasSuffix("-thumbnail") {
+                let id = String(name.dropLast("-thumbnail".count))
+                if !id.isEmpty {
+                    ids.insert(id)
+                }
+            }
+        }
+
+        return ids
+    }
+
     func storeDownload(roomId: String, messageId: String, sourceTemp: URL) throws -> URL {
         let dest = localURL(roomId: roomId, messageId: messageId)
         try? FileManager.default.removeItem(at: dest)
