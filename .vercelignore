@@ -3,10 +3,14 @@
 !.vercel/output/
 !.vercel/output/**
 !package.json
+!package-lock.json
+!vercel.json
 !api/
 !api/**
 !web/
 !web/**
+!web/package.json
+!web/package-lock.json
 web/.DS_Store
 web/.vercel/**
 web/dist/**
