@@ -34,7 +34,7 @@ Supabase Dashboard의 Authentication 설정에서 Anonymous sign-ins가 켜져 �
 
 ### macOS
 
-1. `Ping-v0.3.45.dmg`를 더블클릭해 마운트한다.
+1. `Ping-v0.3.46.dmg`를 더블클릭해 마운트한다.
 2. `Ping.app`을 Applications 폴더로 드래그한다.
 3. 더블클릭해 실행한다. Developer ID 서명 + Apple 공증(notarized) 빌드라 Gatekeeper 경고 없이 바로 열린다.
 4. 카메라, 마이크, 알림 권한을 허용한다.
@@ -44,14 +44,14 @@ Supabase Dashboard의 Authentication 설정에서 Anonymous sign-ins가 켜져 �
 
 Windows 앱은 `windows/` 아래 별도 네이티브 클라이언트다.
 
-1. 랜딩페이지에서 `PingSetup-v0.3.45.exe`를 내려받아 실행한다.
+1. 랜딩페이지에서 `PingSetup-v0.3.46.exe`를 내려받아 실행한다.
 2. Windows SmartScreen 경고가 보이면 `추가 정보` → `실행`을 선택한다. 무료 자체서명 배포라 정상적인 경고다.
 3. UAC 관리자 권한을 승인한다.
 4. 설치 프로그램이 공개 인증서 `Ping-Windows-Sideload.cer`를 Windows `Trusted People` 저장소에 등록한 뒤 PC 아키텍처에 맞는 MSIX를 공개 다운로드 서버에서 받아 설치하고 Ping을 실행한다.
 5. `%LOCALAPPDATA%\Ping\Supabase.json`에 Supabase URL과 anon key를 저장한다.
 6. 온보딩에서 카메라, 마이크, 화면 캡처, 알림, 단축키, 시작프로그램 상태를 확인한다.
 
-`Ping-Windows-v0.3.45-sideload.zip`은 fallback/debug용 배포물이다. 일반 사용자는 `PingSetup-v0.3.45.exe`를 받으면 된다.
+`Ping-Windows-v0.3.46-sideload.zip`은 fallback/debug용 배포물이다. 일반 사용자는 `PingSetup-v0.3.46.exe`를 받으면 된다.
 
 자세한 Windows 빌드/설치/QA 절차는 `docs/WINDOWS_APP_SETUP.md`와 `windows/README.md`를 따른다.
 
@@ -80,7 +80,12 @@ macOS 앱은 Sparkle로 업데이트를 확인한다. 새 버전이 공개되면
 
 0.3.28 초기 빌드(38/39)에서 업데이트 설치 오류가 반복되면 랜딩페이지의 최신 macOS DMG를 한 번 수동으로 내려받아 `Ping.app`을 Applications 폴더에 덮어쓴다. 이 초기 빌드는 Sparkle installer helper 권한/서명이 잘못 들어간 상태라, 현재 실행 중인 앱만으로는 자동 업데이트 설치가 실패할 수 있다. build 40 이상은 Sparkle helper 권한을 보존하고 sandbox mach-lookup 예외를 포함한다.
 
-Windows 앱은 Sparkle을 사용하지 않는다. 비용 없는 배포는 self-signed MSIX를 작은 `PingSetup-v0.3.45.exe` 웹 설치파일로 감싸고, 설치 중 PC 아키텍처에 맞는 MSIX를 `https://0minping.vercel.app/downloads/windows/`에서 받는 방식이다. 최초 설치 시 installer가 Ping 공개 인증서를 등록한다. Microsoft Store, Azure Artifact Signing, OV 코드서명 인증서는 더 매끄러운 신뢰 UX를 제공하지만 비용 또는 외부 계정 검증이 필요하다.
+Windows 앱은 Sparkle을 사용하지 않는다. 비용 없는 배포는 self-signed MSIX를 작은 `PingSetup-v0.3.46.exe` 웹 설치파일로 감싸고, 설치 중 PC 아키텍처에 맞는 MSIX를 `https://0minping.vercel.app/downloads/windows/`에서 받는 방식이다. 최초 설치 시 installer가 Ping 공개 인증서를 등록한다. Microsoft Store, Azure Artifact Signing, OV 코드서명 인증서는 더 매끄러운 신뢰 UX를 제공하지만 비용 또는 외부 계정 검증이 필요하다.
+
+## v0.3.46 macOS/Windows/iOS 수정
+
+- 채팅에 URL을 보내면 하이퍼링크로 표시하고, 가능한 경우 제목/설명/OG 이미지를 포함한 링크 프리뷰를 보여준다.
+- 링크 프리뷰 카드를 클릭하면 macOS, Windows, iOS에서 기본 브라우저로 해당 링크를 연다.
 
 ## v0.3.45 macOS/Windows 수정
 
