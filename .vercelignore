@@ -5,8 +5,10 @@
 !package.json
 !package-lock.json
 !vercel.json
+!api
 !api/
 !api/**
+!web
 !web/
 !web/**
 !web/package.json
