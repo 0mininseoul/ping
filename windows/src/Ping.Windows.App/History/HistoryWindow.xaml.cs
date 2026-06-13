@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml.Media;
 using Ping.Windows.App.Playback;
 using Ping.Windows.Core.Backend;
 using Ping.Windows.Core.Models;
+using Windows.System;
 using Windows.Storage.Pickers;
 using WinRT.Interop;
 
@@ -210,6 +211,14 @@ public sealed partial class HistoryWindow : Window
         if (ChatItem(sender) is { } item)
         {
             await RunAsync(() => viewModel.DeleteChatAsync(item));
+        }
+    }
+
+    private async void OpenChatLinkButton_Click(object sender, RoutedEventArgs args)
+    {
+        if (ChatItem(sender)?.LinkPreviewUrl is { } url)
+        {
+            await Launcher.LaunchUriAsync(url);
         }
     }
 

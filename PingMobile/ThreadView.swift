@@ -175,6 +175,10 @@ struct ThreadView: View {
                                     .fill(mine ? Color.accentColor : Color.gray.opacity(0.18))
                             )
                     }
+
+                    if let url = PingLinkPreviewDetector.firstURL(in: chat.body) {
+                        LinkPreviewCard(url: url, mine: mine)
+                    }
                 }
                 .contextMenu {
                     messageContextMenu(

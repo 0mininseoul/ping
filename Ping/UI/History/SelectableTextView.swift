@@ -50,7 +50,15 @@ struct SelectableTextView: NSViewRepresentable {
             .font: font,
             .foregroundColor: textColor
         ]
-        tv.textStorage?.setAttributedString(NSAttributedString(string: text, attributes: attrs))
+        let attributed = NSMutableAttributedString(string: text, attributes: attrs)
+        for match in LinkPreviewDetector.matches(in: text) {
+            attributed.addAttributes([
+                .link: match.url,
+                .underlineStyle: NSUnderlineStyle.single.rawValue,
+                .foregroundColor: NSColor.linkColor
+            ], range: match.range)
+        }
+        tv.textStorage?.setAttributedString(attributed)
     }
 }
 
@@ -82,6 +90,35 @@ final class ContextMenuTextView: NSTextView {
     override func menu(for event: NSEvent) -> NSMenu? {
         // 시스템 메뉴 대신 항상 우리 메뉴 반환
         return menuProvider?() ?? super.menu(for: event)
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        let link = selectedRange().length == 0 ? linkURL(at: event) : nil
+        if let url = link {
+            NSWorkspace.shared.open(url)
+            return
+        }
+        super.mouseUp(with: event)
+    }
+
+    private func linkURL(at event: NSEvent) -> URL? {
+        guard let layoutManager, let textContainer else { return nil }
+        var point = convert(event.locationInWindow, from: nil)
+        point.x -= textContainerOrigin.x
+        point.y -= textContainerOrigin.y
+
+        let glyphIndex = layoutManager.glyphIndex(for: point, in: textContainer)
+        let characterIndex = layoutManager.characterIndexForGlyph(at: glyphIndex)
+        guard characterIndex < attributedString().length else { return nil }
+
+        let value = attributedString().attribute(.link, at: characterIndex, effectiveRange: nil)
+        if let url = value as? URL {
+            return url
+        }
+        if let string = value as? String {
+            return URL(string: string)
+        }
+        return nil
     }
 }
 

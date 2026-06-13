@@ -17,6 +17,7 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
     private readonly ChatMessageService chatService;
     private readonly ReactionService reactionService;
     private readonly IChatMediaStorageService storageService;
+    private readonly ILinkPreviewService linkPreviewService;
     private readonly Func<string?> currentUidProvider;
     private static readonly string[] QuickReactions = ["❤️", "👍", "👎", "😂", "‼️", "❓"];
     private Room? selectedRoom;
@@ -31,7 +32,8 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         ChatMessageService chatService,
         ReactionService reactionService,
         IChatMediaStorageService storageService,
-        Func<string?> currentUidProvider)
+        Func<string?> currentUidProvider,
+        ILinkPreviewService? linkPreviewService = null)
     {
         this.roomService = roomService;
         this.messageService = messageService;
@@ -39,6 +41,7 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         this.reactionService = reactionService;
         this.storageService = storageService;
         this.currentUidProvider = currentUidProvider;
+        this.linkPreviewService = linkPreviewService ?? new LinkPreviewService();
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -234,6 +237,7 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         RebuildTimeline();
         RestoreSelectedTimelineItem(previousSelectedSortKind, previousSelectedSortId);
         await LoadChatImagesAsync(cancellationToken);
+        await LoadLinkPreviewsAsync(cancellationToken);
         if (await MarkSelectedRoomReadAsync(roomId, cancellationToken))
         {
             ClearSelectedRoomUnreadBadge(roomId);
@@ -454,6 +458,15 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
             {
                 row.SetAttachmentError();
             }
+        }
+    }
+
+    private async Task LoadLinkPreviewsAsync(CancellationToken cancellationToken)
+    {
+        foreach (var row in Chats.Where(row => row.LinkPreviewUrl is not null))
+        {
+            var metadata = await linkPreviewService.MetadataAsync(row.LinkPreviewUrl!, cancellationToken);
+            row.SetLinkPreview(metadata);
         }
     }
 

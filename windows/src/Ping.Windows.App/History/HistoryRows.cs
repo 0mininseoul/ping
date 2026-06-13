@@ -124,10 +124,13 @@ public sealed class ChatHistoryItem : INotifyPropertyChanged
 {
 #if WINDOWS
     private BitmapImage? imageSource;
+    private BitmapImage? linkPreviewImageSource;
 #else
     private Uri? imageSource;
+    private Uri? linkPreviewImageSource;
 #endif
     private string attachmentStatus;
+    private LinkPreviewMetadata? linkPreview;
 
     public ChatHistoryItem(
         ChatMessage message,
@@ -144,6 +147,7 @@ public sealed class ChatHistoryItem : INotifyPropertyChanged
         attachmentStatus = message.MediaFileName ?? (HasImageAttachment ? "Image attachment" : string.Empty);
         IsMine = string.Equals(message.SenderUid, currentUid, StringComparison.Ordinal);
         ReplyPreview = replyPreview ?? string.Empty;
+        LinkPreviewUrl = LinkPreviewDetector.FirstUrl(Message.Body);
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -165,6 +169,16 @@ public sealed class ChatHistoryItem : INotifyPropertyChanged
     public bool IsMine { get; }
 
     public string ReplyPreview { get; }
+
+    public Uri? LinkPreviewUrl { get; }
+
+    public string LinkPreviewTitle => linkPreview?.DisplayTitle
+        ?? (LinkPreviewUrl is null ? string.Empty : LinkPreviewDetector.DisplayHost(LinkPreviewUrl));
+
+    public string LinkPreviewSummary => linkPreview?.Summary ?? string.Empty;
+
+    public string LinkPreviewHost => linkPreview?.DisplayHost
+        ?? (LinkPreviewUrl is null ? string.Empty : LinkPreviewDetector.DisplayHost(LinkPreviewUrl));
 
     public string PreviewText
     {
@@ -189,6 +203,14 @@ public sealed class ChatHistoryItem : INotifyPropertyChanged
 
     public Visibility ReplyPreviewVisibility => string.IsNullOrWhiteSpace(ReplyPreview) ? Visibility.Collapsed : Visibility.Visible;
 
+    public Visibility LinkPreviewVisibility => LinkPreviewUrl is null ? Visibility.Collapsed : Visibility.Visible;
+
+    public Visibility LinkPreviewSummaryVisibility => string.IsNullOrWhiteSpace(LinkPreviewSummary) ? Visibility.Collapsed : Visibility.Visible;
+
+    public Visibility LinkPreviewImageVisibility => linkPreviewImageSource is null ? Visibility.Collapsed : Visibility.Visible;
+
+    public BitmapImage? LinkPreviewImageSource => linkPreviewImageSource;
+
     public BitmapImage? ImageSource
 #else
     public bool AttachmentVisibility => HasImageAttachment;
@@ -198,6 +220,14 @@ public sealed class ChatHistoryItem : INotifyPropertyChanged
     public bool ImageVisibility => imageSource is not null;
 
     public bool ReplyPreviewVisibility => !string.IsNullOrWhiteSpace(ReplyPreview);
+
+    public bool LinkPreviewVisibility => LinkPreviewUrl is not null;
+
+    public bool LinkPreviewSummaryVisibility => !string.IsNullOrWhiteSpace(LinkPreviewSummary);
+
+    public bool LinkPreviewImageVisibility => linkPreviewImageSource is not null;
+
+    public Uri? LinkPreviewImageSource => linkPreviewImageSource;
 
     public Uri? ImageSource
 #endif
@@ -229,6 +259,22 @@ public sealed class ChatHistoryItem : INotifyPropertyChanged
         ImageSource = new Uri(Path.GetFullPath(localPath));
 #endif
         AttachmentStatus = string.IsNullOrWhiteSpace(MediaFileName) ? "Image" : MediaFileName;
+    }
+
+    public void SetLinkPreview(LinkPreviewMetadata metadata)
+    {
+        linkPreview = metadata;
+#if WINDOWS
+        linkPreviewImageSource = metadata.ImageUrl is null ? null : new BitmapImage(metadata.ImageUrl);
+#else
+        linkPreviewImageSource = metadata.ImageUrl;
+#endif
+        OnPropertyChanged(nameof(LinkPreviewTitle));
+        OnPropertyChanged(nameof(LinkPreviewSummary));
+        OnPropertyChanged(nameof(LinkPreviewHost));
+        OnPropertyChanged(nameof(LinkPreviewSummaryVisibility));
+        OnPropertyChanged(nameof(LinkPreviewImageVisibility));
+        OnPropertyChanged(nameof(LinkPreviewImageSource));
     }
 
     public void SetAttachmentError()

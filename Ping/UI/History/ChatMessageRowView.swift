@@ -80,6 +80,21 @@ struct ChatMessageRowView: View {
                         .fill(isMine ? Color.accentColor : Color.gray.opacity(0.18))
                 )
             }
+
+            if let url = LinkPreviewDetector.firstURL(in: message.body) {
+                LinkPreviewCard(url: url, isMine: isMine)
+                    .contextMenu {
+                        Button("링크 열기") {
+                            NSWorkspace.shared.open(url)
+                        }
+                        Button("답장", action: onReply)
+                        Button("이모지 반응", action: onReact)
+                        if isMine {
+                            Divider()
+                            Button("삭제", action: onDelete)
+                        }
+                    }
+            }
         }
     }
 

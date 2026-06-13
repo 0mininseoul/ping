@@ -7,6 +7,38 @@ namespace Ping.Windows.App.Tests;
 public sealed class AppCoordinatorSourceTests
 {
     [Fact]
+    public void HistoryWindowRendersChatLinkPreviewAndOpensBrowser()
+    {
+        var root = RepoRoot();
+        var xaml = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "History",
+            "HistoryWindow.xaml"));
+        var code = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "History",
+            "HistoryWindow.xaml.cs"));
+        var rows = File.ReadAllText(Path.Combine(
+            root,
+            "windows",
+            "src",
+            "Ping.Windows.App",
+            "History",
+            "HistoryRows.cs"));
+
+        Assert.Contains("Visibility=\"{Binding Chat.LinkPreviewVisibility}\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Click=\"OpenChatLinkButton_Click\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Launcher.LaunchUriAsync", code, StringComparison.Ordinal);
+        Assert.Contains("LinkPreviewDetector.FirstUrl(Message.Body)", rows, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void MainWindowExposesClickablePrimaryActions()
     {
         var root = RepoRoot();

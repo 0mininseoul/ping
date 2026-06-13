@@ -236,6 +236,57 @@
                                         Foreground="{StaticResource PingMutedBrush}"
                                         Text="{Binding Chat.Body}"
                                         TextWrapping="WrapWholeWords" />
+                                    <Border
+                                        Padding="8"
+                                        Background="#1B1D20"
+                                        BorderBrush="{StaticResource PingIdleBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Visibility="{Binding Chat.LinkPreviewVisibility}">
+                                        <Button
+                                            Padding="0"
+                                            HorizontalAlignment="Stretch"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Click="OpenChatLinkButton_Click">
+                                            <Grid ColumnSpacing="8">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="64" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <Border
+                                                    Width="64"
+                                                    Height="64"
+                                                    Background="#22808080"
+                                                    CornerRadius="8">
+                                                    <Image
+                                                        Source="{Binding Chat.LinkPreviewImageSource}"
+                                                        Stretch="UniformToFill"
+                                                        Visibility="{Binding Chat.LinkPreviewImageVisibility}" />
+                                                </Border>
+                                                <StackPanel Grid.Column="1" Spacing="3">
+                                                    <TextBlock
+                                                        FontSize="12"
+                                                        FontWeight="SemiBold"
+                                                        Foreground="{StaticResource PingTextBrush}"
+                                                        Text="{Binding Chat.LinkPreviewTitle}"
+                                                        TextWrapping="WrapWholeWords"
+                                                        MaxLines="2" />
+                                                    <TextBlock
+                                                        FontSize="11"
+                                                        Foreground="{StaticResource PingMutedBrush}"
+                                                        Text="{Binding Chat.LinkPreviewSummary}"
+                                                        TextWrapping="WrapWholeWords"
+                                                        MaxLines="2"
+                                                        Visibility="{Binding Chat.LinkPreviewSummaryVisibility}" />
+                                                    <TextBlock
+                                                        FontSize="10"
+                                                        Foreground="{StaticResource PingMutedBrush}"
+                                                        Text="{Binding Chat.LinkPreviewHost}" />
+                                                </StackPanel>
+                                            </Grid>
+                                        </Button>
+                                    </Border>
                                     <StackPanel Orientation="Horizontal" Spacing="4">
                                         <Button
                                             Padding="6,2"

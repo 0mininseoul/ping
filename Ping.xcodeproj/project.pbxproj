@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		00F43118BC5391A2FE1ABD0C /* ReleaseVersionContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BB8B40BB61BAE16EB12E239 /* ReleaseVersionContractTests.swift */; };
+		0408CDDC886A3177BFA59915 /* LinkPreviewCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4183FA9FB48289C2CB006B2C /* LinkPreviewCard.swift */; };
+		04210A00039638943F6CBAC9 /* LinkPreviewCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3D068C3338A147955587478 /* LinkPreviewCard.swift */; };
 		053A44897F67094ABE710FF4 /* ChatComposerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B7FBE2B14276ED0005C1615 /* ChatComposerView.swift */; };
 		05C9AC42BAC6198AE227CAB6 /* ChatImageAttachmentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6B11EA47A90F6C103338B3A /* ChatImageAttachmentView.swift */; };
 		05F064F14F190E4EC2CDA275 /* PingWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 9DA8354482E6065AA5CBDD0C /* PingWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -154,6 +156,7 @@
 		D3660AF8AC6874725F533E10 /* SupabaseSessionContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09E2E7CA36EC901ED5EE3FB /* SupabaseSessionContractTests.swift */; };
 		D554E57BED49035560D4AE74 /* PlaybackWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01290226E3F8D2ED2E2FA6AC /* PlaybackWindow.swift */; };
 		D6AEB2C5D651AED89D60A3EE /* RoomVideoDeduplicationContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46E75CCE637B32C4D8C02DF3 /* RoomVideoDeduplicationContractTests.swift */; };
+		D735D551FFADD94B03844CC5 /* LinkPreviewContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 812CEF00097DFECB5FB3E119 /* LinkPreviewContractTests.swift */; };
 		D94A00EE205AF8CCF9BE4393 /* RoomListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CD854FC545A367784978698 /* RoomListView.swift */; };
 		DC50B03D4024B3F6BE9B79E0 /* WatchAppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E1F6F2D8E154DB411DE015B /* WatchAppDelegate.swift */; };
 		DE12BE3CE643E58547F434B3 /* LandingPageDesignContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 864AD1809E808999EDC337AA /* LandingPageDesignContractTests.swift */; };
@@ -174,6 +177,7 @@
 		F7B15D253CEFD4BA923186FB /* MultiAccountGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D77E396E3C1D15BE710498ED /* MultiAccountGateTests.swift */; };
 		F82A4ECB45A5581D811B4F3C /* OnboardingInputContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E1A841BBD8BDD965C164BF8 /* OnboardingInputContractTests.swift */; };
 		F9F01F4FE990F1A34D5E5FCF /* RainbowBorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97150E02C17DE9AEBD26BF13 /* RainbowBorder.swift */; };
+		FBC15B3189746AB556414ECC /* LinkPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8D29F898D793DDAC8C24599 /* LinkPreview.swift */; };
 		FF3B573F1FBFCF71A605ACB9 /* ChatComposerIMEContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E29B5DB774FF236DDB8C436C /* ChatComposerIMEContractTests.swift */; };
 		FF645ABE2A696D7110266F3C /* PairingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F013D14C65D1B797C6EF367 /* PairingViewModel.swift */; };
 /* End PBXBuildFile section */
@@ -270,6 +274,7 @@
 		3BFB39C830F5652627E5C107 /* UpdaterBehaviorContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdaterBehaviorContractTests.swift; sourceTree = "<group>"; };
 		3CC9A5C9C5BA8FF0D9D30E0A /* InviteLinkContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteLinkContractTests.swift; sourceTree = "<group>"; };
 		3F670415508116D43886183A /* MirrorViewModelStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MirrorViewModelStateTests.swift; sourceTree = "<group>"; };
+		4183FA9FB48289C2CB006B2C /* LinkPreviewCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkPreviewCard.swift; sourceTree = "<group>"; };
 		46E75CCE637B32C4D8C02DF3 /* RoomVideoDeduplicationContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomVideoDeduplicationContractTests.swift; sourceTree = "<group>"; };
 		4741EB3E3614D20DF3C78279 /* VideoCropper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoCropper.swift; sourceTree = "<group>"; };
 		4768EC8284B544E3649C4507 /* HistoryViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryViewModelTests.swift; sourceTree = "<group>"; };
@@ -313,6 +318,7 @@
 		7EE33710D375112C559C3B9B /* RoomTimelineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomTimelineView.swift; sourceTree = "<group>"; };
 		7F1E09D4F9233190C884D2DF /* AppInstallLocationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppInstallLocationTests.swift; sourceTree = "<group>"; };
 		807D0F7ABDF51662C9497EEF /* NotificationLedgerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationLedgerTests.swift; sourceTree = "<group>"; };
+		812CEF00097DFECB5FB3E119 /* LinkPreviewContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkPreviewContractTests.swift; sourceTree = "<group>"; };
 		864AD1809E808999EDC337AA /* LandingPageDesignContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LandingPageDesignContractTests.swift; sourceTree = "<group>"; };
 		880D2B3F583FCC9102608E19 /* CameraPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPreviewView.swift; sourceTree = "<group>"; };
 		8841413A695A3C64F0B3F247 /* GlassButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassButton.swift; sourceTree = "<group>"; };
@@ -381,6 +387,7 @@
 		DF791350460B22AC63D0CE32 /* PlaybackPrefetchContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackPrefetchContractTests.swift; sourceTree = "<group>"; };
 		E0CE48710A798DC7E4F5F387 /* EntitlementsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntitlementsTests.swift; sourceTree = "<group>"; };
 		E29B5DB774FF236DDB8C436C /* ChatComposerIMEContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatComposerIMEContractTests.swift; sourceTree = "<group>"; };
+		E3D068C3338A147955587478 /* LinkPreviewCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkPreviewCard.swift; sourceTree = "<group>"; };
 		E4C0907AE314021D2DFEC882 /* RoomLimits.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomLimits.swift; sourceTree = "<group>"; };
 		E7BA291155ACBFF85185B36B /* CompatibilityContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompatibilityContractTests.swift; sourceTree = "<group>"; };
 		E89232F1FE943FF8CE229F13 /* MirrorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MirrorViewModel.swift; sourceTree = "<group>"; };
@@ -396,6 +403,7 @@
 		F758F3123EB5B3CD54F783B9 /* ChatRealtimeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRealtimeService.swift; sourceTree = "<group>"; };
 		F760D624DE03E352A8514854 /* ScreenCoordinates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenCoordinates.swift; sourceTree = "<group>"; };
 		F7DD9D4337004D4575FF0FC3 /* PingApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PingApp.swift; sourceTree = "<group>"; };
+		F8D29F898D793DDAC8C24599 /* LinkPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkPreview.swift; sourceTree = "<group>"; };
 		FA17BAFB8C514438C7961E5F /* VideoRecordingContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoRecordingContractTests.swift; sourceTree = "<group>"; };
 		FCE7247150967CBCEC6BEFF3 /* SelectableTextLayoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectableTextLayoutTests.swift; sourceTree = "<group>"; };
 		FD69BFAD0704FB61C435A68E /* InvitationCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvitationCard.swift; sourceTree = "<group>"; };
@@ -453,6 +461,7 @@
 				96D07ED094D1B1E9297946A0 /* AccountNotifications.swift */,
 				72E17B6A6D89179C56491009 /* AppState.swift */,
 				0194505B84DC32C2BA700F6C /* InviteLink.swift */,
+				F8D29F898D793DDAC8C24599 /* LinkPreview.swift */,
 				DDF74D004DFD2F009A5DA36B /* Models.swift */,
 				8F8F7409AE1AFA053895230D /* MultiAccountGate.swift */,
 				62D2F7B67DB16ADA6741BD44 /* PingError.swift */,
@@ -476,6 +485,7 @@
 				1616675AE7695B824BD066DE /* DesktopInstallGuideView.swift */,
 				242765EC4E5CC70241BB46FB /* InboxView.swift */,
 				012928FD0CA6F78D08BC8F84 /* Info.plist */,
+				4183FA9FB48289C2CB006B2C /* LinkPreviewCard.swift */,
 				4889748CC37B60C1E533B625 /* PingMobile.entitlements */,
 				A442835C646C43BA7F20E0EA /* PingMobileApp.swift */,
 				36410F2A63B9906DC8C06A8B /* PushRegistrar.swift */,
@@ -564,6 +574,7 @@
 				B297B0F942C3BA0AEFCF8EA3 /* HistoryViewModel.swift */,
 				D8344102772E903458A39D6D /* HistoryWindow.swift */,
 				ECAF925EB5EB36A31683069F /* InlinePlayerView.swift */,
+				E3D068C3338A147955587478 /* LinkPreviewCard.swift */,
 				6FD73952C51CA80616FFA8E6 /* MessageRowView.swift */,
 				3847490D60B97829AB0CA7B6 /* ReactionPickerView.swift */,
 				7EE33710D375112C559C3B9B /* RoomTimelineView.swift */,
@@ -708,6 +719,7 @@
 				3CC9A5C9C5BA8FF0D9D30E0A /* InviteLinkContractTests.swift */,
 				A4A1E99D8A2F055B3DD2924E /* KeyboardRoutingContractTests.swift */,
 				864AD1809E808999EDC337AA /* LandingPageDesignContractTests.swift */,
+				812CEF00097DFECB5FB3E119 /* LinkPreviewContractTests.swift */,
 				FE28695E12B3BFE879774504 /* LocalSavePermissionContractTests.swift */,
 				B34FE34A23EC76CE975F980D /* MenuBarIconContractTests.swift */,
 				3F670415508116D43886183A /* MirrorViewModelStateTests.swift */,
@@ -1162,6 +1174,7 @@
 				06BC9DFC1F527E3082A3B29A /* ContentView.swift in Sources */,
 				5AA7E9EB021EE17E4D1A1B15 /* DesktopInstallGuideView.swift in Sources */,
 				D16003558CADE09FB3893E91 /* InboxView.swift in Sources */,
+				0408CDDC886A3177BFA59915 /* LinkPreviewCard.swift in Sources */,
 				68C7329A0CC241A8C7AC5C7C /* PingMobileApp.swift in Sources */,
 				50C9793FBA90BD1C6A41402B /* PushRegistrar.swift in Sources */,
 				5E8F74FACE824DA1B4D7CEF4 /* QRScannerView.swift in Sources */,
@@ -1191,6 +1204,7 @@
 				315501BEACA5034EC49BB7B3 /* InviteLinkContractTests.swift in Sources */,
 				D1F98BCF92D6A7D7BD4FAFA5 /* KeyboardRoutingContractTests.swift in Sources */,
 				DE12BE3CE643E58547F434B3 /* LandingPageDesignContractTests.swift in Sources */,
+				D735D551FFADD94B03844CC5 /* LinkPreviewContractTests.swift in Sources */,
 				6C7E8E8138C42E9ED2D0D8CF /* LocalSavePermissionContractTests.swift in Sources */,
 				82489619708A93D7397D5172 /* MenuBarIconContractTests.swift in Sources */,
 				C5B52473A941591B9CEBDCF0 /* MirrorViewModelStateTests.swift in Sources */,
@@ -1270,6 +1284,8 @@
 				DF64AE4C1BA57CB52E98AC20 /* InvitationCard.swift in Sources */,
 				89CA5CAC17D1B7BEC031CBF5 /* InvitationService.swift in Sources */,
 				E88C396E9E50FA27A25162ED /* InviteLink.swift in Sources */,
+				FBC15B3189746AB556414ECC /* LinkPreview.swift in Sources */,
+				04210A00039638943F6CBAC9 /* LinkPreviewCard.swift in Sources */,
 				CD48671985ADE8C6B4831F9B /* LocalArchive.swift in Sources */,
 				B516DA8E35BE22691A6F324C /* LocalNotificationCenter.swift in Sources */,
 				ED2A3EB3872996158DA65761 /* MessageRowView.swift in Sources */,
