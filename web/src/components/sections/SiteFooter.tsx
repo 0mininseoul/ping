@@ -2,10 +2,9 @@ import BrandMark from "@/components/ui/brand-mark";
 
 interface SiteFooterProps {
   macVersion: string;
-  windowsVersion: string;
 }
 
-export default function SiteFooter({ macVersion, windowsVersion }: SiteFooterProps) {
+export default function SiteFooter({ macVersion }: SiteFooterProps) {
   return (
     <footer className="border-t border-border py-12">
       <div className="container-app flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
@@ -14,13 +13,13 @@ export default function SiteFooter({ macVersion, windowsVersion }: SiteFooterPro
           <span className="text-sm">
             <span className="font-bold">Ping</span>
             <span className="ml-2 font-mono text-subtle">
-              macOS {macVersion} · Windows {windowsVersion}
+              macOS {macVersion}
             </span>
           </span>
         </div>
 
         <p className="text-xs text-subtle">
-          macOS 13 Ventura+ · Windows 11 24H2+
+          macOS 13 Ventura+
         </p>
 
         <nav

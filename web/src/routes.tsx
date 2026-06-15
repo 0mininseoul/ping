@@ -29,9 +29,7 @@ export default function Routes() {
       <InviteView
         token={token}
         macDownloadUrl={MAC_DOWNLOAD_URL}
-        windowsDownloadUrl={WINDOWS_DOWNLOAD_URL}
         macVersion={MAC_APP_VERSION}
-        windowsVersion={WINDOWS_APP_VERSION}
       />
     );
   }
@@ -39,9 +37,7 @@ export default function Routes() {
   return (
     <LandingPage
       macDownloadUrl={MAC_DOWNLOAD_URL}
-      windowsDownloadUrl={WINDOWS_DOWNLOAD_URL}
       macVersion={MAC_APP_VERSION}
-      windowsVersion={WINDOWS_APP_VERSION}
     />
   );
 }

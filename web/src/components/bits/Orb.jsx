@@ -187,8 +187,41 @@ export default function Orb({
     const container = ctnDom.current;
     if (!container) return;
 
-    const renderer = new Renderer({ alpha: true, premultipliedAlpha: false });
+    const enableFallback = () => {
+      container.dataset.fallback = 'true';
+      container.style.setProperty('--orb-fallback-bg', backgroundColor);
+      container.style.setProperty('--orb-fallback-hue', `${hue}deg`);
+    };
+
+    const disableFallback = () => {
+      delete container.dataset.fallback;
+      container.style.removeProperty('--orb-fallback-bg');
+      container.style.removeProperty('--orb-fallback-hue');
+    };
+
+    const probe = document.createElement('canvas');
+    const supportsWebGL = Boolean(
+      probe.getContext('webgl') || probe.getContext('experimental-webgl')
+    );
+    if (!supportsWebGL) {
+      enableFallback();
+      return disableFallback;
+    }
+
+    let renderer;
+    try {
+      renderer = new Renderer({ alpha: true, premultipliedAlpha: false });
+    } catch {
+      enableFallback();
+      return disableFallback;
+    }
+
     const gl = renderer.gl;
+    if (!gl) {
+      enableFallback();
+      return disableFallback;
+    }
+
     gl.clearColor(0, 0, 0, 0);
     container.appendChild(gl.canvas);
 
@@ -284,6 +317,7 @@ export default function Orb({
       container.removeEventListener('mouseleave', handleMouseLeave);
       container.removeChild(gl.canvas);
       gl.getExtension('WEBGL_lose_context')?.loseContext();
+      disableFallback();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hue, hoverIntensity, rotateOnHover, forceHoverState, backgroundColor]);

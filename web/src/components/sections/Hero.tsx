@@ -7,38 +7,16 @@ import ClickSpark from "@/components/bits/ClickSpark";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import BrandMark from "@/components/ui/brand-mark";
-import { useOS } from "@/lib/useOS";
 
 interface HeroProps {
   macDownloadUrl: string;
-  windowsDownloadUrl: string;
   macVersion: string;
-  windowsVersion: string;
 }
 
 export default function Hero({
   macDownloadUrl,
-  windowsDownloadUrl,
   macVersion,
-  windowsVersion,
 }: HeroProps) {
-  const os = useOS();
-  const targets = [
-    {
-      key: "mac",
-      url: macDownloadUrl,
-      label: "Download for macOS",
-      aria: `Ping ${macVersion} macOS DMG 다운로드`,
-    },
-    {
-      key: "win",
-      url: windowsDownloadUrl,
-      label: "Download for Windows",
-      aria: `Ping ${windowsVersion} Windows EXE 다운로드`,
-    },
-  ];
-  const ordered = os === "windows" ? [targets[1], targets[0]] : targets;
-
   return (
     <section className="relative isolate overflow-hidden pt-32 pb-28 md:pt-44 md:pb-36">
       <Aurora
@@ -81,24 +59,19 @@ export default function Hero({
 
             <p className="mb-9 max-w-[36rem] text-balance text-base leading-relaxed text-muted md:text-lg">
               Ping은 얼굴 거울과 화면+얼굴 거울을 열고, 3초짜리 영상
-              메시지를 리뷰 후 보내는 작은 데스크톱 앱입니다. Mac과 Windows
-              사용자가 같은 방에서 주고받을 수 있습니다.
+              메시지를 리뷰 후 보내는 작은 Mac 앱입니다. 같은 방에 초대한
+              사람끼리만 빠르게 주고받을 수 있습니다.
             </p>
 
             <div className="mb-10 flex flex-wrap items-center gap-3">
-              {ordered.map((t, i) => (
-                <ClickSpark key={t.key}>
-                  <a href={t.url} aria-label={t.aria}>
-                    <Button
-                      variant={i === 0 ? "primary" : "secondary"}
-                      size="lg"
-                    >
-                      <MonitorDown aria-hidden className="h-[18px] w-[18px]" />
-                      {t.label}
-                    </Button>
-                  </a>
-                </ClickSpark>
-              ))}
+              <ClickSpark>
+                <a href={macDownloadUrl} aria-label={`Ping ${macVersion} macOS DMG 다운로드`}>
+                  <Button variant="primary" size="lg">
+                    <MonitorDown aria-hidden className="h-[18px] w-[18px]" />
+                    Download for macOS
+                  </Button>
+                </a>
+              </ClickSpark>
               <a href="#flow">
                 <Button variant="ghost" size="lg">
                   작동 방식 보기
@@ -107,36 +80,13 @@ export default function Hero({
               </a>
             </div>
 
-            {/* Windows 설치 안내 */}
-            <div className="mb-10 max-w-[36rem] rounded-md border border-border bg-bg-elev/50 px-4 py-3 text-xs leading-relaxed text-muted">
-              <p className="font-medium text-fg">Windows 설치 안내</p>
-              <p className="mt-1">
-                Windows 버전은 무료 자체서명(sideload) 패키지라 첫 실행 시 보안
-                경고(SmartScreen)가 보일 수 있어요. 경고 창에서
-                <span className="font-bold text-fg"> '추가 정보' &rarr; '실행'</span>
-                을 누르면 정상 설치됩니다.
-              </p>
-              <details className="mt-2">
-                <summary className="cursor-pointer select-none text-subtle transition-colors hover:text-fg">
-                  고급: PowerShell 한 줄 설치
-                </summary>
-                <p className="mt-1.5">
-                  관리자 권한 PowerShell에서 아래를 실행하면 인증서 등록부터
-                  바로가기 구성까지 한 번에 끝납니다.
-                </p>
-                <code className="mt-1 block break-all select-all rounded border border-border bg-bg px-2 py-1.5 font-mono text-[10.5px] text-fg">
-                  irm https://0minping.vercel.app/install.ps1 | iex
-                </code>
-              </details>
-            </div>
-
             <dl
               className="grid max-w-[34rem] grid-cols-3 gap-x-6 border-t border-border pt-5"
               aria-label="Ping 요약"
             >
               <FactItem term="단축키" value="Option + P/L" />
               <FactItem term="길이" value="정확히 3초" />
-              <FactItem term="배포" value="DMG / EXE" />
+              <FactItem term="배포" value="DMG" />
             </dl>
           </div>
 

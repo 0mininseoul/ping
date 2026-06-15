@@ -3,11 +3,9 @@ import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import BrandMark from "@/components/ui/brand-mark";
 import { cn } from "@/lib/utils";
-import { useOS } from "@/lib/useOS";
 
 interface SiteNavProps {
   macDownloadUrl: string;
-  windowsDownloadUrl: string;
 }
 
 const links = [
@@ -18,10 +16,8 @@ const links = [
 
 export default function SiteNav({
   macDownloadUrl,
-  windowsDownloadUrl,
 }: SiteNavProps) {
   const [scrolled, setScrolled] = useState(false);
-  const os = useOS();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -29,12 +25,6 @@ export default function SiteNav({
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
-
-  const targets = [
-    { key: "mac", url: macDownloadUrl, label: "macOS", short: "Mac", aria: "Download for macOS" },
-    { key: "win", url: windowsDownloadUrl, label: "Windows", short: "Windows", aria: "Download for Windows" },
-  ];
-  const ordered = os === "windows" ? [targets[1], targets[0]] : targets;
 
   return (
     <header
@@ -71,15 +61,13 @@ export default function SiteNav({
         </nav>
 
         <div className="flex items-center gap-2">
-          {ordered.map((t, i) => (
-            <a key={t.key} href={t.url} aria-label={t.aria}>
-              <Button variant={i === 0 ? "primary" : "secondary"} size="sm">
-                <Download aria-hidden className="h-4 w-4" />
-                <span className="hidden sm:inline">{t.label}</span>
-                <span className="sm:hidden">{t.short}</span>
-              </Button>
-            </a>
-          ))}
+          <a href={macDownloadUrl} aria-label="Download for macOS">
+            <Button variant="primary" size="sm">
+              <Download aria-hidden className="h-4 w-4" />
+              <span className="hidden sm:inline">macOS 다운로드</span>
+              <span className="sm:hidden">Mac</span>
+            </Button>
+          </a>
         </div>
       </div>
     </header>

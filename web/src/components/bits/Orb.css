@@ -4,3 +4,19 @@
   width: 100%;
   height: 100%;
 }
+
+.orb-container[data-fallback='true']::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 35% 28%, rgba(255, 255, 255, 0.78), transparent 25%),
+    radial-gradient(circle at 67% 62%, rgba(141, 232, 185, 0.9), transparent 36%),
+    radial-gradient(circle at 32% 72%, rgba(47, 170, 110, 0.7), transparent 42%),
+    var(--orb-fallback-bg, #f7f4ea);
+  filter: hue-rotate(var(--orb-fallback-hue, 0deg));
+  box-shadow:
+    inset 0 1px 22px rgba(255, 255, 255, 0.58),
+    0 18px 42px rgba(10, 11, 9, 0.12);
+}
