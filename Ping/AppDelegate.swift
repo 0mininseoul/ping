@@ -38,6 +38,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var incomingMessageTask: Task<Void, Never>?
     private var chatCatchUpTask: Task<Void, Never>?
     private var bootstrapTask: Task<Void, Never>?
+    private var bootstrapRetryTask: Task<Void, Never>?
+    private var bootstrapFailureCount = 0
     private var cameraStartTask: Task<Void, Never>?
     private var pendingInviteToken: String?
     private var currentMirrorMode: CaptureMode?
@@ -86,6 +88,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         bootstrapTask?.cancel()
+        bootstrapRetryTask?.cancel()
         roomObserverTask?.cancel()
         invitationObserverTask?.cancel()
         incomingMessageTask?.cancel()
@@ -179,6 +182,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func startBootstrapTaskIfNeeded() {
         guard bootstrapTask == nil else { return }
 
+        bootstrapRetryTask?.cancel()
+        bootstrapRetryTask = nil
+
         bootstrapTask = Task { @MainActor [weak self] in
             guard let self else { return }
             await self.bootstrapBackend()
@@ -190,6 +196,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         do {
             let uid = try await SupabaseClient.shared.bootstrap()
             let existing = try await userService.get(uid: uid)
+            bootstrapFailureCount = 0
+            bootstrapRetryTask?.cancel()
+            bootstrapRetryTask = nil
+            appState.backendStatusMessage = nil
 
             if let existing {
                 try await userService.upsert(uid: uid, nickname: existing.nickname)
@@ -204,9 +214,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 showOnboarding(uid: uid)
             }
         } catch {
-            appState.backendStatusMessage = error.localizedDescription
             NSLog("Backend bootstrap failed: \(error)")
+            if BackendRetryPolicy.shouldRetryBootstrap(after: error) {
+                scheduleBackendBootstrapRetry(after: error)
+                return
+            }
+
+            appState.backendStatusMessage = error.localizedDescription
             showSetupError(error)
+        }
+    }
+
+    private func scheduleBackendBootstrapRetry(after error: Error) {
+        bootstrapFailureCount += 1
+        let delay = BackendRetryPolicy.delay(forFailureCount: bootstrapFailureCount)
+        appState.backendStatusMessage = "네트워크 연결을 기다리는 중입니다. \(Int(delay))초 후 다시 시도합니다."
+        NSLog("Backend bootstrap transient failure; retrying in \(Int(delay))s: \(error)")
+
+        bootstrapRetryTask?.cancel()
+        bootstrapRetryTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+            guard !Task.isCancelled else { return }
+            self?.bootstrapRetryTask = nil
+            self?.startBootstrapTaskIfNeeded()
         }
     }
 
@@ -1030,6 +1060,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// 전환/추가 전 공통 정리: 옵저버·창·캐시·상태·인메모리 dedup.
     private func teardownForAccountChange() {
         bootstrapTask?.cancel(); bootstrapTask = nil
+        bootstrapRetryTask?.cancel(); bootstrapRetryTask = nil
+        bootstrapFailureCount = 0
         roomObserverTask?.cancel(); roomObserverTask = nil
         invitationObserverTask?.cancel(); invitationObserverTask = nil
         incomingMessageTask?.cancel(); incomingMessageTask = nil

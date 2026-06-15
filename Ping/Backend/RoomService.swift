@@ -36,7 +36,7 @@ final class RoomService {
                         let rooms: [Room] = try await client.rpcArray("ping_my_rooms")
                         continuation.yield(rooms)
                     } catch {
-                        continuation.yield([])
+                        NSLog("Room polling failed: \(error)")
                     }
                     signposter.endInterval("rooms-poll-cycle", intervalState)
                     try? await Task.sleep(nanoseconds: 10_000_000_000)
