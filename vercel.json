@@ -10,6 +10,17 @@
     },
     {
       "source": "/invite/:token",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(kakaotalk|KakaoTalk|facebookexternalhit|Twitterbot|Slackbot|Discordbot|LinkedInBot|WhatsApp|TelegramBot|bot|crawler|spider).*"
+        }
+      ],
+      "destination": "/api/invite?token=:token"
+    },
+    {
+      "source": "/invite/:token",
       "destination": "/index.html"
     }
   ]
