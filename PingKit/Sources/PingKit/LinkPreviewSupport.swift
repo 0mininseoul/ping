@@ -17,8 +17,8 @@ public struct PingLinkPreviewMetadata: Equatable, Hashable, Sendable {
             url: url,
             title: nil,
             summary: nil,
-            imageURL: nil,
-            siteName: nil
+            imageURL: PingLinkPreviewDetector.youtubeThumbnailURL(for: url),
+            siteName: PingLinkPreviewDetector.fallbackSiteName(for: url)
         )
     }
 
@@ -56,6 +56,15 @@ public enum PingLinkPreviewDetector {
         return host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
     }
 
+    public static func fallbackSiteName(for url: URL) -> String? {
+        isYouTubeURL(url) ? "YouTube" : nil
+    }
+
+    public static func youtubeThumbnailURL(for url: URL) -> URL? {
+        guard let videoID = youtubeVideoID(for: url) else { return nil }
+        return URL(string: "https://i.ytimg.com/vi/\(videoID)/hqdefault.jpg")
+    }
+
     private static func normalizedURL(from raw: String) -> URL? {
         let value = raw.hasPrefix("www.") ? "https://\(raw)" : raw
         guard let components = URLComponents(string: value),
@@ -66,6 +75,52 @@ public enum PingLinkPreviewDetector {
         }
         return components.url
     }
+
+    private static func youtubeVideoID(for url: URL) -> String? {
+        guard isYouTubeURL(url) else { return nil }
+
+        let host = normalizedHost(for: url)
+        let pathComponents = url.path.split(separator: "/").map(String.init)
+
+        if host == "youtu.be" {
+            return sanitizedYouTubeVideoID(pathComponents.first)
+        }
+
+        if url.path == "/watch",
+           let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+           let videoID = components.queryItems?.first(where: { $0.name == "v" })?.value {
+            return sanitizedYouTubeVideoID(videoID)
+        }
+
+        guard pathComponents.count >= 2 else { return nil }
+        switch pathComponents[0].lowercased() {
+        case "embed", "live", "shorts", "v":
+            return sanitizedYouTubeVideoID(pathComponents[1])
+        default:
+            return nil
+        }
+    }
+
+    private static func isYouTubeURL(_ url: URL) -> Bool {
+        let host = normalizedHost(for: url)
+        return host == "youtu.be"
+            || host == "youtube.com"
+            || host.hasSuffix(".youtube.com")
+            || host == "youtube-nocookie.com"
+            || host.hasSuffix(".youtube-nocookie.com")
+    }
+
+    private static func normalizedHost(for url: URL) -> String {
+        let host = (url.host(percentEncoded: false) ?? "").lowercased()
+        return host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
+    }
+
+    private static func sanitizedYouTubeVideoID(_ rawValue: String?) -> String? {
+        guard let rawValue, !rawValue.isEmpty else { return nil }
+        let allowedCharacters = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-")
+        guard rawValue.rangeOfCharacter(from: allowedCharacters.inverted) == nil else { return nil }
+        return rawValue
+    }
 }
 
 public enum PingOpenGraphParser {
@@ -74,8 +129,10 @@ public enum PingOpenGraphParser {
             ?? titleContent(in: html)
         let summary = metaContent(in: html, keys: ["og:description", "twitter:description", "description"])
         let siteName = metaContent(in: html, keys: ["og:site_name"])
+            ?? PingLinkPreviewDetector.fallbackSiteName(for: pageURL)
         let image = metaContent(in: html, keys: ["og:image", "og:image:url", "twitter:image"])
         let imageURL = image.flatMap { URL(string: $0, relativeTo: pageURL)?.absoluteURL }
+            ?? PingLinkPreviewDetector.youtubeThumbnailURL(for: pageURL)
 
         return PingLinkPreviewMetadata(
             url: pageURL,

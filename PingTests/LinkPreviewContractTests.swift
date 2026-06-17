@@ -30,6 +30,31 @@ final class LinkPreviewContractTests: XCTestCase {
         XCTAssertEqual(metadata.imageURL?.absoluteString, "https://example.com/card.png")
     }
 
+    func testYouTubeFallbackProvidesStableThumbnailAndSiteName() {
+        let url = URL(string: "https://www.youtube.com/watch?v=oFAvC8gw-fQ")!
+
+        let metadata = LinkPreviewMetadata.fallback(url: url)
+
+        XCTAssertEqual(metadata.displayTitle, "YouTube")
+        XCTAssertEqual(metadata.siteName, "YouTube")
+        XCTAssertEqual(metadata.imageURL?.absoluteString, "https://i.ytimg.com/vi/oFAvC8gw-fQ/hqdefault.jpg")
+    }
+
+    func testOpenGraphParserUsesYouTubeThumbnailWhenImageMetaIsMissing() {
+        let html = """
+        <html><head>
+        <meta property="og:title" content="COMEUP 2023">
+        <meta property="og:site_name" content="YouTube">
+        </head></html>
+        """
+
+        let metadata = OpenGraphParser.parse(html: html, pageURL: URL(string: "https://youtu.be/oFAvC8gw-fQ")!)
+
+        XCTAssertEqual(metadata.title, "COMEUP 2023")
+        XCTAssertEqual(metadata.siteName, "YouTube")
+        XCTAssertEqual(metadata.imageURL?.absoluteString, "https://i.ytimg.com/vi/oFAvC8gw-fQ/hqdefault.jpg")
+    }
+
     func testMacChatRowRendersClickableLinkPreviewCard() throws {
         let source = try readProjectSource("Ping/UI/History/ChatMessageRowView.swift")
 
