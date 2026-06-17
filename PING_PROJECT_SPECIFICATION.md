@@ -73,7 +73,7 @@ Windows packaged client는 Windows 11 24H2 미만에서는 설치 대상이 아�
 ### 룸과 파트너
 
 - 모든 메시지는 룸 단위로 전송된다.
-- 현재 서버 제한은 사용자당 최대 8개 룸, 룸당 최대 4명이다.
+- 현재 서버 제한은 사용자당 최대 8개 룸, 룸당 최대 8명이다.
 - `rooms.status`는 멤버 수가 제한에 도달하면 `full`, 아니면 `open`이다.
 - 앱의 기본 송신 대상은 `profiles.last_used_room_id`와 로컬 `AppState.defaultRoom`으로 결정한다.
 - 단일 룸 송신은 그 룸의 본인 제외 멤버에게 메시지를 만든다.

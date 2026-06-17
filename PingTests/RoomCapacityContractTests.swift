@@ -1,16 +1,16 @@
 import XCTest
 
 final class RoomCapacityContractTests: XCTestCase {
-    func testRoomLimitsAreEightRoomsAndFourMembers() throws {
+    func testRoomLimitsAreEightRoomsAndEightMembers() throws {
         let limitsSource = try readSourceFile("Ping/Core/RoomLimits.swift")
-        let migration = try readSourceFile("supabase/migrations/20260518003000_room_capacity_limits.sql")
+        let migration = try readSourceFile("supabase/migrations/20260617034843_room_capacity_eight_members.sql")
 
         XCTAssertTrue(limitsSource.contains("maxRoomsPerUser = 8"))
-        XCTAssertTrue(limitsSource.contains("maxMembersPerRoom = 4"))
+        XCTAssertTrue(limitsSource.contains("maxMembersPerRoom = 8"))
         XCTAssertTrue(migration.contains("current_room_count >= 8"))
-        XCTAssertTrue(migration.contains("current_count >= 4"))
-        XCTAssertTrue(migration.contains("member_count >= 4"))
-        XCTAssertTrue(migration.contains("case when current_count >= 4 then 'full' else 'open' end"))
+        XCTAssertTrue(migration.contains("current_count >= 8"))
+        XCTAssertTrue(migration.contains("member_count >= 8"))
+        XCTAssertTrue(migration.contains("case when current_count >= 8 then 'full' else 'open' end"))
     }
 
     func testRoomNameLimitIsSixteenCharactersAcrossAppAndDatabase() throws {
