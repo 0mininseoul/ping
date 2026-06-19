@@ -16,7 +16,7 @@ final class CompatibilityContractTests: XCTestCase {
         XCTAssertTrue(info.contains("<string>13.0</string>"))
     }
 
-    func testMacAppIsLaunchServicesSearchableWhileHidingDockAtRuntime() throws {
+    func testMacAppNeverShowsInDockWhenLaunchedFromFinderOrSpotlight() throws {
         let project = try readFixture("project.yml")
         let info = try readFixture("Ping/Info.plist")
         let appDelegate = try readFixture("AppDelegate.swift")
@@ -32,8 +32,8 @@ final class CompatibilityContractTests: XCTestCase {
             to: "func applicationWillTerminate"
         )
 
-        XCTAssertFalse(appTarget.contains("LSUIElement: true"))
-        XCTAssertFalse(info.contains("<key>LSUIElement</key>"))
+        XCTAssertTrue(appTarget.contains("LSUIElement: true"))
+        XCTAssertTrue(info.contains("<key>LSUIElement</key>\n\t<true/>"))
         XCTAssertTrue(appTarget.contains("LSApplicationCategoryType: public.app-category.social-networking"))
         XCTAssertTrue(info.contains("<key>LSApplicationCategoryType</key>"))
         XCTAssertTrue(info.contains("<string>public.app-category.social-networking</string>"))

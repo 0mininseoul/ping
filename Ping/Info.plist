@@ -31,10 +31,12 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
-	<key>LSMinimumSystemVersion</key>
-	<string>13.0</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.social-networking</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>13.0</string>
+	<key>LSUIElement</key>
+	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Ping은 3초 영상 메시지 촬영을 위해 카메라를 사용합니다.</string>
 	<key>NSMicrophoneUsageDescription</key>

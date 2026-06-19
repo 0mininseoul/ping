@@ -104,7 +104,7 @@ Windows 앱은 Sparkle을 사용하지 않는다. 비용 없는 배포는 self-s
 
 ## v0.3.45 macOS/Windows 수정
 
-- macOS 업데이트/재실행 뒤 Dock에 Ping 아이콘이 남지 않도록 런타임 accessory 정책을 launch, activation, reopen 경로에서 재적용한다.
+- macOS 업데이트/재실행 뒤 Dock에 Ping 아이콘이 남지 않도록 agent 앱 분류와 런타임 accessory 정책을 함께 적용한다.
 - 영상 푸시 알림 전달 상태를 서버 `notified_at`으로 기록해 앱 재실행 후 같은 영상 알림이 다시 뜨지 않게 한다.
 - 기존 히스토리 캐시에 남은 영상/썸네일 ID를 시작 시 알림 원장에 흡수해 과거에 조회한 영상 알림 재발을 줄인다.
 
@@ -138,7 +138,7 @@ Windows 앱은 Sparkle을 사용하지 않는다. 비용 없는 배포는 self-s
 
 ## v0.3.39 macOS 수정
 
-- 메뉴바 앱 동작은 유지하면서 Launchpad와 Spotlight 검색 색인에서 `Ping`이 앱으로 잡히도록 번들 `LSUIElement` 분류를 제거하고 런타임에서 Dock 숨김 정책을 적용한다.
+- 메뉴바 앱 동작은 유지한다. Dock에 절대 표시되지 않아야 하므로 현재 빌드는 번들 `LSUIElement` agent 분류와 런타임 accessory 정책을 함께 적용한다.
 
 ## v0.3.29 Windows 수정
 

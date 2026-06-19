@@ -68,6 +68,7 @@ targets:
       properties:
         LSMinimumSystemVersion: "13.0"
         LSApplicationCategoryType: public.app-category.social-networking
+        LSUIElement: true
         CFBundleName: Ping
         CFBundleDisplayName: Ping
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
