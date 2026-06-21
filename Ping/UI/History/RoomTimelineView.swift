@@ -310,6 +310,7 @@ struct RoomTimelineView: View {
             rowFor(item: item)
                 .offset(x: revealOffset)
         }
+        .frame(maxWidth: .infinity, alignment: .trailing)
     }
 
     @ViewBuilder

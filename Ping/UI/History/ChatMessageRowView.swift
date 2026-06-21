@@ -13,12 +13,6 @@ struct ChatMessageRowView: View {
     let onDelete: () -> Void
     let onToggleReaction: (String) -> Void
 
-    private let messageMaxWidth: CGFloat = 280
-    private let textBubbleHorizontalPadding: CGFloat = 11
-    private var textContentMaxWidth: CGFloat {
-        messageMaxWidth - textBubbleHorizontalPadding * 2
-    }
-
     enum ReplyPreview {
         case chat(sender: String, body: String)
         case video(sender: String, captureMode: CaptureMode)
@@ -73,13 +67,18 @@ struct ChatMessageRowView: View {
             }
 
             if !message.body.isEmpty {
+                let textSize = ChatMessageBubbleLayout.textContentSize(
+                    for: message.body,
+                    font: messageFont
+                )
                 SelectableTextView(
                     text: message.body,
-                    font: NSFont.systemFont(ofSize: NSFont.systemFontSize),
+                    font: messageFont,
                     textColor: isMine ? .white : NSColor.labelColor,
                     maxWidth: textContentMaxWidth,
                     menuProvider: { makeContextMenu() }
                 )
+                .frame(width: textSize.width, height: textSize.height, alignment: .leading)
                 .padding(.horizontal, textBubbleHorizontalPadding)
                 .padding(.vertical, 6)
                 .background(
@@ -103,6 +102,22 @@ struct ChatMessageRowView: View {
                     }
             }
         }
+    }
+
+    private var messageMaxWidth: CGFloat {
+        ChatMessageBubbleLayout.messageMaxWidth
+    }
+
+    private var textBubbleHorizontalPadding: CGFloat {
+        ChatMessageBubbleLayout.textBubbleHorizontalPadding
+    }
+
+    private var textContentMaxWidth: CGFloat {
+        ChatMessageBubbleLayout.textContentMaxWidth
+    }
+
+    private var messageFont: NSFont {
+        NSFont.systemFont(ofSize: NSFont.systemFontSize)
     }
 
     private func makeContextMenu() -> NSMenu {
@@ -184,4 +199,22 @@ struct ChatMessageRowView: View {
         }
     }
 
+}
+
+enum ChatMessageBubbleLayout {
+    static let messageMaxWidth: CGFloat = 280
+    static let textBubbleHorizontalPadding: CGFloat = 11
+
+    static var textContentMaxWidth: CGFloat {
+        messageMaxWidth - textBubbleHorizontalPadding * 2
+    }
+
+    static func textContentSize(for text: String, font: NSFont) -> CGSize {
+        SelectableTextLayout.size(
+            text: text,
+            font: font,
+            maxWidth: textContentMaxWidth,
+            proposedWidth: textContentMaxWidth
+        )
+    }
 }

@@ -36,4 +36,16 @@ final class SelectableTextLayoutTests: XCTestCase {
         XCTAssertLessThanOrEqual(size.width, 258)
         XCTAssertGreaterThan(size.height, 40)
     }
+
+    func testLongURLChatBubbleOuterWidthFitsMessageColumn() {
+        let font = NSFont.systemFont(ofSize: NSFont.systemFontSize)
+        let text = "그리고 애들아 이거 한번 가입해서 써봐\nhttps://gatitagachon.vercel.app/invite/abcdefghijklmnopqrstuvwxyz"
+
+        let size = ChatMessageBubbleLayout.textContentSize(for: text, font: font)
+        let outerWidth = size.width + ChatMessageBubbleLayout.textBubbleHorizontalPadding * 2
+
+        XCTAssertLessThanOrEqual(size.width, ChatMessageBubbleLayout.textContentMaxWidth)
+        XCTAssertLessThanOrEqual(outerWidth, ChatMessageBubbleLayout.messageMaxWidth)
+        XCTAssertGreaterThan(size.height, 40)
+    }
 }

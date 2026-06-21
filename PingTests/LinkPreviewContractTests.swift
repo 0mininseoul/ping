@@ -89,7 +89,20 @@ final class LinkPreviewContractTests: XCTestCase {
         XCTAssertTrue(source.contains("LinkPreviewDetector.firstURL(in: message.body)"))
         XCTAssertTrue(source.contains("NSWorkspace.shared.open"))
         XCTAssertTrue(source.contains("messageMaxWidth - textBubbleHorizontalPadding * 2"))
+        XCTAssertTrue(source.contains(".frame(width: textSize.width, height: textSize.height"))
         XCTAssertTrue(source.contains(".frame(maxWidth: .infinity, alignment: isMine ? .trailing : .leading)"))
+    }
+
+    func testMacTimelineRowsResolveToFullWidthBeforeTrailingAlignment() throws {
+        let source = try readProjectSource("Ping/UI/History/RoomTimelineView.swift")
+        let timelineRow = try sourceSlice(
+            in: source,
+            from: "private func timelineRow(for item: TimelineItem) -> some View",
+            to: "@ViewBuilder\n    private func timestampLabel"
+        )
+
+        XCTAssertTrue(timelineRow.contains("ZStack(alignment: .trailing)"))
+        XCTAssertTrue(timelineRow.contains(".frame(maxWidth: .infinity, alignment: .trailing)"))
     }
 
     func testSelectableTextMarksDetectedLinksAsClickableAttributes() throws {
@@ -141,5 +154,13 @@ final class LinkPreviewContractTests: XCTestCase {
         let testsDir = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
         let projectRoot = testsDir.deletingLastPathComponent()
         return try String(contentsOf: projectRoot.appendingPathComponent(relativePath), encoding: .utf8)
+    }
+
+    private func sourceSlice(in source: String, from start: String, to end: String) throws -> String {
+        guard let startRange = source.range(of: start),
+              let endRange = source.range(of: end, range: startRange.upperBound..<source.endIndex) else {
+            throw XCTSkip("source markers not found")
+        }
+        return String(source[startRange.lowerBound..<endRange.lowerBound])
     }
 }
