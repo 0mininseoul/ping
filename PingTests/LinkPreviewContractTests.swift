@@ -88,6 +88,8 @@ final class LinkPreviewContractTests: XCTestCase {
         XCTAssertTrue(source.contains("LinkPreviewCard(url:"))
         XCTAssertTrue(source.contains("LinkPreviewDetector.firstURL(in: message.body)"))
         XCTAssertTrue(source.contains("NSWorkspace.shared.open"))
+        XCTAssertTrue(source.contains("messageMaxWidth - textBubbleHorizontalPadding * 2"))
+        XCTAssertTrue(source.contains(".frame(maxWidth: .infinity, alignment: isMine ? .trailing : .leading)"))
     }
 
     func testSelectableTextMarksDetectedLinksAsClickableAttributes() throws {

@@ -13,6 +13,12 @@ struct ChatMessageRowView: View {
     let onDelete: () -> Void
     let onToggleReaction: (String) -> Void
 
+    private let messageMaxWidth: CGFloat = 280
+    private let textBubbleHorizontalPadding: CGFloat = 11
+    private var textContentMaxWidth: CGFloat {
+        messageMaxWidth - textBubbleHorizontalPadding * 2
+    }
+
     enum ReplyPreview {
         case chat(sender: String, body: String)
         case video(sender: String, captureMode: CaptureMode)
@@ -44,10 +50,11 @@ struct ChatMessageRowView: View {
                     reactionStrip
                 }
             }
-            .frame(maxWidth: 280, alignment: isMine ? .trailing : .leading)
+            .frame(maxWidth: messageMaxWidth, alignment: isMine ? .trailing : .leading)
 
             if !isMine { Spacer(minLength: 40) }
         }
+        .frame(maxWidth: .infinity, alignment: isMine ? .trailing : .leading)
         .padding(.vertical, 1)
     }
 
@@ -70,10 +77,10 @@ struct ChatMessageRowView: View {
                     text: message.body,
                     font: NSFont.systemFont(ofSize: NSFont.systemFontSize),
                     textColor: isMine ? .white : NSColor.labelColor,
-                    maxWidth: 280,
+                    maxWidth: textContentMaxWidth,
                     menuProvider: { makeContextMenu() }
                 )
-                .padding(.horizontal, 11)
+                .padding(.horizontal, textBubbleHorizontalPadding)
                 .padding(.vertical, 6)
                 .background(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)

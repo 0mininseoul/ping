@@ -26,4 +26,14 @@ final class SelectableTextLayoutTests: XCTestCase {
         XCTAssertGreaterThan(long.width, short.width)
         XCTAssertGreaterThan(long.height, short.height * 2)
     }
+
+    func testLongURLWrapsWithinTextContentWidth() {
+        let font = NSFont.systemFont(ofSize: NSFont.systemFontSize)
+        let text = "그리고 애들아 이거 한번 가입해서 써봐\nhttps://gatitagachon.vercel.app/invite/abcdefghijklmnopqrstuvwxyz"
+
+        let size = SelectableTextLayout.size(text: text, font: font, maxWidth: 258, proposedWidth: nil)
+
+        XCTAssertLessThanOrEqual(size.width, 258)
+        XCTAssertGreaterThan(size.height, 40)
+    }
 }

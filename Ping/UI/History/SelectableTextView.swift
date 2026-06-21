@@ -19,10 +19,12 @@ struct SelectableTextView: NSViewRepresentable {
         tv.drawsBackground = false
         tv.backgroundColor = .clear
         tv.textContainer?.lineFragmentPadding = 0
+        tv.textContainer?.lineBreakMode = .byCharWrapping
         tv.textContainerInset = .zero
         tv.isVerticallyResizable = true
         tv.isHorizontallyResizable = false
         tv.textContainer?.widthTracksTextView = true
+        tv.maxSize = NSSize(width: maxWidth, height: .greatestFiniteMagnitude)
         tv.autoresizingMask = [.width]
         tv.menuProvider = menuProvider
         applyText(to: tv)
@@ -36,8 +38,10 @@ struct SelectableTextView: NSViewRepresentable {
         } else {
             // font/color만 update
             let range = NSRange(location: 0, length: tv.textStorage?.length ?? 0)
-            tv.textStorage?.addAttributes([.font: font, .foregroundColor: textColor], range: range)
+            tv.textStorage?.addAttributes(baseAttributes, range: range)
         }
+        tv.maxSize = NSSize(width: maxWidth, height: .greatestFiniteMagnitude)
+        tv.textContainer?.lineBreakMode = .byCharWrapping
         tv.layoutManager?.ensureLayout(for: tv.textContainer!)
     }
 
@@ -46,11 +50,7 @@ struct SelectableTextView: NSViewRepresentable {
     }
 
     private func applyText(to tv: ContextMenuTextView) {
-        let attrs: [NSAttributedString.Key: Any] = [
-            .font: font,
-            .foregroundColor: textColor
-        ]
-        let attributed = NSMutableAttributedString(string: text, attributes: attrs)
+        let attributed = NSMutableAttributedString(string: text, attributes: baseAttributes)
         for match in LinkPreviewDetector.matches(in: text) {
             attributed.addAttributes([
                 .link: match.url,
@@ -60,14 +60,30 @@ struct SelectableTextView: NSViewRepresentable {
         }
         tv.textStorage?.setAttributedString(attributed)
     }
+
+    private var baseAttributes: [NSAttributedString.Key: Any] {
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.lineBreakMode = .byCharWrapping
+        return [
+            .font: font,
+            .foregroundColor: textColor,
+            .paragraphStyle: paragraphStyle
+        ]
+    }
 }
 
 enum SelectableTextLayout {
     static func size(text: String, font: NSFont, maxWidth: CGFloat, proposedWidth: CGFloat?) -> CGSize {
         let wrappingWidth = max(1, min(proposedWidth ?? maxWidth, maxWidth))
-        let storage = NSTextStorage(string: text, attributes: [.font: font])
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.lineBreakMode = .byCharWrapping
+        let storage = NSTextStorage(string: text, attributes: [
+            .font: font,
+            .paragraphStyle: paragraphStyle
+        ])
         let container = NSTextContainer(size: NSSize(width: wrappingWidth, height: .greatestFiniteMagnitude))
         container.lineFragmentPadding = 0
+        container.lineBreakMode = .byCharWrapping
         let layoutManager = NSLayoutManager()
         layoutManager.addTextContainer(container)
         storage.addLayoutManager(layoutManager)
