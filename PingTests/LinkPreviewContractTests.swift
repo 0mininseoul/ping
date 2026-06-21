@@ -107,6 +107,19 @@ final class LinkPreviewContractTests: XCTestCase {
         XCTAssertTrue(cardSource.contains("openURL(url)"))
     }
 
+    func testLinkPreviewCardsUseLargeVerticalImageLayout() throws {
+        let macCardSource = try readProjectSource("Ping/UI/History/LinkPreviewCard.swift")
+        let iosCardSource = try readProjectSource("PingMobile/LinkPreviewCard.swift")
+
+        XCTAssertTrue(macCardSource.contains("previewImageHeight"))
+        XCTAssertTrue(macCardSource.contains("metadataText"))
+        XCTAssertFalse(macCardSource.contains(".frame(width: 54, height: 54)"))
+
+        XCTAssertTrue(iosCardSource.contains("previewImageHeight"))
+        XCTAssertTrue(iosCardSource.contains("metadataText"))
+        XCTAssertFalse(iosCardSource.contains(".frame(width: 54, height: 54)"))
+    }
+
     private func readProjectSource(_ relativePath: String) throws -> String {
         let testsDir = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
         let projectRoot = testsDir.deletingLastPathComponent()

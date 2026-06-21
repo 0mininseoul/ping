@@ -7,6 +7,13 @@ struct LinkPreviewCard: View {
 
     @Environment(\.openURL) private var openURL
     @State private var metadata: PingLinkPreviewMetadata
+    private let maxCardWidth: CGFloat = 320
+    private let horizontalSafetyInset: CGFloat = 88
+    private let previewImageHeight: CGFloat = 190
+
+    private var cardWidth: CGFloat {
+        min(maxCardWidth, max(240, UIScreen.main.bounds.width - horizontalSafetyInset))
+    }
 
     init(url: URL, mine: Bool) {
         self.url = url
@@ -18,38 +25,51 @@ struct LinkPreviewCard: View {
         Button {
             openURL(url)
         } label: {
-            HStack(spacing: 9) {
+            VStack(alignment: .leading, spacing: 0) {
                 previewImage
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(metadata.displayTitle)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(mine ? .white : Color(uiColor: .label))
-                        .lineLimit(2)
-                    if let summary = metadata.summary, !summary.isEmpty {
-                        Text(summary)
-                            .font(.caption2)
-                            .foregroundStyle(mine ? .white.opacity(0.78) : .secondary)
-                            .lineLimit(2)
-                    }
-                    Text(PingLinkPreviewDetector.displayHost(for: url))
-                        .font(.caption2.weight(.medium))
-                        .foregroundStyle(mine ? .white.opacity(0.70) : .secondary)
-                        .lineLimit(1)
-                }
-                Spacer(minLength: 0)
+                    .frame(width: cardWidth, height: previewImageHeight)
+                    .clipped()
+
+                metadataText
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
             }
-            .padding(8)
-            .frame(maxWidth: 260, alignment: .leading)
+            .frame(width: cardWidth, alignment: .leading)
             .background(
-                RoundedRectangle(cornerRadius: 13, style: .continuous)
-                    .fill(mine ? Color.white.opacity(0.16) : Color.gray.opacity(0.13))
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Color(uiColor: .systemBackground))
             )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .strokeBorder(Color.black.opacity(0.06))
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(.plain)
         .task(id: url) {
             metadata = await PingLinkPreviewCache.shared.metadata(for: url)
         }
         .accessibilityLabel(Text(metadata.displayTitle))
+    }
+
+    private var metadataText: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(metadata.displayTitle)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(Color(uiColor: .label))
+                .lineLimit(2)
+            if let summary = metadata.summary, !summary.isEmpty {
+                Text(summary)
+                    .font(.system(size: 14))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+            Text(PingLinkPreviewDetector.displayHost(for: url))
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(Color.accentColor)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder
@@ -65,21 +85,18 @@ struct LinkPreviewCard: View {
                     placeholder
                 }
             }
-            .frame(width: 54, height: 54)
-            .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
         } else {
             placeholder
-                .frame(width: 54, height: 54)
         }
     }
 
     private var placeholder: some View {
-        RoundedRectangle(cornerRadius: 9, style: .continuous)
-            .fill(mine ? Color.white.opacity(0.14) : Color.gray.opacity(0.20))
+        Rectangle()
+            .fill(Color(uiColor: .secondarySystemBackground))
             .overlay(
                 Image(systemName: "link")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(mine ? .white.opacity(0.80) : .secondary)
+                    .font(.system(size: 34, weight: .semibold))
+                    .foregroundStyle(.secondary)
             )
     }
 }

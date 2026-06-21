@@ -6,6 +6,8 @@ struct LinkPreviewCard: View {
     let isMine: Bool
 
     @State private var metadata: LinkPreviewMetadata
+    private let cardWidth: CGFloat = 280
+    private let previewImageHeight: CGFloat = 168
 
     init(url: URL, isMine: Bool) {
         self.url = url
@@ -17,42 +19,51 @@ struct LinkPreviewCard: View {
         Button {
             NSWorkspace.shared.open(url)
         } label: {
-            HStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: 0) {
                 previewImage
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(metadata.displayTitle)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(isMine ? .white : .primary)
-                        .lineLimit(2)
-                    if let summary = metadata.summary, !summary.isEmpty {
-                        Text(summary)
-                            .font(.caption2)
-                            .foregroundStyle(isMine ? .white.opacity(0.78) : .secondary)
-                            .lineLimit(2)
-                    }
-                    Text(LinkPreviewDetector.displayHost(for: url))
-                        .font(.caption2.weight(.medium))
-                        .foregroundStyle(isMine ? .white.opacity(0.70) : .secondary)
-                        .lineLimit(1)
-                }
-                Spacer(minLength: 0)
+                    .frame(width: cardWidth, height: previewImageHeight)
+                    .clipped()
+
+                metadataText
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 11)
             }
-            .padding(8)
-            .frame(maxWidth: 280, alignment: .leading)
+            .frame(width: cardWidth, alignment: .leading)
             .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(isMine ? Color.white.opacity(0.16) : Color.gray.opacity(0.13))
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color(nsColor: .textBackgroundColor))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .strokeBorder(isMine ? Color.white.opacity(0.20) : Color.black.opacity(0.06))
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(Color.black.opacity(0.08))
             )
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .buttonStyle(.plain)
         .task(id: url) {
             metadata = await LinkPreviewCache.shared.metadata(for: url)
         }
         .accessibilityLabel(Text(metadata.displayTitle))
+    }
+
+    private var metadataText: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(metadata.displayTitle)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.primary)
+                .lineLimit(2)
+            if let summary = metadata.summary, !summary.isEmpty {
+                Text(summary)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+            Text(LinkPreviewDetector.displayHost(for: url))
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(Color.accentColor)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder
@@ -68,21 +79,18 @@ struct LinkPreviewCard: View {
                     placeholder
                 }
             }
-            .frame(width: 54, height: 54)
-            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         } else {
             placeholder
-                .frame(width: 54, height: 54)
         }
     }
 
     private var placeholder: some View {
-        RoundedRectangle(cornerRadius: 8, style: .continuous)
-            .fill(isMine ? Color.white.opacity(0.14) : Color.gray.opacity(0.20))
+        Rectangle()
+            .fill(Color(nsColor: .controlBackgroundColor))
             .overlay(
                 Image(systemName: "link")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(isMine ? .white.opacity(0.80) : .secondary)
+                    .font(.system(size: 30, weight: .semibold))
+                    .foregroundStyle(.secondary)
             )
     }
 }
