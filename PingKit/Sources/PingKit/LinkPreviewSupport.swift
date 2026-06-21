@@ -241,7 +241,6 @@ public actor PingLinkPreviewCache {
             return cached
         }
 
-        let metadata: PingLinkPreviewMetadata
         do {
             var request = URLRequest(url: url)
             request.setValue("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", forHTTPHeaderField: "Accept")
@@ -255,13 +254,12 @@ public actor PingLinkPreviewCache {
             let html = String(data: data, encoding: .utf8)
                 ?? String(data: data, encoding: .ascii)
                 ?? ""
-            metadata = PingOpenGraphParser.parse(html: html, pageURL: response.url ?? url)
+            let metadata = PingOpenGraphParser.parse(html: html, pageURL: response.url ?? url)
+            metadataByURL[url] = metadata
+            return metadata
         } catch {
             NSLog("Link preview fetch failed for \(url.absoluteString): \(error.localizedDescription)")
-            metadata = .fallback(url: url)
+            return .fallback(url: url)
         }
-
-        metadataByURL[url] = metadata
-        return metadata
     }
 }

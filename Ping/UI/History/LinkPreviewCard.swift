@@ -6,8 +6,8 @@ struct LinkPreviewCard: View {
     let isMine: Bool
 
     @State private var metadata: LinkPreviewMetadata
-    private let cardWidth: CGFloat = 280
-    private let previewImageHeight: CGFloat = 168
+    private let cardWidth: CGFloat = 248
+    private let previewImageHeight: CGFloat = 124
 
     init(url: URL, isMine: Bool) {
         self.url = url
@@ -40,6 +40,7 @@ struct LinkPreviewCard: View {
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .buttonStyle(.plain)
+        .padding(.trailing, isMine ? 28 : 0)
         .task(id: url) {
             metadata = await LinkPreviewCache.shared.metadata(for: url)
         }

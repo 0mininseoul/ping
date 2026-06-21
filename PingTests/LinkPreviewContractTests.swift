@@ -107,17 +107,32 @@ final class LinkPreviewContractTests: XCTestCase {
         XCTAssertTrue(cardSource.contains("openURL(url)"))
     }
 
-    func testLinkPreviewCardsUseLargeVerticalImageLayout() throws {
+    func testLinkPreviewCardsUseCompactVerticalImageLayout() throws {
         let macCardSource = try readProjectSource("Ping/UI/History/LinkPreviewCard.swift")
         let iosCardSource = try readProjectSource("PingMobile/LinkPreviewCard.swift")
 
-        XCTAssertTrue(macCardSource.contains("previewImageHeight"))
+        XCTAssertTrue(macCardSource.contains("private let cardWidth: CGFloat = 248"))
+        XCTAssertTrue(macCardSource.contains("private let previewImageHeight: CGFloat = 124"))
+        XCTAssertTrue(macCardSource.contains(".padding(.trailing, isMine ? 28 : 0)"))
         XCTAssertTrue(macCardSource.contains("metadataText"))
         XCTAssertFalse(macCardSource.contains(".frame(width: 54, height: 54)"))
 
-        XCTAssertTrue(iosCardSource.contains("previewImageHeight"))
+        XCTAssertTrue(iosCardSource.contains("private let maxCardWidth: CGFloat = 300"))
+        XCTAssertTrue(iosCardSource.contains("private let horizontalSafetyInset: CGFloat = 112"))
+        XCTAssertTrue(iosCardSource.contains("private let previewImageHeight: CGFloat = 132"))
         XCTAssertTrue(iosCardSource.contains("metadataText"))
         XCTAssertFalse(iosCardSource.contains(".frame(width: 54, height: 54)"))
+    }
+
+    func testLinkPreviewFetchFailuresAreNotPersistedAsMetadata() throws {
+        let macCacheSource = try readProjectSource("Ping/Core/LinkPreview.swift")
+        let kitCacheSource = try readProjectSource("PingKit/Sources/PingKit/LinkPreviewSupport.swift")
+
+        XCTAssertTrue(macCacheSource.contains("metadataByURL[url] = metadata\n            return metadata"))
+        XCTAssertTrue(macCacheSource.contains("return .fallback(url: url)"))
+
+        XCTAssertTrue(kitCacheSource.contains("metadataByURL[url] = metadata\n            return metadata"))
+        XCTAssertTrue(kitCacheSource.contains("return .fallback(url: url)"))
     }
 
     private func readProjectSource(_ relativePath: String) throws -> String {

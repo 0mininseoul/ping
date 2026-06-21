@@ -7,12 +7,12 @@ struct LinkPreviewCard: View {
 
     @Environment(\.openURL) private var openURL
     @State private var metadata: PingLinkPreviewMetadata
-    private let maxCardWidth: CGFloat = 320
-    private let horizontalSafetyInset: CGFloat = 88
-    private let previewImageHeight: CGFloat = 190
+    private let maxCardWidth: CGFloat = 300
+    private let horizontalSafetyInset: CGFloat = 112
+    private let previewImageHeight: CGFloat = 132
 
     private var cardWidth: CGFloat {
-        min(maxCardWidth, max(240, UIScreen.main.bounds.width - horizontalSafetyInset))
+        min(maxCardWidth, max(220, UIScreen.main.bounds.width - horizontalSafetyInset))
     }
 
     init(url: URL, mine: Bool) {
