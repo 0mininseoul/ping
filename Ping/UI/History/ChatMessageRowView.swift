@@ -108,6 +108,7 @@ struct ChatMessageRowView: View {
                     }
             }
         }
+        .padding(.trailing, isMine ? ChatMessageBubbleLayout.outgoingContentTrailingInset : 0)
     }
 
     private var messageMaxWidth: CGFloat {
@@ -211,6 +212,7 @@ enum ChatMessageBubbleLayout {
     static let messageMaxWidth: CGFloat = 280
     static let textBubbleHorizontalPadding: CGFloat = 11
     static let textBubbleVerticalPadding: CGFloat = 6
+    static let outgoingContentTrailingInset: CGFloat = 28
 
     static var textContentMaxWidth: CGFloat {
         messageMaxWidth - textBubbleHorizontalPadding * 2

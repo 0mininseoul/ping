@@ -92,6 +92,7 @@ final class LinkPreviewContractTests: XCTestCase {
         XCTAssertTrue(source.contains(".frame(width: textSize.width, height: textSize.height"))
         XCTAssertTrue(source.contains(".frame(width: bubbleSize.width, height: bubbleSize.height"))
         XCTAssertTrue(source.contains(".clipShape(RoundedRectangle(cornerRadius: 14"))
+        XCTAssertTrue(source.contains(".padding(.trailing, isMine ? ChatMessageBubbleLayout.outgoingContentTrailingInset : 0)"))
         XCTAssertTrue(source.contains(".frame(maxWidth: .infinity, alignment: isMine ? .trailing : .leading)"))
     }
 
@@ -140,7 +141,7 @@ final class LinkPreviewContractTests: XCTestCase {
 
         XCTAssertTrue(macCardSource.contains("private let cardWidth: CGFloat = 248"))
         XCTAssertTrue(macCardSource.contains("private let previewImageHeight: CGFloat = 124"))
-        XCTAssertTrue(macCardSource.contains(".padding(.trailing, isMine ? 28 : 0)"))
+        XCTAssertFalse(macCardSource.contains(".padding(.trailing, isMine ? 28 : 0)"))
         XCTAssertTrue(macCardSource.contains("metadataText"))
         XCTAssertFalse(macCardSource.contains(".frame(width: 54, height: 54)"))
 

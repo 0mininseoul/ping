@@ -40,7 +40,6 @@ struct LinkPreviewCard: View {
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .buttonStyle(.plain)
-        .padding(.trailing, isMine ? 28 : 0)
         .task(id: url) {
             metadata = await LinkPreviewCache.shared.metadata(for: url)
         }
