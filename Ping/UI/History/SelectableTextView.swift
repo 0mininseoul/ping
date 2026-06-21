@@ -12,44 +12,25 @@ struct SelectableTextView: NSViewRepresentable {
     let maxWidth: CGFloat
     let menuProvider: () -> NSMenu
 
-    func makeNSView(context: Context) -> ContextMenuTextView {
-        let tv = ContextMenuTextView()
-        tv.isEditable = false
-        tv.isSelectable = true
-        tv.drawsBackground = false
-        tv.backgroundColor = .clear
-        tv.textContainer?.lineFragmentPadding = 0
-        tv.textContainer?.lineBreakMode = .byCharWrapping
-        tv.textContainerInset = .zero
-        tv.isVerticallyResizable = true
-        tv.isHorizontallyResizable = false
-        tv.textContainer?.widthTracksTextView = true
-        tv.maxSize = NSSize(width: maxWidth, height: .greatestFiniteMagnitude)
-        tv.autoresizingMask = [.width]
-        tv.menuProvider = menuProvider
-        applyText(to: tv)
-        return tv
+    func makeNSView(context: Context) -> SelectableTextContainerView {
+        let view = SelectableTextContainerView()
+        view.maxTextWidth = maxWidth
+        view.menuProvider = menuProvider
+        view.setAttributedText(attributedText)
+        return view
     }
 
-    func updateNSView(_ tv: ContextMenuTextView, context: Context) {
-        tv.menuProvider = menuProvider
-        if tv.string != text {
-            applyText(to: tv)
-        } else {
-            // font/color만 update
-            let range = NSRange(location: 0, length: tv.textStorage?.length ?? 0)
-            tv.textStorage?.addAttributes(baseAttributes, range: range)
-        }
-        tv.maxSize = NSSize(width: maxWidth, height: .greatestFiniteMagnitude)
-        tv.textContainer?.lineBreakMode = .byCharWrapping
-        tv.layoutManager?.ensureLayout(for: tv.textContainer!)
+    func updateNSView(_ view: SelectableTextContainerView, context: Context) {
+        view.maxTextWidth = maxWidth
+        view.menuProvider = menuProvider
+        view.setAttributedText(attributedText)
     }
 
-    func sizeThatFits(_ proposal: ProposedViewSize, nsView: ContextMenuTextView, context: Context) -> CGSize? {
+    func sizeThatFits(_ proposal: ProposedViewSize, nsView: SelectableTextContainerView, context: Context) -> CGSize? {
         SelectableTextLayout.size(text: text, font: font, maxWidth: maxWidth, proposedWidth: proposal.width)
     }
 
-    private func applyText(to tv: ContextMenuTextView) {
+    private var attributedText: NSAttributedString {
         let attributed = NSMutableAttributedString(string: text, attributes: baseAttributes)
         for match in LinkPreviewDetector.matches(in: text) {
             attributed.addAttributes([
@@ -58,7 +39,7 @@ struct SelectableTextView: NSViewRepresentable {
                 .foregroundColor: NSColor.linkColor
             ], range: match.range)
         }
-        tv.textStorage?.setAttributedString(attributed)
+        return attributed
     }
 
     private var baseAttributes: [NSAttributedString.Key: Any] {
@@ -69,6 +50,74 @@ struct SelectableTextView: NSViewRepresentable {
             .foregroundColor: textColor,
             .paragraphStyle: paragraphStyle
         ]
+    }
+}
+
+final class SelectableTextContainerView: NSView {
+    private let textView = ContextMenuTextView()
+
+    var maxTextWidth: CGFloat = 1 {
+        didSet {
+            invalidateIntrinsicContentSize()
+            needsLayout = true
+        }
+    }
+
+    var menuProvider: (() -> NSMenu)? {
+        didSet {
+            textView.menuProvider = menuProvider
+        }
+    }
+
+    override var isFlipped: Bool { true }
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        wantsLayer = true
+        layer?.masksToBounds = true
+
+        textView.isEditable = false
+        textView.isSelectable = true
+        textView.drawsBackground = false
+        textView.backgroundColor = .clear
+        textView.textContainerInset = .zero
+        textView.textContainer?.lineFragmentPadding = 0
+        textView.textContainer?.lineBreakMode = .byCharWrapping
+        textView.textContainer?.widthTracksTextView = false
+        textView.isVerticallyResizable = false
+        textView.isHorizontallyResizable = false
+        textView.autoresizingMask = []
+        addSubview(textView)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    func setAttributedText(_ attributedText: NSAttributedString) {
+        if textView.attributedString() != attributedText {
+            textView.textStorage?.setAttributedString(attributedText)
+        }
+        updateTextGeometry()
+    }
+
+    override func layout() {
+        super.layout()
+        textView.frame = bounds
+        updateTextGeometry()
+    }
+
+    private func updateTextGeometry() {
+        guard let textContainer = textView.textContainer else { return }
+        let width = max(1, bounds.width > 0 ? bounds.width : maxTextWidth)
+        textView.minSize = .zero
+        textView.maxSize = NSSize(width: width, height: .greatestFiniteMagnitude)
+        textContainer.containerSize = NSSize(width: width, height: .greatestFiniteMagnitude)
+        textContainer.widthTracksTextView = false
+        textContainer.lineFragmentPadding = 0
+        textContainer.lineBreakMode = .byCharWrapping
+        textView.layoutManager?.ensureLayout(for: textContainer)
     }
 }
 

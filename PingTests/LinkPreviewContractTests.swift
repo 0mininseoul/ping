@@ -90,7 +90,19 @@ final class LinkPreviewContractTests: XCTestCase {
         XCTAssertTrue(source.contains("NSWorkspace.shared.open"))
         XCTAssertTrue(source.contains("messageMaxWidth - textBubbleHorizontalPadding * 2"))
         XCTAssertTrue(source.contains(".frame(width: textSize.width, height: textSize.height"))
+        XCTAssertTrue(source.contains(".frame(width: bubbleSize.width, height: bubbleSize.height"))
+        XCTAssertTrue(source.contains(".clipShape(RoundedRectangle(cornerRadius: 14"))
         XCTAssertTrue(source.contains(".frame(maxWidth: .infinity, alignment: isMine ? .trailing : .leading)"))
+    }
+
+    func testMacSelectableTextUsesClippingContainerInsteadOfBareNSTextView() throws {
+        let source = try readProjectSource("Ping/UI/History/SelectableTextView.swift")
+
+        XCTAssertTrue(source.contains("func makeNSView(context: Context) -> SelectableTextContainerView"))
+        XCTAssertTrue(source.contains("final class SelectableTextContainerView: NSView"))
+        XCTAssertTrue(source.contains("layer?.masksToBounds = true"))
+        XCTAssertTrue(source.contains("textContainer.containerSize = NSSize(width: width"))
+        XCTAssertTrue(source.contains("textContainer.widthTracksTextView = false"))
     }
 
     func testMacTimelineRowsResolveToFullWidthBeforeTrailingAlignment() throws {

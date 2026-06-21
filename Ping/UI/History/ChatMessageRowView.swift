@@ -71,6 +71,10 @@ struct ChatMessageRowView: View {
                     for: message.body,
                     font: messageFont
                 )
+                let bubbleSize = ChatMessageBubbleLayout.textBubbleSize(
+                    for: message.body,
+                    font: messageFont
+                )
                 SelectableTextView(
                     text: message.body,
                     font: messageFont,
@@ -80,11 +84,13 @@ struct ChatMessageRowView: View {
                 )
                 .frame(width: textSize.width, height: textSize.height, alignment: .leading)
                 .padding(.horizontal, textBubbleHorizontalPadding)
-                .padding(.vertical, 6)
+                .padding(.vertical, ChatMessageBubbleLayout.textBubbleVerticalPadding)
+                .frame(width: bubbleSize.width, height: bubbleSize.height, alignment: .leading)
                 .background(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .fill(isMine ? Color.accentColor : Color.gray.opacity(0.18))
                 )
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
 
             if let url = LinkPreviewDetector.firstURL(in: message.body) {
@@ -204,6 +210,7 @@ struct ChatMessageRowView: View {
 enum ChatMessageBubbleLayout {
     static let messageMaxWidth: CGFloat = 280
     static let textBubbleHorizontalPadding: CGFloat = 11
+    static let textBubbleVerticalPadding: CGFloat = 6
 
     static var textContentMaxWidth: CGFloat {
         messageMaxWidth - textBubbleHorizontalPadding * 2
@@ -215,6 +222,14 @@ enum ChatMessageBubbleLayout {
             font: font,
             maxWidth: textContentMaxWidth,
             proposedWidth: textContentMaxWidth
+        )
+    }
+
+    static func textBubbleSize(for text: String, font: NSFont) -> CGSize {
+        let textSize = textContentSize(for: text, font: font)
+        return CGSize(
+            width: textSize.width + textBubbleHorizontalPadding * 2,
+            height: textSize.height + textBubbleVerticalPadding * 2
         )
     }
 }
