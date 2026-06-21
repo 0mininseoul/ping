@@ -36,6 +36,31 @@ public enum PingLinkPreviewDetector {
     }
 
     public static func matches(in text: String) -> [PingDetectedLink] {
+        let detectorMatches = dataDetectorMatches(in: text)
+        if !detectorMatches.isEmpty {
+            return detectorMatches
+        }
+
+        return regexMatches(in: text)
+    }
+
+    private static func dataDetectorMatches(in text: String) -> [PingDetectedLink] {
+        guard let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue) else {
+            return []
+        }
+
+        let nsText = text as NSString
+        let fullRange = NSRange(location: 0, length: nsText.length)
+        return detector.matches(in: text, range: fullRange).compactMap { result in
+            guard result.range.location != NSNotFound else { return nil }
+            var raw = nsText.substring(with: result.range)
+            raw = raw.trimmingCharacters(in: trailingPunctuation)
+            guard let url = normalizedURL(from: raw) ?? result.url else { return nil }
+            return PingDetectedLink(url: url, range: NSRange(location: result.range.location, length: (raw as NSString).length))
+        }
+    }
+
+    private static func regexMatches(in text: String) -> [PingDetectedLink] {
         guard let regex = try? NSRegularExpression(pattern: urlPattern, options: [.caseInsensitive]) else {
             return []
         }
@@ -130,7 +155,7 @@ public enum PingOpenGraphParser {
         let summary = metaContent(in: html, keys: ["og:description", "twitter:description", "description"])
         let siteName = metaContent(in: html, keys: ["og:site_name"])
             ?? PingLinkPreviewDetector.fallbackSiteName(for: pageURL)
-        let image = metaContent(in: html, keys: ["og:image", "og:image:url", "twitter:image"])
+        let image = metaContent(in: html, keys: ["og:image:secure_url", "og:image", "og:image:url", "twitter:image", "twitter:image:src"])
         let imageURL = image.flatMap { URL(string: $0, relativeTo: pageURL)?.absoluteURL }
             ?? PingLinkPreviewDetector.youtubeThumbnailURL(for: pageURL)
 
@@ -143,21 +168,22 @@ public enum PingOpenGraphParser {
         )
     }
 
-    private static func metaContent(in html: String, keys: Set<String>) -> String? {
+    private static func metaContent(in html: String, keys: [String]) -> String? {
         guard let tagRegex = try? NSRegularExpression(pattern: #"<meta\b[^>]*>"#, options: [.caseInsensitive]) else {
             return nil
         }
 
         let fullRange = NSRange(html.startIndex..<html.endIndex, in: html)
+        var contentByKey: [String: String] = [:]
         for tagMatch in tagRegex.matches(in: html, range: fullRange) {
             let tag = (html as NSString).substring(with: tagMatch.range)
             let attrs = attributes(in: tag)
             let key = (attrs["property"] ?? attrs["name"])?.lowercased()
-            if let key, keys.contains(key), let content = attrs["content"], !content.isEmpty {
-                return htmlDecoded(content)
+            if let key, keys.contains(key), contentByKey[key] == nil, let content = attrs["content"], !content.isEmpty {
+                contentByKey[key] = htmlDecoded(content)
             }
         }
-        return nil
+        return keys.compactMap { contentByKey[$0] }.first
     }
 
     private static func attributes(in tag: String) -> [String: String] {
@@ -217,12 +243,21 @@ public actor PingLinkPreviewCache {
 
         let metadata: PingLinkPreviewMetadata
         do {
-            let (data, _) = try await URLSession.shared.data(from: url)
+            var request = URLRequest(url: url)
+            request.setValue("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", forHTTPHeaderField: "Accept")
+            request.setValue("Ping LinkPreview", forHTTPHeaderField: "User-Agent")
+
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse,
+                  (200..<300).contains(http.statusCode) else {
+                throw URLError(.badServerResponse)
+            }
             let html = String(data: data, encoding: .utf8)
                 ?? String(data: data, encoding: .ascii)
                 ?? ""
-            metadata = PingOpenGraphParser.parse(html: html, pageURL: url)
+            metadata = PingOpenGraphParser.parse(html: html, pageURL: response.url ?? url)
         } catch {
+            NSLog("Link preview fetch failed for \(url.absoluteString): \(error.localizedDescription)")
             metadata = .fallback(url: url)
         }
 

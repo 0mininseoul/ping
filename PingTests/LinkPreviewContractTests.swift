@@ -14,6 +14,14 @@ final class LinkPreviewContractTests: XCTestCase {
         XCTAssertEqual(url?.absoluteString, "https://www.example.com/ping")
     }
 
+    func testFirstURLDetectsGatiGachonLinkInKoreanSentence() {
+        let text = "그리고 애들아 이거 한번 가입해서 써봐\nhttps://gatitagachon.vercel.app/"
+
+        let url = LinkPreviewDetector.firstURL(in: text)
+
+        XCTAssertEqual(url?.absoluteString, "https://gatitagachon.vercel.app/")
+    }
+
     func testOpenGraphParserExtractsTitleDescriptionAndImage() {
         let html = """
         <html><head>
@@ -28,6 +36,25 @@ final class LinkPreviewContractTests: XCTestCase {
         XCTAssertEqual(metadata.title, "Ping launch")
         XCTAssertEqual(metadata.summary, "Three second video messages")
         XCTAssertEqual(metadata.imageURL?.absoluteString, "https://example.com/card.png")
+    }
+
+    func testOpenGraphParserExtractsGatiGachonMetadata() {
+        let html = """
+        <!DOCTYPE html><html lang="ko"><head>
+        <title>같이타 - 가천대 통학 동행 플랫폼</title>
+        <meta name="description" content="가천대학교 학생들을 위한 통학 경로 동행자 매칭 서비스입니다.">
+        <meta property="og:title" content="같이타 : 가천대 통학 동행 플랫폼"/>
+        <meta property="og:description" content="가천대역에서 AI공학관까지, 안전하고 편리하게 함께 이동하세요!"/>
+        <meta property="og:image" content="https://gatitagachon.vercel.app/og-image.png"/>
+        <meta name="twitter:image" content="https://gatitagachon.vercel.app/twitter.png"/>
+        </head></html>
+        """
+
+        let metadata = OpenGraphParser.parse(html: html, pageURL: URL(string: "https://gatitagachon.vercel.app/")!)
+
+        XCTAssertEqual(metadata.title, "같이타 : 가천대 통학 동행 플랫폼")
+        XCTAssertEqual(metadata.summary, "가천대역에서 AI공학관까지, 안전하고 편리하게 함께 이동하세요!")
+        XCTAssertEqual(metadata.imageURL?.absoluteString, "https://gatitagachon.vercel.app/og-image.png")
     }
 
     func testYouTubeFallbackProvidesStableThumbnailAndSiteName() {
