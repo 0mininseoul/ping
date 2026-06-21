@@ -9,6 +9,7 @@ struct SelectableTextView: NSViewRepresentable {
     let text: String
     let font: NSFont
     let textColor: NSColor
+    let linkColor: NSColor
     let maxWidth: CGFloat
     let menuProvider: () -> NSMenu
 
@@ -16,6 +17,7 @@ struct SelectableTextView: NSViewRepresentable {
         let view = SelectableTextContainerView()
         view.maxTextWidth = maxWidth
         view.menuProvider = menuProvider
+        view.linkColor = linkColor
         view.setAttributedText(attributedText)
         return view
     }
@@ -23,6 +25,7 @@ struct SelectableTextView: NSViewRepresentable {
     func updateNSView(_ view: SelectableTextContainerView, context: Context) {
         view.maxTextWidth = maxWidth
         view.menuProvider = menuProvider
+        view.linkColor = linkColor
         view.setAttributedText(attributedText)
     }
 
@@ -36,7 +39,7 @@ struct SelectableTextView: NSViewRepresentable {
             attributed.addAttributes([
                 .link: match.url,
                 .underlineStyle: NSUnderlineStyle.single.rawValue,
-                .foregroundColor: NSColor.linkColor
+                .foregroundColor: linkColor
             ], range: match.range)
         }
         return attributed
@@ -60,6 +63,15 @@ final class SelectableTextContainerView: NSView {
         didSet {
             invalidateIntrinsicContentSize()
             needsLayout = true
+        }
+    }
+
+    var linkColor: NSColor = .linkColor {
+        didSet {
+            textView.linkTextAttributes = [
+                .foregroundColor: linkColor,
+                .underlineStyle: NSUnderlineStyle.single.rawValue
+            ]
         }
     }
 

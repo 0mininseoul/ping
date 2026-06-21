@@ -27,7 +27,7 @@ struct ChatMessageRowView: View {
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 6) {
-            if isMine { Spacer(minLength: 40) }
+            if isMine { Spacer(minLength: 0) }
 
             VStack(alignment: isMine ? .trailing : .leading, spacing: 2) {
                 if showsSender && !isMine {
@@ -46,7 +46,7 @@ struct ChatMessageRowView: View {
             }
             .frame(maxWidth: messageMaxWidth, alignment: isMine ? .trailing : .leading)
 
-            if !isMine { Spacer(minLength: 40) }
+            if !isMine { Spacer(minLength: 0) }
         }
         .frame(maxWidth: .infinity, alignment: isMine ? .trailing : .leading)
         .padding(.vertical, 1)
@@ -79,6 +79,7 @@ struct ChatMessageRowView: View {
                     text: message.body,
                     font: messageFont,
                     textColor: isMine ? .white : NSColor.labelColor,
+                    linkColor: isMine ? .white : NSColor.linkColor,
                     maxWidth: textContentMaxWidth,
                     menuProvider: { makeContextMenu() }
                 )
@@ -93,7 +94,7 @@ struct ChatMessageRowView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
 
-            if let url = LinkPreviewDetector.firstURL(in: message.body) {
+            if let url = previewURL {
                 LinkPreviewCard(url: url, isMine: isMine)
                     .contextMenu {
                         Button("링크 열기") {
@@ -108,7 +109,10 @@ struct ChatMessageRowView: View {
                     }
             }
         }
-        .padding(.trailing, isMine ? ChatMessageBubbleLayout.outgoingContentTrailingInset : 0)
+    }
+
+    private var previewURL: URL? {
+        LinkPreviewDetector.firstURL(in: message.body)
     }
 
     private var messageMaxWidth: CGFloat {
@@ -212,7 +216,6 @@ enum ChatMessageBubbleLayout {
     static let messageMaxWidth: CGFloat = 280
     static let textBubbleHorizontalPadding: CGFloat = 11
     static let textBubbleVerticalPadding: CGFloat = 6
-    static let outgoingContentTrailingInset: CGFloat = 28
 
     static var textContentMaxWidth: CGFloat {
         messageMaxWidth - textBubbleHorizontalPadding * 2

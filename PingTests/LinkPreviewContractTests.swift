@@ -92,7 +92,9 @@ final class LinkPreviewContractTests: XCTestCase {
         XCTAssertTrue(source.contains(".frame(width: textSize.width, height: textSize.height"))
         XCTAssertTrue(source.contains(".frame(width: bubbleSize.width, height: bubbleSize.height"))
         XCTAssertTrue(source.contains(".clipShape(RoundedRectangle(cornerRadius: 14"))
-        XCTAssertTrue(source.contains(".padding(.trailing, isMine ? ChatMessageBubbleLayout.outgoingContentTrailingInset : 0)"))
+        XCTAssertTrue(source.contains("Spacer(minLength: 0)"))
+        XCTAssertFalse(source.contains("outgoingContentTrailingPadding"))
+        XCTAssertFalse(source.contains("outgoingContentTrailingInset"))
         XCTAssertTrue(source.contains(".frame(maxWidth: .infinity, alignment: isMine ? .trailing : .leading)"))
     }
 
@@ -122,6 +124,7 @@ final class LinkPreviewContractTests: XCTestCase {
         let source = try readProjectSource("Ping/UI/History/SelectableTextView.swift")
 
         XCTAssertTrue(source.contains(".link: match.url"))
+        XCTAssertTrue(source.contains(".foregroundColor: linkColor"))
         XCTAssertTrue(source.contains("NSWorkspace.shared.open(url)"))
     }
 

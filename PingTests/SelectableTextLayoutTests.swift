@@ -83,6 +83,125 @@ final class SelectableTextLayoutTests: XCTestCase {
         XCTAssertLessThanOrEqual(maxDescendantMaxX(in: host, relativeTo: host), timelineWidth + 0.5)
     }
 
+    func testRenderedOutgoingTextWithoutLinkKeepsNativeTrailingAlignment() {
+        let timelineWidth: CGFloat = 620
+        let message = ChatMessage(
+            id: "chat-1",
+            roomId: "room-1",
+            senderUid: "me",
+            senderNickname: "나",
+            body: "세연이랑 모수 다녀오기로 했어",
+            createdAt: Date()
+        )
+        let row = ChatMessageRowView(
+            message: message,
+            isMine: true,
+            showsSender: false,
+            replyPreview: nil,
+            cacheService: HistoryCacheService(),
+            reactions: [],
+            onReply: {},
+            onReact: {},
+            onDelete: {},
+            onToggleReaction: { _ in }
+        )
+        .frame(width: timelineWidth)
+
+        let host = NSHostingView(rootView: row)
+        host.frame = NSRect(x: 0, y: 0, width: timelineWidth, height: 160)
+        host.layoutSubtreeIfNeeded()
+
+        XCTAssertGreaterThanOrEqual(
+            maxSelectableTextContainerMaxX(in: host, relativeTo: host),
+            timelineWidth - ChatMessageBubbleLayout.textBubbleHorizontalPadding - 0.5
+        )
+    }
+
+    func testRenderedOutgoingLongTextFitsNarrowMacTimelineWidth() {
+        let timelineWidth: CGFloat = 287
+        let message = ChatMessage(
+            id: "chat-1",
+            roomId: "room-1",
+            senderUid: "me",
+            senderNickname: "나",
+            body: "무슨 네이버, 카카오 VC 투자 유치하고 팁스 선정 됐었던 사람이 PT 플랫폼 앱 만들고",
+            createdAt: Date()
+        )
+        let row = ChatMessageRowView(
+            message: message,
+            isMine: true,
+            showsSender: false,
+            replyPreview: nil,
+            cacheService: HistoryCacheService(),
+            reactions: [],
+            onReply: {},
+            onReact: {},
+            onDelete: {},
+            onToggleReaction: { _ in }
+        )
+        .frame(width: timelineWidth)
+
+        let host = NSHostingView(rootView: row)
+        host.frame = NSRect(x: 0, y: 0, width: timelineWidth, height: 220)
+        host.layoutSubtreeIfNeeded()
+
+        XCTAssertLessThanOrEqual(maxDescendantMaxX(in: host, relativeTo: host), timelineWidth + 0.5)
+    }
+
+    func testOutgoingTextWithPreviewUsesSameTrailingEdgeAsRegularOutgoingText() {
+        let timelineWidth: CGFloat = 287
+        let regularHost = makeOutgoingChatRowHost(
+            width: timelineWidth,
+            body: "무슨 네이버, 카카오 VC 투자 유치하고 팁스 선정 됐었던 사람이 PT 플랫폼 앱 만들고"
+        )
+        let linkHost = makeOutgoingChatRowHost(
+            width: timelineWidth,
+            body: "심심할 때 한번 봐봐\nhttps://www.youtube.com/watch?v=oFAvC8gw-fQ"
+        )
+
+        XCTAssertEqual(
+            maxSelectableTextContainerMaxX(in: regularHost, relativeTo: regularHost),
+            maxSelectableTextContainerMaxX(in: linkHost, relativeTo: linkHost),
+            accuracy: 0.5
+        )
+    }
+
+    func testOutgoingLinkTextUsesReadableColorOnBlueBubble() throws {
+        let urlString = "https://gatitagachon.vercel.app/"
+        let message = ChatMessage(
+            id: "chat-1",
+            roomId: "room-1",
+            senderUid: "me",
+            senderNickname: "나",
+            body: "그리고 애들아 이거 한번 가입해서 써봐\n\(urlString)",
+            createdAt: Date()
+        )
+        let row = ChatMessageRowView(
+            message: message,
+            isMine: true,
+            showsSender: false,
+            replyPreview: nil,
+            cacheService: HistoryCacheService(),
+            reactions: [],
+            onReply: {},
+            onReact: {},
+            onDelete: {},
+            onToggleReaction: { _ in }
+        )
+        .frame(width: 620)
+
+        let host = NSHostingView(rootView: row)
+        host.frame = NSRect(x: 0, y: 0, width: 620, height: 240)
+        host.layoutSubtreeIfNeeded()
+
+        let textView = try XCTUnwrap(firstTextView(containing: urlString, in: host))
+        let range = (textView.string as NSString).range(of: urlString)
+        let color = try XCTUnwrap(
+            textView.attributedString().attribute(.foregroundColor, at: range.location, effectiveRange: nil) as? NSColor
+        )
+        XCTAssertTrue(isReadableOutgoingLinkColor(color), "\(color) should be readable on the outgoing blue bubble")
+    }
+
     @MainActor
     func testRenderedRoomTimelineKeepsOutgoingLongURLInsideVisibleViewport() {
         let timelineWidth = sampleTimelineWidth
@@ -93,17 +212,16 @@ final class SelectableTextLayoutTests: XCTestCase {
     }
 
     @MainActor
-    func testRenderedRoomTimelineKeepsOutgoingTextBubbleAlignedWithPreviewInset() {
+    func testRenderedRoomTimelineKeepsOutgoingTextBubbleAlignedWithViewportEdge() {
         let timelineWidth = sampleTimelineWidth
         let timelineHorizontalPadding: CGFloat = 16
-        let outgoingTrailingInset: CGFloat = 28
         let host = makeSampleTimelineHost(width: timelineWidth)
         let textContainerMaxX = maxSelectableTextContainerMaxX(in: host, relativeTo: host)
 
         XCTAssertGreaterThan(textContainerMaxX, 0)
         XCTAssertLessThanOrEqual(
             textContainerMaxX,
-            timelineWidth - timelineHorizontalPadding - outgoingTrailingInset + 0.5
+            timelineWidth - timelineHorizontalPadding - ChatMessageBubbleLayout.textBubbleHorizontalPadding + 0.5
         )
     }
 
@@ -191,6 +309,36 @@ final class SelectableTextLayoutTests: XCTestCase {
         return host
     }
 
+    @MainActor
+    private func makeOutgoingChatRowHost(width timelineWidth: CGFloat, body: String) -> NSHostingView<some View> {
+        let message = ChatMessage(
+            id: UUID().uuidString,
+            roomId: "room-1",
+            senderUid: "me",
+            senderNickname: "나",
+            body: body,
+            createdAt: Date()
+        )
+        let row = ChatMessageRowView(
+            message: message,
+            isMine: true,
+            showsSender: false,
+            replyPreview: nil,
+            cacheService: HistoryCacheService(),
+            reactions: [],
+            onReply: {},
+            onReact: {},
+            onDelete: {},
+            onToggleReaction: { _ in }
+        )
+        .frame(width: timelineWidth)
+
+        let host = NSHostingView(rootView: row)
+        host.frame = NSRect(x: 0, y: 0, width: timelineWidth, height: 260)
+        host.layoutSubtreeIfNeeded()
+        return host
+    }
+
     private func maxSelectableTextContainerMaxX(in view: NSView, relativeTo root: NSView) -> CGFloat {
         let currentMax: CGFloat
         if view is SelectableTextContainerView {
@@ -201,5 +349,22 @@ final class SelectableTextLayoutTests: XCTestCase {
         return view.subviews.reduce(currentMax) {
             max($0, maxSelectableTextContainerMaxX(in: $1, relativeTo: root))
         }
+    }
+
+    private func firstTextView(containing text: String, in view: NSView) -> NSTextView? {
+        if let textView = view as? NSTextView, textView.string.contains(text) {
+            return textView
+        }
+        for subview in view.subviews {
+            if let match = firstTextView(containing: text, in: subview) {
+                return match
+            }
+        }
+        return nil
+    }
+
+    private func isReadableOutgoingLinkColor(_ color: NSColor) -> Bool {
+        guard let rgb = color.usingColorSpace(.deviceRGB) else { return false }
+        return rgb.redComponent > 0.8 && rgb.greenComponent > 0.8 && rgb.blueComponent > 0.8
     }
 }
