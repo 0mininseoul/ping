@@ -34,7 +34,7 @@ Supabase Dashboard의 Authentication 설정에서 Anonymous sign-ins가 켜져 �
 
 ### macOS
 
-1. `Ping-v0.3.57.dmg`를 더블클릭해 마운트한다.
+1. `Ping-v0.3.58.dmg`를 더블클릭해 마운트한다.
 2. `Ping.app`을 Applications 폴더로 드래그한다.
 3. 더블클릭해 실행한다. Developer ID 서명 + Apple 공증(notarized) 빌드라 Gatekeeper 경고 없이 바로 열린다.
 4. 카메라, 마이크, 알림 권한을 허용한다.
@@ -81,6 +81,11 @@ macOS 앱은 Sparkle로 업데이트를 확인한다. 새 버전이 공개되면
 0.3.28 초기 빌드(38/39)에서 업데이트 설치 오류가 반복되면 랜딩페이지의 최신 macOS DMG를 한 번 수동으로 내려받아 `Ping.app`을 Applications 폴더에 덮어쓴다. 이 초기 빌드는 Sparkle installer helper 권한/서명이 잘못 들어간 상태라, 현재 실행 중인 앱만으로는 자동 업데이트 설치가 실패할 수 있다. build 40 이상은 Sparkle helper 권한을 보존하고 sandbox mach-lookup 예외를 포함한다.
 
 Windows 앱은 Sparkle을 사용하지 않는다. 비용 없는 배포는 self-signed MSIX를 작은 `PingSetup-v0.3.46.exe` 웹 설치파일로 감싸고, 설치 중 PC 아키텍처에 맞는 MSIX를 `https://0minping.vercel.app/downloads/windows/`에서 받는 방식이다. 최초 설치 시 installer가 Ping 공개 인증서를 등록한다. Microsoft Store, Azure Artifact Signing, OV 코드서명 인증서는 더 매끄러운 신뢰 UX를 제공하지만 비용 또는 외부 계정 검증이 필요하다.
+
+## v0.3.58 macOS 수정
+
+- 좁은 macOS 채팅 컬럼에서 긴 발신 말풍선이 오른쪽 viewport 밖으로 빠져나가던 문제를 고쳤다.
+- URL 포함 발신 말풍선과 일반 발신 말풍선이 같은 오른쪽 기준선에 맞도록 하고, 파란 말풍선 안 URL 텍스트는 흰색 링크로 렌더링해 읽을 수 있게 했다.
 
 ## v0.3.57 macOS 수정
 
