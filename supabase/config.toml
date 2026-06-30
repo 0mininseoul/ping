@@ -163,11 +163,13 @@ jwt_expiry = 3600
 jwt_issuer = "https://qxjtprxvjmaxlbtljcjw.supabase.co/auth/v1"
 # Path to JWT signing key. DO NOT commit your signing keys file to git.
 # signing_keys_path = "./signing_keys.json"
-# If disabled, the refresh token will never expire.
-enable_refresh_token_rotation = true
+# Rotation is OFF in production so desktop, iPhone and Apple Watch can share one
+# handoff session without invalidating each other's refresh token. (config.toml
+# had drifted to `true`; aligned here to match the live project.)
+enable_refresh_token_rotation = false
 # Allows refresh tokens to be reused after expiry, up to the specified interval in seconds.
-# Requires enable_refresh_token_rotation = true.
-refresh_token_reuse_interval = 10
+# Requires enable_refresh_token_rotation = true. (No effect while rotation is off.)
+refresh_token_reuse_interval = 86400
 # Allow/disallow new user signups to your project.
 enable_signup = true
 # Allow/disallow anonymous sign-ins to your project.
