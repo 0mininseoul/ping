@@ -1,10 +1,13 @@
 import SwiftUI
+import OSLog
 import PingKit
 
 /// Paired home: a light list of rooms. Tapping a room opens its thread. Replaces
 /// the old static "연결됐어요" screen so the app has something to show when opened
 /// cold, while keeping the receive+reply role (no recording here).
 struct InboxView: View {
+    private static let log = Logger(subsystem: "com.youngminpark.ping.PingMobile", category: "inbox")
+
     let account: PairedAccount
 
     @State private var rooms: [PingRoom] = []
@@ -162,9 +165,12 @@ struct InboxView: View {
             return
         }
         // Only replace on success — a transient failure must not wipe a loaded
-        // list back to the empty "연결됨" state.
-        if let fetched = try? await client.myRooms() {
-            rooms = fetched
+        // list back to the empty "연결됨" state. Log the real cause (a silent
+        // failure here is what made the empty-inbox bug so hard to diagnose).
+        do {
+            rooms = try await client.myRooms()
+        } catch {
+            Self.log.error("myRooms failed: \(error, privacy: .public)")
         }
         isLoading = false
     }

@@ -1,12 +1,15 @@
 import SwiftUI
 import AVKit
 import AVFoundation
+import OSLog
 import PingKit
 
 /// A room's thread: received pings (tap to play the 3s clip) and text chat,
 /// interleaved by time, with a text (dictation) reply bar. No recording here —
 /// composing a ping stays a Mac/PC act.
 struct ThreadView: View {
+    private static let log = Logger(subsystem: "com.youngminpark.ping.PingMobile", category: "thread")
+
     let account: PairedAccount
     let roomId: String
 
@@ -301,9 +304,15 @@ struct ThreadView: View {
         }
         await refreshRoomName(client: client)
         // Keep the existing thread on a transient failure instead of flashing an
-        // empty history; require both reads to succeed before replacing.
-        guard let videos = try? await client.roomMessages(roomId: roomId),
-              let chats = try? await client.roomChatMessages(roomId: roomId) else {
+        // empty history; require both reads to succeed before replacing. Log the
+        // real cause rather than swallowing it silently.
+        let videos: [VideoMessage]
+        let chats: [PingChatMessage]
+        do {
+            videos = try await client.roomMessages(roomId: roomId)
+            chats = try await client.roomChatMessages(roomId: roomId)
+        } catch {
+            Self.log.error("thread load failed (room \(roomId, privacy: .public)): \(error, privacy: .public)")
             isLoading = false
             return
         }
