@@ -28,6 +28,12 @@ final class AppEnvironment: ObservableObject {
 
     private let fileURL: URL
 
+    /// One client per identity, shared across every caller. Building a fresh
+    /// client per call would defeat the in-flight refresh coalescing inside
+    /// `PingSupabaseClient` and let concurrent refreshes race on the single-use
+    /// refresh token (empty inbox / empty thread when the loser fails).
+    private var cachedClient: PingSupabaseClient?
+
     init() {
         let directory = (try? FileManager.default.url(
             for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true
@@ -44,6 +50,7 @@ final class AppEnvironment: ObservableObject {
 
     func setPaired(_ account: PairedAccount) {
         paired = account
+        cachedClient = nil  // New identity → rebuild the shared client.
         persist()
         WatchBridge.shared.sync(account)
     }
@@ -58,6 +65,7 @@ final class AppEnvironment: ObservableObject {
 
     func disconnect() {
         paired = nil
+        cachedClient = nil
         try? FileManager.default.removeItem(at: fileURL)
         WatchBridge.shared.unpair()
     }
@@ -67,12 +75,20 @@ final class AppEnvironment: ObservableObject {
         try? data.write(to: fileURL, options: .atomic)
     }
 
-    /// Build a client for the current identity, persisting any refreshed session.
+    /// The shared client for the current identity, persisting any refreshed
+    /// session. Cached so all callers share one refresh path; rebuilt only when
+    /// the identity changes (`setPaired`/`disconnect`).
     func makeClient() -> PingSupabaseClient? {
-        guard let account = paired else { return nil }
+        guard let account = paired else {
+            cachedClient = nil
+            return nil
+        }
+        if let cachedClient { return cachedClient }
         let configuration = PingConfiguration(url: account.url, anonKey: account.anonKey)
-        return PingSupabaseClient(configuration: configuration, session: account.session) { newSession in
+        let client = PingSupabaseClient(configuration: configuration, session: account.session) { newSession in
             Task { @MainActor in AppEnvironment.shared.updateSession(newSession) }
         }
+        cachedClient = client
+        return client
     }
 }

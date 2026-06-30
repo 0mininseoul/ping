@@ -195,3 +195,87 @@ import Testing
         #expect(PingProductLinks.desktopInstallPageText == "0minping.vercel.app")
     }
 }
+
+/// Records every request a `PingSupabaseClient` makes so a test can assert that
+/// concurrent callers refresh the single-use refresh token exactly once.
+final class RefreshCountingURLProtocol: URLProtocol, @unchecked Sendable {
+    nonisolated(unsafe) static var refreshCount = 0
+    nonisolated(unsafe) static var rpcCount = 0
+    static let lock = NSLock()
+
+    static func reset() {
+        lock.lock(); refreshCount = 0; rpcCount = 0; lock.unlock()
+    }
+
+    static var refreshes: Int {
+        lock.lock(); defer { lock.unlock() }; return refreshCount
+    }
+
+    static var rpcs: Int {
+        lock.lock(); defer { lock.unlock() }; return rpcCount
+    }
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+    override func stopLoading() {}
+
+    override func startLoading() {
+        let url = request.url!
+        let body: Data
+
+        if url.path.hasSuffix("/auth/v1/token") {
+            Self.lock.lock(); Self.refreshCount += 1; Self.lock.unlock()
+            // Widen the in-flight window so an un-coalesced client would expose
+            // overlapping refreshes (and fail this test by counting > 1).
+            Thread.sleep(forTimeInterval: 0.05)
+            let expiresAt = Int(Date().addingTimeInterval(3600).timeIntervalSince1970)
+            body = Data("""
+            {"access_token":"new-acc","refresh_token":"new-ref","expires_in":3600,\
+            "expires_at":\(expiresAt),"user":{"id":"u-1"}}
+            """.utf8)
+        } else {
+            Self.lock.lock(); Self.rpcCount += 1; Self.lock.unlock()
+            body = Data("[]".utf8)
+        }
+
+        let response = HTTPURLResponse(
+            url: url, statusCode: 200, httpVersion: nil,
+            headerFields: ["Content-Type": "application/json"]
+        )!
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: body)
+        client?.urlProtocolDidFinishLoading(self)
+    }
+}
+
+@Suite struct RefreshCoalescingTests {
+    /// Many simultaneous reads on an expired session must collapse into a single
+    /// token refresh; otherwise the rotated refresh token would be consumed more
+    /// than once and the losers would fail with `refresh_token_already_used`.
+    @Test func concurrentReadsRefreshTokenExactlyOnce() async {
+        RefreshCountingURLProtocol.reset()
+
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [RefreshCountingURLProtocol.self]
+        let urlSession = URLSession(configuration: configuration)
+
+        let expired = SupabaseSession(
+            accessToken: "old", refreshToken: "old-ref",
+            expiresAt: Date().addingTimeInterval(-60), userId: "u-1"
+        )
+        let client = PingSupabaseClient(
+            configuration: PingConfiguration(url: URL(string: "https://proj.supabase.co")!, anonKey: "anon"),
+            session: expired,
+            urlSession: urlSession
+        )
+
+        await withTaskGroup(of: Void.self) { group in
+            for _ in 0..<12 {
+                group.addTask { _ = try? await client.myRooms() }
+            }
+        }
+
+        #expect(RefreshCountingURLProtocol.refreshes == 1)
+        #expect(RefreshCountingURLProtocol.rpcs == 12)
+    }
+}

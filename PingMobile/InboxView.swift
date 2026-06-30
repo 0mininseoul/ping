@@ -161,7 +161,11 @@ struct InboxView: View {
             isLoading = false
             return
         }
-        rooms = (try? await client.myRooms()) ?? []
+        // Only replace on success — a transient failure must not wipe a loaded
+        // list back to the empty "연결됨" state.
+        if let fetched = try? await client.myRooms() {
+            rooms = fetched
+        }
         isLoading = false
     }
 

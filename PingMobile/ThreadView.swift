@@ -300,8 +300,13 @@ struct ThreadView: View {
             return
         }
         await refreshRoomName(client: client)
-        let videos = (try? await client.roomMessages(roomId: roomId)) ?? []
-        let chats = (try? await client.roomChatMessages(roomId: roomId)) ?? []
+        // Keep the existing thread on a transient failure instead of flashing an
+        // empty history; require both reads to succeed before replacing.
+        guard let videos = try? await client.roomMessages(roomId: roomId),
+              let chats = try? await client.roomChatMessages(roomId: roomId) else {
+            isLoading = false
+            return
+        }
         var merged: [ThreadItem] = videos.map { .video($0) } + chats.map { .chat($0) }
         merged.sort { $0.date < $1.date }
         items = merged

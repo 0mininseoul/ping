@@ -79,12 +79,37 @@ public actor PingSupabaseClient {
         return try await send(request)
     }
 
+    /// The in-flight refresh shared by all concurrent callers. Supabase rotates
+    /// (single-use) refresh tokens, so two simultaneous refreshes would make the
+    /// second fail with `refresh_token_already_used`. Coalescing collapses them
+    /// into one network call that consumes the refresh token exactly once.
+    private var refreshTask: Task<SupabaseSession, Error>?
+
     private func validAccessToken() async throws -> String {
         if !session.needsRefresh { return session.accessToken }
-        let refreshed = try await refresh(refreshToken: session.refreshToken)
+        return try await refreshedSession().accessToken
+    }
+
+    private func refreshedSession() async throws -> SupabaseSession {
+        // A coalesced refresh may have completed while this caller was suspended.
+        if !session.needsRefresh { return session }
+
+        // Join an in-flight refresh instead of starting a competing one.
+        if let refreshTask {
+            return try await refreshTask.value
+        }
+
+        let refreshToken = session.refreshToken
+        let task = Task { try await self.refresh(refreshToken: refreshToken) }
+        refreshTask = task
+        defer { refreshTask = nil }
+
+        let refreshed = try await task.value
+        // Only the caller that owns the task commits the rotated session; the
+        // followers above receive the same value without re-applying it.
         session = refreshed
         onSessionUpdate?(refreshed)
-        return refreshed.accessToken
+        return refreshed
     }
 
     private func refresh(refreshToken: String) async throws -> SupabaseSession {
@@ -103,13 +128,10 @@ public actor PingSupabaseClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: ["refresh_token": refreshToken])
 
-        let data: Data
-        do {
-            data = try await send(request)
-        } catch {
-            throw PingKitError.sessionExpired
-        }
-
+        // Propagate the real failure (e.g. `requestFailed` carrying a 400
+        // `refresh_token_already_used`) rather than flattening every error into
+        // `sessionExpired`, so callers and diagnostics keep the underlying cause.
+        let data = try await send(request)
         let response = try PingJSON.decoder.decode(AuthResponse.self, from: data)
         let expiration = response.expiresAt.map { Date(timeIntervalSince1970: TimeInterval($0)) }
             ?? Date().addingTimeInterval(TimeInterval(response.expiresIn))
