@@ -95,7 +95,13 @@ final class LocalNotificationCenter: NSObject, UNUserNotificationCenterDelegate 
         ])
     }
 
-    func notifyIncomingMessage(senderNickname: String, messageId: String, roomId: String) {
+    func notifyIncomingMessage(senderNickname: String, messageId: String, roomId: String) async -> Bool {
+        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        guard Self.canScheduleNotifications(settings) else {
+            NSLog("notifyIncomingMessage skipped: notifications are not authorized")
+            return false
+        }
+
         let content = UNMutableNotificationContent()
         content.title = "\(senderNickname)님이 영상을 보냈습니다"
         content.sound = notificationSound()
@@ -107,7 +113,16 @@ final class LocalNotificationCenter: NSObject, UNUserNotificationCenterDelegate 
             content: content,
             trigger: nil
         )
-        UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
+        return await withCheckedContinuation { continuation in
+            UNUserNotificationCenter.current().add(request) { error in
+                if let error {
+                    NSLog("notifyIncomingMessage failed: \(error)")
+                    continuation.resume(returning: false)
+                    return
+                }
+                continuation.resume(returning: true)
+            }
+        }
     }
 
     func notifyIncomingChat(_ message: ChatMessage, roomName: String) {
@@ -276,6 +291,17 @@ final class LocalNotificationCenter: NSObject, UNUserNotificationCenterDelegate 
             return .default
         case .none:
             return nil
+        }
+    }
+
+    private static func canScheduleNotifications(_ settings: UNNotificationSettings) -> Bool {
+        switch settings.authorizationStatus {
+        case .authorized, .provisional, .ephemeral:
+            return true
+        case .denied, .notDetermined:
+            return false
+        @unknown default:
+            return false
         }
     }
 }

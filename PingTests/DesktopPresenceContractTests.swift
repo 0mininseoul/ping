@@ -34,9 +34,12 @@ final class DesktopPresenceContractTests: XCTestCase {
 
     func testSelectedRealtimeChatIsMarkedReadAgain() throws {
         let source = try readSourceFile("Ping/UI/History/HistoryViewModel.swift")
+        let chatService = try readSourceFile("Ping/Backend/ChatMessageService.swift")
 
         XCTAssertTrue(source.contains("markSelectedRoomReadAfterRealtime(roomId: msg.roomId)"))
-        XCTAssertTrue(source.contains("try await chatService.markRoomRead(roomId: roomId)"))
+        XCTAssertTrue(source.contains("try await chatService.markRoomChatRead(roomId: roomId)"))
+        XCTAssertTrue(chatService.contains("func markRoomChatRead(roomId: String) async throws"))
+        XCTAssertTrue(chatService.contains("\"ping_mark_room_chat_read\""))
         XCTAssertTrue(source.contains("appState.markRoomReadLocally(roomId: roomId)"))
     }
 

@@ -169,7 +169,7 @@ final class HistoryViewModel: ObservableObject {
     private func markSelectedRoomReadAfterRealtime(roomId: String) async {
         guard roomId == selectedRoomId else { return }
         do {
-            try await chatService.markRoomRead(roomId: roomId)
+            try await chatService.markRoomChatRead(roomId: roomId)
             appState.markRoomReadLocally(roomId: roomId)
         } catch {
             NSLog("Mark realtime room read failed: \(error) — roomId=\(roomId)")

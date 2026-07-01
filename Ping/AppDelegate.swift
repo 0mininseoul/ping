@@ -320,14 +320,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 guard let id = message.id, shouldNotify(messageId: id, uid: uid, message: message) else {
                     continue
                 }
-                ledger.remember(.video, uid: uid, id: id)
-                try? await messageService.markNotified(messageId: id)
                 await prefetchMessageVideo(message)
-                LocalNotificationCenter.shared.notifyIncomingMessage(
+                let didScheduleNotification = await LocalNotificationCenter.shared.notifyIncomingMessage(
                     senderNickname: message.senderNickname,
                     messageId: id,
                     roomId: message.roomId
                 )
+                guard didScheduleNotification else { continue }
+                ledger.remember(.video, uid: uid, id: id)
+                try? await messageService.markNotified(messageId: id)
             }
         }
     }

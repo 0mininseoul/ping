@@ -60,6 +60,10 @@ final class ChatMessageService {
         try await client.rpcVoid("ping_mark_room_read", body: ["room_uuid": roomId])
     }
 
+    func markRoomChatRead(roomId: String) async throws {
+        try await client.rpcVoid("ping_mark_room_chat_read", body: ["room_uuid": roomId])
+    }
+
     func unreadChatCounts() async throws -> [String: Int] {
         struct Row: Codable {
             let room_id: String

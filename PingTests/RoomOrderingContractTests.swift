@@ -34,20 +34,30 @@ final class RoomOrderingContractTests: XCTestCase {
         XCTAssertTrue(functionSource.contains("status = 'uploaded'"))
     }
 
-    func testIncomingVideoNotificationsIgnoreMessagesAlreadyReadByRoomTimestamp() throws {
+    func testRealtimeChatReadDoesNotClearVideoUnreadState() throws {
         let migrations = try readSupabaseMigrationSources()
-        guard let start = migrations.range(
-            of: "create or replace function public.ping_incoming_messages()",
-            options: .backwards
-        ) else {
-            return XCTFail("ping_incoming_messages RPC is missing")
-        }
-        let functionSource = String(migrations[start.lowerBound...])
+        let functionSource = try latestFunctionSource(
+            named: "public.ping_mark_room_chat_read",
+            in: migrations
+        )
 
         XCTAssertTrue(functionSource.contains("last_read_chat_at"))
-        XCTAssertTrue(functionSource.contains("read_map"))
-        XCTAssertTrue(functionSource.contains("read_map ->> m.room_id::text"))
-        XCTAssertTrue(functionSource.contains("m.created_at > coalesce"))
+        XCTAssertFalse(functionSource.contains("update public.messages"))
+        XCTAssertFalse(functionSource.contains("set status = 'seen'"))
+    }
+
+    func testIncomingVideoNotificationsDoNotDependOnChatReadTimestamp() throws {
+        let migrations = try readSupabaseMigrationSources()
+        let functionSource = try latestFunctionSource(
+            named: "public.ping_incoming_messages",
+            in: migrations
+        )
+
+        XCTAssertTrue(functionSource.contains("m.notified_at is null"))
+        XCTAssertFalse(functionSource.contains("last_read_chat_at"))
+        XCTAssertFalse(functionSource.contains("read_map"))
+        XCTAssertFalse(functionSource.contains("read_map ->> m.room_id::text"))
+        XCTAssertFalse(functionSource.contains("m.created_at > coalesce"))
     }
 
     func testIncomingVideoNotificationsArePersistentlyDeliveredOnce() throws {
@@ -62,9 +72,11 @@ final class RoomOrderingContractTests: XCTestCase {
         XCTAssertTrue(messageService.contains("func markNotified(messageId: String) async throws"))
         XCTAssertTrue(messageService.contains("\"ping_mark_message_notified\""))
 
-        let markRange = try XCTUnwrap(appDelegate.range(of: "try? await messageService.markNotified(messageId: id)"))
+        XCTAssertTrue(appDelegate.contains("let didScheduleNotification = await LocalNotificationCenter.shared.notifyIncomingMessage"))
+        XCTAssertTrue(appDelegate.contains("guard didScheduleNotification else { continue }"))
         let notifyRange = try XCTUnwrap(appDelegate.range(of: "LocalNotificationCenter.shared.notifyIncomingMessage"))
-        XCTAssertLessThan(markRange.lowerBound, notifyRange.lowerBound)
+        let markRange = try XCTUnwrap(appDelegate.range(of: "try? await messageService.markNotified(messageId: id)"))
+        XCTAssertLessThan(notifyRange.lowerBound, markRange.lowerBound)
     }
 
     func testSharedRoomModelsDecodeOrderAndUnreadMetadata() throws {
@@ -166,5 +178,21 @@ final class RoomOrderingContractTests: XCTestCase {
         return try migrationFiles
             .map { try String(contentsOf: $0, encoding: .utf8) }
             .joined(separator: "\n")
+    }
+
+    private func latestFunctionSource(named functionName: String, in migrations: String) throws -> String {
+        let needle = "create or replace function \(functionName)"
+        guard let start = migrations.range(of: needle, options: .backwards) else {
+            throw NSError(
+                domain: "RoomOrderingContractTests",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "\(functionName) RPC is missing"]
+            )
+        }
+        let tail = String(migrations[start.lowerBound...])
+        if let grant = tail.range(of: "grant execute", options: []) {
+            return String(tail[..<grant.lowerBound])
+        }
+        return tail
     }
 }
