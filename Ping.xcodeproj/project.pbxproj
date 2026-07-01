@@ -99,6 +99,7 @@
 		7D6820A9720716BA8CC598CE /* WindowPositioning.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73B2E5B2B85836038B79C18B /* WindowPositioning.swift */; };
 		7F6A47959943C9D575EFF846 /* PingKit in Frameworks */ = {isa = PBXBuildFile; productRef = A299A26A76C1EEE355D3B9F4 /* PingKit */; };
 		8034FE36123AC61C5D2661DD /* ChatMessageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCF184494526CD00335EC49D /* ChatMessageService.swift */; };
+		80E2A55BBE956261C463262D /* ForegroundPresentationContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 252CD0C48E3BD775FA887F14 /* ForegroundPresentationContractTests.swift */; };
 		81AD9AA639E624B9BD249F74 /* VideoRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06B4B9E0137AD6A34F151BF2 /* VideoRecorder.swift */; };
 		81B8B052C9139748FA9F47DE /* BackendRetryPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 236B98B4323FB9FE9DEB2AF1 /* BackendRetryPolicyTests.swift */; };
 		81CF775CFAC24B82B2F8043A /* GlassChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFDFDDA4D6E69A3184DC445F /* GlassChip.swift */; };
@@ -134,6 +135,7 @@
 		B6A11640F9C354B97F970881 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 9A1A6B3E7AB732144F264705 /* Sparkle */; };
 		B81C0B09A4BF899A8773CC3F /* WatchContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 991C6509D6B14DB1451FC377 /* WatchContentView.swift */; };
 		BAC0D847D9554D9F5BE8C122 /* SelectableTextLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCE7247150967CBCEC6BEFF3 /* SelectableTextLayoutTests.swift */; };
+		BCF7187C4DAFB7DF099D11F5 /* ForegroundPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3E3F4481E793E98BF26304F /* ForegroundPresenter.swift */; };
 		BD4B27A9FA26170478465688 /* SupabaseClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = C719C9C94BAE6A852AD90D7A /* SupabaseClient.swift */; };
 		BDC7E1C785C6260EEBD1A885 /* AppcastUpdateOfferParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9214746AA17BA72DEFC057E7 /* AppcastUpdateOfferParserTests.swift */; };
 		BE3551EEFED3B34395960150 /* ScreenCoordinatesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DB8EE7896F96DFAC0EFCA86 /* ScreenCoordinatesTests.swift */; };
@@ -265,6 +267,7 @@
 		236B98B4323FB9FE9DEB2AF1 /* BackendRetryPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendRetryPolicyTests.swift; sourceTree = "<group>"; };
 		23C125D42D4715B503E6E707 /* MirrorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MirrorView.swift; sourceTree = "<group>"; };
 		242765EC4E5CC70241BB46FB /* InboxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InboxView.swift; sourceTree = "<group>"; };
+		252CD0C48E3BD775FA887F14 /* ForegroundPresentationContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForegroundPresentationContractTests.swift; sourceTree = "<group>"; };
 		260A034212C7DCDAE4B05B4E /* UserService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserService.swift; sourceTree = "<group>"; };
 		2823CB8CE254CF54DFA45E9C /* GlassEffectCompat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassEffectCompat.swift; sourceTree = "<group>"; };
 		2AF4160B3B74FDD3CA18261B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -349,6 +352,7 @@
 		9DA8354482E6065AA5CBDD0C /* PingWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PingWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9E1F6F2D8E154DB411DE015B /* WatchAppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchAppDelegate.swift; sourceTree = "<group>"; };
 		A0546AA276FA90796D5CD11E /* PingMobileTimestampRevealContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PingMobileTimestampRevealContractTests.swift; sourceTree = "<group>"; };
+		A3E3F4481E793E98BF26304F /* ForegroundPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForegroundPresenter.swift; sourceTree = "<group>"; };
 		A442835C646C43BA7F20E0EA /* PingMobileApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PingMobileApp.swift; sourceTree = "<group>"; };
 		A4A1E99D8A2F055B3DD2924E /* KeyboardRoutingContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardRoutingContractTests.swift; sourceTree = "<group>"; };
 		A54D7D9F08655509CE5894FA /* MirrorWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MirrorWindow.swift; sourceTree = "<group>"; };
@@ -471,6 +475,7 @@
 				96D07ED094D1B1E9297946A0 /* AccountNotifications.swift */,
 				72E17B6A6D89179C56491009 /* AppState.swift */,
 				497260D101318CB4A8D8DE2C /* BackendRetryPolicy.swift */,
+				A3E3F4481E793E98BF26304F /* ForegroundPresenter.swift */,
 				0194505B84DC32C2BA700F6C /* InviteLink.swift */,
 				F8D29F898D793DDAC8C24599 /* LinkPreview.swift */,
 				DDF74D004DFD2F009A5DA36B /* Models.swift */,
@@ -729,6 +734,7 @@
 				A6157E3107FE54D68F65EFCB /* DesignSystemContractTests.swift */,
 				96B89FB193F948DD67E28BD3 /* DesktopPresenceContractTests.swift */,
 				E0CE48710A798DC7E4F5F387 /* EntitlementsTests.swift */,
+				252CD0C48E3BD775FA887F14 /* ForegroundPresentationContractTests.swift */,
 				4768EC8284B544E3649C4507 /* HistoryViewModelTests.swift */,
 				3CC9A5C9C5BA8FF0D9D30E0A /* InviteLinkContractTests.swift */,
 				A4A1E99D8A2F055B3DD2924E /* KeyboardRoutingContractTests.swift */,
@@ -1219,6 +1225,7 @@
 				2E6412BD4860FB69C0B3C49A /* DesignSystemContractTests.swift in Sources */,
 				71727BE893C91EFA23DD7F85 /* DesktopPresenceContractTests.swift in Sources */,
 				67FBBC00ABEE4FDC9A8E5496 /* EntitlementsTests.swift in Sources */,
+				80E2A55BBE956261C463262D /* ForegroundPresentationContractTests.swift in Sources */,
 				06AFB9CF51890A927220471E /* HistoryViewModelTests.swift in Sources */,
 				315501BEACA5034EC49BB7B3 /* InviteLinkContractTests.swift in Sources */,
 				D1F98BCF92D6A7D7BD4FAFA5 /* KeyboardRoutingContractTests.swift in Sources */,
@@ -1292,6 +1299,7 @@
 				784474049D097C6E7F6C56A7 /* DeviceHandoffPayload.swift in Sources */,
 				87A004D8E295993226310DA6 /* DevicePairingView.swift in Sources */,
 				5587D2DEE80A1085ACF53044 /* ExpandedPlaybackWindow.swift in Sources */,
+				BCF7187C4DAFB7DF099D11F5 /* ForegroundPresenter.swift in Sources */,
 				3E8747EC3C02819DE0808A7E /* GlassButton.swift in Sources */,
 				81CF775CFAC24B82B2F8043A /* GlassChip.swift in Sources */,
 				6E1D0F1C5152D44720289D6E /* GlassEffectCompat.swift in Sources */,

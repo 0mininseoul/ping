@@ -32,7 +32,11 @@ final class UpdaterController: NSObject, @preconcurrency SPUStandardUserDriverDe
     ) {
         NSApp.setActivationPolicy(.accessory)
 
-        guard !state.userInitiated else { return }
+        if state.userInitiated {
+            ForegroundPresenter.activateApp()
+            return
+        }
+
         guard updateReminderStore.shouldNotify(version: update.displayVersionString) else { return }
 
         LocalNotificationCenter.shared.notifyUpdateAvailable(version: update.displayVersionString)
@@ -54,6 +58,8 @@ final class UpdaterController: NSObject, @preconcurrency SPUStandardUserDriverDe
     }
 
     @objc func checkForUpdates(_ sender: Any?) {
+        ForegroundPresenter.activateApp()
+
         guard AppInstallLocation.canUseSparkleUpdates() else {
             Task { @MainActor in
                 await showManualDownloadUpdateOffer()
@@ -71,7 +77,7 @@ final class UpdaterController: NSObject, @preconcurrency SPUStandardUserDriverDe
     private func showManualDownloadUpdateOffer() async {
         let offer = await latestManualUpdateOffer()
         NSApp.setActivationPolicy(.accessory)
-        NSApp.activate(ignoringOtherApps: true)
+        ForegroundPresenter.activateApp()
 
         let alert = NSAlert()
         alert.alertStyle = .informational

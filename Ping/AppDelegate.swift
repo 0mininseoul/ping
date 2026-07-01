@@ -438,7 +438,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.informativeText = "화면+얼굴 모드를 사용하려면 시스템 설정에서 Ping에 화면 녹화 권한을 부여해주세요."
         alert.addButton(withTitle: "시스템 설정 열기")
         alert.addButton(withTitle: "닫기")
-        NSApp.activate(ignoringOtherApps: true)
+        ForegroundPresenter.activateApp()
         let response = alert.runModal()
         if response == .alertFirstButtonReturn {
             ScreenCapturePermission.openSystemSettings()
@@ -481,8 +481,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 await screenCapture.startPreview(on: window.screen ?? screen)
             }
         }
-        mirrorWindow?.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+        ForegroundPresenter.present(mirrorWindow)
         ClientEventService.shared.log("mirror_opened", properties: ["mode": mode.rawValue])
     }
 
@@ -600,6 +599,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func playMessage(messageId: String) {
         Task { @MainActor in
+            ForegroundPresenter.activateApp()
             do {
                 guard let message = try await messageService.get(messageId: messageId) else { return }
                 let localURL = try await cachedVideoURL(for: message)
@@ -739,14 +739,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.messageText = "Ping 초기 설정을 열 수 없습니다"
         alert.informativeText = error.localizedDescription
         alert.addButton(withTitle: "확인")
-        NSApp.activate(ignoringOtherApps: true)
+        ForegroundPresenter.activateApp()
         alert.runModal()
     }
 
     private func showOnboardingPreviewForQA() {
         if let onboardingWindow {
-            onboardingWindow.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
+            ForegroundPresenter.present(onboardingWindow)
             return
         }
 
@@ -759,14 +758,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         onboardingWindow = OnboardingWindow(rootView: view)
-        onboardingWindow?.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+        ForegroundPresenter.present(onboardingWindow)
     }
 
     private func showOnboarding(uid: String) {
         if let onboardingWindow {
-            onboardingWindow.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
+            ForegroundPresenter.present(onboardingWindow)
             return
         }
 
@@ -830,8 +827,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         onboardingWindow = OnboardingWindow(rootView: view)
-        onboardingWindow?.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+        ForegroundPresenter.present(onboardingWindow)
     }
 
     @objc private func showRoomManager() {
@@ -883,8 +879,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             roomManagerWindow = RoomManagerWindow(rootView: view)
         }
 
-        roomManagerWindow?.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+        ForegroundPresenter.present(roomManagerWindow)
         Task { @MainActor [weak self] in
             await self?.refreshDesktopPresence()
         }
@@ -895,8 +890,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             settingsWindow = SettingsWindow(rootView: SettingsView().environmentObject(appState))
         }
 
-        settingsWindow?.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+        ForegroundPresenter.present(settingsWindow)
     }
 
     private func handleInvite(user: PingUser) {
@@ -980,7 +974,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.messageText = title
         alert.informativeText = message
         alert.addButton(withTitle: "확인")
-        NSApp.activate(ignoringOtherApps: true)
+        ForegroundPresenter.activateApp()
         alert.runModal()
     }
 

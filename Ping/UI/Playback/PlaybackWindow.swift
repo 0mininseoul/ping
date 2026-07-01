@@ -85,7 +85,7 @@ final class PlaybackWindow: NSWindow {
     }
 
     func fadeIn() {
-        makeKeyAndOrderFront(nil)
+        ForegroundPresenter.present(self)
         installKeyMonitor()
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.20
@@ -129,11 +129,12 @@ final class PlaybackWindow: NSWindow {
             on: screen,
             onDismiss: { [weak self] in
                 self?.expandedWindow = nil
-                self?.makeKeyAndOrderFront(nil)
+                ForegroundPresenter.present(self)
             }
         )
         self.expandedWindow = expanded
         self.orderOut(nil)
+        ForegroundPresenter.present(expanded)
         expanded.present()
     }
 
