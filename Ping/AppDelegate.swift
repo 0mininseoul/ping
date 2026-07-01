@@ -26,6 +26,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let cleanupService = CleanupService()
     private let chatRealtime = ChatRealtimeService()
     private let chatMessageService = ChatMessageService()
+    private let desktopPresenceService = DesktopPresenceService()
     private let appStartTime = Date()
     private let ledger = NotificationLedger()
 
@@ -37,6 +38,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var invitationObserverTask: Task<Void, Never>?
     private var incomingMessageTask: Task<Void, Never>?
     private var chatCatchUpTask: Task<Void, Never>?
+    private var desktopPresenceTask: Task<Void, Never>?
     private var bootstrapTask: Task<Void, Never>?
     private var bootstrapRetryTask: Task<Void, Never>?
     private var bootstrapFailureCount = 0
@@ -92,10 +94,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         roomObserverTask?.cancel()
         invitationObserverTask?.cancel()
         incomingMessageTask?.cancel()
+        desktopPresenceTask?.cancel()
         cancelPlaybackPrefetches()
         cameraStartTask?.cancel()
         camera.stop()
         Task { await chatRealtime.unsubscribeAll() }
+        Task { await desktopPresenceService.clear() }
     }
 
     func application(_ application: NSApplication, open urls: [URL]) {
@@ -165,6 +169,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 .receive(on: DispatchQueue.main)
                 .sink { [weak self] event in
                     self?.handleChatRealtimeEvent(event)
+                }
+                .store(in: &cancellables)
+
+            appState.$lastSelectedRoomId
+                .removeDuplicates()
+                .sink { [weak self] _ in
+                    guard let self, self.desktopPresenceTask != nil else { return }
+                    Task { @MainActor in
+                        await self.refreshDesktopPresence()
+                    }
                 }
                 .store(in: &cancellables)
         }
@@ -253,6 +267,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         incomingMessageTask?.cancel()
         cancelPlaybackPrefetches()
         seedVideoNotificationLedgerFromHistoryCache(uid: uid)
+        startDesktopPresenceHeartbeat()
 
         roomObserverTask = Task { @MainActor in
             var didHandleInitialSnapshot = false
@@ -315,6 +330,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 )
             }
         }
+    }
+
+    private func startDesktopPresenceHeartbeat() {
+        desktopPresenceTask?.cancel()
+        desktopPresenceTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                await self?.refreshDesktopPresence()
+                try? await Task.sleep(nanoseconds: 15_000_000_000)
+            }
+        }
+    }
+
+    private func stopDesktopPresenceHeartbeat(clear: Bool = true) {
+        desktopPresenceTask?.cancel()
+        desktopPresenceTask = nil
+        if clear {
+            Task { @MainActor [weak self] in
+                await self?.desktopPresenceService.clear()
+            }
+        }
+    }
+
+    private func refreshDesktopPresence() async {
+        do {
+            try await desktopPresenceService.update(activeRoomId: visibleRoomIdForPresence)
+        } catch {
+            NSLog("Desktop presence heartbeat failed: \(error)")
+        }
+    }
+
+    private var visibleRoomIdForPresence: String? {
+        guard let roomManagerWindow, roomManagerWindow.isVisible else { return nil }
+        return appState.lastSelectedRoomId
     }
 
     private func seedVideoNotificationLedgerFromHistoryCache(uid: String) {
@@ -792,6 +840,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func toggleRoomManager() {
         if let roomManagerWindow, roomManagerWindow.isVisible {
             roomManagerWindow.close()
+            Task { @MainActor [weak self] in
+                await self?.refreshDesktopPresence()
+            }
             return
         }
 
@@ -833,6 +884,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         roomManagerWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+        Task { @MainActor [weak self] in
+            await self?.refreshDesktopPresence()
+        }
     }
 
     @objc private func showSettings() {
@@ -1067,6 +1121,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         incomingMessageTask?.cancel(); incomingMessageTask = nil
         cancelPlaybackPrefetches()
         chatCatchUpTask?.cancel(); chatCatchUpTask = nil
+        stopDesktopPresenceHeartbeat()
 
         if mirrorWindow != nil { closeMirrorWindow() }
         roomManagerWindow?.close()

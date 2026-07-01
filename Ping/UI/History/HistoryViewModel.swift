@@ -157,11 +157,22 @@ final class HistoryViewModel: ObservableObject {
                 loadedChats.append(msg)
                 groups = Self.groupTimelineByDay(videos: loadedVideos, chats: loadedChats, calendar: .current)
             }
+            Task { await markSelectedRoomReadAfterRealtime(roomId: msg.roomId) }
         case .chatDeleted(let id, _):
             loadedChats.removeAll { $0.id == id }
             groups = Self.groupTimelineByDay(videos: loadedVideos, chats: loadedChats, calendar: .current)
         case .reactionChanged:
             Task { await refreshReactions() }
+        }
+    }
+
+    private func markSelectedRoomReadAfterRealtime(roomId: String) async {
+        guard roomId == selectedRoomId else { return }
+        do {
+            try await chatService.markRoomRead(roomId: roomId)
+            appState.markRoomReadLocally(roomId: roomId)
+        } catch {
+            NSLog("Mark realtime room read failed: \(error) — roomId=\(roomId)")
         }
     }
 

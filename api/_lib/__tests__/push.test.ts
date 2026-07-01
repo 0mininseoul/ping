@@ -5,6 +5,7 @@ interface FakeOptions {
   tokenQueryError?: { message: string } | null;
   signedUrlError?: { message: string } | null;
   signedUrl?: string | null;
+  desktopPresence?: Array<{ uid: string; updated_at: string }>;
 }
 
 function fakeSupabase(
@@ -13,7 +14,23 @@ function fakeSupabase(
 ) {
   const deleted: string[][] = [];
   const supabase = {
-    from(_table: string) {
+    from(table: string) {
+      if (table === 'desktop_presence') {
+        return {
+          select() {
+            return {
+              in(_col: string, uids: string[]) {
+                return {
+                  gte: async () => ({
+                    data: (opts.desktopPresence ?? []).filter((row) => uids.includes(row.uid)),
+                    error: null,
+                  }),
+                };
+              },
+            };
+          },
+        };
+      }
       return {
         select() {
           return {
@@ -139,6 +156,18 @@ describe('handlePush', () => {
     expect(send).not.toHaveBeenCalled();
   });
 
+  it('suppresses video push while the receiver has fresh desktop presence', async () => {
+    const { d, send } = deps(
+      {},
+      [{ token: 't1', environment: 'production' }],
+      { desktopPresence: [{ uid: 'rcv-1', updated_at: new Date().toISOString() }] }
+    );
+    const out = await handlePush(insertBody, 's3cret', d);
+    expect(out.code).toBe(200);
+    expect(out.body).toEqual({ sent: 0, removed: 0, suppressed: 1 });
+    expect(send).not.toHaveBeenCalled();
+  });
+
   it('returns 500 when the device_tokens query errors', async () => {
     const { d, send } = deps(
       {},
@@ -166,7 +195,8 @@ describe('handlePush', () => {
 
 function chatFakeSupabase(
   members: Array<{ user_id: string }>,
-  tokens: Array<{ token: string; environment: string }>
+  tokens: Array<{ token: string; environment: string }>,
+  desktopPresence: Array<{ uid: string; updated_at: string }> = []
 ) {
   const deleted: string[][] = [];
   const supabase = {
@@ -177,6 +207,22 @@ function chatFakeSupabase(
             return {
               eq() {
                 return { neq: async () => ({ data: members, error: null }) };
+              },
+            };
+          },
+        };
+      }
+      if (table === 'desktop_presence') {
+        return {
+          select() {
+            return {
+              in(_col: string, uids: string[]) {
+                return {
+                  gte: async () => ({
+                    data: desktopPresence.filter((row) => uids.includes(row.uid)),
+                    error: null,
+                  }),
+                };
               },
             };
           },
@@ -215,9 +261,10 @@ const chatBody = {
 
 function chatDeps(
   members: Array<{ user_id: string }>,
-  tokens: Array<{ token: string; environment: string }>
+  tokens: Array<{ token: string; environment: string }>,
+  desktopPresence: Array<{ uid: string; updated_at: string }> = []
 ) {
-  const { supabase, deleted } = chatFakeSupabase(members, tokens);
+  const { supabase, deleted } = chatFakeSupabase(members, tokens, desktopPresence);
   const send = vi.fn(async () => ({ status: 200, body: '' }));
   const d: PushDeps = {
     supabase: supabase as unknown as PushDeps['supabase'],
@@ -242,6 +289,18 @@ describe('handlePush (chat)', () => {
     expect(arg.payload.aps.alert.body).toBe('안녕하세요');
     expect(arg.collapseId).toBe('chat-1');
     expect(out.body).toEqual({ sent: 1, removed: 0, kind: 'chat' });
+  });
+
+  it('suppresses chat push for members with fresh desktop presence', async () => {
+    const { d, send } = chatDeps(
+      [{ user_id: 'rcv-1' }],
+      [{ token: 't1', environment: 'production' }],
+      [{ uid: 'rcv-1', updated_at: new Date().toISOString() }]
+    );
+    const out = await handlePush(chatBody, 's3cret', d);
+    expect(out.code).toBe(200);
+    expect(out.body).toEqual({ sent: 0, removed: 0, kind: 'chat', suppressed: 1 });
+    expect(send).not.toHaveBeenCalled();
   });
 
   it('returns sent:0 when the room has no other members', async () => {

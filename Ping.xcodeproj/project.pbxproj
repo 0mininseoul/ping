@@ -93,6 +93,7 @@
 		6E1D0F1C5152D44720289D6E /* GlassEffectCompat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2823CB8CE254CF54DFA45E9C /* GlassEffectCompat.swift */; };
 		6FC1B535DD12B36BA7721FDD /* GlassPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCBB58248AD85A5BB4137D3F /* GlassPanel.swift */; };
 		7035C7FE65C8AC75092F13FB /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 124F74B5C81D2AD5BA394E96 /* KeyboardShortcuts */; };
+		71727BE893C91EFA23DD7F85 /* DesktopPresenceContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96B89FB193F948DD67E28BD3 /* DesktopPresenceContractTests.swift */; };
 		776C909E046ADCF36EFB3CB8 /* UserService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 260A034212C7DCDAE4B05B4E /* UserService.swift */; };
 		784474049D097C6E7F6C56A7 /* DeviceHandoffPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = 311483C170DA8C628A197596 /* DeviceHandoffPayload.swift */; };
 		7D6820A9720716BA8CC598CE /* WindowPositioning.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73B2E5B2B85836038B79C18B /* WindowPositioning.swift */; };
@@ -171,6 +172,7 @@
 		E5098E32A2ACA9ED9F8A2939 /* RoomService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BB81E537D50111710D5B182 /* RoomService.swift */; };
 		E78C9B4431F062FB15266922 /* ScreenCapturePermission.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE35E9FFD55B61D62E4BE8EB /* ScreenCapturePermission.swift */; };
 		E88C396E9E50FA27A25162ED /* InviteLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0194505B84DC32C2BA700F6C /* InviteLink.swift */; };
+		ECF103DDCC0A6C69976373A1 /* DesktopPresenceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 002D151B2D97D19630FF11D6 /* DesktopPresenceService.swift */; };
 		ED2A3EB3872996158DA65761 /* MessageRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FD73952C51CA80616FFA8E6 /* MessageRowView.swift */; };
 		EE1A8480D0A1A17293759871 /* ReactionPersistenceContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5D3DB5C2FE7FCBB66A9C92D /* ReactionPersistenceContractTests.swift */; };
 		EFB2B0047CDF9C0ECEE1B2D6 /* ScreenFaceLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C56300160B566EFB16A4161 /* ScreenFaceLayoutTests.swift */; };
@@ -235,6 +237,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		002D151B2D97D19630FF11D6 /* DesktopPresenceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesktopPresenceService.swift; sourceTree = "<group>"; };
 		0046D5141DDF76BC6DD5F048 /* SettingsScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsScene.swift; sourceTree = "<group>"; };
 		00EDA916E26BEAF2BAA3A0F3 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
 		01290226E3F8D2ED2E2FA6AC /* PlaybackWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackWindow.swift; sourceTree = "<group>"; };
@@ -335,6 +338,7 @@
 		9214746AA17BA72DEFC057E7 /* AppcastUpdateOfferParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppcastUpdateOfferParserTests.swift; sourceTree = "<group>"; };
 		961E0B236B19718866C9702B /* RoomDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomDetailView.swift; sourceTree = "<group>"; };
 		963FCFD5B3AEA79A145B675A /* PingKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PingKit; path = PingKit; sourceTree = SOURCE_ROOT; };
+		96B89FB193F948DD67E28BD3 /* DesktopPresenceContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesktopPresenceContractTests.swift; sourceTree = "<group>"; };
 		96D07ED094D1B1E9297946A0 /* AccountNotifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountNotifications.swift; sourceTree = "<group>"; };
 		97150E02C17DE9AEBD26BF13 /* RainbowBorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RainbowBorder.swift; sourceTree = "<group>"; };
 		973AD72C9CE629F13531F10F /* WatchPlaybackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchPlaybackView.swift; sourceTree = "<group>"; };
@@ -548,6 +552,7 @@
 				F758F3123EB5B3CD54F783B9 /* ChatRealtimeService.swift */,
 				196AE189C92F647078653279 /* CleanupService.swift */,
 				A628BE96FDE0D4A8AE65516D /* ClientEventService.swift */,
+				002D151B2D97D19630FF11D6 /* DesktopPresenceService.swift */,
 				311483C170DA8C628A197596 /* DeviceHandoffPayload.swift */,
 				B110C3699C333F4B8A9E7E7C /* HistoryCacheService.swift */,
 				5E744CF82AF7E6266CD82F92 /* InvitationService.swift */,
@@ -722,6 +727,7 @@
 				7975A085C7725F5166047E0C /* ChatMessageCodingTests.swift */,
 				E7BA291155ACBFF85185B36B /* CompatibilityContractTests.swift */,
 				A6157E3107FE54D68F65EFCB /* DesignSystemContractTests.swift */,
+				96B89FB193F948DD67E28BD3 /* DesktopPresenceContractTests.swift */,
 				E0CE48710A798DC7E4F5F387 /* EntitlementsTests.swift */,
 				4768EC8284B544E3649C4507 /* HistoryViewModelTests.swift */,
 				3CC9A5C9C5BA8FF0D9D30E0A /* InviteLinkContractTests.swift */,
@@ -1211,6 +1217,7 @@
 				21B53CD69BAF477C5D9658E0 /* ChatMessageCodingTests.swift in Sources */,
 				44DC21E6B318CF6969918DE9 /* CompatibilityContractTests.swift in Sources */,
 				2E6412BD4860FB69C0B3C49A /* DesignSystemContractTests.swift in Sources */,
+				71727BE893C91EFA23DD7F85 /* DesktopPresenceContractTests.swift in Sources */,
 				67FBBC00ABEE4FDC9A8E5496 /* EntitlementsTests.swift in Sources */,
 				06AFB9CF51890A927220471E /* HistoryViewModelTests.swift in Sources */,
 				315501BEACA5034EC49BB7B3 /* InviteLinkContractTests.swift in Sources */,
@@ -1281,6 +1288,7 @@
 				5214CD941CDE454FE3F3E101 /* ChatRealtimeService.swift in Sources */,
 				CBA9098946084A74F1DDD04C /* CleanupService.swift in Sources */,
 				9F82291BBB72BBCE49382029 /* ClientEventService.swift in Sources */,
+				ECF103DDCC0A6C69976373A1 /* DesktopPresenceService.swift in Sources */,
 				784474049D097C6E7F6C56A7 /* DeviceHandoffPayload.swift in Sources */,
 				87A004D8E295993226310DA6 /* DevicePairingView.swift in Sources */,
 				5587D2DEE80A1085ACF53044 /* ExpandedPlaybackWindow.swift in Sources */,

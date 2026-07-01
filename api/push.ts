@@ -17,6 +17,8 @@ export interface PushResult {
   body: unknown;
 }
 
+const DEFAULT_DESKTOP_PRESENCE_TTL_SECONDS = 45;
+
 export async function handlePush(
   body: unknown,
   secretHeader: string | undefined,
@@ -29,6 +31,15 @@ export async function handlePush(
   // Video ping → push to the message's receiver.
   const video = parseMessageRecord(body);
   if (video) {
+    const desktopPresence = await freshDesktopPresenceUids(deps, [video.receiverUid]);
+    if (desktopPresence.error) {
+      return { code: 500, body: { error: 'db_error', detail: desktopPresence.error.message } };
+    }
+    if (desktopPresence.uids.has(video.receiverUid)) {
+      console.log(`[push] video suppressed by desktop presence receiver=${video.receiverUid}`);
+      return { code: 200, body: { sent: 0, removed: 0, suppressed: 1 } };
+    }
+
     const { data: tokens, error: tokenError } = await deps.supabase
       .from('device_tokens')
       .select('token, environment')
@@ -68,10 +79,21 @@ export async function handlePush(
     console.log(`[push] chat room=${chat.roomId} sender=${chat.senderUid} otherMembers=${uids.length}`);
     if (uids.length === 0) return { code: 200, body: { sent: 0, removed: 0 } };
 
+    const desktopPresence = await freshDesktopPresenceUids(deps, uids);
+    if (desktopPresence.error) {
+      return { code: 500, body: { error: 'db_error', detail: desktopPresence.error.message } };
+    }
+    const pushUids = uids.filter((uid) => !desktopPresence.uids.has(uid));
+    const suppressed = uids.length - pushUids.length;
+    if (pushUids.length === 0) {
+      console.log(`[push] chat suppressed by desktop presence room=${chat.roomId} suppressed=${suppressed}`);
+      return { code: 200, body: { sent: 0, removed: 0, kind: 'chat', suppressed } };
+    }
+
     const { data: tokens, error: tokenError } = await deps.supabase
       .from('device_tokens')
       .select('token, environment')
-      .in('uid', uids);
+      .in('uid', pushUids);
     if (tokenError) return { code: 500, body: { error: 'db_error', detail: tokenError.message } };
     console.log(`[push] chat tokens=${tokens?.length ?? 0}`);
     if (!tokens || tokens.length === 0) return { code: 200, body: { sent: 0, removed: 0 } };
@@ -88,6 +110,33 @@ export async function handlePush(
   }
 
   return { code: 200, body: { ignored: true } };
+}
+
+async function freshDesktopPresenceUids(
+  deps: PushDeps,
+  uids: string[]
+): Promise<{ uids: Set<string>; error: { message: string } | null }> {
+  if (uids.length === 0) return { uids: new Set(), error: null };
+
+  const ttlSeconds = Number(process.env.PUSH_DESKTOP_PRESENCE_TTL_SECONDS ?? DEFAULT_DESKTOP_PRESENCE_TTL_SECONDS);
+  const effectiveTtlSeconds = Number.isFinite(ttlSeconds) && ttlSeconds > 0
+    ? ttlSeconds
+    : DEFAULT_DESKTOP_PRESENCE_TTL_SECONDS;
+  const cutoff = new Date(Date.now() - effectiveTtlSeconds * 1000).toISOString();
+
+  const { data, error } = await deps.supabase
+    .from('desktop_presence')
+    .select('uid')
+    .in('uid', uids)
+    .gte('updated_at', cutoff);
+
+  if (error) return { uids: new Set(), error };
+
+  const fresh = new Set<string>();
+  for (const row of (data ?? []) as Array<{ uid: string }>) {
+    fresh.add(row.uid);
+  }
+  return { uids: fresh, error: null };
 }
 
 /// Send one push per token (same payload), prune 410 Unregistered tokens.
