@@ -84,6 +84,11 @@ macOS 앱은 Sparkle로 업데이트를 확인한다. 새 버전이 공개되면
 
 Windows 앱은 Sparkle을 사용하지 않는다. 비용 없는 배포는 self-signed MSIX를 작은 `PingSetup-v0.3.46.exe` 웹 설치파일로 감싸고, 설치 중 PC 아키텍처에 맞는 MSIX를 `https://0minping.vercel.app/downloads/windows/`에서 받는 방식이다. 최초 설치 시 installer가 Ping 공개 인증서를 등록한다. Microsoft Store, Azure Artifact Signing, OV 코드서명 인증서는 더 매끄러운 신뢰 UX를 제공하지만 비용 또는 외부 계정 검증이 필요하다.
 
+## v0.3.61 macOS 수정
+
+- Option+L 프리뷰에 Option+스크롤, 커서 이동, Enter 녹화, Esc 닫기를 함께 설명하는 상세 안내를 추가했다. 조작을 시작하면 축약 안내로 전환되고 Option+0으로 초기화하면 상세 안내가 다시 나타난다.
+- Ping 자신을 캡처 필터에서 제외하지 못한 경우 빈 제외 목록으로 진행하지 않도록 재시도와 안전 중단 처리를 추가해, 프리뷰 안에 프리뷰가 반복되는 재귀 캡처를 막았다.
+
 ## v0.3.58 macOS 수정
 
 - 좁은 macOS 채팅 컬럼에서 긴 발신 말풍선이 오른쪽 viewport 밖으로 빠져나가던 문제를 고쳤다.

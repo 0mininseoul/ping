@@ -127,7 +127,8 @@ final class DesignSystemContractTests: XCTestCase {
 
         XCTAssertTrue(mirrorContent.contains(".clipShape(mirrorShape)"))
         XCTAssertTrue(source.contains("HintCapsuleView(text: \"↵ 녹화 · Esc\")"))
-        XCTAssertTrue(source.contains("maxWidth: 220"))
+        XCTAssertTrue(source.contains("ScreenFaceGuideView("))
+        XCTAssertTrue(source.contains(".frame(maxWidth: 360)"))
         XCTAssertTrue(source.contains("HintCapsuleView(text: \"↵ 보내기 · ⌫ 다시 · Esc\")"))
         XCTAssertTrue(source.contains(".font(.system(size: 11, weight: .medium))"))
         XCTAssertTrue(source.contains("var maxWidth: CGFloat = 156"))

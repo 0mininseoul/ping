@@ -24,6 +24,7 @@ struct MirrorView: View {
     @State private var selectedRoomIds = Set<String>()
     @State private var pickerExpanded = false
     @State private var viewport = ScreenCaptureViewport()
+    @State private var hasInteractedWithViewport = false
 
     private var mirrorShape: AnyShape {
         switch captureMode {
@@ -81,17 +82,6 @@ struct MirrorView: View {
                 bottomOverlay
             }
 
-            if showsViewportBadge {
-                VStack {
-                    HStack {
-                        ViewportZoomBadge(zoom: viewport.zoom)
-                        Spacer()
-                    }
-                    Spacer()
-                }
-                .padding(10)
-                .allowsHitTesting(false)
-            }
         }
         .frame(width: previewSize.width, height: previewSize.height)
         .clipShape(mirrorShape)
@@ -115,9 +105,9 @@ struct MirrorView: View {
         case .idle:
             if camera.isReady {
                 if captureMode == .screenFace {
-                    HintCapsuleView(
-                        text: "⌥스크롤 확대 · ⌥이동 · ↵ 녹화 · Esc",
-                        maxWidth: 220
+                    ScreenFaceGuideView(
+                        isCompact: hasInteractedWithViewport,
+                        zoom: viewport.zoom
                     )
                     .padding(.top, 10)
                 } else {
@@ -228,6 +218,7 @@ struct MirrorView: View {
                 && event.modifierFlags.contains(.option)
                 && allowsViewportEditing:
                 viewport.reset()
+                hasInteractedWithViewport = false
                 return nil
             case 29, 0:
                 selectedRoomIds = Set(activeRooms.compactMap(\.id))
@@ -287,6 +278,7 @@ struct MirrorView: View {
             guard delta != 0 else { return false }
             viewport.adjustZoom(by: delta)
             viewport.moveCenter(toScreenPoint: NSEvent.mouseLocation, in: captureScreenFrame)
+            hasInteractedWithViewport = true
             return true
         default:
             return false
@@ -298,7 +290,12 @@ struct MirrorView: View {
               NSEvent.modifierFlags.contains(.option) else {
             return
         }
-        viewport.moveCenter(toScreenPoint: NSEvent.mouseLocation, in: captureScreenFrame)
+        let previousCenter = viewport.center
+        if viewport.moveCenter(toScreenPoint: NSEvent.mouseLocation, in: captureScreenFrame),
+           viewport.zoom > ScreenCaptureViewport.minimumZoom + 0.01,
+           viewport.center != previousCenter {
+            hasInteractedWithViewport = true
+        }
     }
 
     private func handleReturnKey() {
@@ -449,10 +446,6 @@ struct MirrorView: View {
         case .recording, .reviewing, .uploading:
             return false
         }
-    }
-
-    private var showsViewportBadge: Bool {
-        allowsViewportEditing && viewport.zoom > ScreenCaptureViewport.minimumZoom + 0.01
     }
 
     private func reconcileSelectedRooms() {
@@ -611,23 +604,52 @@ struct HintCapsuleView: View {
     }
 }
 
-struct ViewportZoomBadge: View {
+struct ScreenFaceGuideView: View {
+    let isCompact: Bool
     let zoom: CGFloat
 
     var body: some View {
-        Text("\(zoom, specifier: "%.1f")× · ⌥0 초기화")
-            .font(.system(size: 11, weight: .semibold, design: .rounded))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background {
-                Capsule()
-                    .fill(Color.black.opacity(0.58))
-                    .overlay {
-                        Capsule()
-                            .strokeBorder(Color.white.opacity(0.22), lineWidth: 0.8)
+        Group {
+            if isCompact {
+                VStack(spacing: 3) {
+                    Text("⌥ 스크롤·커서 이동")
+                    Text("↵ 녹화 시작   Esc 닫기")
+                    if zoom > ScreenCaptureViewport.minimumZoom + 0.01 {
+                        Text("\(zoom, specifier: "%.1f")× · ⌥0 전체 화면")
+                            .fontWeight(.semibold)
                     }
+                }
+            } else {
+                VStack(spacing: 4) {
+                    Text("⌥ Option 키를 누른 채 스크롤해 확대·축소하고")
+                        .fontWeight(.semibold)
+                    Text("커서를 움직여 보낼 영역을 맞춰보세요.")
+                    HStack(spacing: 14) {
+                        Text("↵ Enter 녹화 시작")
+                        Text("Esc 닫기")
+                    }
+                    .fontWeight(.semibold)
+                }
             }
+        }
+        .font(.system(size: 11, weight: .medium))
+        .foregroundStyle(.white)
+        .multilineTextAlignment(.center)
+        .lineLimit(1)
+        .minimumScaleFactor(0.78)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+        .frame(maxWidth: 360)
+        .background {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color.black.opacity(0.62))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .strokeBorder(Color.white.opacity(0.22), lineWidth: 0.8)
+                }
+        }
+        .allowsHitTesting(false)
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -667,6 +689,18 @@ struct ScreenLiveImageView: View {
                 Image(nsImage: nsImage)
                     .resizable()
                     .scaledToFill()
+            } else if let lastError = screenCapture.lastError {
+                VStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                    Text(lastError)
+                        .lineLimit(2)
+                }
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Color.yellow)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.black.opacity(0.62))
             } else {
                 Color.black.opacity(0.15)
             }
@@ -674,7 +708,11 @@ struct ScreenLiveImageView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipped()
         .allowsHitTesting(false)
-        .onReceive(screenCapture.$latestFrame.compactMap { $0 }) { frame in
+        .onReceive(screenCapture.$latestFrame) { frame in
+            guard let frame else {
+                nsImage = nil
+                return
+            }
             let ctx = CIContext()
             let cropped = viewport.cropped(frame)
             if let cg = ctx.createCGImage(cropped, from: cropped.extent) {

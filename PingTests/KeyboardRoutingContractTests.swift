@@ -69,7 +69,10 @@ final class KeyboardRoutingContractTests: XCTestCase {
         let source = try readSourceFile("Ping/UI/Mirror/MirrorView.swift")
 
         XCTAssertTrue(source.contains("↵ 녹화 · Esc"))
-        XCTAssertTrue(source.contains("⌥스크롤 확대 · ⌥이동 · ↵ 녹화 · Esc"))
+        XCTAssertTrue(source.contains("⌥ Option 키를 누른 채 스크롤해 확대·축소하고"))
+        XCTAssertTrue(source.contains("커서를 움직여 보낼 영역을 맞춰보세요."))
+        XCTAssertTrue(source.contains("↵ Enter 녹화 시작"))
+        XCTAssertTrue(source.contains("Esc 닫기"))
         XCTAssertTrue(source.contains("↵ 보내기 · ⌫ 다시 · Esc"))
     }
 

@@ -478,12 +478,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         mirrorViewModel.reset()
         mirrorWindow?.ensureVisibleOnCurrentScreen()
         startCameraForMirrorPresentation()
+        ForegroundPresenter.present(mirrorWindow)
         if mode == .screenFace {
-            Task {
-                await screenCapture.startPreview(on: window.screen ?? screen)
+            let previewScreen = window.screen ?? screen
+            Task { [weak self, weak window] in
+                await Task.yield()
+                guard let self,
+                      let window,
+                      window === self.mirrorWindow else { return }
+                await self.screenCapture.startPreview(on: previewScreen)
             }
         }
-        ForegroundPresenter.present(mirrorWindow)
         ClientEventService.shared.log("mirror_opened", properties: ["mode": mode.rawValue])
     }
 
