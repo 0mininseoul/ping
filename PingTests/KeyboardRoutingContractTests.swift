@@ -76,6 +76,21 @@ final class KeyboardRoutingContractTests: XCTestCase {
         XCTAssertTrue(source.contains("↵ 보내기 · ⌫ 다시 · Esc"))
     }
 
+    func testScreenFaceGuideCompactsToOneLineAfterThreeSeconds() throws {
+        let source = try readSourceFile("Ping/UI/Mirror/MirrorView.swift")
+        let compactGuide = try sourceSlice(
+            in: source,
+            from: "if isCompact",
+            to: "} else {"
+        )
+
+        XCTAssertTrue(source.contains("startViewportGuideTimer()"))
+        XCTAssertTrue(source.contains("Task.sleep(for: .seconds(3))"))
+        XCTAssertTrue(source.contains("isViewportGuideCompact = true"))
+        XCTAssertTrue(source.contains("⌥ 스크롤·커서 이동   ↵ 녹화 시작   Esc 닫기"))
+        XCTAssertFalse(compactGuide.contains("VStack"))
+    }
+
     func testScreenFaceViewportInputIsOptionScopedAndLocksDuringRecording() throws {
         let source = try readSourceFile("Ping/UI/Mirror/MirrorView.swift")
 

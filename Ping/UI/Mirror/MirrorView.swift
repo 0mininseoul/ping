@@ -20,11 +20,12 @@ struct MirrorView: View {
     @State private var localViewportMonitor: Any?
     @State private var globalViewportMonitor: Any?
     @State private var viewportTrackingTask: Task<Void, Never>?
+    @State private var viewportGuideTask: Task<Void, Never>?
     @State private var lastRecordedAspect: Double = 1.0
     @State private var selectedRoomIds = Set<String>()
     @State private var pickerExpanded = false
     @State private var viewport = ScreenCaptureViewport()
-    @State private var hasInteractedWithViewport = false
+    @State private var isViewportGuideCompact = false
 
     private var mirrorShape: AnyShape {
         switch captureMode {
@@ -46,15 +47,25 @@ struct MirrorView: View {
             reconcileSelectedRooms()
             installKeyMonitor()
             installViewportMonitors()
+            if camera.isReady {
+                startViewportGuideTimer()
+            }
         }
         .onChange(of: appState.rooms.map(\.id)) { _ in
             reconcileSelectedRooms()
+        }
+        .onChange(of: camera.isReady) { isReady in
+            if isReady {
+                startViewportGuideTimer()
+            }
         }
         .onDisappear {
             if let keyMonitor {
                 NSEvent.removeMonitor(keyMonitor)
             }
             keyMonitor = nil
+            viewportGuideTask?.cancel()
+            viewportGuideTask = nil
             removeViewportMonitors()
         }
     }
@@ -106,7 +117,7 @@ struct MirrorView: View {
             if camera.isReady {
                 if captureMode == .screenFace {
                     ScreenFaceGuideView(
-                        isCompact: hasInteractedWithViewport,
+                        isCompact: isViewportGuideCompact,
                         zoom: viewport.zoom
                     )
                     .padding(.top, 10)
@@ -218,7 +229,6 @@ struct MirrorView: View {
                 && event.modifierFlags.contains(.option)
                 && allowsViewportEditing:
                 viewport.reset()
-                hasInteractedWithViewport = false
                 return nil
             case 29, 0:
                 selectedRoomIds = Set(activeRooms.compactMap(\.id))
@@ -278,7 +288,6 @@ struct MirrorView: View {
             guard delta != 0 else { return false }
             viewport.adjustZoom(by: delta)
             viewport.moveCenter(toScreenPoint: NSEvent.mouseLocation, in: captureScreenFrame)
-            hasInteractedWithViewport = true
             return true
         default:
             return false
@@ -290,11 +299,23 @@ struct MirrorView: View {
               NSEvent.modifierFlags.contains(.option) else {
             return
         }
-        let previousCenter = viewport.center
-        if viewport.moveCenter(toScreenPoint: NSEvent.mouseLocation, in: captureScreenFrame),
-           viewport.zoom > ScreenCaptureViewport.minimumZoom + 0.01,
-           viewport.center != previousCenter {
-            hasInteractedWithViewport = true
+        viewport.moveCenter(toScreenPoint: NSEvent.mouseLocation, in: captureScreenFrame)
+    }
+
+    private func startViewportGuideTimer() {
+        guard captureMode == .screenFace else { return }
+
+        viewportGuideTask?.cancel()
+        isViewportGuideCompact = false
+        viewportGuideTask = Task { @MainActor in
+            do {
+                try await Task.sleep(for: .seconds(3))
+            } catch {
+                return
+            }
+            withAnimation(.easeOut(duration: 0.2)) {
+                isViewportGuideCompact = true
+            }
         }
     }
 
@@ -611,14 +632,8 @@ struct ScreenFaceGuideView: View {
     var body: some View {
         Group {
             if isCompact {
-                VStack(spacing: 3) {
-                    Text("⌥ 스크롤·커서 이동")
-                    Text("↵ 녹화 시작   Esc 닫기")
-                    if zoom > ScreenCaptureViewport.minimumZoom + 0.01 {
-                        Text("\(zoom, specifier: "%.1f")× · ⌥0 전체 화면")
-                            .fontWeight(.semibold)
-                    }
-                }
+                Text(compactGuideText)
+                    .fontWeight(.semibold)
             } else {
                 VStack(spacing: 4) {
                     Text("⌥ Option 키를 누른 채 스크롤해 확대·축소하고")
@@ -650,6 +665,15 @@ struct ScreenFaceGuideView: View {
         }
         .allowsHitTesting(false)
         .accessibilityElement(children: .combine)
+    }
+
+    private var compactGuideText: String {
+        let guidance = "⌥ 스크롤·커서 이동   ↵ 녹화 시작   Esc 닫기"
+        guard zoom > ScreenCaptureViewport.minimumZoom + 0.01 else {
+            return guidance
+        }
+        let zoomText = String(format: "%.1f", Double(zoom))
+        return "\(guidance)   \(zoomText)× · ⌥0 전체 화면"
     }
 }
 
