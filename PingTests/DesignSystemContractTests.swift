@@ -127,9 +127,11 @@ final class DesignSystemContractTests: XCTestCase {
 
         XCTAssertTrue(mirrorContent.contains(".clipShape(mirrorShape)"))
         XCTAssertTrue(source.contains("HintCapsuleView(text: \"↵ 녹화 · Esc\")"))
+        XCTAssertTrue(source.contains("maxWidth: 220"))
         XCTAssertTrue(source.contains("HintCapsuleView(text: \"↵ 보내기 · ⌫ 다시 · Esc\")"))
         XCTAssertTrue(source.contains(".font(.system(size: 11, weight: .medium))"))
-        XCTAssertTrue(source.contains(".frame(maxWidth: 156)"))
+        XCTAssertTrue(source.contains("var maxWidth: CGFloat = 156"))
+        XCTAssertTrue(source.contains(".frame(maxWidth: maxWidth)"))
     }
 
     func testPartnerPickerMenuIsCompactScrollableAndRoomBased() throws {

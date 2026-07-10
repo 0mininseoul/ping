@@ -63,6 +63,8 @@ Ping은 이메일 로그인 없이 Supabase Anonymous Auth 세션을 로컬에 �
 
 - Option+P: 얼굴만 거울을 띄운다.
 - Option+L: 화면+얼굴 거울을 띄운다.
+- Option+L 프리뷰에서 Option+위/아래 스크롤: 프리뷰 창은 고정한 채 전송할 화면 영역을 1.0×~4.0×로 확대/축소한다.
+- Option+L 프리뷰에서 Option+마우스 이동: 포인터 위치로 캡처 영역을 이동하고 Option을 놓으면 고정한다. Option+0으로 전체 화면으로 초기화한다.
 - Option+O: 내 룸/히스토리 창을 연다.
 - Windows 기본 대응: Alt+P, Alt+L, Alt+O.
 - Windows 빠른 전송: Alt+Shift+L로 기본 룸에 화면+얼굴 메시지를 즉시 3초 녹화/전송한다.

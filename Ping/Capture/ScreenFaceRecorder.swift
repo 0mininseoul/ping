@@ -14,6 +14,7 @@ final class ScreenFaceRecorder: NSObject {
         screenManager: ScreenCaptureManager,
         cameraSession: AVCaptureSession,
         screenSize: CGSize,
+        viewport: ScreenCaptureViewport = ScreenCaptureViewport(),
         duration: TimeInterval = 3.0
     ) async throws -> Output {
         let outputURL = FileManager.default.temporaryDirectory
@@ -131,9 +132,10 @@ final class ScreenFaceRecorder: NSObject {
                 continue
             }
 
-            let sx = outputSize.width / screenImage.extent.width
-            let sy = outputSize.height / screenImage.extent.height
-            let scaledScreen = screenImage.transformed(by: CGAffineTransform(scaleX: sx, y: sy))
+            let croppedScreen = viewport.cropped(screenImage)
+            let sx = outputSize.width / croppedScreen.extent.width
+            let sy = outputSize.height / croppedScreen.extent.height
+            let scaledScreen = croppedScreen.transformed(by: CGAffineTransform(scaleX: sx, y: sy))
             let composed = PIPCompositor.compose(
                 screen: scaledScreen,
                 face: cameraImage,

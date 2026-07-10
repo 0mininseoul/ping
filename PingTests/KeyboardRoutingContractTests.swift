@@ -69,7 +69,22 @@ final class KeyboardRoutingContractTests: XCTestCase {
         let source = try readSourceFile("Ping/UI/Mirror/MirrorView.swift")
 
         XCTAssertTrue(source.contains("↵ 녹화 · Esc"))
+        XCTAssertTrue(source.contains("⌥스크롤 확대 · ⌥이동 · ↵ 녹화 · Esc"))
         XCTAssertTrue(source.contains("↵ 보내기 · ⌫ 다시 · Esc"))
+    }
+
+    func testScreenFaceViewportInputIsOptionScopedAndLocksDuringRecording() throws {
+        let source = try readSourceFile("Ping/UI/Mirror/MirrorView.swift")
+
+        XCTAssertTrue(source.contains("NSEvent.addGlobalMonitorForEvents"))
+        XCTAssertTrue(source.contains("NSEvent.addLocalMonitorForEvents"))
+        XCTAssertTrue(source.contains("event.modifierFlags.contains(.option)"))
+        XCTAssertTrue(source.contains("NSEvent.modifierFlags.contains(.option)"))
+        XCTAssertTrue(source.contains("trackViewportToPointerIfNeeded()"))
+        XCTAssertTrue(source.contains("case .idle, .failed:"))
+        XCTAssertTrue(source.contains("case .recording, .reviewing, .uploading:"))
+        XCTAssertTrue(source.contains("case 29 where captureMode == .screenFace"))
+        XCTAssertTrue(source.contains("viewport.reset()"))
     }
 
     func testMirrorSendsCheckedRoomTargets() throws {

@@ -7,6 +7,8 @@ struct MirrorView: View {
     @ObservedObject var camera: CameraManager
     @ObservedObject var screenCapture: ScreenCaptureManager
     let captureMode: CaptureMode
+    let captureScreenFrame: CGRect
+    let previewSize: CGSize
     @ObservedObject var viewModel: MirrorViewModel
     @ObservedObject var appState: AppState
 
@@ -15,20 +17,13 @@ struct MirrorView: View {
     var onSend: (URL, MirrorPosition, [Room], CaptureMode, Double) async throws -> Void
 
     @State private var keyMonitor: Any?
+    @State private var localViewportMonitor: Any?
+    @State private var globalViewportMonitor: Any?
+    @State private var viewportTrackingTask: Task<Void, Never>?
     @State private var lastRecordedAspect: Double = 1.0
     @State private var selectedRoomIds = Set<String>()
     @State private var pickerExpanded = false
-
-    private var contentSize: CGSize {
-        switch captureMode {
-        case .faceOnly:
-            return CGSize(width: 200, height: 200)
-        case .screenFace:
-            let screen = NSScreen.main ?? NSScreen.screens.first!
-            let s = MirrorWindow.sizeForScreenFace(on: screen)
-            return CGSize(width: s.width, height: s.height)
-        }
-    }
+    @State private var viewport = ScreenCaptureViewport()
 
     private var mirrorShape: AnyShape {
         switch captureMode {
@@ -44,11 +39,12 @@ struct MirrorView: View {
             mirrorShadowSurface
             mirrorContent
         }
-        .frame(width: contentSize.width, height: contentSize.height)
+        .frame(width: previewSize.width, height: previewSize.height)
         .contentShape(mirrorShape)
         .onAppear {
             reconcileSelectedRooms()
             installKeyMonitor()
+            installViewportMonitors()
         }
         .onChange(of: appState.rooms.map(\.id)) { _ in
             reconcileSelectedRooms()
@@ -58,6 +54,7 @@ struct MirrorView: View {
                 NSEvent.removeMonitor(keyMonitor)
             }
             keyMonitor = nil
+            removeViewportMonitors()
         }
     }
 
@@ -83,8 +80,20 @@ struct MirrorView: View {
                 Spacer()
                 bottomOverlay
             }
+
+            if showsViewportBadge {
+                VStack {
+                    HStack {
+                        ViewportZoomBadge(zoom: viewport.zoom)
+                        Spacer()
+                    }
+                    Spacer()
+                }
+                .padding(10)
+                .allowsHitTesting(false)
+            }
         }
-        .frame(width: contentSize.width, height: contentSize.height)
+        .frame(width: previewSize.width, height: previewSize.height)
         .clipShape(mirrorShape)
     }
 
@@ -96,7 +105,7 @@ struct MirrorView: View {
             case .faceOnly:
                 CameraPreviewView(session: camera.session)
             case .screenFace:
-                ScreenFacePreview(screenCapture: screenCapture, camera: camera)
+                ScreenFacePreview(screenCapture: screenCapture, camera: camera, viewport: viewport)
             }
         }
     }
@@ -105,8 +114,16 @@ struct MirrorView: View {
         switch viewModel.state {
         case .idle:
             if camera.isReady {
-                HintCapsuleView(text: "↵ 녹화 · Esc")
+                if captureMode == .screenFace {
+                    HintCapsuleView(
+                        text: "⌥스크롤 확대 · ⌥이동 · ↵ 녹화 · Esc",
+                        maxWidth: 220
+                    )
                     .padding(.top, 10)
+                } else {
+                    HintCapsuleView(text: "↵ 녹화 · Esc")
+                        .padding(.top, 10)
+                }
             } else {
                 Text(camera.lastError ?? "카메라 준비 중")
                     .font(PingFont.caption)
@@ -207,6 +224,11 @@ struct MirrorView: View {
                     appState.sendMode = .singlePartner
                 }
                 return nil
+            case 29 where captureMode == .screenFace
+                && event.modifierFlags.contains(.option)
+                && allowsViewportEditing:
+                viewport.reset()
+                return nil
             case 29, 0:
                 selectedRoomIds = Set(activeRooms.compactMap(\.id))
                 appState.sendMode = .allPartners
@@ -215,6 +237,68 @@ struct MirrorView: View {
                 return event
             }
         }
+    }
+
+    private func installViewportMonitors() {
+        guard captureMode == .screenFace else { return }
+
+        let mask: NSEvent.EventTypeMask = .scrollWheel
+        localViewportMonitor = NSEvent.addLocalMonitorForEvents(matching: mask) { event in
+            guard event.window is MirrorWindow else { return event }
+            return handleViewportEvent(event) ? nil : event
+        }
+        globalViewportMonitor = NSEvent.addGlobalMonitorForEvents(matching: mask) { event in
+            handleViewportEvent(event)
+        }
+        viewportTrackingTask = Task { @MainActor in
+            while !Task.isCancelled {
+                trackViewportToPointerIfNeeded()
+                try? await Task.sleep(for: .milliseconds(33))
+            }
+        }
+    }
+
+    private func removeViewportMonitors() {
+        if let localViewportMonitor {
+            NSEvent.removeMonitor(localViewportMonitor)
+            self.localViewportMonitor = nil
+        }
+        if let globalViewportMonitor {
+            NSEvent.removeMonitor(globalViewportMonitor)
+            self.globalViewportMonitor = nil
+        }
+        viewportTrackingTask?.cancel()
+        viewportTrackingTask = nil
+    }
+
+    @discardableResult
+    private func handleViewportEvent(_ event: NSEvent) -> Bool {
+        guard allowsViewportEditing,
+              event.modifierFlags.contains(.option) else {
+            return false
+        }
+
+        switch event.type {
+        case .scrollWheel:
+            let delta = ScreenCaptureViewport.zoomAdjustment(
+                scrollingDeltaY: event.scrollingDeltaY,
+                precise: event.hasPreciseScrollingDeltas
+            )
+            guard delta != 0 else { return false }
+            viewport.adjustZoom(by: delta)
+            viewport.moveCenter(toScreenPoint: NSEvent.mouseLocation, in: captureScreenFrame)
+            return true
+        default:
+            return false
+        }
+    }
+
+    private func trackViewportToPointerIfNeeded() {
+        guard allowsViewportEditing,
+              NSEvent.modifierFlags.contains(.option) else {
+            return
+        }
+        viewport.moveCenter(toScreenPoint: NSEvent.mouseLocation, in: captureScreenFrame)
     }
 
     private func handleReturnKey() {
@@ -281,13 +365,14 @@ struct MirrorView: View {
                 recordedURL = try await recorder.recordClip()
                 lastRecordedAspect = 1.0
             case .screenFace:
-                let screen = NSScreen.main ?? NSScreen.screens.first!
+                let screen = captureScreen
                 await screenCapture.startRecording(on: screen)
                 let recorder = ScreenFaceRecorder()
                 let out = try await recorder.record(
                     screenManager: screenCapture,
                     cameraSession: camera.session,
-                    screenSize: screen.frame.size
+                    screenSize: captureScreenFrame.size,
+                    viewport: viewport
                 )
                 recordedURL = out.url
                 lastRecordedAspect = out.aspectRatio
@@ -321,10 +406,13 @@ struct MirrorView: View {
         viewModel.beginUpload()
 
         let origin = windowOrigin()
-        let screen = NSScreen.main?.frame ?? .zero
-        let centerX = origin.x + contentSize.width / 2
-        let centerY = origin.y + contentSize.height / 2
-        let position = ScreenCoordinates.normalize(point: NSPoint(x: centerX, y: centerY), in: screen)
+        let displayFrame = NSScreen.main?.frame ?? captureScreenFrame
+        let centerX = origin.x + previewSize.width / 2
+        let centerY = origin.y + previewSize.height / 2
+        let position = ScreenCoordinates.normalize(
+            point: NSPoint(x: centerX, y: centerY),
+            in: displayFrame
+        )
 
         do {
             try await onSend(url, position, currentTargets(), captureMode, lastRecordedAspect)
@@ -345,6 +433,26 @@ struct MirrorView: View {
 
     private var singleSelectedRoomId: String? {
         selectedRoomIds.count == 1 ? selectedRoomIds.first : nil
+    }
+
+    private var captureScreen: NSScreen {
+        NSScreen.screens.first { $0.frame == captureScreenFrame }
+            ?? NSScreen.main
+            ?? NSScreen.screens.first!
+    }
+
+    private var allowsViewportEditing: Bool {
+        guard captureMode == .screenFace else { return false }
+        switch viewModel.state {
+        case .idle, .failed:
+            return true
+        case .recording, .reviewing, .uploading:
+            return false
+        }
+    }
+
+    private var showsViewportBadge: Bool {
+        allowsViewportEditing && viewport.zoom > ScreenCaptureViewport.minimumZoom + 0.01
     }
 
     private func reconcileSelectedRooms() {
@@ -477,6 +585,7 @@ struct ReviewLoopPlayerView: NSViewRepresentable {
 
 struct HintCapsuleView: View {
     let text: String
+    var maxWidth: CGFloat = 156
     @State private var opacity: Double = 1.0
 
     var body: some View {
@@ -487,7 +596,7 @@ struct HintCapsuleView: View {
             .minimumScaleFactor(0.82)
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
-            .frame(maxWidth: 156)
+            .frame(maxWidth: maxWidth)
             .background {
                 Capsule()
                     .fill(Color.black.opacity(0.50))
@@ -502,9 +611,30 @@ struct HintCapsuleView: View {
     }
 }
 
+struct ViewportZoomBadge: View {
+    let zoom: CGFloat
+
+    var body: some View {
+        Text("\(zoom, specifier: "%.1f")× · ⌥0 초기화")
+            .font(.system(size: 11, weight: .semibold, design: .rounded))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background {
+                Capsule()
+                    .fill(Color.black.opacity(0.58))
+                    .overlay {
+                        Capsule()
+                            .strokeBorder(Color.white.opacity(0.22), lineWidth: 0.8)
+                    }
+            }
+    }
+}
+
 struct ScreenFacePreview: View {
     @ObservedObject var screenCapture: ScreenCaptureManager
     @ObservedObject var camera: CameraManager
+    let viewport: ScreenCaptureViewport
 
     var body: some View {
         GeometryReader { proxy in
@@ -512,7 +642,7 @@ struct ScreenFacePreview: View {
             let padding = ScreenFaceLayout.padding(in: proxy.size)
 
             ZStack(alignment: .bottomTrailing) {
-                ScreenLiveImageView(screenCapture: screenCapture)
+                ScreenLiveImageView(screenCapture: screenCapture, viewport: viewport)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 CameraPreviewView(session: camera.session)
                     .frame(width: diameter, height: diameter)
@@ -528,6 +658,7 @@ struct ScreenFacePreview: View {
 
 struct ScreenLiveImageView: View {
     @ObservedObject var screenCapture: ScreenCaptureManager
+    let viewport: ScreenCaptureViewport
     @State private var nsImage: NSImage?
 
     var body: some View {
@@ -545,7 +676,8 @@ struct ScreenLiveImageView: View {
         .allowsHitTesting(false)
         .onReceive(screenCapture.$latestFrame.compactMap { $0 }) { frame in
             let ctx = CIContext()
-            if let cg = ctx.createCGImage(frame, from: frame.extent) {
+            let cropped = viewport.cropped(frame)
+            if let cg = ctx.createCGImage(cropped, from: cropped.extent) {
                 nsImage = NSImage(cgImage: cg, size: .zero)
             }
         }

@@ -30,9 +30,11 @@ final class ScreenFaceLayoutTests: XCTestCase {
         XCTAssertTrue(previewSource.contains("ScreenFaceLayout.faceDiameter"))
         XCTAssertTrue(previewSource.contains("ScreenFaceLayout.padding"))
         XCTAssertFalse(previewSource.contains(".frame(width: 72, height: 72)"))
+        XCTAssertTrue(mirrorSource.contains("let cropped = viewport.cropped(frame)"))
 
         XCTAssertTrue(recorderSource.contains("ScreenFaceLayout.faceDiameterRatio"))
         XCTAssertTrue(recorderSource.contains("ScreenFaceLayout.paddingRatio"))
+        XCTAssertTrue(recorderSource.contains("let croppedScreen = viewport.cropped(screenImage)"))
         XCTAssertFalse(recorderSource.contains("72.0 / longSide"))
         XCTAssertFalse(recorderSource.contains("12.0 / longSide"))
 

@@ -458,6 +458,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             camera: camera,
             screenCapture: screenCapture,
             captureMode: mode,
+            captureScreenFrame: screen.frame,
+            previewSize: size,
             viewModel: mirrorViewModel,
             appState: appState,
             windowOrigin: { [weak window] in window?.frame.origin ?? .zero },

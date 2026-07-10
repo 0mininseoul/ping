@@ -118,6 +118,16 @@ Windows packaged client는 Windows 11 24H2 미만에서는 설치 대상이 아�
 - `Enter`: 녹화 시작
 - `Esc`: 닫기
 
+### 화면+얼굴 캡처 영역
+
+- Option+L 프리뷰는 매번 1.0× 전체 화면으로 시작한다.
+- `Option+위/아래 스크롤`로 화면 캡처 영역을 1.0×~4.0× 범위에서 확대/축소한다.
+- `Option`을 누른 채 마우스를 움직이면 포인터가 있는 위치로 캡처 중심 X/Y가 이동하고, `Option`을 놓으면 현재 영역이 고정된다.
+- `Option+0`은 전체 화면 1.0×로 초기화한다.
+- 프리뷰 창의 위치와 크기, 우측 하단 얼굴 PIP는 유지하고 화면 레이어에만 확대/이동을 적용한다.
+- `Enter`를 누르는 순간 캡처 영역을 잠그고, 녹화와 review 중에는 확대/이동 입력을 무시한다.
+- 프리뷰와 실제 MP4 녹화는 동일한 크롭 영역을 사용한다.
+
 ### 수신 재생
 
 - Supabase polling으로 새 메시지를 감지하면 로컬 알림을 띄운다.
@@ -141,6 +151,7 @@ Windows packaged client는 Windows 11 24H2 미만에서는 설치 대상이 아�
 - `AVCaptureSession.Preset.hd1920x1080`
 - 30fps, H.264, AAC, MP4
 - `AVCaptureMovieFileOutput.maxRecordedDuration`으로 3초 제한
+- screen+face는 Option+L 프리뷰에서 잠긴 `ScreenCaptureViewport` 크롭을 화면 프레임에 적용한 뒤 얼굴 PIP를 합성한다.
 - 녹화 파일은 임시 경로로 만든 뒤 설정에 따라 `~/Documents/Ping/sent/`로 이동한다.
 - 수신 파일은 수신자의 자동 저장 설정이 켜져 있고 발신자가 로컬 저장을 허용한 메시지일 때만 `~/Documents/Ping/received/`에 저장한다.
 
@@ -375,6 +386,7 @@ ping/
 | 룸 생성/검색 | prefix 검색과 룸 참여가 동작 |
 | 초대/초대 링크 | 수락 후 양쪽 룸 목록 갱신 |
 | Option+P | 다른 앱 포커스에서도 거울 표시 |
+| Option+L 확대/이동 | 프리뷰 창은 고정된 채 화면 영역만 1.0×~4.0×로 변경되고, Enter 후 녹화와 일치 |
 | 녹화 → 전송 | 업로드와 message 생성 후 윈도우 닫힘 |
 | 수신 알림 | 중복 없이 로컬 알림 표시 |
 | 알림 클릭 → 재생 | Storage 다운로드 후 3초 재생 |
