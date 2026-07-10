@@ -69,7 +69,7 @@ final class KeyboardRoutingContractTests: XCTestCase {
         let source = try readSourceFile("Ping/UI/Mirror/MirrorView.swift")
 
         XCTAssertTrue(source.contains("↵ 녹화 · Esc"))
-        XCTAssertTrue(source.contains("⌥ Option 키를 누른 채 스크롤해 확대·축소하고"))
+        XCTAssertTrue(source.contains("⌥ Option+스크롤 또는 두 손가락 핀치로 확대·축소하고"))
         XCTAssertTrue(source.contains("커서를 움직여 보낼 영역을 맞춰보세요."))
         XCTAssertTrue(source.contains("↵ Enter 녹화 시작"))
         XCTAssertTrue(source.contains("Esc 닫기"))
@@ -87,7 +87,7 @@ final class KeyboardRoutingContractTests: XCTestCase {
         XCTAssertTrue(source.contains("startViewportGuideTimer()"))
         XCTAssertTrue(source.contains("Task.sleep(for: .seconds(3))"))
         XCTAssertTrue(source.contains("isViewportGuideCompact = true"))
-        XCTAssertTrue(source.contains("⌥ 스크롤·커서 이동   ↵ 녹화 시작   Esc 닫기"))
+        XCTAssertTrue(source.contains("⌥ 스크롤·핀치·커서 이동   ↵ 녹화 시작   Esc 닫기"))
         XCTAssertFalse(compactGuide.contains("VStack"))
     }
 
@@ -103,6 +103,17 @@ final class KeyboardRoutingContractTests: XCTestCase {
         XCTAssertTrue(source.contains("case .recording, .reviewing, .uploading:"))
         XCTAssertTrue(source.contains("case 29 where captureMode == .screenFace"))
         XCTAssertTrue(source.contains("viewport.reset()"))
+    }
+
+    func testScreenFaceViewportAcceptsTrackpadMagnification() throws {
+        let source = try readSourceFile("Ping/UI/Mirror/MirrorView.swift")
+
+        XCTAssertTrue(source.contains("[.scrollWheel, .magnify]"))
+        XCTAssertTrue(source.contains("case .magnify:"))
+        XCTAssertTrue(source.contains("event.magnification"))
+        XCTAssertTrue(source.contains("ScreenCaptureViewport.magnificationAdjustment"))
+        XCTAssertTrue(source.contains("⌥ Option+스크롤 또는 두 손가락 핀치로 확대·축소하고"))
+        XCTAssertTrue(source.contains("⌥ 스크롤·핀치·커서 이동"))
     }
 
     func testMirrorSendsCheckedRoomTargets() throws {

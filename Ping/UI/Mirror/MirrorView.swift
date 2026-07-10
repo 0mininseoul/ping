@@ -243,7 +243,7 @@ struct MirrorView: View {
     private func installViewportMonitors() {
         guard captureMode == .screenFace else { return }
 
-        let mask: NSEvent.EventTypeMask = .scrollWheel
+        let mask: NSEvent.EventTypeMask = [.scrollWheel, .magnify]
         localViewportMonitor = NSEvent.addLocalMonitorForEvents(matching: mask) { event in
             guard event.window is MirrorWindow else { return event }
             return handleViewportEvent(event) ? nil : event
@@ -274,17 +274,21 @@ struct MirrorView: View {
 
     @discardableResult
     private func handleViewportEvent(_ event: NSEvent) -> Bool {
-        guard allowsViewportEditing,
-              event.modifierFlags.contains(.option) else {
-            return false
-        }
+        guard allowsViewportEditing else { return false }
 
         switch event.type {
         case .scrollWheel:
+            guard event.modifierFlags.contains(.option) else { return false }
             let delta = ScreenCaptureViewport.zoomAdjustment(
                 scrollingDeltaY: event.scrollingDeltaY,
                 precise: event.hasPreciseScrollingDeltas
             )
+            guard delta != 0 else { return false }
+            viewport.adjustZoom(by: delta)
+            viewport.moveCenter(toScreenPoint: NSEvent.mouseLocation, in: captureScreenFrame)
+            return true
+        case .magnify:
+            let delta = ScreenCaptureViewport.magnificationAdjustment(event.magnification)
             guard delta != 0 else { return false }
             viewport.adjustZoom(by: delta)
             viewport.moveCenter(toScreenPoint: NSEvent.mouseLocation, in: captureScreenFrame)
@@ -636,7 +640,7 @@ struct ScreenFaceGuideView: View {
                     .fontWeight(.semibold)
             } else {
                 VStack(spacing: 4) {
-                    Text("⌥ Option 키를 누른 채 스크롤해 확대·축소하고")
+                    Text("⌥ Option+스크롤 또는 두 손가락 핀치로 확대·축소하고")
                         .fontWeight(.semibold)
                     Text("커서를 움직여 보낼 영역을 맞춰보세요.")
                     HStack(spacing: 14) {
@@ -668,7 +672,7 @@ struct ScreenFaceGuideView: View {
     }
 
     private var compactGuideText: String {
-        let guidance = "⌥ 스크롤·커서 이동   ↵ 녹화 시작   Esc 닫기"
+        let guidance = "⌥ 스크롤·핀치·커서 이동   ↵ 녹화 시작   Esc 닫기"
         guard zoom > ScreenCaptureViewport.minimumZoom + 0.01 else {
             return guidance
         }

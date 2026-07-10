@@ -21,9 +21,14 @@ struct ScreenCaptureViewport: Equatable, Sendable {
     static func zoomAdjustment(scrollingDeltaY: CGFloat, precise: Bool) -> CGFloat {
         guard abs(scrollingDeltaY) > 0.01 else { return 0 }
         if precise {
-            return scrollingDeltaY * 0.0125
+            return -scrollingDeltaY * 0.0125
         }
-        return scrollingDeltaY > 0 ? 0.25 : -0.25
+        return scrollingDeltaY > 0 ? -0.25 : 0.25
+    }
+
+    static func magnificationAdjustment(_ magnification: CGFloat) -> CGFloat {
+        guard magnification.isFinite, abs(magnification) > 0.0001 else { return 0 }
+        return magnification
     }
 
     @discardableResult

@@ -72,22 +72,28 @@ final class ScreenCaptureViewportTests: XCTestCase {
     func testScrollDirectionAndDevicePrecisionProduceStableZoomAdjustments() {
         XCTAssertEqual(
             ScreenCaptureViewport.zoomAdjustment(scrollingDeltaY: 10, precise: true),
-            0.125,
-            accuracy: 0.0001
-        )
-        XCTAssertEqual(
-            ScreenCaptureViewport.zoomAdjustment(scrollingDeltaY: -10, precise: true),
             -0.125,
             accuracy: 0.0001
         )
         XCTAssertEqual(
+            ScreenCaptureViewport.zoomAdjustment(scrollingDeltaY: -10, precise: true),
+            0.125,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
             ScreenCaptureViewport.zoomAdjustment(scrollingDeltaY: 3, precise: false),
-            0.25
+            -0.25
         )
         XCTAssertEqual(
             ScreenCaptureViewport.zoomAdjustment(scrollingDeltaY: -3, precise: false),
-            -0.25
+            0.25
         )
+    }
+
+    func testPinchMagnificationUsesNativeGestureDirection() {
+        XCTAssertEqual(ScreenCaptureViewport.magnificationAdjustment(0.18), 0.18)
+        XCTAssertEqual(ScreenCaptureViewport.magnificationAdjustment(-0.12), -0.12)
+        XCTAssertEqual(ScreenCaptureViewport.magnificationAdjustment(0.00001), 0)
     }
 
     func testCroppedImageIsNormalizedToZeroOrigin() {
