@@ -245,7 +245,7 @@ struct MirrorView: View {
 
         let mask: NSEvent.EventTypeMask = [.scrollWheel, .magnify]
         localViewportMonitor = NSEvent.addLocalMonitorForEvents(matching: mask) { event in
-            guard event.window is MirrorWindow else { return event }
+            guard event.type == .magnify || event.window is MirrorWindow else { return event }
             return handleViewportEvent(event) ? nil : event
         }
         globalViewportMonitor = NSEvent.addGlobalMonitorForEvents(matching: mask) { event in
@@ -288,6 +288,7 @@ struct MirrorView: View {
             viewport.moveCenter(toScreenPoint: NSEvent.mouseLocation, in: captureScreenFrame)
             return true
         case .magnify:
+            guard event.modifierFlags.contains(.option) else { return false }
             let delta = ScreenCaptureViewport.magnificationAdjustment(event.magnification)
             guard delta != 0 else { return false }
             viewport.adjustZoom(by: delta)
@@ -640,7 +641,7 @@ struct ScreenFaceGuideView: View {
                     .fontWeight(.semibold)
             } else {
                 VStack(spacing: 4) {
-                    Text("⌥ Option+스크롤 또는 두 손가락 핀치로 확대·축소하고")
+                    Text("⌥ Option+스크롤 또는 두 손가락 펼치기·오므리기로 확대·축소하고")
                         .fontWeight(.semibold)
                     Text("커서를 움직여 보낼 영역을 맞춰보세요.")
                     HStack(spacing: 14) {

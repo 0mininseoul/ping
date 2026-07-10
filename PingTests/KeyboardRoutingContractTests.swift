@@ -69,7 +69,7 @@ final class KeyboardRoutingContractTests: XCTestCase {
         let source = try readSourceFile("Ping/UI/Mirror/MirrorView.swift")
 
         XCTAssertTrue(source.contains("↵ 녹화 · Esc"))
-        XCTAssertTrue(source.contains("⌥ Option+스크롤 또는 두 손가락 핀치로 확대·축소하고"))
+        XCTAssertTrue(source.contains("⌥ Option+스크롤 또는 두 손가락 펼치기·오므리기로 확대·축소하고"))
         XCTAssertTrue(source.contains("커서를 움직여 보낼 영역을 맞춰보세요."))
         XCTAssertTrue(source.contains("↵ Enter 녹화 시작"))
         XCTAssertTrue(source.contains("Esc 닫기"))
@@ -107,12 +107,24 @@ final class KeyboardRoutingContractTests: XCTestCase {
 
     func testScreenFaceViewportAcceptsTrackpadMagnification() throws {
         let source = try readSourceFile("Ping/UI/Mirror/MirrorView.swift")
+        let localMonitor = try sourceSlice(
+            in: source,
+            from: "localViewportMonitor = NSEvent.addLocalMonitorForEvents",
+            to: "globalViewportMonitor = NSEvent.addGlobalMonitorForEvents"
+        )
+        let magnifyHandler = try sourceSlice(
+            in: source,
+            from: "case .magnify:",
+            to: "default:"
+        )
 
         XCTAssertTrue(source.contains("[.scrollWheel, .magnify]"))
         XCTAssertTrue(source.contains("case .magnify:"))
         XCTAssertTrue(source.contains("event.magnification"))
         XCTAssertTrue(source.contains("ScreenCaptureViewport.magnificationAdjustment"))
-        XCTAssertTrue(source.contains("⌥ Option+스크롤 또는 두 손가락 핀치로 확대·축소하고"))
+        XCTAssertTrue(localMonitor.contains("event.type == .magnify || event.window is MirrorWindow"))
+        XCTAssertTrue(magnifyHandler.contains("event.modifierFlags.contains(.option)"))
+        XCTAssertTrue(source.contains("⌥ Option+스크롤 또는 두 손가락 펼치기·오므리기로 확대·축소하고"))
         XCTAssertTrue(source.contains("⌥ 스크롤·핀치·커서 이동"))
     }
 
