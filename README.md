@@ -34,7 +34,7 @@ Supabase Dashboard의 Authentication 설정에서 Anonymous sign-ins가 켜져 �
 
 ### macOS
 
-1. `Ping-v0.3.61.dmg`를 더블클릭해 마운트한다.
+1. `Ping-v0.3.62.dmg`를 더블클릭해 마운트한다.
 2. `Ping.app`을 Applications 폴더로 드래그한다.
 3. 더블클릭해 실행한다. Developer ID 서명 + Apple 공증(notarized) 빌드라 Gatekeeper 경고 없이 바로 열린다.
 4. 카메라, 마이크, 알림 권한을 허용한다.
@@ -85,9 +85,10 @@ macOS 앱은 Sparkle로 업데이트를 확인한다. 새 버전이 공개되면
 
 Windows 앱은 Sparkle을 사용하지 않는다. 비용 없는 배포는 self-signed MSIX를 작은 `PingSetup-v0.3.46.exe` 웹 설치파일로 감싸고, 설치 중 PC 아키텍처에 맞는 MSIX를 `https://0minping.vercel.app/downloads/windows/`에서 받는 방식이다. 최초 설치 시 installer가 Ping 공개 인증서를 등록한다. Microsoft Store, Azure Artifact Signing, OV 코드서명 인증서는 더 매끄러운 신뢰 UX를 제공하지만 비용 또는 외부 계정 검증이 필요하다.
 
-## v0.3.61 macOS 수정
+## v0.3.62 macOS 수정
 
-- Option+L 프리뷰에 Option+스크롤, Option+트랙패드 핀치, Option+커서 이동, Enter 녹화, Esc 닫기를 함께 설명하는 상세 안내를 3초간 표시한다. 이후 `⌥ 스크롤·핀치·커서 이동   ↵ 녹화 시작   Esc 닫기` 한 줄 안내로 자동 전환된다.
+- Option+L 프리뷰 창은 고정한 채 Option+스크롤 또는 Option+트랙패드 두 손가락 펼치기·오므리기로 전송 영역을 1.0×~4.0× 확대·축소하고, Option+커서 이동으로 중심을 맞출 수 있게 했다.
+- 확대·이동, Enter 녹화, Esc 닫기를 함께 설명하는 상세 안내를 3초간 표시한 뒤 `⌥ 스크롤·핀치·커서 이동   ↵ 녹화 시작   Esc 닫기` 한 줄 안내로 자동 전환한다.
 - Ping 자신을 캡처 필터에서 제외하지 못한 경우 빈 제외 목록으로 진행하지 않도록 재시도와 안전 중단 처리를 추가해, 프리뷰 안에 프리뷰가 반복되는 재귀 캡처를 막았다.
 
 ## v0.3.58 macOS 수정
