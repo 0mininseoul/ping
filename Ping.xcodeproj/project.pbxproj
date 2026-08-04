@@ -84,6 +84,7 @@
 		593B51C4CE943EE1FBB2FD87 /* AppInstallLocation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AABBC608A3DBBCE53D71796 /* AppInstallLocation.swift */; };
 		5AA7E9EB021EE17E4D1A1B15 /* DesktopInstallGuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1616675AE7695B824BD066DE /* DesktopInstallGuideView.swift */; };
 		5D89DB1CFC8A93880FABEB80 /* MessageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8EEA4E1E7817FF473236F52 /* MessageService.swift */; };
+		5E4DD40E440B7D44DA18CEB5 /* AutoStartSettingsWiringTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F47E3355A4AE56784ED018FD /* AutoStartSettingsWiringTests.swift */; };
 		5E8F74FACE824DA1B4D7CEF4 /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5251D41AA9E41DBE6D637EF1 /* QRScannerView.swift */; };
 		5EE98B4867742225FE567CD4 /* PartnerCyclingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F441B1B93C9D79CB77E24D4 /* PartnerCyclingTests.swift */; };
 		5F547FCCA25D9DBDC39E0527 /* HistoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B297B0F942C3BA0AEFCF8EA3 /* HistoryViewModel.swift */; };
@@ -440,6 +441,7 @@
 		ED7C10424EA3C4E5036BACF3 /* WatchBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchBridge.swift; sourceTree = "<group>"; };
 		F2F40CF1E71B9600941F2BE1 /* StatusMenuBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusMenuBuilderTests.swift; sourceTree = "<group>"; };
 		F3ECDFD80CFE634B9C98FDA3 /* PingPushService.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = PingPushService.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		F47E3355A4AE56784ED018FD /* AutoStartSettingsWiringTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoStartSettingsWiringTests.swift; sourceTree = "<group>"; };
 		F5C19898F5FCEE8CFE97D3ED /* SelectableTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectableTextView.swift; sourceTree = "<group>"; };
 		F6B11EA47A90F6C103338B3A /* ChatImageAttachmentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatImageAttachmentView.swift; sourceTree = "<group>"; };
 		F758F3123EB5B3CD54F783B9 /* ChatRealtimeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRealtimeService.swift; sourceTree = "<group>"; };
@@ -766,6 +768,7 @@
 				7F1E09D4F9233190C884D2DF /* AppInstallLocationTests.swift */,
 				E36147E7743AF446CC43F2EA /* AutoStartAgentPlistTests.swift */,
 				4AAED4DB083F94C85723DC9D /* AutoStartPolicyTests.swift */,
+				F47E3355A4AE56784ED018FD /* AutoStartSettingsWiringTests.swift */,
 				236B98B4323FB9FE9DEB2AF1 /* BackendRetryPolicyTests.swift */,
 				B156E510EB6A9724929971C1 /* CameraStartupContractTests.swift */,
 				ABC6B40332B85971277277F6 /* CanonicalRoomNameContractTests.swift */,
@@ -1274,6 +1277,7 @@
 				BDC7E1C785C6260EEBD1A885 /* AppcastUpdateOfferParserTests.swift in Sources */,
 				4340477927034D4400D71C7A /* AutoStartAgentPlistTests.swift in Sources */,
 				B9BF1BC872AA66623D27560B /* AutoStartPolicyTests.swift in Sources */,
+				5E4DD40E440B7D44DA18CEB5 /* AutoStartSettingsWiringTests.swift in Sources */,
 				81B8B052C9139748FA9F47DE /* BackendRetryPolicyTests.swift in Sources */,
 				D145DD48FDB755F20A1C5A99 /* CameraStartupContractTests.swift in Sources */,
 				87B11294010084335996090D /* CanonicalRoomNameContractTests.swift in Sources */,

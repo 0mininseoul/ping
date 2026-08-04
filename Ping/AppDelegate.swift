@@ -69,6 +69,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setupHotkey()
 
         if !ProcessInfo.processInfo.isRunningUnitTests {
+            AutoStartController.shared.applyPolicyAtLaunch()
+
             if showsOnboardingForQA {
                 showOnboardingPreviewForQA()
                 return
