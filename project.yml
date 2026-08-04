@@ -359,6 +359,7 @@ targets:
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/Info.plist"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/README.md"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/Supabase.example.plist"
+          - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/com.youngminpark.ping.Ping.keepalive.plist"
     dependencies:
       - target: Ping
 

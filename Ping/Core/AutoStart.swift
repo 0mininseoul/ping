@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import OSLog
 import ServiceManagement
@@ -24,6 +25,26 @@ enum AutoStartAction: Equatable {
     case migrateFromMainApp
 }
 
+/// launchd가 띄운 인스턴스와 사용자가 띄운 인스턴스가 겹치는 것을 막는다.
+///
+/// `SMAppService.register()`는 잡을 즉시 로드하고, plist의 `RunAtLoad`가 true라 launchd는
+/// 그 자리에서 `Contents/MacOS/Ping`을 exec한다. 즉 **실행 중인 앱이 자기 자신을 등록하면
+/// 두 번째 프로세스가 뜬다.** launchd의 exec는 LaunchServices를 거치지 않아 중복 제거가 안 된다.
+/// 그대로 두면 메뉴바 아이콘 2개, realtime 구독 2벌, 알림 2배가 된다.
+enum SingleInstanceGuard {
+    /// 이 판정은 기동 직후에만 호출된다. 우리 프로세스는 방금 떴으므로 목록의 다른 pid는
+    /// 전부 우리보다 먼저 뜬 인스턴스다.
+    static func shouldYield(runningPIDs: [pid_t], currentPID: pid_t) -> Bool {
+        runningPIDs.contains { $0 != currentPID }
+    }
+
+    static func runningPIDs(forBundleIdentifier bundleIdentifier: String) -> [pid_t] {
+        NSRunningApplication
+            .runningApplications(withBundleIdentifier: bundleIdentifier)
+            .map(\.processIdentifier)
+    }
+}
+
 /// 자동 시작 등록 상태를 어떻게 맞출지 정하는 순수 함수. 부작용이 없어 전수 테스트가 가능하다.
 enum AutoStartPolicy {
     static func action(
@@ -36,7 +57,7 @@ enum AutoStartPolicy {
             if mainAppStatus.isRegistered {
                 return .migrateFromMainApp
             }
-            return agentStatus == .enabled ? .none : .registerAgent
+            return reconcileEnabled(agentStatus)
         }
 
         guard userChoice else {
@@ -44,11 +65,20 @@ enum AutoStartPolicy {
             return agentStatus.isRegistered ? .unregisterAgent : .none
         }
 
-        // 앱을 옮겼거나 번들이 교체되면 notFound/notRegistered로 떨어진다. 자가 치유한다.
+        return reconcileEnabled(agentStatus)
+    }
+
+    /// "켜져 있어야 한다"가 확정된 뒤 현재 상태를 어떻게 맞출지 정한다.
+    /// 첫 실행 분기와 자가 치유 분기가 같은 판단을 쓰도록 한 곳에 모았다 —
+    /// 어긋나면 한쪽만 실패할 `register()`를 매 기동 반복한다.
+    private static func reconcileEnabled(_ agentStatus: AutoStartStatus) -> AutoStartAction {
         switch agentStatus {
         case .enabled, .requiresApproval, .unknown:
+            // requiresApproval은 사용자가 시스템 설정에서 껐다는 뜻이라 존중한다.
+            // unknown은 우리가 모르는 상태다. 모르면 건드리지 않는다.
             return .none
         case .notRegistered, .notFound:
+            // 앱을 옮겼거나 번들이 교체되면 여기로 떨어진다. 자가 치유한다.
             return .registerAgent
         }
     }
@@ -99,17 +129,27 @@ final class AutoStartController {
     }
 
     /// 설정 토글에서 호출한다. 사용자의 명시적 선택을 저장한다.
+    ///
+    /// 저장이 OS 호출보다 **먼저**다. 나중에 저장하면 `unregister()`가 실패했을 때 "끄겠다"는
+    /// 의사가 유실되고, 다음 기동에서 정책이 여전히 켜진 상태로 판단해 영구히 켜진 채 남는다.
+    /// 먼저 저장해 두면 OS 호출이 실패해도 다음 기동에서 정책이 양방향으로 자가 치유한다.
     func setEnabled(_ enabled: Bool) throws {
+        userChoice = enabled
+
         if enabled {
             try agent.register()
         } else if status.isRegistered {
             try agent.unregister()
         }
-        userChoice = enabled
     }
 
     /// 기동 시 1회 호출. 기본 ON 적용과 구 로그인 항목 마이그레이션을 수행한다.
     func applyPolicyAtLaunch() {
+        // DerivedData나 .dmg에서 실행된 빌드는 등록하지 않는다. 등록하면 Xcode의 Stop(SIGKILL)이
+        // 비정상 종료로 잡혀 KeepAlive가 개발 빌드를 되살리고, DerivedData를 지우면
+        // 시스템 설정에 죽은 로그인 항목이 남는다.
+        guard AppInstallLocation.canUseSparkleUpdates() else { return }
+
         let choice = userChoice
         let action = AutoStartPolicy.action(
             userChoice: choice,
@@ -126,9 +166,11 @@ final class AutoStartController {
             case .unregisterAgent:
                 try agent.unregister()
             case .migrateFromMainApp:
-                // 순서가 중요하다. mainApp을 남긴 채 agent를 등록하면 로그인 시 두 번 실행된다.
-                try SMAppService.mainApp.unregister()
+                // agent 등록이 먼저다. mainApp을 먼저 해제하면 register()가 실패했을 때
+                // 둘 다 없는 상태로 남고 복구 경로가 없다. 이 순서면 최악의 경우가
+                // "둘 다 등록됨"이고, 그건 중복 가드가 막고 다음 기동이 정리한다.
                 try agent.register()
+                try SMAppService.mainApp.unregister()
             }
 
             if choice == nil {

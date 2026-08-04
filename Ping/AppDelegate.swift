@@ -55,7 +55,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillFinishLaunching(_ notification: Notification) {
+        if !ProcessInfo.processInfo.isRunningUnitTests, shouldYieldToRunningInstance() {
+            // exit(0)이어야 launchd가 비정상 종료로 보지 않는다. 0이 아니면 KeepAlive가
+            // 곧바로 다시 띄워 무한 루프가 된다.
+            exit(0)
+        }
+
         enforceAccessoryActivationPolicy()
+    }
+
+    private func shouldYieldToRunningInstance() -> Bool {
+        guard let bundleIdentifier = Bundle.main.bundleIdentifier else { return false }
+
+        return SingleInstanceGuard.shouldYield(
+            runningPIDs: SingleInstanceGuard.runningPIDs(forBundleIdentifier: bundleIdentifier),
+            currentPID: ProcessInfo.processInfo.processIdentifier
+        )
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {

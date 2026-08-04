@@ -91,6 +91,7 @@
 		647D023951472D012B739794 /* VideoThumbnailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91CA4C2B635FD53502BAE5A6 /* VideoThumbnailView.swift */; };
 		64FB720C71D2506C3FF0A5F6 /* InlinePlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECAF925EB5EB36A31683069F /* InlinePlayerView.swift */; };
 		661E54E16BDF7EF0037D6F5E /* MirrorWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A54D7D9F08655509CE5894FA /* MirrorWindow.swift */; };
+		676EB8BC99CDB722E5209216 /* AutoStartLaunchGuardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20528B0C72C726FF8392EA4 /* AutoStartLaunchGuardTests.swift */; };
 		67FBBC00ABEE4FDC9A8E5496 /* EntitlementsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0CE48710A798DC7E4F5F387 /* EntitlementsTests.swift */; };
 		68155E2EA147765775AA1E78 /* VideoThumbnailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 178B779BE40BB245CFDED469 /* VideoThumbnailView.swift */; };
 		68C7329A0CC241A8C7AC5C7C /* PingMobileApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A442835C646C43BA7F20E0EA /* PingMobileApp.swift */; };
@@ -439,6 +440,7 @@
 		EB469BD2ECF2AC4459C1A4D1 /* LocalArchive.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalArchive.swift; sourceTree = "<group>"; };
 		ECAF925EB5EB36A31683069F /* InlinePlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InlinePlayerView.swift; sourceTree = "<group>"; };
 		ED7C10424EA3C4E5036BACF3 /* WatchBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchBridge.swift; sourceTree = "<group>"; };
+		F20528B0C72C726FF8392EA4 /* AutoStartLaunchGuardTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoStartLaunchGuardTests.swift; sourceTree = "<group>"; };
 		F2F40CF1E71B9600941F2BE1 /* StatusMenuBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusMenuBuilderTests.swift; sourceTree = "<group>"; };
 		F3ECDFD80CFE634B9C98FDA3 /* PingPushService.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = PingPushService.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		F47E3355A4AE56784ED018FD /* AutoStartSettingsWiringTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoStartSettingsWiringTests.swift; sourceTree = "<group>"; };
@@ -767,6 +769,7 @@
 				9214746AA17BA72DEFC057E7 /* AppcastUpdateOfferParserTests.swift */,
 				7F1E09D4F9233190C884D2DF /* AppInstallLocationTests.swift */,
 				E36147E7743AF446CC43F2EA /* AutoStartAgentPlistTests.swift */,
+				F20528B0C72C726FF8392EA4 /* AutoStartLaunchGuardTests.swift */,
 				4AAED4DB083F94C85723DC9D /* AutoStartPolicyTests.swift */,
 				F47E3355A4AE56784ED018FD /* AutoStartSettingsWiringTests.swift */,
 				236B98B4323FB9FE9DEB2AF1 /* BackendRetryPolicyTests.swift */,
@@ -1239,6 +1242,7 @@
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/Info.plist",
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/README.md",
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/Supabase.example.plist",
+				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/com.youngminpark.ping.Ping.keepalive.plist",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -1276,6 +1280,7 @@
 				A0CC34586E73BD4AD949C332 /* AppInstallLocationTests.swift in Sources */,
 				BDC7E1C785C6260EEBD1A885 /* AppcastUpdateOfferParserTests.swift in Sources */,
 				4340477927034D4400D71C7A /* AutoStartAgentPlistTests.swift in Sources */,
+				676EB8BC99CDB722E5209216 /* AutoStartLaunchGuardTests.swift in Sources */,
 				B9BF1BC872AA66623D27560B /* AutoStartPolicyTests.swift in Sources */,
 				5E4DD40E440B7D44DA18CEB5 /* AutoStartSettingsWiringTests.swift in Sources */,
 				81B8B052C9139748FA9F47DE /* BackendRetryPolicyTests.swift in Sources */,
