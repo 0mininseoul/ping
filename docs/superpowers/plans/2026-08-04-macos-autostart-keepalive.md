@@ -4,7 +4,9 @@
 
 **Goal:** Ping.app이 로그인 시 자동으로 켜지고, macOS `cache_delete`의 강제 종료나 크래시로 꺼져도 launchd가 수 초 안에 되살리게 한다.
 
-**Architecture:** 앱 번들 안(`Contents/Library/LaunchAgents/`)에 LaunchAgent plist를 넣고 `SMAppService.agent(plistName:)`로 등록해 프로세스 수명을 launchd에 맡긴다. `KeepAlive = { SuccessfulExit: false }`가 비정상 종료만 골라 재실행하므로 사용자가 메뉴바에서 "종료"한 경우는 되살아나지 않는다. 등록 여부 결정은 순수 함수(`AutoStartPolicy`)로 분리하고, `SMAppService`를 실제로 호출하는 곳은 `AutoStartController` 한 곳으로 모은다.
+**Architecture:** 앱 번들 안(`Contents/Library/LaunchAgents/`)에 LaunchAgent plist를 넣고 `SMAppService.agent(plistName:)`로 등록해 프로세스 수명을 launchd에 맡긴다. `KeepAlive = { SuccessfulExit: false }`가 비정상 종료만 골라 재실행하므로 사용자가 메뉴바에서 "종료"한 경우는 되살아나지 않는다. `SMAppService`는 단위 테스트가 불가능하므로 "무엇을 등록/해제할지" 판단만 순수 함수(`AutoStartPolicy`)로 떼어내 검증하고, 실제 호출은 `AutoStartController` 한 곳에 모은다. 둘은 파일 하나(`Ping/Core/AutoStart.swift`)에 같이 산다.
+
+**범위(YAGNI):** 최소 변경으로 간다. 신규 Swift 파일 1개, 수정 3개. 설계 문서 §4.5(중복 실행 가드)와 §4.6(크래시 루프 차단)은 **구현하지 않는다** — 전자는 LaunchServices가 이미 같은 번들의 두 번째 인스턴스를 막고, 후자는 `ThrottleInterval 30`과 시스템 설정 › 로그인 항목이라는 탈출구가 이미 있는 가상 시나리오 대비였다. 실제로 문제가 관측되면 그때 추가한다.
 
 **Tech Stack:** Swift 6 / SwiftUI / AppKit, ServiceManagement (`SMAppService`, macOS 13+), XcodeGen(`project.yml`), XCTest
 
@@ -34,14 +36,10 @@
 | 파일 | 책임 |
 |---|---|
 | `Resources/LaunchAgents/com.youngminpark.ping.Ping.keepalive.plist` | launchd 잡 정의. 재실행 정책의 유일한 선언 지점 |
-| `Ping/Core/AutoStart/AutoStartPolicy.swift` | (userChoice, agentStatus, mainAppStatus) → action. 순수 함수. 프레임워크 의존 없음 |
-| `Ping/Core/AutoStart/LaunchLedger.swift` | 단명 기동 카운트 + 크래시 루프 임계값 판정 |
-| `Ping/Core/AutoStart/SingleInstanceGuard.swift` | 중복 인스턴스 판정 + 러닝앱 조회 어댑터 |
-| `Ping/Core/AutoStart/AutoStartController.swift` | 위 셋을 엮고 `SMAppService`를 호출하는 **유일한** 지점 |
-| `Ping/AppDelegate.swift` | 기동 훅: 중복 가드 → 원장 기록 → 정책 적용 → 60초 후 healthy 표시 |
-| `Ping/UI/Setup/SettingsScene.swift` | 토글 배선만 controller로 교체 |
-| `Ping/Core/UserPreferences.swift` | UserDefaults 키 2개 추가 |
-| `Ping/Notifications/LocalNotificationCenter.swift` | 크래시 루프로 자동 시작을 껐을 때의 알림 1종 추가 |
+| `Ping/Core/AutoStart.swift` | 신규 Swift 파일. `AutoStartStatus`·`AutoStartAction`·`AutoStartPolicy`(순수 판정) + `AutoStartController`(`SMAppService` 호출) |
+| `Ping/Core/UserPreferences.swift` | UserDefaults 키 1개 추가 |
+| `Ping/AppDelegate.swift` | 기동 시 정책 적용 1줄 |
+| `Ping/UI/Setup/SettingsScene.swift` | 토글 배선만 controller로 교체. 문구 불변 |
 
 ---
 
@@ -56,7 +54,7 @@ plist를 만들고 앱 번들의 `Contents/Library/LaunchAgents/`에 서명 포�
 
 **Interfaces:**
 - Consumes: 없음 (첫 태스크)
-- Produces: 번들 경로 `Contents/Library/LaunchAgents/com.youngminpark.ping.Ping.keepalive.plist`, 잡 Label `com.youngminpark.ping.Ping.keepalive`. Task 5의 `AutoStartController.agentPlistName`이 이 파일명을 참조한다.
+- Produces: 번들 경로 `Contents/Library/LaunchAgents/com.youngminpark.ping.Ping.keepalive.plist`, 잡 Label `com.youngminpark.ping.Ping.keepalive`. Task 2의 `AutoStartController.agentPlistName`이 이 파일명을 참조한다.
 
 - [ ] **Step 1: plist 작성**
 
@@ -233,27 +231,31 @@ EOF
 
 ---
 
-## Task 2: AutoStartPolicy — 등록 여부 결정 (순수 함수)
+## Task 2: AutoStart.swift — 등록 정책과 SMAppService 어댑터
 
-`SMAppService`를 부르지 않고 "무엇을 해야 하는가"만 정하는 순수 함수. 이 태스크의 산출물은 전부 단위 테스트로 검증된다.
+`SMAppService` 호출은 단위 테스트가 불가능하다(시스템 등록을 건드린다). 그래서 "무엇을 해야 하는가"를 정하는 순수 함수만 떼어내 전수 테스트하고, 실제 호출은 얇은 컨트롤러에 둔다. 둘 다 파일 하나에 산다.
 
 **Files:**
-- Create: `Ping/Core/AutoStart/AutoStartPolicy.swift`
+- Create: `Ping/Core/AutoStart.swift`
+- Modify: `Ping/Core/UserPreferences.swift` (`PingPreferenceKeys`에 키 1개 추가)
 - Test: `PingTests/AutoStartPolicyTests.swift`
 
 **Interfaces:**
-- Consumes: 없음
+- Consumes: Task 1이 번들에 넣은 plist 파일명 `com.youngminpark.ping.Ping.keepalive.plist`
 - Produces:
   - `enum AutoStartStatus: Equatable { case enabled, requiresApproval, notRegistered, notFound, unknown }` + `var isRegistered: Bool`
   - `enum AutoStartAction: Equatable { case none, registerAgent, unregisterAgent, migrateFromMainApp }`
   - `enum AutoStartPolicy { static func action(userChoice: Bool?, agentStatus: AutoStartStatus, mainAppStatus: AutoStartStatus) -> AutoStartAction }`
-  - Task 5의 `AutoStartController`가 이 셋을 모두 쓴다.
+  - `@MainActor final class AutoStartController` — `static let shared`, `static let agentPlistName`, `init(defaults: UserDefaults = .standard)`, `var userChoice: Bool?`, `var status: AutoStartStatus`, `static func map(_:) -> AutoStartStatus`, `func setEnabled(_ enabled: Bool) throws`, `func applyPolicyAtLaunch()`
+  - `PingPreferenceKeys.autostartUserChoice` = `"ping.autostart.userChoice"`
+  - Task 3의 `AppDelegate`와 `SettingsScene`이 쓴다.
 
 - [ ] **Step 1: 실패하는 테스트 작성**
 
 `PingTests/AutoStartPolicyTests.swift`:
 
 ```swift
+import ServiceManagement
 import XCTest
 @testable import Ping
 
@@ -367,6 +369,46 @@ final class AutoStartPolicyTests: XCTestCase {
             }
         }
     }
+
+    // MARK: 컨트롤러
+
+    @MainActor
+    func testUserChoiceRoundTripsAndDistinguishesFalseFromUnset() {
+        let suiteName = "AutoStartPolicyTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let controller = AutoStartController(defaults: defaults)
+        XCTAssertNil(controller.userChoice)
+
+        controller.userChoice = true
+        XCTAssertEqual(controller.userChoice, true)
+
+        // bool(forKey:)로 읽으면 false와 미설정이 뭉개져 사용자가 끈 상태가 매 기동마다 다시 켜진다.
+        controller.userChoice = false
+        XCTAssertEqual(controller.userChoice, false)
+        XCTAssertNotNil(controller.userChoice)
+    }
+
+    @MainActor
+    func testStatusMappingCoversEveryServiceManagementCase() {
+        XCTAssertEqual(AutoStartController.map(.enabled), .enabled)
+        XCTAssertEqual(AutoStartController.map(.requiresApproval), .requiresApproval)
+        XCTAssertEqual(AutoStartController.map(.notRegistered), .notRegistered)
+        XCTAssertEqual(AutoStartController.map(.notFound), .notFound)
+    }
+
+    @MainActor
+    func testAgentPlistNameMatchesBundledFile() {
+        XCTAssertEqual(
+            AutoStartController.agentPlistName,
+            "com.youngminpark.ping.Ping.keepalive.plist"
+        )
+    }
+
+    func testPreferenceKeyIsStable() {
+        XCTAssertEqual(PingPreferenceKeys.autostartUserChoice, "ping.autostart.userChoice")
+    }
 }
 ```
 
@@ -376,14 +418,24 @@ final class AutoStartPolicyTests: XCTestCase {
 xcodebuild -project Ping.xcodeproj -scheme Ping -destination "platform=macOS" test \
   -only-testing:PingTests/AutoStartPolicyTests
 ```
-Expected: 컴파일 실패 — `AutoStartStatus` / `AutoStartAction` / `AutoStartPolicy` 미정의.
+Expected: 컴파일 실패 — `AutoStartStatus` / `AutoStartAction` / `AutoStartPolicy` / `AutoStartController` / `PingPreferenceKeys.autostartUserChoice` 전부 미정의.
 
-- [ ] **Step 3: 구현**
+- [ ] **Step 3: UserDefaults 키 추가**
 
-`Ping/Core/AutoStart/AutoStartPolicy.swift`:
+`Ping/Core/UserPreferences.swift`의 `PingPreferenceKeys`에서 `appearanceMode` 줄 아래에 추가:
+
+```swift
+    static let autostartUserChoice = "ping.autostart.userChoice"
+```
+
+- [ ] **Step 4: 구현**
+
+`Ping/Core/AutoStart.swift`:
 
 ```swift
 import Foundation
+import OSLog
+import ServiceManagement
 
 /// `SMAppService.Status`를 프레임워크 의존 없이 표현한 값. 정책 판정을 순수 함수로 유지하려고 분리했다.
 enum AutoStartStatus: Equatable {
@@ -436,474 +488,6 @@ enum AutoStartPolicy {
         }
     }
 }
-```
-
-- [ ] **Step 4: 테스트 통과 확인**
-
-```bash
-xcodegen generate
-xcodebuild -project Ping.xcodeproj -scheme Ping -destination "platform=macOS" test \
-  -only-testing:PingTests/AutoStartPolicyTests
-```
-Expected: PASS (7개 테스트)
-
-- [ ] **Step 5: 커밋**
-
-```bash
-git add Ping/Core/AutoStart/AutoStartPolicy.swift PingTests/AutoStartPolicyTests.swift Ping.xcodeproj
-git commit -m "$(cat <<'EOF'
-feat(autostart): add pure AutoStartPolicy decision function
-
-Default-on for first run, one-shot migration off the legacy login item,
-self-healing re-register when the bundle moves. A stored userChoice of
-false is never reversed.
-
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
-EOF
-)"
-```
-
----
-
-## Task 3: LaunchLedger — 크래시 루프 차단
-
-앱이 기동 즉시 죽으면 launchd가 30초마다 영원히 되살린다. "60초를 못 넘긴 기동"이 연속 5회면 자동 시작을 스스로 끈다.
-
-**Files:**
-- Create: `Ping/Core/AutoStart/LaunchLedger.swift`
-- Modify: `Ping/Core/UserPreferences.swift` (`PingPreferenceKeys`에 키 2개 추가)
-- Test: `PingTests/LaunchLedgerTests.swift`
-
-**Interfaces:**
-- Consumes: 없음
-- Produces:
-  - `PingPreferenceKeys.autostartUserChoice` = `"ping.autostart.userChoice"`, `PingPreferenceKeys.autostartLaunchLedger` = `"ping.autostart.launchLedger"`
-  - `@MainActor struct LaunchLedger { init(defaults: UserDefaults = .standard, threshold: Int = 5); static let healthyLifetime: TimeInterval = 60; var shortLivedLaunchCount: Int; @discardableResult func recordLaunch(at date: Date = Date()) -> Bool; func markHealthy() }`
-  - Task 5의 `AutoStartController`가 `recordLaunch` / `markHealthy`를, Task 6의 `AppDelegate`가 `LaunchLedger.healthyLifetime`을 쓴다.
-
-- [ ] **Step 1: 실패하는 테스트 작성**
-
-`PingTests/LaunchLedgerTests.swift`:
-
-```swift
-import XCTest
-@testable import Ping
-
-@MainActor final class LaunchLedgerTests: XCTestCase {
-    private var suiteName: String!
-    private var defaults: UserDefaults!
-
-    override func setUpWithError() throws {
-        suiteName = "LaunchLedgerTests.\(UUID().uuidString)"
-        defaults = UserDefaults(suiteName: suiteName)
-    }
-
-    override func tearDownWithError() throws {
-        defaults.removePersistentDomain(forName: suiteName)
-    }
-
-    func testStaysQuietBelowThreshold() {
-        let ledger = LaunchLedger(defaults: defaults, threshold: 5)
-
-        for index in 1...4 {
-            XCTAssertFalse(ledger.recordLaunch(at: Date()), "launch \(index)")
-        }
-        XCTAssertEqual(ledger.shortLivedLaunchCount, 4)
-    }
-
-    func testTripsAtThreshold() {
-        let ledger = LaunchLedger(defaults: defaults, threshold: 5)
-
-        for _ in 1...4 {
-            _ = ledger.recordLaunch(at: Date())
-        }
-        XCTAssertTrue(ledger.recordLaunch(at: Date()))
-    }
-
-    func testHealthyRunResetsTheCount() {
-        let ledger = LaunchLedger(defaults: defaults, threshold: 5)
-
-        for _ in 1...4 {
-            _ = ledger.recordLaunch(at: Date())
-        }
-        // 60초를 넘겨 살아남은 실행은 카운터를 리셋한다. 수동으로 껐다 켜는 정상 사용이
-        // 크래시 루프로 오판되지 않게 하는 장치다.
-        ledger.markHealthy()
-
-        XCTAssertEqual(ledger.shortLivedLaunchCount, 0)
-        XCTAssertFalse(ledger.recordLaunch(at: Date()))
-    }
-
-    func testCountIsCappedAtThreshold() {
-        let ledger = LaunchLedger(defaults: defaults, threshold: 5)
-
-        for _ in 1...12 {
-            _ = ledger.recordLaunch(at: Date())
-        }
-        XCTAssertEqual(ledger.shortLivedLaunchCount, 5)
-    }
-
-    func testHealthyLifetimeIsOneMinute() {
-        XCTAssertEqual(LaunchLedger.healthyLifetime, 60)
-    }
-
-    func testPreferenceKeysAreStable() {
-        XCTAssertEqual(PingPreferenceKeys.autostartUserChoice, "ping.autostart.userChoice")
-        XCTAssertEqual(PingPreferenceKeys.autostartLaunchLedger, "ping.autostart.launchLedger")
-    }
-}
-```
-
-- [ ] **Step 2: 테스트가 실패하는지 확인**
-
-```bash
-xcodebuild -project Ping.xcodeproj -scheme Ping -destination "platform=macOS" test \
-  -only-testing:PingTests/LaunchLedgerTests
-```
-Expected: 컴파일 실패 — `LaunchLedger` 및 새 `PingPreferenceKeys` 미정의.
-
-- [ ] **Step 3: UserDefaults 키 추가**
-
-`Ping/Core/UserPreferences.swift`의 `PingPreferenceKeys`에 두 줄을 추가한다 (`appearanceMode` 줄 아래):
-
-```swift
-    static let autostartUserChoice = "ping.autostart.userChoice"
-    static let autostartLaunchLedger = "ping.autostart.launchLedger"
-```
-
-- [ ] **Step 4: LaunchLedger 구현**
-
-`Ping/Core/AutoStart/LaunchLedger.swift`:
-
-```swift
-import Foundation
-
-/// launchd KeepAlive가 크래시 루프를 무한 반복하지 않도록 "짧게 살다 죽은 기동"만 센다.
-/// 60초를 넘겨 살아남은 실행은 `markHealthy()`로 카운터를 리셋하므로,
-/// 사용자가 수동으로 껐다 켜는 정상 사용은 루프로 오판되지 않는다.
-@MainActor struct LaunchLedger {
-    /// 이 시간을 넘겨 살아 있으면 건강한 실행으로 본다.
-    static let healthyLifetime: TimeInterval = 60
-
-    private let defaults: UserDefaults
-    private let threshold: Int
-
-    init(defaults: UserDefaults = .standard, threshold: Int = 5) {
-        self.defaults = defaults
-        self.threshold = threshold
-    }
-
-    var shortLivedLaunchCount: Int {
-        stamps.count
-    }
-
-    /// 기동을 기록하고, 임계값에 도달했으면 true를 돌려준다.
-    /// true면 호출자가 자동 시작을 해제해야 한다.
-    @discardableResult
-    func recordLaunch(at date: Date = Date()) -> Bool {
-        var updated = stamps
-        updated.append(date.timeIntervalSince1970)
-        if updated.count > threshold {
-            updated = Array(updated.suffix(threshold))
-        }
-        defaults.set(updated, forKey: PingPreferenceKeys.autostartLaunchLedger)
-
-        return updated.count >= threshold
-    }
-
-    func markHealthy() {
-        defaults.removeObject(forKey: PingPreferenceKeys.autostartLaunchLedger)
-    }
-
-    private var stamps: [Double] {
-        defaults.array(forKey: PingPreferenceKeys.autostartLaunchLedger) as? [Double] ?? []
-    }
-}
-```
-
-- [ ] **Step 5: 테스트 통과 확인**
-
-```bash
-xcodegen generate
-xcodebuild -project Ping.xcodeproj -scheme Ping -destination "platform=macOS" test \
-  -only-testing:PingTests/LaunchLedgerTests
-```
-Expected: PASS (6개 테스트)
-
-- [ ] **Step 6: 커밋**
-
-```bash
-git add Ping/Core/AutoStart/LaunchLedger.swift Ping/Core/UserPreferences.swift PingTests/LaunchLedgerTests.swift Ping.xcodeproj
-git commit -m "$(cat <<'EOF'
-feat(autostart): add LaunchLedger crash-loop guard
-
-Counts only launches that fail to survive 60 seconds, so a healthy run
-resets the counter and manual quit/reopen is not mistaken for a loop.
-
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
-EOF
-)"
-```
-
----
-
-## Task 4: SingleInstanceGuard — 중복 실행 방지
-
-launchd가 띄운 인스턴스가 있는데 사용자가 Ping.app을 더블클릭하면 메뉴바 아이콘 2개 · realtime 구독 2벌 · 알림 2배가 된다.
-
-**Files:**
-- Create: `Ping/Core/AutoStart/SingleInstanceGuard.swift`
-- Test: `PingTests/SingleInstanceGuardTests.swift`
-
-**Interfaces:**
-- Consumes: 없음
-- Produces:
-  - `protocol RunningInstanceLocating { func processIdentifiers(forBundleIdentifier bundleIdentifier: String) -> [pid_t] }`
-  - `struct WorkspaceInstanceLocator: RunningInstanceLocating` (기본 구현)
-  - `enum SingleInstanceGuard { static func shouldYield(runningPIDs: [pid_t], currentPID: pid_t) -> Bool }`
-  - Task 6의 `AppDelegate.applicationWillFinishLaunching`이 쓴다.
-
-- [ ] **Step 1: 실패하는 테스트 작성**
-
-`PingTests/SingleInstanceGuardTests.swift`:
-
-```swift
-import XCTest
-@testable import Ping
-
-final class SingleInstanceGuardTests: XCTestCase {
-    func testDoesNotYieldWhenAloneInTheList() {
-        XCTAssertFalse(SingleInstanceGuard.shouldYield(runningPIDs: [42], currentPID: 42))
-    }
-
-    func testDoesNotYieldWhenListIsEmpty() {
-        // LaunchServices 등록 전이면 자기 자신도 목록에 없을 수 있다. 물러나면 앱이 아예 안 뜬다.
-        XCTAssertFalse(SingleInstanceGuard.shouldYield(runningPIDs: [], currentPID: 42))
-    }
-
-    func testYieldsWhenAnotherInstanceIsAlreadyRunning() {
-        // 이 판정은 기동 직후에만 실행되므로 "다른 pid = 나보다 먼저 뜬 인스턴스"가 성립한다.
-        XCTAssertTrue(SingleInstanceGuard.shouldYield(runningPIDs: [17, 42], currentPID: 42))
-    }
-
-    func testYieldsEvenWhenSelfIsNotYetListed() {
-        XCTAssertTrue(SingleInstanceGuard.shouldYield(runningPIDs: [17], currentPID: 42))
-    }
-
-    func testLocatorReturnsEmptyForUnknownBundleIdentifier() {
-        // 존재하지 않는 번들 ID. 조회가 크래시하지 않고 빈 배열을 주는지 본다.
-        let pids = WorkspaceInstanceLocator()
-            .processIdentifiers(forBundleIdentifier: "com.youngminpark.ping.NoSuchApp")
-
-        XCTAssertTrue(pids.isEmpty)
-    }
-}
-```
-
-- [ ] **Step 2: 테스트가 실패하는지 확인**
-
-```bash
-xcodebuild -project Ping.xcodeproj -scheme Ping -destination "platform=macOS" test \
-  -only-testing:PingTests/SingleInstanceGuardTests
-```
-Expected: 컴파일 실패 — `SingleInstanceGuard` / `WorkspaceInstanceLocator` 미정의.
-
-- [ ] **Step 3: 구현**
-
-`Ping/Core/AutoStart/SingleInstanceGuard.swift`:
-
-```swift
-import AppKit
-import Foundation
-
-protocol RunningInstanceLocating {
-    func processIdentifiers(forBundleIdentifier bundleIdentifier: String) -> [pid_t]
-}
-
-struct WorkspaceInstanceLocator: RunningInstanceLocating {
-    func processIdentifiers(forBundleIdentifier bundleIdentifier: String) -> [pid_t] {
-        NSRunningApplication
-            .runningApplications(withBundleIdentifier: bundleIdentifier)
-            .map(\.processIdentifier)
-    }
-}
-
-/// launchd가 띄운 인스턴스와 사용자가 더블클릭한 인스턴스가 겹치면
-/// 메뉴바 아이콘 2개·realtime 구독 2벌·알림 2배가 된다. 나중에 뜬 쪽이 물러난다.
-enum SingleInstanceGuard {
-    /// 이 판정은 `applicationWillFinishLaunching`에서만 호출된다.
-    /// 우리 프로세스는 방금 떴으므로 목록의 다른 pid는 전부 우리보다 먼저 뜬 인스턴스다.
-    static func shouldYield(runningPIDs: [pid_t], currentPID: pid_t) -> Bool {
-        runningPIDs.contains { $0 != currentPID }
-    }
-}
-```
-
-- [ ] **Step 4: 테스트 통과 확인**
-
-```bash
-xcodegen generate
-xcodebuild -project Ping.xcodeproj -scheme Ping -destination "platform=macOS" test \
-  -only-testing:PingTests/SingleInstanceGuardTests
-```
-Expected: PASS (5개 테스트)
-
-- [ ] **Step 5: 커밋**
-
-```bash
-git add Ping/Core/AutoStart/SingleInstanceGuard.swift PingTests/SingleInstanceGuardTests.swift Ping.xcodeproj
-git commit -m "$(cat <<'EOF'
-feat(autostart): add single-instance guard
-
-Prevents duplicate menu bar icons and doubled realtime subscriptions when
-a launchd-started instance and a user-launched one overlap.
-
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
-EOF
-)"
-```
-
----
-
-## Task 5: AutoStartController — SMAppService를 만지는 유일한 지점
-
-정책·원장을 엮고 실제 등록/해제를 수행한다. 크래시 루프 알림도 여기서 낸다.
-
-**Files:**
-- Create: `Ping/Core/AutoStart/AutoStartController.swift`
-- Modify: `Ping/Notifications/LocalNotificationCenter.swift` (알림 1종 추가)
-- Test: `PingTests/AutoStartControllerTests.swift`
-
-**Interfaces:**
-- Consumes: `AutoStartStatus`, `AutoStartAction`, `AutoStartPolicy` (Task 2), `LaunchLedger`, `PingPreferenceKeys.autostartUserChoice` (Task 3)
-- Produces:
-  - `@MainActor final class AutoStartController`
-    - `static let shared: AutoStartController`
-    - `static let agentPlistName = "com.youngminpark.ping.Ping.keepalive.plist"`
-    - `init(defaults: UserDefaults = .standard)`
-    - `var userChoice: Bool? { get set }`
-    - `var status: AutoStartStatus { get }`
-    - `static func map(_ status: SMAppService.Status) -> AutoStartStatus`
-    - `func setEnabled(_ enabled: Bool) throws`
-    - `func applyPolicyAtLaunch()`
-    - `func recordLaunch(now: Date = Date())`
-    - `func markHealthy()`
-  - `LocalNotificationCenter.shared.notifyAutoStartDisabled()`
-  - Task 6(`AppDelegate`)과 Task 7(`SettingsScene`)이 쓴다.
-
-- [ ] **Step 1: 실패하는 테스트 작성**
-
-`SMAppService` 호출 자체는 단위 테스트가 불가능하다(시스템 등록을 건드린다). 테스트는 **주입된 defaults 위에서의 `userChoice` 영속성**과 **상태 매핑**만 검증한다. 등록/해제 동작은 Task 8의 수동 검증이 담당한다.
-
-`PingTests/AutoStartControllerTests.swift`:
-
-```swift
-import ServiceManagement
-import XCTest
-@testable import Ping
-
-@MainActor final class AutoStartControllerTests: XCTestCase {
-    private var suiteName: String!
-    private var defaults: UserDefaults!
-
-    override func setUpWithError() throws {
-        suiteName = "AutoStartControllerTests.\(UUID().uuidString)"
-        defaults = UserDefaults(suiteName: suiteName)
-    }
-
-    override func tearDownWithError() throws {
-        defaults.removePersistentDomain(forName: suiteName)
-    }
-
-    func testUserChoiceStartsUnset() {
-        let controller = AutoStartController(defaults: defaults)
-
-        XCTAssertNil(controller.userChoice)
-    }
-
-    func testUserChoiceRoundTrips() {
-        let controller = AutoStartController(defaults: defaults)
-
-        controller.userChoice = true
-        XCTAssertEqual(controller.userChoice, true)
-
-        controller.userChoice = false
-        XCTAssertEqual(controller.userChoice, false)
-
-        controller.userChoice = nil
-        XCTAssertNil(controller.userChoice)
-    }
-
-    func testFalseIsDistinguishableFromUnset() {
-        // Bool?를 object(forKey:)로 읽지 않고 bool(forKey:)로 읽으면 false와 미설정이 뭉개진다.
-        // 그러면 사용자가 끈 상태가 매 기동마다 "첫 실행"으로 오인돼 다시 켜진다.
-        let controller = AutoStartController(defaults: defaults)
-        controller.userChoice = false
-
-        XCTAssertNotNil(controller.userChoice)
-        XCTAssertEqual(controller.userChoice, false)
-    }
-
-    func testStatusMappingCoversEveryServiceManagementCase() {
-        XCTAssertEqual(AutoStartController.map(.enabled), .enabled)
-        XCTAssertEqual(AutoStartController.map(.requiresApproval), .requiresApproval)
-        XCTAssertEqual(AutoStartController.map(.notRegistered), .notRegistered)
-        XCTAssertEqual(AutoStartController.map(.notFound), .notFound)
-    }
-
-    func testAgentPlistNameMatchesBundledFile() {
-        XCTAssertEqual(
-            AutoStartController.agentPlistName,
-            "com.youngminpark.ping.Ping.keepalive.plist"
-        )
-    }
-}
-```
-
-- [ ] **Step 2: 테스트가 실패하는지 확인**
-
-```bash
-xcodebuild -project Ping.xcodeproj -scheme Ping -destination "platform=macOS" test \
-  -only-testing:PingTests/AutoStartControllerTests
-```
-Expected: 컴파일 실패 — `AutoStartController` 미정의.
-
-- [ ] **Step 3: 크래시 루프 알림 추가**
-
-`Ping/Notifications/LocalNotificationCenter.swift`:
-
-`static let updateAvailableIdentifier = "ping.update.available"` 줄 아래에 추가:
-
-```swift
-    static let autoStartDisabledIdentifier = "ping.autostart.disabled"
-```
-
-`clearUpdateAvailableNotification()` 메서드 **바로 위에** 추가:
-
-```swift
-    func notifyAutoStartDisabled() {
-        let content = UNMutableNotificationContent()
-        content.title = "Ping 자동 시작을 껐습니다"
-        content.body = "앱이 반복해서 비정상 종료되어 자동 시작을 해제했습니다. 설정에서 다시 켤 수 있습니다."
-        content.sound = notificationSound()
-
-        let request = UNNotificationRequest(
-            identifier: Self.autoStartDisabledIdentifier,
-            content: content,
-            trigger: nil
-        )
-        UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
-    }
-```
-
-- [ ] **Step 4: AutoStartController 구현**
-
-`Ping/Core/AutoStart/AutoStartController.swift`:
-
-```swift
-import Foundation
-import OSLog
-import ServiceManagement
 
 /// 자동 시작 등록 상태를 관리한다. `SMAppService`를 호출하는 곳은 이 클래스 하나뿐이다.
 @MainActor
@@ -912,12 +496,10 @@ final class AutoStartController {
     static let agentPlistName = "com.youngminpark.ping.Ping.keepalive.plist"
 
     private let defaults: UserDefaults
-    private let ledger: LaunchLedger
     private let logger = Logger(subsystem: "com.youngminpark.ping.Ping", category: "autostart")
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        self.ledger = LaunchLedger(defaults: defaults)
     }
 
     private var agent: SMAppService {
@@ -992,26 +574,6 @@ final class AutoStartController {
             logger.error("auto-start \(String(describing: action), privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
         }
     }
-
-    /// 기동을 원장에 기록한다. 연속 단명 기동이 임계값에 닿으면 자동 시작을 스스로 끈다.
-    func recordLaunch(now: Date = Date()) {
-        guard ledger.recordLaunch(at: now) else { return }
-        disableAfterCrashLoop()
-    }
-
-    /// 기동 후 `LaunchLedger.healthyLifetime`을 넘겨 살아남았을 때 호출한다.
-    func markHealthy() {
-        ledger.markHealthy()
-    }
-
-    private func disableAfterCrashLoop() {
-        logger.error("auto-start disabled after repeated short-lived launches")
-
-        try? agent.unregister()
-        userChoice = false
-        ledger.markHealthy()
-        LocalNotificationCenter.shared.notifyAutoStartDisabled()
-    }
 }
 ```
 
@@ -1020,20 +582,20 @@ final class AutoStartController {
 ```bash
 xcodegen generate
 xcodebuild -project Ping.xcodeproj -scheme Ping -destination "platform=macOS" test \
-  -only-testing:PingTests/AutoStartControllerTests
+  -only-testing:PingTests/AutoStartPolicyTests
 ```
-Expected: PASS (6개 테스트)
+Expected: PASS (12개 테스트)
 
 - [ ] **Step 6: 커밋**
 
 ```bash
-git add Ping/Core/AutoStart/AutoStartController.swift Ping/Notifications/LocalNotificationCenter.swift PingTests/AutoStartControllerTests.swift Ping.xcodeproj
+git add Ping/Core/AutoStart.swift Ping/Core/UserPreferences.swift PingTests/AutoStartPolicyTests.swift Ping.xcodeproj
 git commit -m "$(cat <<'EOF'
-feat(autostart): add AutoStartController over SMAppService
+feat(autostart): add auto-start policy and SMAppService controller
 
-Single place that touches ServiceManagement: applies the launch policy,
-migrates off the legacy login item, and self-disables with a notification
-after repeated short-lived launches.
+Default-on for first run, one-shot migration off the legacy login item,
+self-healing re-register when the bundle moves. A stored userChoice of
+false is never reversed.
 
 Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
 EOF
@@ -1042,212 +604,20 @@ EOF
 
 ---
 
-## Task 6: AppDelegate 기동 훅 연결
+## Task 3: 기동 훅과 설정 토글 배선
+
+앱이 뜰 때 정책을 적용하고, 설정 토글이 구 로그인 항목 대신 KeepAlive agent를 조작하게 한다. **설정 화면의 문구와 레이아웃은 한 글자도 바꾸지 않는다.**
 
 **Files:**
-- Modify: `Ping/AppDelegate.swift` (`applicationWillFinishLaunching` 57-59행, `applicationDidFinishLaunching` 61-80행, `applicationWillTerminate` 91-103행, 프로퍼티 선언부 37-47행)
-- Test: `PingTests/AutoStartLaunchHookTests.swift`
-
-**Interfaces:**
-- Consumes: `SingleInstanceGuard`, `WorkspaceInstanceLocator` (Task 4), `AutoStartController` (Task 5), `LaunchLedger.healthyLifetime` (Task 3)
-- Produces: 없음 (통합 지점)
-
-- [ ] **Step 1: fixture 등록과 실패하는 contract test 작성**
-
-`project.yml`의 `Copy Contract Test Fixtures`에서 `cp "$PROJECT_DIR/Ping/Info.plist" "$DST/Info.plist"` 줄 **바로 앞에** 추가:
-
-```bash
-          cp "$PROJECT_DIR/Ping/AppDelegate.swift" "$DST/AppDelegate.swift"
-```
-
-같은 스크립트의 `inputFiles:` 목록 끝에 추가:
-
-```yaml
-          - "$(PROJECT_DIR)/Ping/AppDelegate.swift"
-```
-
-`PingTests/AutoStartLaunchHookTests.swift`:
-
-```swift
-import XCTest
-
-final class AutoStartLaunchHookTests: XCTestCase {
-    func testGuardRunsBeforeAnythingElseAndExitsCleanly() throws {
-        let source = try readSourceFile("AppDelegate.swift")
-
-        XCTAssertTrue(source.contains("SingleInstanceGuard.shouldYield"))
-        // exit(0)이어야 launchd가 비정상 종료로 보지 않아 재실행하지 않는다.
-        XCTAssertTrue(source.contains("exit(0)"))
-    }
-
-    func testLaunchIsRecordedBeforePolicyIsApplied() throws {
-        let source = try readSourceFile("AppDelegate.swift")
-
-        let recordIndex = try XCTUnwrap(source.range(of: "AutoStartController.shared.recordLaunch()")).lowerBound
-        let applyIndex = try XCTUnwrap(source.range(of: "AutoStartController.shared.applyPolicyAtLaunch()")).lowerBound
-
-        // 크래시 루프가 감지되면 recordLaunch가 userChoice를 false로 내린다.
-        // 그 뒤에 정책을 적용해야 해제 상태가 유지된다.
-        XCTAssertLessThan(recordIndex, applyIndex)
-    }
-
-    func testHealthyMarkIsScheduled() throws {
-        let source = try readSourceFile("AppDelegate.swift")
-
-        XCTAssertTrue(source.contains("LaunchLedger.healthyLifetime"))
-        XCTAssertTrue(source.contains("AutoStartController.shared.markHealthy()"))
-    }
-
-    func testAutoStartIsSkippedUnderUnitTests() throws {
-        let source = try readSourceFile("AppDelegate.swift")
-
-        XCTAssertTrue(source.contains("isRunningUnitTests"))
-    }
-
-    private func readSourceFile(_ relativePath: String) throws -> String {
-        try String(contentsOf: resourceURL(for: relativePath), encoding: .utf8)
-    }
-
-    private func resourceURL(for relativePath: String) throws -> URL {
-        let fileName = URL(fileURLWithPath: relativePath).lastPathComponent
-        return try XCTUnwrap(Bundle(for: Self.self).resourceURL?.appendingPathComponent(fileName))
-    }
-}
-```
-
-- [ ] **Step 2: 테스트가 실패하는지 확인**
-
-```bash
-xcodegen generate
-xcodebuild -project Ping.xcodeproj -scheme Ping -destination "platform=macOS" test \
-  -only-testing:PingTests/AutoStartLaunchHookTests
-```
-Expected: 앞의 3개 FAIL (`AppDelegate.swift`에 아직 해당 호출들이 없다), `testAutoStartIsSkippedUnderUnitTests`는 PASS (기존 코드에 이미 `isRunningUnitTests`가 있다 — 이 테스트는 회귀 방지용이다).
-
-- [ ] **Step 3: 프로퍼티 추가**
-
-`Ping/AppDelegate.swift`의 `private var cameraStartTask: Task<Void, Never>?` 줄 아래에 추가:
-
-```swift
-    private var autoStartHealthTask: Task<Void, Never>?
-```
-
-- [ ] **Step 4: 중복 인스턴스 가드 추가**
-
-`applicationWillFinishLaunching`(57행)을 다음으로 교체:
-
-```swift
-    func applicationWillFinishLaunching(_ notification: Notification) {
-        if !ProcessInfo.processInfo.isRunningUnitTests, shouldYieldToRunningInstance() {
-            // exit(0)이어야 launchd가 비정상 종료로 보지 않는다. 종료 코드가 0이 아니면
-            // KeepAlive가 곧바로 다시 띄워 무한 루프가 된다.
-            exit(0)
-        }
-
-        enforceAccessoryActivationPolicy()
-    }
-
-    private func shouldYieldToRunningInstance() -> Bool {
-        guard let bundleIdentifier = Bundle.main.bundleIdentifier else { return false }
-
-        return SingleInstanceGuard.shouldYield(
-            runningPIDs: WorkspaceInstanceLocator().processIdentifiers(forBundleIdentifier: bundleIdentifier),
-            currentPID: ProcessInfo.processInfo.processIdentifier
-        )
-    }
-```
-
-- [ ] **Step 5: 기동 정책 적용 추가**
-
-`applicationDidFinishLaunching`의 `if !ProcessInfo.processInfo.isRunningUnitTests {` 블록(71행)을 다음으로 교체:
-
-```swift
-        if !ProcessInfo.processInfo.isRunningUnitTests {
-            // 순서 주의: recordLaunch가 크래시 루프를 감지하면 userChoice를 false로 내린다.
-            // 그 결과를 applyPolicyAtLaunch가 읽어야 해제 상태가 유지된다.
-            AutoStartController.shared.recordLaunch()
-            AutoStartController.shared.applyPolicyAtLaunch()
-            scheduleAutoStartHealthyMark()
-
-            if showsOnboardingForQA {
-                showOnboardingPreviewForQA()
-                return
-            }
-
-            UpdaterController.shared.start()
-            startBootstrapTaskIfNeeded()
-        }
-```
-
-같은 파일의 `applicationWillTerminate` 아래(105행 `application(_:open:)` 앞)에 추가:
-
-```swift
-    private func scheduleAutoStartHealthyMark() {
-        autoStartHealthTask?.cancel()
-        autoStartHealthTask = Task { @MainActor in
-            try? await Task.sleep(nanoseconds: UInt64(LaunchLedger.healthyLifetime * 1_000_000_000))
-            guard !Task.isCancelled else { return }
-
-            AutoStartController.shared.markHealthy()
-        }
-    }
-```
-
-- [ ] **Step 6: 종료 시 태스크 취소**
-
-`applicationWillTerminate`의 `cameraStartTask?.cancel()` 줄 아래에 추가:
-
-```swift
-        autoStartHealthTask?.cancel()
-```
-
-- [ ] **Step 7: 테스트 통과 확인**
-
-```bash
-xcodegen generate
-xcodebuild -project Ping.xcodeproj -scheme Ping -destination "platform=macOS" test \
-  -only-testing:PingTests/AutoStartLaunchHookTests
-```
-Expected: PASS (4개 테스트)
-
-- [ ] **Step 8: 전체 테스트로 회귀 확인**
-
-```bash
-xcodebuild -project Ping.xcodeproj -scheme Ping -destination "platform=macOS" test
-```
-Expected: 전부 PASS. 기존 테스트가 깨지면 진행하지 말고 원인을 보고할 것.
-
-- [ ] **Step 9: 커밋**
-
-```bash
-git add Ping/AppDelegate.swift project.yml PingTests/AutoStartLaunchHookTests.swift Ping.xcodeproj
-git commit -m "$(cat <<'EOF'
-feat(autostart): wire launch hooks into AppDelegate
-
-Yield to an already-running instance with exit(0), record the launch,
-apply the auto-start policy, and clear the crash-loop ledger once the
-process survives its first minute.
-
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
-EOF
-)"
-```
-
----
-
-## Task 7: 설정 토글 배선 교체 (문구 불변)
-
-토글이 구 로그인 항목 대신 KeepAlive agent를 조작하게 한다. **화면에 보이는 문구와 레이아웃은 한 글자도 바꾸지 않는다.**
-
-**Files:**
-- Modify: `Ping/UI/Setup/SettingsScene.swift` (3행 import, 321-341행 `updateAutoLaunch`/`refreshAutoLaunchStatus`, 380-404행 `isAutoLaunchEnabled`/`autoLaunchStatusText`)
+- Modify: `Ping/AppDelegate.swift` (`applicationDidFinishLaunching`의 `if !ProcessInfo.processInfo.isRunningUnitTests {` 블록)
+- Modify: `Ping/UI/Setup/SettingsScene.swift` (3행 import, `updateAutoLaunch`, `isAutoLaunchEnabled`, `autoLaunchStatusText`)
 - Test: `PingTests/AutoStartSettingsWiringTests.swift`
 
 **Interfaces:**
-- Consumes: `AutoStartController` (Task 5)
-- Produces: 없음
+- Consumes: `AutoStartController` (Task 2)
+- Produces: 없음 (통합 지점)
 
-`SettingsScene.swift`는 이미 `Copy Contract Test Fixtures`에 등록돼 있으므로 fixture 추가 작업이 필요 없다.
+`SettingsScene.swift`는 이미 `project.yml`의 `Copy Contract Test Fixtures`에 등록돼 있으므로 fixture 추가 작업이 필요 없다.
 
 - [ ] **Step 1: 실패하는 테스트 작성**
 
@@ -1296,9 +666,22 @@ xcodebuild -project Ping.xcodeproj -scheme Ping -destination "platform=macOS" te
 ```
 Expected: `testToggleDrivesKeepAliveAgentInsteadOfLoginItem` FAIL (아직 `SMAppService.mainApp` 사용 중), `testSettingsCopyIsUnchanged` PASS.
 
-- [ ] **Step 3: `updateAutoLaunch` 교체**
+- [ ] **Step 3: 기동 훅 추가**
 
-`Ping/UI/Setup/SettingsScene.swift`의 `updateAutoLaunch(_:)`(321-336행)를 다음으로 교체:
+`Ping/AppDelegate.swift`의 `applicationDidFinishLaunching` 안에서 `if !ProcessInfo.processInfo.isRunningUnitTests {` 바로 다음 줄에 한 줄을 추가한다. `showsOnboardingForQA` 조기 반환보다 **앞**이어야 QA 프리뷰 모드에서도 정책이 적용된다:
+
+```swift
+        if !ProcessInfo.processInfo.isRunningUnitTests {
+            AutoStartController.shared.applyPolicyAtLaunch()
+
+            if showsOnboardingForQA {
+```
+
+나머지 줄은 건드리지 않는다.
+
+- [ ] **Step 4: `updateAutoLaunch` 교체**
+
+`Ping/UI/Setup/SettingsScene.swift`의 `updateAutoLaunch(_:)`를 다음으로 교체:
 
 ```swift
     private func updateAutoLaunch(_ enabled: Bool) {
@@ -1314,9 +697,9 @@ Expected: `testToggleDrivesKeepAliveAgentInsteadOfLoginItem` FAIL (아직 `SMApp
     }
 ```
 
-- [ ] **Step 4: 상태 조회 두 개 교체**
+- [ ] **Step 5: 상태 조회 두 개 교체**
 
-`isAutoLaunchEnabled()`(380-389행)와 `autoLaunchStatusText()`(391-404행)를 다음으로 교체:
+같은 파일의 `isAutoLaunchEnabled()`와 `autoLaunchStatusText()`를 다음으로 교체:
 
 ```swift
     @MainActor
@@ -1341,11 +724,11 @@ Expected: `testToggleDrivesKeepAliveAgentInsteadOfLoginItem` FAIL (아직 `SMApp
     }
 ```
 
-- [ ] **Step 5: 쓰이지 않는 import 제거**
+- [ ] **Step 6: 쓰이지 않는 import 제거**
 
 `SettingsScene.swift` 3행의 `import ServiceManagement`를 삭제한다. 이 파일에서 `SMAppService`를 더 이상 참조하지 않는다.
 
-- [ ] **Step 6: 테스트 통과 확인**
+- [ ] **Step 7: 테스트 통과 확인**
 
 ```bash
 xcodegen generate
@@ -1354,24 +737,24 @@ xcodebuild -project Ping.xcodeproj -scheme Ping -destination "platform=macOS" te
 ```
 Expected: PASS (2개 테스트)
 
-**`@State` 초기화에서 `@MainActor` 격리 오류가 나면**: `@State private var autoLaunchEnabled = Self.isAutoLaunchEnabled()`(76-77행)를 `@State private var autoLaunchEnabled = false` / `@State private var autoLaunchStatusText = ""`로 바꾸고, 뷰의 `body`에 `.onAppear { refreshAutoLaunchStatus() }`를 추가한다. 표시 문구는 그대로 유지된다.
+**`@State` 초기화에서 `@MainActor` 격리 오류가 나면**: `@State private var autoLaunchEnabled = Self.isAutoLaunchEnabled()` / `@State private var autoLaunchStatusText = Self.autoLaunchStatusText()`를 `= false` / `= ""`로 바꾸고, 뷰 `body`의 최상위 컨테이너에 `.onAppear { refreshAutoLaunchStatus() }`를 붙인다. 표시 문구는 그대로 유지된다.
 
-- [ ] **Step 7: 전체 테스트**
+- [ ] **Step 8: 전체 테스트로 회귀 확인**
 
 ```bash
 xcodebuild -project Ping.xcodeproj -scheme Ping -destination "platform=macOS" test
 ```
-Expected: 전부 PASS.
+Expected: 전부 PASS. 기존 테스트가 깨지면 진행하지 말고 원인을 보고할 것.
 
-- [ ] **Step 8: 커밋**
+- [ ] **Step 9: 커밋**
 
 ```bash
-git add Ping/UI/Setup/SettingsScene.swift PingTests/AutoStartSettingsWiringTests.swift Ping.xcodeproj
+git add Ping/AppDelegate.swift Ping/UI/Setup/SettingsScene.swift PingTests/AutoStartSettingsWiringTests.swift Ping.xcodeproj
 git commit -m "$(cat <<'EOF'
-fix(autostart): point the settings toggle at the KeepAlive agent
+feat(autostart): apply the policy at launch and rewire the settings toggle
 
 Registering mainApp alongside the agent would launch Ping twice at login.
-Visible copy and layout are unchanged — only the wiring moved.
+Visible settings copy and layout are unchanged — only the wiring moved.
 
 Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
 EOF
@@ -1380,113 +763,75 @@ EOF
 
 ---
 
-## Task 8: 실기기 검증과 스펙 보강
+## Task 4: 실기기 검증 (컨트롤러가 직접 수행)
 
-`SMAppService` 등록·launchd 재실행은 단위 테스트로 검증할 수 없다. 실제로 돌려서 확인한다. **이 태스크는 사람이 결과를 읽고 판단해야 하며, 실패 시 그대로 보고한다.**
+`SMAppService` 등록과 launchd 재실행은 단위 테스트로 검증할 수 없다. **이 태스크는 서브에이전트에 위임하지 않는다** — `pkill -f "Ping.app/Contents/MacOS/Ping"`가 사용자의 실제 `/Applications/Ping.app`까지 죽이고, DerivedData 빌드를 가리키는 launchd 잡을 등록할 수 있기 때문이다. 사용자 승인 후 컨트롤러가 직접 실행한다.
 
-**Files:**
-- Modify: `docs/superpowers/specs/2026-08-04-macos-autostart-keepalive-design.md` (§9에 한계 1건 추가)
+- [ ] **Step 1: 사용자에게 확인받기** — 검증 중 실행 중인 Ping이 종료되고, 임시로 DerivedData 빌드가 로그인 항목에 등록된다는 점을 알린다. 검증 후 원복 방법(Step 6)도 함께 제시한다.
 
-**Interfaces:**
-- Consumes: Task 1-7 전부
-- Produces: 검증 결과 보고
-
-- [ ] **Step 1: 릴리스 빌드와 설치**
+- [ ] **Step 2: 빌드와 서명 확인**
 
 ```bash
 xcodegen generate
 xcodebuild -project Ping.xcodeproj -scheme Ping -configuration Debug -destination "platform=macOS" build
 DERIVED=$(xcodebuild -project Ping.xcodeproj -scheme Ping -showBuildSettings \
           | grep -m1 BUILT_PRODUCTS_DIR | awk '{print $3}')
+ls -l "$DERIVED/Ping.app/Contents/Library/LaunchAgents/"
 codesign --verify --deep --strict "$DERIVED/Ping.app" && echo "SIGNATURE OK"
 ```
 
-기존 실행 중인 Ping을 먼저 내린다:
-```bash
-osascript -e 'tell application "Ping" to quit' || pkill -f "Ping.app/Contents/MacOS/Ping" || true
-```
-
-- [ ] **Step 2: `BundleProgram` 해석 검증 (가장 불확실한 지점)**
-
-빌드된 앱을 실행한 뒤:
+- [ ] **Step 3: `BundleProgram` 해석 검증 (가장 불확실한 지점)**
 
 ```bash
+osascript -e 'tell application "Ping" to quit' || true
 open "$DERIVED/Ping.app"
 sleep 5
 launchctl print "gui/$(id -u)/com.youngminpark.ping.Ping.keepalive"
 ```
 
-Expected: 잡이 출력되고 `program` 또는 `path`가 실제 앱 실행 파일을 가리킨다. `state = running`.
+Expected: 잡이 출력되고 program 경로가 실제 앱 실행 파일을 가리키며 `state = running`.
 
-**실패 시 (잡을 못 찾거나 program 경로가 비어 있음)**: `BundleProgram`이 기대대로 해석되지 않은 것이다. 진행을 멈추고 다음을 보고할 것 — `launchctl print` 전체 출력, `SMAppService.agent(...).status` 값, Console.app의 `com.apple.xpc.launchd` 로그. 폴백은 plist를 `ProgramArguments` 절대 경로(`/Applications/Ping.app/Contents/MacOS/Ping`)로 바꾸고 "앱이 /Applications에 있어야 한다"는 제약을 문서화하는 것이지만, **임의로 적용하지 말고 먼저 보고할 것.**
+**실패 시**: `BundleProgram`이 기대대로 해석되지 않은 것이다. 폴백은 `ProgramArguments` 절대 경로 + "앱은 /Applications에 있어야 함" 제약이지만, 임의로 적용하지 말고 `launchctl print` 출력과 함께 사용자에게 보고할 것.
 
-- [ ] **Step 3: 비정상 종료 → 재실행 확인**
+- [ ] **Step 4: 비정상 종료 → 재실행 확인**
 
 ```bash
-PID=$(pgrep -f "Ping.app/Contents/MacOS/Ping")
-echo "before: $PID"
-kill -9 "$PID"
-sleep 40
+PID=$(pgrep -f "Ping.app/Contents/MacOS/Ping"); echo "before: $PID"; kill -9 "$PID"; sleep 40
 echo "after: $(pgrep -f 'Ping.app/Contents/MacOS/Ping')"
 ```
+Expected: 40초 안에 **다른 pid**로 살아 있다 (`ThrottleInterval 30` 때문에 최대 30초).
 
-Expected: 40초 안에 **다른 pid**로 프로세스가 살아 있다. (`ThrottleInterval 30` 때문에 최대 30초가 걸린다.)
-
-- [ ] **Step 4: 정상 종료 → 재실행 안 되는지 확인**
+- [ ] **Step 5: 정상 종료 → 재실행 안 되는지 확인**
 
 ```bash
-osascript -e 'tell application "Ping" to quit'
-sleep 45
+osascript -e 'tell application "Ping" to quit'; sleep 45
 pgrep -f "Ping.app/Contents/MacOS/Ping" || echo "STAYED DOWN (correct)"
 ```
+Expected: `STAYED DOWN (correct)`. 되살아나면 `KeepAlive.SuccessfulExit` 설정이나 종료 경로의 exit code 문제이므로 보고할 것.
 
-Expected: `STAYED DOWN (correct)`. 여기서 앱이 되살아나면 `KeepAlive.SuccessfulExit` 설정이나 종료 경로의 exit code에 문제가 있는 것이므로 보고할 것.
+- [ ] **Step 6: 검증용 등록 원복**
 
-- [ ] **Step 5: 중복 실행 가드 확인**
-
-```bash
-open "$DERIVED/Ping.app"
-sleep 3
-open "$DERIVED/Ping.app"
-sleep 3
-pgrep -cf "Ping.app/Contents/MacOS/Ping"
-```
-
-Expected: `1`
-
-- [ ] **Step 6: 로그인 항목 목록에 노출되는지 확인**
-
-시스템 설정 › 일반 › 로그인 항목을 열어 "백그라운드에서 허용" 목록에 **Ping**이 (raw label이 아니라) 표시되는지 확인한다. `AssociatedBundleIdentifiers`가 동작하는지 보는 것이다.
-
-- [ ] **Step 7: 스펙에 알려진 한계 추가**
-
-`docs/superpowers/specs/2026-08-04-macos-autostart-keepalive-design.md`의 `## 9. 리스크와 트레이드오프` 섹션 끝에 추가:
-
-```markdown
-**수동 재실행 인스턴스는 launchd 관리 밖이다.** 사용자가 메뉴바에서 "종료"하면 launchd 잡도 멈춘다(정상 종료라 KeepAlive가 재실행하지 않는다). 그 상태에서 사용자가 Ping.app을 직접 실행하면 그 프로세스는 LaunchServices가 띄운 것이라 launchd 관리 대상이 아니고, 이후 비정상 종료돼도 되살아나지 않는다. 다음 로그인에 `RunAtLoad`로 다시 관리 하에 들어온다. 이를 즉시 교정하려면 실행 중인 인스턴스를 죽이고 launchd로 다시 띄워야 하는데, 그 부작용이 이득보다 크다고 판단해 받아들인다.
-```
-
-- [ ] **Step 8: 정리와 커밋**
+DerivedData 빌드로 등록된 잡을 지우고 사용자의 실제 앱 상태로 되돌린다:
 
 ```bash
 pkill -f "Ping.app/Contents/MacOS/Ping" || true
-git add docs/superpowers/specs/2026-08-04-macos-autostart-keepalive-design.md
-git commit -m "$(cat <<'EOF'
-docs(spec): record the unmanaged manual-relaunch limitation
-
-Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
-EOF
-)"
+launchctl bootout "gui/$(id -u)/com.youngminpark.ping.Ping.keepalive" 2>/dev/null || true
+defaults delete com.youngminpark.ping.Ping ping.autostart.userChoice 2>/dev/null || true
+open -a /Applications/Ping.app
 ```
 
-- [ ] **Step 9: 검증 결과 보고**
+시스템 설정 › 일반 › 로그인 항목에 DerivedData 빌드를 가리키는 잔여 항목이 없는지 눈으로 확인한다.
 
-Step 2-6의 실제 출력을 그대로 보고한다. 통과한 항목과 실패한 항목을 구분해서 적을 것. 실패를 통과로 적지 말 것.
+- [ ] **Step 7: 결과 보고** — Step 2-5의 실제 출력을 그대로 보고한다. 통과 항목과 실패 항목을 구분해 적고, 실패를 통과로 적지 않는다.
 
 ---
 
 ## 자체 리뷰 결과
 
-**스펙 커버리지:** §4.1 plist → Task 1. §4.2 종료 경로 → Task 1(plist) + Task 8(실측). §4.3 빌드 통합 → Task 1. §4.4 정책 → Task 2. §4.5 중복 가드 → Task 4 + Task 6. §4.6 크래시 루프 → Task 3 + Task 5. §4.7 설정 UI → Task 7. §4.8 컴포넌트 경계 → Task 2-5의 파일 분리. §5 변경 파일 목록 → 전 태스크에 배분됨. §6 에러 처리 → Task 5의 `applyPolicyAtLaunch` catch + `setEnabled` throws. §7 테스트 → 각 태스크 + Task 8. 누락 없음.
+**스펙 커버리지:** 설계 문서 §4.1 plist → Task 1. §4.2 종료 경로 → Task 1(plist) + Task 4(실측). §4.3 빌드 통합 → Task 1. §4.4 정책 → Task 2. §4.7 설정 UI → Task 3. §6 에러 처리 → Task 2의 `applyPolicyAtLaunch` catch + `setEnabled` throws. §7 테스트 → 각 태스크 + Task 4.
 
-**스펙과 달라진 점 1건:** 스펙 §5는 `LocalNotificationCenter.swift` 수정을 파일 목록에 넣지 않았으나, §4.6의 "로컬 알림을 띄운다"를 구현하려면 필요하다. Task 5에 포함했다.
+**의도적으로 구현하지 않는 스펙 항목 2건** (YAGNI, 플랜 헤더의 범위 절 참조):
+- §4.5 중복 실행 가드 — LaunchServices가 같은 번들의 두 번째 인스턴스를 이미 막는다.
+- §4.6 크래시 루프 차단 — `ThrottleInterval 30`과 시스템 설정 › 로그인 항목이라는 탈출구가 이미 있다.
+
+이에 따라 스펙 §5의 파일 목록 중 `LaunchLedger.swift` / `SingleInstanceGuard.swift` / `LocalNotificationCenter.swift` 수정은 발생하지 않고, `AutoStartPolicy.swift`와 `AutoStartController.swift`는 `AutoStart.swift` 한 파일로 합쳐진다. Task 4 완료 후 스펙에 이 축소를 기록한다.
