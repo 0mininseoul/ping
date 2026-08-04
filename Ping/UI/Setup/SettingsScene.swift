@@ -1,6 +1,5 @@
 import AppKit
 import KeyboardShortcuts
-import ServiceManagement
 import SwiftUI
 
 @MainActor
@@ -322,12 +321,7 @@ private struct GeneralSettingsView: View {
         autoLaunchError = nil
 
         do {
-            // SMAppService.mainApp is the modern login-item API for this macOS-only app.
-            if enabled {
-                try SMAppService.mainApp.register()
-            } else {
-                try SMAppService.mainApp.unregister()
-            }
+            try AutoStartController.shared.setEnabled(enabled)
         } catch {
             autoLaunchError = "자동 시작 설정을 변경하지 못했습니다."
         }
@@ -377,19 +371,14 @@ private struct GeneralSettingsView: View {
         }
     }
 
+    @MainActor
     private static func isAutoLaunchEnabled() -> Bool {
-        switch SMAppService.mainApp.status {
-        case .enabled, .requiresApproval:
-            return true
-        case .notRegistered, .notFound:
-            return false
-        @unknown default:
-            return false
-        }
+        AutoStartController.shared.status.isRegistered
     }
 
+    @MainActor
     private static func autoLaunchStatusText() -> String {
-        switch SMAppService.mainApp.status {
+        switch AutoStartController.shared.status {
         case .enabled:
             return "켜져 있음"
         case .requiresApproval:
@@ -398,7 +387,7 @@ private struct GeneralSettingsView: View {
             return "꺼져 있음"
         case .notFound:
             return "자동 시작 항목을 찾을 수 없습니다."
-        @unknown default:
+        case .unknown:
             return "상태를 확인할 수 없습니다."
         }
     }

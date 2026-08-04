@@ -56,3 +56,6 @@ default.profraw
 # Design Screenshots
 design/screenshots/
 
+
+# Subagent-driven-development scratch (ledger, briefs, review packages)
+.superpowers/

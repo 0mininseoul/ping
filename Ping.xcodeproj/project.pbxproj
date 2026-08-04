@@ -59,6 +59,7 @@
 		42FAB79B241573C81A6569F5 /* WatchSessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 307DEEFD9006672888B273CE /* WatchSessionStore.swift */; };
 		42FEC3304784AF5DBBC354EA /* PingPushService.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F3ECDFD80CFE634B9C98FDA3 /* PingPushService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		43072A8619301C054B30BC7C /* OnboardingFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05A1A2EA9F9A191DE3263C29 /* OnboardingFlowTests.swift */; };
+		4340477927034D4400D71C7A /* AutoStartAgentPlistTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E36147E7743AF446CC43F2EA /* AutoStartAgentPlistTests.swift */; };
 		44DC21E6B318CF6969918DE9 /* CompatibilityContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7BA291155ACBFF85185B36B /* CompatibilityContractTests.swift */; };
 		45CDCD2993C1E53FB62356A1 /* StatusMenuBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CAAECC60F6BE44D405DF213 /* StatusMenuBuilder.swift */; };
 		46082337F49EFA825645368A /* UnreadRoomBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 677595AB315664F0B4C3E4B7 /* UnreadRoomBadge.swift */; };
@@ -83,18 +84,21 @@
 		593B51C4CE943EE1FBB2FD87 /* AppInstallLocation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AABBC608A3DBBCE53D71796 /* AppInstallLocation.swift */; };
 		5AA7E9EB021EE17E4D1A1B15 /* DesktopInstallGuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1616675AE7695B824BD066DE /* DesktopInstallGuideView.swift */; };
 		5D89DB1CFC8A93880FABEB80 /* MessageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8EEA4E1E7817FF473236F52 /* MessageService.swift */; };
+		5E4DD40E440B7D44DA18CEB5 /* AutoStartSettingsWiringTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F47E3355A4AE56784ED018FD /* AutoStartSettingsWiringTests.swift */; };
 		5E8F74FACE824DA1B4D7CEF4 /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5251D41AA9E41DBE6D637EF1 /* QRScannerView.swift */; };
 		5EE98B4867742225FE567CD4 /* PartnerCyclingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F441B1B93C9D79CB77E24D4 /* PartnerCyclingTests.swift */; };
 		5F547FCCA25D9DBDC39E0527 /* HistoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B297B0F942C3BA0AEFCF8EA3 /* HistoryViewModel.swift */; };
 		647D023951472D012B739794 /* VideoThumbnailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91CA4C2B635FD53502BAE5A6 /* VideoThumbnailView.swift */; };
 		64FB720C71D2506C3FF0A5F6 /* InlinePlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECAF925EB5EB36A31683069F /* InlinePlayerView.swift */; };
 		661E54E16BDF7EF0037D6F5E /* MirrorWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A54D7D9F08655509CE5894FA /* MirrorWindow.swift */; };
+		676EB8BC99CDB722E5209216 /* AutoStartLaunchGuardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20528B0C72C726FF8392EA4 /* AutoStartLaunchGuardTests.swift */; };
 		67FBBC00ABEE4FDC9A8E5496 /* EntitlementsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0CE48710A798DC7E4F5F387 /* EntitlementsTests.swift */; };
 		68155E2EA147765775AA1E78 /* VideoThumbnailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 178B779BE40BB245CFDED469 /* VideoThumbnailView.swift */; };
 		68C7329A0CC241A8C7AC5C7C /* PingMobileApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A442835C646C43BA7F20E0EA /* PingMobileApp.swift */; };
 		6C7E8E8138C42E9ED2D0D8CF /* LocalSavePermissionContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE28695E12B3BFE879774504 /* LocalSavePermissionContractTests.swift */; };
 		6D10BA31F2FBF6ADCB3D99B1 /* ScreenCoordinates.swift in Sources */ = {isa = PBXBuildFile; fileRef = F760D624DE03E352A8514854 /* ScreenCoordinates.swift */; };
 		6E1D0F1C5152D44720289D6E /* GlassEffectCompat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2823CB8CE254CF54DFA45E9C /* GlassEffectCompat.swift */; };
+		6FB60AA3DE52D0F022A0250B /* AutoStart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FA38A9FDBA557155F1D78AC /* AutoStart.swift */; };
 		6FC1B535DD12B36BA7721FDD /* GlassPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCBB58248AD85A5BB4137D3F /* GlassPanel.swift */; };
 		7035C7FE65C8AC75092F13FB /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 124F74B5C81D2AD5BA394E96 /* KeyboardShortcuts */; };
 		71727BE893C91EFA23DD7F85 /* DesktopPresenceContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96B89FB193F948DD67E28BD3 /* DesktopPresenceContractTests.swift */; };
@@ -138,6 +142,7 @@
 		B5ADEAB2D74F268DF698CC0E /* WindowPositioningTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA897CE96651014C4A14D9FF /* WindowPositioningTests.swift */; };
 		B6A11640F9C354B97F970881 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 9A1A6B3E7AB732144F264705 /* Sparkle */; };
 		B81C0B09A4BF899A8773CC3F /* WatchContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 991C6509D6B14DB1451FC377 /* WatchContentView.swift */; };
+		B9BF1BC872AA66623D27560B /* AutoStartPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AAED4DB083F94C85723DC9D /* AutoStartPolicyTests.swift */; };
 		BAC0D847D9554D9F5BE8C122 /* SelectableTextLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCE7247150967CBCEC6BEFF3 /* SelectableTextLayoutTests.swift */; };
 		BCF7187C4DAFB7DF099D11F5 /* ForegroundPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3E3F4481E793E98BF26304F /* ForegroundPresenter.swift */; };
 		BD4B27A9FA26170478465688 /* SupabaseClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = C719C9C94BAE6A852AD90D7A /* SupabaseClient.swift */; };
@@ -189,6 +194,7 @@
 		F7FF9BDB0AB6F7836A2AC2A4 /* ScreenCaptureViewport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 955EEFC8CA504F12D5F23658 /* ScreenCaptureViewport.swift */; };
 		F82A4ECB45A5581D811B4F3C /* OnboardingInputContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E1A841BBD8BDD965C164BF8 /* OnboardingInputContractTests.swift */; };
 		F9F01F4FE990F1A34D5E5FCF /* RainbowBorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97150E02C17DE9AEBD26BF13 /* RainbowBorder.swift */; };
+		FA2CCE5462ABB0DADC291E84 /* com.youngminpark.ping.Ping.keepalive.plist in CopyFiles */ = {isa = PBXBuildFile; fileRef = 31560A6E274345958FA506F7 /* com.youngminpark.ping.Ping.keepalive.plist */; };
 		FBC15B3189746AB556414ECC /* LinkPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8D29F898D793DDAC8C24599 /* LinkPreview.swift */; };
 		FF3B573F1FBFCF71A605ACB9 /* ChatComposerIMEContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E29B5DB774FF236DDB8C436C /* ChatComposerIMEContractTests.swift */; };
 		FF645ABE2A696D7110266F3C /* PairingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F013D14C65D1B797C6EF367 /* PairingViewModel.swift */; };
@@ -219,6 +225,16 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		7B0EF64478ED7F201F897826 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = Contents/Library/LaunchAgents;
+			dstSubfolderSpec = 1;
+			files = (
+				FA2CCE5462ABB0DADC291E84 /* com.youngminpark.ping.Ping.keepalive.plist in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		E7C67A07ABCFE850BC82B8D3 /* Embed Watch Content */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -278,8 +294,10 @@
 		2AF4160B3B74FDD3CA18261B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		2D52664C4393A5DF13065298 /* RoomOrderingContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomOrderingContractTests.swift; sourceTree = "<group>"; };
 		2F806032469E93F02C3C28D9 /* AppcastUpdateOfferParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppcastUpdateOfferParser.swift; sourceTree = "<group>"; };
+		2FA38A9FDBA557155F1D78AC /* AutoStart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoStart.swift; sourceTree = "<group>"; };
 		307DEEFD9006672888B273CE /* WatchSessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSessionStore.swift; sourceTree = "<group>"; };
 		311483C170DA8C628A197596 /* DeviceHandoffPayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceHandoffPayload.swift; sourceTree = "<group>"; };
+		31560A6E274345958FA506F7 /* com.youngminpark.ping.Ping.keepalive.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = com.youngminpark.ping.Ping.keepalive.plist; sourceTree = "<group>"; };
 		327FC4862D3451ACBA1490B2 /* ScreenFaceLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenFaceLayout.swift; sourceTree = "<group>"; };
 		35F242A1F9AF07C6AE883A24 /* ExpandedPlaybackWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpandedPlaybackWindow.swift; sourceTree = "<group>"; };
 		36410F2A63B9906DC8C06A8B /* PushRegistrar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushRegistrar.swift; sourceTree = "<group>"; };
@@ -295,6 +313,7 @@
 		4768EC8284B544E3649C4507 /* HistoryViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryViewModelTests.swift; sourceTree = "<group>"; };
 		4889748CC37B60C1E533B625 /* PingMobile.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PingMobile.entitlements; sourceTree = "<group>"; };
 		497260D101318CB4A8D8DE2C /* BackendRetryPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendRetryPolicy.swift; sourceTree = "<group>"; };
+		4AAED4DB083F94C85723DC9D /* AutoStartPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoStartPolicyTests.swift; sourceTree = "<group>"; };
 		4B5BB40E86D90C32CA784A61 /* UpdateReminderStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateReminderStoreTests.swift; sourceTree = "<group>"; };
 		4CD854FC545A367784978698 /* RoomListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomListView.swift; sourceTree = "<group>"; };
 		4E1A841BBD8BDD965C164BF8 /* OnboardingInputContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingInputContractTests.swift; sourceTree = "<group>"; };
@@ -411,6 +430,7 @@
 		DF791350460B22AC63D0CE32 /* PlaybackPrefetchContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackPrefetchContractTests.swift; sourceTree = "<group>"; };
 		E0CE48710A798DC7E4F5F387 /* EntitlementsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntitlementsTests.swift; sourceTree = "<group>"; };
 		E29B5DB774FF236DDB8C436C /* ChatComposerIMEContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatComposerIMEContractTests.swift; sourceTree = "<group>"; };
+		E36147E7743AF446CC43F2EA /* AutoStartAgentPlistTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoStartAgentPlistTests.swift; sourceTree = "<group>"; };
 		E3D068C3338A147955587478 /* LinkPreviewCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkPreviewCard.swift; sourceTree = "<group>"; };
 		E4C0907AE314021D2DFEC882 /* RoomLimits.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomLimits.swift; sourceTree = "<group>"; };
 		E7BA291155ACBFF85185B36B /* CompatibilityContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompatibilityContractTests.swift; sourceTree = "<group>"; };
@@ -420,8 +440,10 @@
 		EB469BD2ECF2AC4459C1A4D1 /* LocalArchive.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalArchive.swift; sourceTree = "<group>"; };
 		ECAF925EB5EB36A31683069F /* InlinePlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InlinePlayerView.swift; sourceTree = "<group>"; };
 		ED7C10424EA3C4E5036BACF3 /* WatchBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchBridge.swift; sourceTree = "<group>"; };
+		F20528B0C72C726FF8392EA4 /* AutoStartLaunchGuardTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoStartLaunchGuardTests.swift; sourceTree = "<group>"; };
 		F2F40CF1E71B9600941F2BE1 /* StatusMenuBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusMenuBuilderTests.swift; sourceTree = "<group>"; };
 		F3ECDFD80CFE634B9C98FDA3 /* PingPushService.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = PingPushService.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		F47E3355A4AE56784ED018FD /* AutoStartSettingsWiringTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoStartSettingsWiringTests.swift; sourceTree = "<group>"; };
 		F5C19898F5FCEE8CFE97D3ED /* SelectableTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectableTextView.swift; sourceTree = "<group>"; };
 		F6B11EA47A90F6C103338B3A /* ChatImageAttachmentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatImageAttachmentView.swift; sourceTree = "<group>"; };
 		F758F3123EB5B3CD54F783B9 /* ChatRealtimeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRealtimeService.swift; sourceTree = "<group>"; };
@@ -484,6 +506,7 @@
 			children = (
 				96D07ED094D1B1E9297946A0 /* AccountNotifications.swift */,
 				72E17B6A6D89179C56491009 /* AppState.swift */,
+				2FA38A9FDBA557155F1D78AC /* AutoStart.swift */,
 				497260D101318CB4A8D8DE2C /* BackendRetryPolicy.swift */,
 				A3E3F4481E793E98BF26304F /* ForegroundPresenter.swift */,
 				0194505B84DC32C2BA700F6C /* InviteLink.swift */,
@@ -548,6 +571,14 @@
 				B6D978D1D0ADEFE94F8E2D9D /* HotkeyManager.swift */,
 			);
 			path = Hotkey;
+			sourceTree = "<group>";
+		};
+		5C10B7B5947170943C80C42E /* LaunchAgents */ = {
+			isa = PBXGroup;
+			children = (
+				31560A6E274345958FA506F7 /* com.youngminpark.ping.Ping.keepalive.plist */,
+			);
+			path = LaunchAgents;
 			sourceTree = "<group>";
 		};
 		73F6CFB9F5250923B00B043C /* PingPushService */ = {
@@ -665,6 +696,7 @@
 				73F6CFB9F5250923B00B043C /* PingPushService */,
 				E210A10C0F07BE54CD148FC4 /* PingTests */,
 				9EFC6A770C2D2D4FCE5122C0 /* PingWatch */,
+				E820D249D5446FD71D7FC96D /* Resources */,
 				A9B87E8D0F6F0C9AE7E7E82C /* Products */,
 			);
 			sourceTree = "<group>";
@@ -736,6 +768,10 @@
 				03BCCCA5063CABABB6E4E636 /* AccountStoreTests.swift */,
 				9214746AA17BA72DEFC057E7 /* AppcastUpdateOfferParserTests.swift */,
 				7F1E09D4F9233190C884D2DF /* AppInstallLocationTests.swift */,
+				E36147E7743AF446CC43F2EA /* AutoStartAgentPlistTests.swift */,
+				F20528B0C72C726FF8392EA4 /* AutoStartLaunchGuardTests.swift */,
+				4AAED4DB083F94C85723DC9D /* AutoStartPolicyTests.swift */,
+				F47E3355A4AE56784ED018FD /* AutoStartSettingsWiringTests.swift */,
 				236B98B4323FB9FE9DEB2AF1 /* BackendRetryPolicyTests.swift */,
 				B156E510EB6A9724929971C1 /* CameraStartupContractTests.swift */,
 				ABC6B40332B85971277277F6 /* CanonicalRoomNameContractTests.swift */,
@@ -798,6 +834,14 @@
 				BA897CE96651014C4A14D9FF /* WindowPositioningTests.swift */,
 			);
 			path = PingTests;
+			sourceTree = "<group>";
+		};
+		E820D249D5446FD71D7FC96D /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				5C10B7B5947170943C80C42E /* LaunchAgents */,
+			);
+			path = Resources;
 			sourceTree = "<group>";
 		};
 		F0C0D5199701D0E1BA4BCF2D /* UI */ = {
@@ -902,6 +946,7 @@
 				C255A03EFDA6B3F9699390D9 /* Sources */,
 				A23E42D62EE51CC9BC9471A2 /* Copy Supabase Config */,
 				0FD94EF7FCF9100B594CBECD /* Resources */,
+				7B0EF64478ED7F201F897826 /* CopyFiles */,
 				9D05FB8D8D7F0319FEB6F66B /* Frameworks */,
 			);
 			buildRules = (
@@ -1111,6 +1156,7 @@
 				"$(PROJECT_DIR)/Ping/Info.plist",
 				"$(PROJECT_DIR)/README.md",
 				"$(PROJECT_DIR)/Resources/Supabase.example.plist",
+				"$(PROJECT_DIR)/Resources/LaunchAgents/com.youngminpark.ping.Ping.keepalive.plist",
 			);
 			name = "Copy Contract Test Fixtures";
 			outputFileListPaths = (
@@ -1196,10 +1242,11 @@
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/Info.plist",
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/README.md",
 				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/Supabase.example.plist",
+				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/com.youngminpark.ping.Ping.keepalive.plist",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -euo pipefail\n\nDST=\"$TARGET_BUILD_DIR/$CONTENTS_FOLDER_PATH/Resources\"\nmkdir -p \"$DST\"\n\ncp \"$PROJECT_DIR/Ping/UI/Glass/GlassButton.swift\" \"$DST/GlassButton.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Glass/GlassChip.swift\" \"$DST/GlassChip.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Glass/GlassEffectCompat.swift\" \"$DST/GlassEffectCompat.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Glass/GlassPanel.swift\" \"$DST/GlassPanel.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Glass/PingDesign.swift\" \"$DST/PingDesign.swift\"\ncp \"$PROJECT_DIR/Ping/Capture/CameraManager.swift\" \"$DST/CameraManager.swift\"\ncp \"$PROJECT_DIR/Ping/Capture/ScreenCaptureManager.swift\" \"$DST/ScreenCaptureManager.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Mirror/MirrorView.swift\" \"$DST/MirrorView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Mirror/PartnerPicker.swift\" \"$DST/PartnerPicker.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/PairingView.swift\" \"$DST/PairingView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/PairingViewModel.swift\" \"$DST/PairingViewModel.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/RoomListView.swift\" \"$DST/RoomListView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/RoomManagerWindow.swift\" \"$DST/RoomManagerWindow.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/RoomDetailView.swift\" \"$DST/RoomDetailView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/RoomSearchView.swift\" \"$DST/RoomSearchView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/SettingsScene.swift\" \"$DST/SettingsScene.swift\"\ncp \"$PROJECT_DIR/Ping/UI/History/HistoryView.swift\" \"$DST/HistoryView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/History/RoomTimelineView.swift\" \"$DST/RoomTimelineView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/History/HistoryViewModel.swift\" \"$DST/HistoryViewModel.swift\"\ncp \"$PROJECT_DIR/Ping/UI/History/MessageRowView.swift\" \"$DST/MessageRowView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/History/InlinePlayerView.swift\" \"$DST/InlinePlayerView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/History/ScreenFaceExpansionOverlay.swift\" \"$DST/ScreenFaceExpansionOverlay.swift\"\ncp \"$PROJECT_DIR/Ping/UI/History/ChatMessageRowView.swift\" \"$DST/ChatMessageRowView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/History/ChatComposerView.swift\" \"$DST/ChatComposerView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/History/SelectableTextView.swift\" \"$DST/SelectableTextView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/History/VideoThumbnailView.swift\" \"$DST/VideoThumbnailView.swift\"\ncp \"$PROJECT_DIR/Ping/Hotkey/HotkeyManager.swift\" \"$DST/HotkeyManager.swift\"\ncp \"$PROJECT_DIR/Ping/Core/UserPreferences.swift\" \"$DST/UserPreferences.swift\"\ncp \"$PROJECT_DIR/Ping/Core/InviteLink.swift\" \"$DST/InviteLink.swift\"\ncp \"$PROJECT_DIR/Ping/Core/AppState.swift\" \"$DST/AppState.swift\"\ncp \"$PROJECT_DIR/Ping/Core/RoomLimits.swift\" \"$DST/RoomLimits.swift\"\ncp \"$PROJECT_DIR/Ping/Core/PingError.swift\" \"$DST/PingError.swift\"\ncp \"$PROJECT_DIR/Ping/Capture/LocalArchive.swift\" \"$DST/LocalArchive.swift\"\ncp \"$PROJECT_DIR/Ping/Capture/ScreenCapturePermission.swift\" \"$DST/ScreenCapturePermission.swift\"\ncp \"$PROJECT_DIR/Ping/Capture/ScreenFaceRecorder.swift\" \"$DST/ScreenFaceRecorder.swift\"\ncp \"$PROJECT_DIR/Ping/Capture/VideoRecorder.swift\" \"$DST/VideoRecorder.swift\"\ncp \"$PROJECT_DIR/Ping/Capture/VideoCropper.swift\" \"$DST/VideoCropper.swift\"\ncp \"$PROJECT_DIR/Ping/AppDelegate.swift\" \"$DST/AppDelegate.swift\"\ncp \"$PROJECT_DIR/Ping/Updater/UpdaterController.swift\" \"$DST/UpdaterController.swift\"\ncp \"$PROJECT_DIR/Ping/Notifications/LocalNotificationCenter.swift\" \"$DST/LocalNotificationCenter.swift\"\ncp \"$PROJECT_DIR/Ping/Backend/RoomService.swift\" \"$DST/RoomService.swift\"\ncp \"$PROJECT_DIR/Ping/Backend/InvitationService.swift\" \"$DST/InvitationService.swift\"\ncp \"$PROJECT_DIR/Ping/Backend/MessageService.swift\" \"$DST/MessageService.swift\"\ncp \"$PROJECT_DIR/Ping/Backend/SupabaseClient.swift\" \"$DST/SupabaseClient.swift\"\ncp \"$PROJECT_DIR/web/src/App.tsx\" \"$DST/App.tsx\"\ncp \"$PROJECT_DIR/web/src/routes.tsx\" \"$DST/routes.tsx\"\ncp \"$PROJECT_DIR/web/src/components/sections/FinalCTA.tsx\" \"$DST/FinalCTA.tsx\"\ncp \"$PROJECT_DIR/windows/src/Ping.Windows.App/Package.appxmanifest\" \"$DST/Package.appxmanifest\"\ncp \"$PROJECT_DIR/scripts/build-release.sh\" \"$DST/build-release.sh\"\ncp \"$PROJECT_DIR/.gitignore\" \"$DST/.gitignore\"\ncp \"$PROJECT_DIR/scripts/generate-icons.swift\" \"$DST/generate-icons.swift\"\ncp \"$PROJECT_DIR/Ping.entitlements\" \"$DST/Ping.entitlements\"\ncp \"$PROJECT_DIR/docs/DESIGN_SYSTEM.md\" \"$DST/DESIGN_SYSTEM.md\"\ncp \"$PROJECT_DIR/docs/AUTO_UPDATE_SETUP.md\" \"$DST/AUTO_UPDATE_SETUP.md\"\ncp \"$PROJECT_DIR/supabase/migrations/20260517000100_create_ping_backend.sql\" \"$DST/20260517000100_create_ping_backend.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260518003000_room_capacity_limits.sql\" \"$DST/20260518003000_room_capacity_limits.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260518113000_invite_user_reuses_pending_room.sql\" \"$DST/20260518113000_invite_user_reuses_pending_room.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260518131500_allow_member_room_rename.sql\" \"$DST/20260518131500_allow_member_room_rename.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260519021000_fix_accept_invite_link_id_ambiguity.sql\" \"$DST/20260519021000_fix_accept_invite_link_id_ambiguity.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260523000500_storage_read_room_member.sql\" \"$DST/20260523000500_storage_read_room_member.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260523000600_room_name_length_limit.sql\" \"$DST/20260523000600_room_name_length_limit.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260524000100_sender_local_save_permission.sql\" \"$DST/20260524000100_sender_local_save_permission.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260524000200_storage_read_seen_messages.sql\" \"$DST/20260524000200_storage_read_seen_messages.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260524132828_chat_image_attachments.sql\" \"$DST/20260524132828_chat_image_attachments.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260526093431_reaction_realtime_metadata.sql\" \"$DST/20260526093431_reaction_realtime_metadata.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260526120003_reaction_metadata_hardening.sql\" \"$DST/20260526120003_reaction_metadata_hardening.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260527000100_delete_shared_video_messages.sql\" \"$DST/20260527000100_delete_shared_video_messages.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260527000200_delete_or_hide_video_message.sql\" \"$DST/20260527000200_delete_or_hide_video_message.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260527000300_delete_video_message_rows_only.sql\" \"$DST/20260527000300_delete_video_message_rows_only.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260602000100_dedupe_sender_room_videos.sql\" \"$DST/20260602000100_dedupe_sender_room_videos.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260602093214_canonical_room_names.sql\" \"$DST/20260602093214_canonical_room_names.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260602094828_canonical_room_searchable_names.sql\" \"$DST/20260602094828_canonical_room_searchable_names.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260603052554_fix_profile_upsert_nickname_ambiguity.sql\" \"$DST/20260603052554_fix_profile_upsert_nickname_ambiguity.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260617034843_room_capacity_eight_members.sql\" \"$DST/20260617034843_room_capacity_eight_members.sql\"\ncp \"$PROJECT_DIR/project.yml\" \"$DST/project.yml\"\ncp \"$PROJECT_DIR/AGENTS.md\" \"$DST/AGENTS.md\"\ncp \"$PROJECT_DIR/PING_PROJECT_SPECIFICATION.md\" \"$DST/PING_PROJECT_SPECIFICATION.md\"\ncp \"$PROJECT_DIR/Ping/Info.plist\" \"$DST/Info.plist\"\ncp \"$PROJECT_DIR/README.md\" \"$DST/README.md\"\ncp \"$PROJECT_DIR/Resources/Supabase.example.plist\" \"$DST/Supabase.example.plist\"\n";
+			shellScript = "set -euo pipefail\n\nDST=\"$TARGET_BUILD_DIR/$CONTENTS_FOLDER_PATH/Resources\"\nmkdir -p \"$DST\"\n\ncp \"$PROJECT_DIR/Ping/UI/Glass/GlassButton.swift\" \"$DST/GlassButton.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Glass/GlassChip.swift\" \"$DST/GlassChip.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Glass/GlassEffectCompat.swift\" \"$DST/GlassEffectCompat.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Glass/GlassPanel.swift\" \"$DST/GlassPanel.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Glass/PingDesign.swift\" \"$DST/PingDesign.swift\"\ncp \"$PROJECT_DIR/Ping/Capture/CameraManager.swift\" \"$DST/CameraManager.swift\"\ncp \"$PROJECT_DIR/Ping/Capture/ScreenCaptureManager.swift\" \"$DST/ScreenCaptureManager.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Mirror/MirrorView.swift\" \"$DST/MirrorView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Mirror/PartnerPicker.swift\" \"$DST/PartnerPicker.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/PairingView.swift\" \"$DST/PairingView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/PairingViewModel.swift\" \"$DST/PairingViewModel.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/RoomListView.swift\" \"$DST/RoomListView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/RoomManagerWindow.swift\" \"$DST/RoomManagerWindow.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/RoomDetailView.swift\" \"$DST/RoomDetailView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/RoomSearchView.swift\" \"$DST/RoomSearchView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/Setup/SettingsScene.swift\" \"$DST/SettingsScene.swift\"\ncp \"$PROJECT_DIR/Ping/UI/History/HistoryView.swift\" \"$DST/HistoryView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/History/RoomTimelineView.swift\" \"$DST/RoomTimelineView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/History/HistoryViewModel.swift\" \"$DST/HistoryViewModel.swift\"\ncp \"$PROJECT_DIR/Ping/UI/History/MessageRowView.swift\" \"$DST/MessageRowView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/History/InlinePlayerView.swift\" \"$DST/InlinePlayerView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/History/ScreenFaceExpansionOverlay.swift\" \"$DST/ScreenFaceExpansionOverlay.swift\"\ncp \"$PROJECT_DIR/Ping/UI/History/ChatMessageRowView.swift\" \"$DST/ChatMessageRowView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/History/ChatComposerView.swift\" \"$DST/ChatComposerView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/History/SelectableTextView.swift\" \"$DST/SelectableTextView.swift\"\ncp \"$PROJECT_DIR/Ping/UI/History/VideoThumbnailView.swift\" \"$DST/VideoThumbnailView.swift\"\ncp \"$PROJECT_DIR/Ping/Hotkey/HotkeyManager.swift\" \"$DST/HotkeyManager.swift\"\ncp \"$PROJECT_DIR/Ping/Core/UserPreferences.swift\" \"$DST/UserPreferences.swift\"\ncp \"$PROJECT_DIR/Ping/Core/InviteLink.swift\" \"$DST/InviteLink.swift\"\ncp \"$PROJECT_DIR/Ping/Core/AppState.swift\" \"$DST/AppState.swift\"\ncp \"$PROJECT_DIR/Ping/Core/RoomLimits.swift\" \"$DST/RoomLimits.swift\"\ncp \"$PROJECT_DIR/Ping/Core/PingError.swift\" \"$DST/PingError.swift\"\ncp \"$PROJECT_DIR/Ping/Capture/LocalArchive.swift\" \"$DST/LocalArchive.swift\"\ncp \"$PROJECT_DIR/Ping/Capture/ScreenCapturePermission.swift\" \"$DST/ScreenCapturePermission.swift\"\ncp \"$PROJECT_DIR/Ping/Capture/ScreenFaceRecorder.swift\" \"$DST/ScreenFaceRecorder.swift\"\ncp \"$PROJECT_DIR/Ping/Capture/VideoRecorder.swift\" \"$DST/VideoRecorder.swift\"\ncp \"$PROJECT_DIR/Ping/Capture/VideoCropper.swift\" \"$DST/VideoCropper.swift\"\ncp \"$PROJECT_DIR/Ping/AppDelegate.swift\" \"$DST/AppDelegate.swift\"\ncp \"$PROJECT_DIR/Ping/Updater/UpdaterController.swift\" \"$DST/UpdaterController.swift\"\ncp \"$PROJECT_DIR/Ping/Notifications/LocalNotificationCenter.swift\" \"$DST/LocalNotificationCenter.swift\"\ncp \"$PROJECT_DIR/Ping/Backend/RoomService.swift\" \"$DST/RoomService.swift\"\ncp \"$PROJECT_DIR/Ping/Backend/InvitationService.swift\" \"$DST/InvitationService.swift\"\ncp \"$PROJECT_DIR/Ping/Backend/MessageService.swift\" \"$DST/MessageService.swift\"\ncp \"$PROJECT_DIR/Ping/Backend/SupabaseClient.swift\" \"$DST/SupabaseClient.swift\"\ncp \"$PROJECT_DIR/web/src/App.tsx\" \"$DST/App.tsx\"\ncp \"$PROJECT_DIR/web/src/routes.tsx\" \"$DST/routes.tsx\"\ncp \"$PROJECT_DIR/web/src/components/sections/FinalCTA.tsx\" \"$DST/FinalCTA.tsx\"\ncp \"$PROJECT_DIR/windows/src/Ping.Windows.App/Package.appxmanifest\" \"$DST/Package.appxmanifest\"\ncp \"$PROJECT_DIR/scripts/build-release.sh\" \"$DST/build-release.sh\"\ncp \"$PROJECT_DIR/.gitignore\" \"$DST/.gitignore\"\ncp \"$PROJECT_DIR/scripts/generate-icons.swift\" \"$DST/generate-icons.swift\"\ncp \"$PROJECT_DIR/Ping.entitlements\" \"$DST/Ping.entitlements\"\ncp \"$PROJECT_DIR/docs/DESIGN_SYSTEM.md\" \"$DST/DESIGN_SYSTEM.md\"\ncp \"$PROJECT_DIR/docs/AUTO_UPDATE_SETUP.md\" \"$DST/AUTO_UPDATE_SETUP.md\"\ncp \"$PROJECT_DIR/supabase/migrations/20260517000100_create_ping_backend.sql\" \"$DST/20260517000100_create_ping_backend.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260518003000_room_capacity_limits.sql\" \"$DST/20260518003000_room_capacity_limits.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260518113000_invite_user_reuses_pending_room.sql\" \"$DST/20260518113000_invite_user_reuses_pending_room.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260518131500_allow_member_room_rename.sql\" \"$DST/20260518131500_allow_member_room_rename.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260519021000_fix_accept_invite_link_id_ambiguity.sql\" \"$DST/20260519021000_fix_accept_invite_link_id_ambiguity.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260523000500_storage_read_room_member.sql\" \"$DST/20260523000500_storage_read_room_member.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260523000600_room_name_length_limit.sql\" \"$DST/20260523000600_room_name_length_limit.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260524000100_sender_local_save_permission.sql\" \"$DST/20260524000100_sender_local_save_permission.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260524000200_storage_read_seen_messages.sql\" \"$DST/20260524000200_storage_read_seen_messages.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260524132828_chat_image_attachments.sql\" \"$DST/20260524132828_chat_image_attachments.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260526093431_reaction_realtime_metadata.sql\" \"$DST/20260526093431_reaction_realtime_metadata.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260526120003_reaction_metadata_hardening.sql\" \"$DST/20260526120003_reaction_metadata_hardening.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260527000100_delete_shared_video_messages.sql\" \"$DST/20260527000100_delete_shared_video_messages.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260527000200_delete_or_hide_video_message.sql\" \"$DST/20260527000200_delete_or_hide_video_message.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260527000300_delete_video_message_rows_only.sql\" \"$DST/20260527000300_delete_video_message_rows_only.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260602000100_dedupe_sender_room_videos.sql\" \"$DST/20260602000100_dedupe_sender_room_videos.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260602093214_canonical_room_names.sql\" \"$DST/20260602093214_canonical_room_names.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260602094828_canonical_room_searchable_names.sql\" \"$DST/20260602094828_canonical_room_searchable_names.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260603052554_fix_profile_upsert_nickname_ambiguity.sql\" \"$DST/20260603052554_fix_profile_upsert_nickname_ambiguity.sql\"\ncp \"$PROJECT_DIR/supabase/migrations/20260617034843_room_capacity_eight_members.sql\" \"$DST/20260617034843_room_capacity_eight_members.sql\"\ncp \"$PROJECT_DIR/Resources/LaunchAgents/com.youngminpark.ping.Ping.keepalive.plist\" \"$DST/com.youngminpark.ping.Ping.keepalive.plist\"\ncp \"$PROJECT_DIR/project.yml\" \"$DST/project.yml\"\ncp \"$PROJECT_DIR/AGENTS.md\" \"$DST/AGENTS.md\"\ncp \"$PROJECT_DIR/PING_PROJECT_SPECIFICATION.md\" \"$DST/PING_PROJECT_SPECIFICATION.md\"\ncp \"$PROJECT_DIR/Ping/Info.plist\" \"$DST/Info.plist\"\ncp \"$PROJECT_DIR/README.md\" \"$DST/README.md\"\ncp \"$PROJECT_DIR/Resources/Supabase.example.plist\" \"$DST/Supabase.example.plist\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -1232,6 +1279,10 @@
 				4798C5AABBEC8C3D9F10A217 /* AccountsFileTests.swift in Sources */,
 				A0CC34586E73BD4AD949C332 /* AppInstallLocationTests.swift in Sources */,
 				BDC7E1C785C6260EEBD1A885 /* AppcastUpdateOfferParserTests.swift in Sources */,
+				4340477927034D4400D71C7A /* AutoStartAgentPlistTests.swift in Sources */,
+				676EB8BC99CDB722E5209216 /* AutoStartLaunchGuardTests.swift in Sources */,
+				B9BF1BC872AA66623D27560B /* AutoStartPolicyTests.swift in Sources */,
+				5E4DD40E440B7D44DA18CEB5 /* AutoStartSettingsWiringTests.swift in Sources */,
 				81B8B052C9139748FA9F47DE /* BackendRetryPolicyTests.swift in Sources */,
 				D145DD48FDB755F20A1C5A99 /* CameraStartupContractTests.swift in Sources */,
 				87B11294010084335996090D /* CanonicalRoomNameContractTests.swift in Sources */,
@@ -1305,6 +1356,7 @@
 				593B51C4CE943EE1FBB2FD87 /* AppInstallLocation.swift in Sources */,
 				9E54DAAC10053EE98C5670CF /* AppState.swift in Sources */,
 				3D8721EF1C7FF79A43DF7064 /* AppcastUpdateOfferParser.swift in Sources */,
+				6FB60AA3DE52D0F022A0250B /* AutoStart.swift in Sources */,
 				E03C28FD5B9296F726A89A05 /* BackendRetryPolicy.swift in Sources */,
 				55964F9C1885CA8604192FDC /* CameraManager.swift in Sources */,
 				D12F7E997BB6376FEF3F220D /* CameraPreviewView.swift in Sources */,
