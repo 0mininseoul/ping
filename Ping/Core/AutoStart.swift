@@ -169,7 +169,13 @@ final class AutoStartController {
                 // agent 등록이 먼저다. mainApp을 먼저 해제하면 register()가 실패했을 때
                 // 둘 다 없는 상태로 남고 복구 경로가 없다. 이 순서면 최악의 경우가
                 // "둘 다 등록됨"이고, 그건 중복 가드가 막고 다음 기동이 정리한다.
-                try agent.register()
+                //
+                // 이미 등록됐으면 다시 부르지 않는다. mainApp 해제가 실패해 다음 기동에서
+                // 이 경로를 재시도할 때, 등록된 agent에 register()가 던지면 아래 해제에
+                // 영영 도달하지 못해 mainApp이 남은 채로 수렴하지 않는다.
+                if !status.isRegistered {
+                    try agent.register()
+                }
                 try SMAppService.mainApp.unregister()
             }
 
