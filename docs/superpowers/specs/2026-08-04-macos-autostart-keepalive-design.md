@@ -286,4 +286,33 @@ log stream --predicate 'eventMessage CONTAINS "youngminpark.ping"' \
 
 **launchd 관리 하에 들어가는 것의 부작용.** 앱이 launchd 잡이 되면 사용자가 "종료"해도 시스템 설정 로그인 항목에는 계속 남는다. 이건 의도된 동작이고, 완전히 끄는 경로는 설정 토글과 시스템 설정 두 군데다.
 
-**`BundleProgram` 불확실성.** §4.1에 적은 대로 실등록 검증이 필요하다. 실패 시 폴백 경로가 있고, 구현 플랜의 첫 단계로 배치한다.
+**`BundleProgram` 불확실성 — 해소됨.** 2026-08-04 실측에서 `launchctl print`가 `program identifier = Contents/MacOS/Ping (mode: 2)`를 출력했다. 번들 상대 경로가 정상 해석된다. 폴백(`ProgramArguments` 절대 경로)은 불필요하다.
+
+**등록 즉시 두 번째 인스턴스가 뜬다.** `SMAppService.register()`는 잡을 즉시 로드하고 `RunAtLoad`가 true라 launchd가 그 자리에서 `Contents/MacOS/Ping`을 exec한다. launchd의 exec는 LaunchServices를 거치지 않아 중복 제거가 되지 않는다. 실측에서 등록 직후 `runs = 1`이 찍혔다 — 두 번째 프로세스가 실제로 떴다는 뜻이다. §4.5의 중복 실행 가드는 이 때문에 **필수**이며, YAGNI로 잘라냈다가 되살렸다. 가드가 `exit(0)`으로 물러나므로 살아남는 프로세스는 1개다.
+
+**등록한 세션은 launchd 감시 밖이다.** 위 결과의 부수 효과다. 가드가 물러난 뒤 잡은 `state = not running`(정상 종료라 KeepAlive가 되살리지 않음)이 되고, 계속 떠 있는 것은 사용자가 띄운 프로세스다. 그 프로세스는 launchd의 자식이 아니므로 이 세션 동안은 강제 종료돼도 되살아나지 않는다. 다음 로그인에 `RunAtLoad`로 launchd가 직접 띄우면서 감시가 시작된다.
+
+**Sparkle 업데이트 후에도 감시 밖이다.** 같은 원리다. Sparkle은 설치 중 앱을 정상 종료(`exit(0)`)시키고 — 그래서 KeepAlive가 끼어들지 않는 것은 옳다 — LaunchServices로 재실행한다. 그 프로세스도 launchd의 자식이 아니다. 즉 업데이트 직후부터 다음 로그인까지는 보호가 적용되지 않는데, 설정 화면은 "켜져 있음"이라고 표시한다(그 문구는 *등록* 상태이지 *감시* 상태가 아니다). Ping은 Sparkle로 자주 업데이트하므로 드문 경우가 아니다. 즉시 교정하려면 실행 중인 인스턴스를 죽이고 launchd로 다시 띄워야 하는데, 그 부작용이 이득보다 크다고 판단해 받아들인다.
+
+**수동 재실행 인스턴스도 마찬가지다.** 사용자가 메뉴바에서 "종료"하면 launchd 잡도 멈춘다(정상 종료). 그 상태에서 Ping.app을 직접 실행하면 LaunchServices가 띄운 것이라 역시 감시 대상이 아니다. 다음 로그인에 정상화된다.
+
+**기동 시 동기 XPC 3회.** `applyPolicyAtLaunch()`가 `agent.status`, `SMAppService.mainApp.status`, 그리고 register/unregister를 메인 스레드에서 동기로 호출한다. 상대는 background-task-management 데몬이고, 이 기능이 겨냥하는 환경이 바로 디스크 압박 상태의 머신이다. 체감 지연이 보고되면 다음 런루프로 미루면 된다 — 이 호출이 완료되기를 기다리는 코드는 없다.
+
+---
+
+## 10. 실기기 검증 결과 (2026-08-04)
+
+Developer ID로 서명한 Release 빌드를 `~/Applications`에 설치해 실측했다. Debug 빌드는 ad-hoc 서명(`TeamIdentifier=not set`)이라 `SMAppService` 등록이 불가능하므로 검증에 쓸 수 없다.
+
+| 항목 | 결과 |
+|---|---|
+| `codesign --verify --deep --strict` | **통과.** Sparkle을 Developer ID로 재서명하는 릴리스 경로에서는 문제없다 (Debug 빌드에서만 실패) |
+| LaunchAgent plist 봉인 | `Contents/_CodeSignature/CodeResources`에 해시 존재 |
+| `BundleProgram` 해석 | `program identifier = Contents/MacOS/Ping (mode: 2)` — **정상** |
+| 등록 시 중복 인스턴스 | `runs = 1` — 두 번째 프로세스가 실제로 떴고, 가드가 `exit(0)`으로 흡수. 살아남은 프로세스 1개 |
+| `kill -9` → 재실행 | pid 50155 → 52924, `runs` 2→3. **35초 내 복구** |
+| 정상 종료 → 미재실행 | `last exit code = 0`, `runs` 3 유지, `state = not running`. **되살아나지 않음** |
+
+검증 후 `launchctl bootout`, `~/Applications/Ping.app` 삭제, `ping.autostart.userChoice` 삭제로 원복했다.
+
+참고: launchd가 띄운 프로세스는 `argv[0]`이 상대 경로(`Contents/MacOS/Ping`)라 `pgrep -f "Ping.app/Contents/MacOS/Ping"` 같은 절대 경로 패턴에 잡히지 않는다. 운영 스크립트를 쓸 때 주의할 것.
