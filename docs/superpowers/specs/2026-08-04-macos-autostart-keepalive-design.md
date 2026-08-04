@@ -1,8 +1,9 @@
 # macOS 자동 시작 + 자동 복구(KeepAlive) — 설계 문서
 
 - **작성일**: 2026-08-04
-- **상태**: 설계 — 구현 전. 본 문서 승인 후 writing-plans로 구현 플랜 작성.
+- **상태**: **구현 완료 + 실기기 검증 완료** (브랜치 `feat/macos-autostart-keepalive`). 검증 결과는 §10.
 - **범위 산정 근거**: 브레인스토밍 세션에서 사용자와 확정한 결정 로그(§3).
+- **초안 대비 변경**: §4.6(크래시 루프 차단)은 YAGNI로 구현하지 않음. §4.5(중복 실행 가드)는 한 번 잘라냈다가 실측에서 필수임이 확인돼 되살림. 파일 분할은 5개 → `Ping/Core/AutoStart.swift` 1개로 통합.
 
 ---
 
@@ -105,7 +106,7 @@ Thread (triggered): com.apple.CFNetwork.LoaderQ
 키 선택 근거:
 
 - **`BundleProgram`** — 번들 상대 경로. `/Applications/Ping.app/...` 절대 경로를 쓰면 사용자가 앱을 다른 위치에 두거나 옮겼을 때 깨진다.
-  - *구현 시 검증 필요*: `BundleProgram`이 SMAppService agent에서 기대대로 해석되는지 실제 등록 후 `launchctl print`로 확인한다. 해석에 실패하면 폴백은 `ProgramArguments` 절대 경로 + "앱은 /Applications에 있어야 함" 제약이며, 이 경우 `AppInstallLocationTests`가 다루는 설치 위치 규약과 함께 재검토한다.
+  - *검증 완료(§10)*: `launchctl print`가 `program identifier = Contents/MacOS/Ping (mode: 2)`를 출력했다. 폴백은 불필요하다.
 - **`KeepAlive = { SuccessfulExit: false }`** — 이 설계의 핵심. 비정상 종료일 때만 재실행한다.
 - **`ThrottleInterval: 30`** — launchd가 30초에 한 번보다 자주 띄우지 않는다. 정상 운영 중(수 시간 실행 후 사망)에는 스로틀 창이 이미 지나 즉시 재실행되고, 기동 즉시 죽는 병리 상태에서만 30초 간격이 된다.
 - **`AssociatedBundleIdentifiers`** — 시스템 설정 › 로그인 항목에 raw label 대신 "Ping"으로 표시된다.
@@ -151,7 +152,7 @@ sources:
 | userChoice | agentStatus | mainAppStatus | 동작 |
 |---|---|---|---|
 | `nil` | 미등록 | 미등록 | `.registerAgent` → `userChoice = true` 저장 |
-| `nil` | 미등록 | `.enabled` / `.requiresApproval` | `.migrateFromMainApp` = `mainApp.unregister()` → agent 등록 → `userChoice = true` |
+| `nil` | 미등록 | `.enabled` / `.requiresApproval` | `.migrateFromMainApp` = agent 등록 → `mainApp.unregister()` → `userChoice = true` |
 | `true` | `.enabled` | — | `.none` |
 | `true` | `.notFound` (앱을 옮겼거나 번들이 교체됨) | — | `.registerAgent` — 자가 치유 |
 | `true` | `.requiresApproval` | — | `.none`. 사용자가 시스템 설정에서 껐다는 뜻이므로 존중 |
@@ -161,36 +162,36 @@ sources:
 
 **`userChoice == false`를 코드가 뒤집는 경로는 없다.** 자동 마이그레이션은 `nil`일 때만 일어난다. 사용자가 껐는데 업데이트 때마다 다시 켜지면 그건 악성 동작이다.
 
-`mainApp` 해제와 agent 등록이 둘 다 성공해야 한다. `mainApp`을 남긴 채 agent를 등록하면 로그인 시 두 번 실행된다. 해제 실패 시 agent 등록을 진행하지 않고 다음 실행에서 재시도한다.
+**마이그레이션 순서는 agent 등록이 먼저다.** `mainApp`을 먼저 해제하면 `register()`가 실패했을 때 둘 다 없는 상태로 남고 복구 경로가 없다 — 자동 시작이 되던 사용자가 조용히 잃는다. 이 순서면 최악의 경우가 "둘 다 등록됨"이고, 그건 §4.5 가드가 흡수하고 다음 기동이 정리한다.
+
+**`setEnabled`는 OS 호출보다 `userChoice` 저장이 먼저다.** 나중에 저장하면 `unregister()`가 실패했을 때 "끄겠다"는 의사가 유실되고, 다음 기동에서 정책이 여전히 켜진 상태로 판단해 영구히 켜진 채 남는다. 먼저 저장해 두면 실패해도 다음 기동에서 정책이 양방향으로 자가 치유한다.
+
+**개발 빌드는 등록하지 않는다.** `AppInstallLocation.canUseSparkleUpdates()`가 false면(DerivedData, `.dmg` 마운트 등) `applyPolicyAtLaunch()`는 아무것도 하지 않는다. 등록하면 Xcode의 Stop(SIGKILL)이 비정상 종료로 잡혀 KeepAlive가 개발 빌드를 되살리고, DerivedData를 지우면 시스템 설정에 죽은 로그인 항목이 남는다.
 
 ### 4.5 중복 실행 가드 — `SingleInstanceGuard`
 
-launchd가 띄운 인스턴스가 떠 있는데 사용자가 Ping.app을 더블클릭하는 경우. LaunchServices가 보통 기존 인스턴스를 활성화하지만, 실패하면 메뉴바 아이콘 2개 · realtime 구독 2벌 · 알림 2배가 된다.
+**필수 구성 요소다.** 한 번 YAGNI로 잘라냈다가 실측에서 필요성이 확인돼 되살렸다.
+
+`SMAppService.register()`는 잡을 즉시 로드하고 `RunAtLoad`가 true라 launchd가 그 자리에서 `Contents/MacOS/Ping`을 exec한다. **즉 실행 중인 앱이 자기 자신을 등록하면 두 번째 프로세스가 뜬다** — 업데이트 후 첫 실행마다, 그리고 설정 토글을 켤 때마다. launchd의 exec는 LaunchServices를 거치지 않으므로 "LaunchServices가 중복을 막는다"는 통념은 여기 적용되지 않는다(그건 더블클릭 방향에만 맞다). 실측에서 등록 직후 `runs = 1`이 찍혀 두 번째 프로세스가 실제로 떴음이 확인됐다.
+
+가드가 없으면 메뉴바 아이콘 2개 · realtime 구독 2벌 · 알림 2배가 된다.
 
 `applicationWillFinishLaunching`(`AppDelegate.swift:57`)에서:
 
-1. 같은 번들 ID의 러닝 앱을 조회한다.
-2. 자기 자신 말고 더 있으면 → 먼저 뜬 쪽을 `activate`하고 **`exit(0)`**.
+1. 같은 번들 ID의 러닝 앱을 조회한다(`NSRunningApplication`).
+2. 자기 자신 말고 더 있으면 **`exit(0)`**.
 
-`exit(0)`이어야 launchd가 이걸 비정상 종료로 보고 재실행하지 않는다.
+`exit(0)`이어야 launchd가 비정상 종료로 보지 않는다. 0이 아니면 KeepAlive가 곧바로 다시 띄워 무한 루프가 된다.
 
-러닝 앱 조회는 프로토콜(`RunningApplicationsProviding`)로 주입해 테스트 가능하게 한다.
+판정은 순수 함수(`SingleInstanceGuard.shouldYield(runningPIDs:currentPID:)`)라 pid 목록만 넘겨 테스트한다. 기동 직후에만 호출되므로 "목록의 다른 pid = 나보다 먼저 뜬 인스턴스"가 성립한다.
 
-### 4.6 크래시 루프 차단 — `LaunchLedger`
+### 4.6 크래시 루프 차단 — **구현하지 않음**
 
-앱이 기동 즉시 죽는 상태(깨진 업데이트, 손상된 설정 파일 등)면 launchd가 30초마다 영원히 되살린다. 사용자가 끄려면 설정 UI가 필요한데 그 앱이 크래시 루프 중이다.
+앱이 기동 즉시 죽으면 launchd가 30초마다 영원히 되살린다는 시나리오에 대비해 단명 기동을 세는 원장을 두려 했으나, **YAGNI로 잘라냈다**(사용자 지시: 최소 변경).
 
-**"짧은 수명"만 센다:**
+근거: `ThrottleInterval 30`이 재시도 주기의 하한을 주고, 시스템 설정 › 일반 › 로그인 항목이라는 OS 차원의 탈출구가 이미 있다(SMAppService agent는 여기 노출된다). 실제로 관측된 적 없는 실패에 파일 1개 + 테스트 6개 + 알림 1종 + UserDefaults 키를 붙이는 값을 하지 못한다.
 
-1. 기동 시 현재 시각을 원장(`UserDefaults` 키 `ping.autostart.launchLedger`, 타임스탬프 배열)에 append.
-2. 기동 후 **60초 생존하면 원장을 비운다** — 건강한 실행은 카운터를 리셋한다.
-3. 원장이 **5개**에 도달하면(= 60초를 못 넘긴 기동이 연속 5회) agent를 스스로 등록 해제하고 로컬 알림을 띄운다: 자동 시작을 껐다는 사실과 설정에서 다시 켜는 방법.
-
-"5분 안에 5회"가 아니라 "연속 5회 단명"으로 판정하는 이유: 사용자가 수동으로 껐다 켰다 하는 정상 사용을 크래시 루프로 오판하지 않는다.
-
-임계값·시계를 주입 가능하게 만들어 테스트한다. 기존 `NotificationLedger`(`Ping/Notifications/NotificationLedger.swift`)와 `NotificationLedgerTests`의 패턴을 따른다.
-
-**별도 탈출구**: 시스템 설정 › 일반 › 로그인 항목에서도 끌 수 있다. SMAppService agent는 여기 노출된다.
+실제로 크래시 루프가 관측되면 그때 추가한다. §4.5와 달리 이건 되살릴 근거가 아직 없다.
 
 ### 4.7 설정 UI — 현행 유지 (D4)
 
@@ -216,62 +217,75 @@ launchd가 띄운 인스턴스가 떠 있는데 사용자가 Ping.app을 더블�
 
 ## 5. 변경 파일 목록
 
+실제로 구현된 목록이다(초안의 5파일 분할은 YAGNI로 1파일로 합쳤다).
+
 신규:
 
 - `Resources/LaunchAgents/com.youngminpark.ping.Ping.keepalive.plist`
-- `Ping/Core/AutoStart/AutoStartPolicy.swift`
-- `Ping/Core/AutoStart/LaunchLedger.swift`
-- `Ping/Core/AutoStart/SingleInstanceGuard.swift`
-- `Ping/Core/AutoStart/AutoStartController.swift`
+- `Ping/Core/AutoStart.swift` — `AutoStartStatus` · `AutoStartAction` · `AutoStartPolicy`(순수 판정) · `SingleInstanceGuard` · `AutoStartController`(`SMAppService` 호출 유일 지점)
+- `PingTests/AutoStartAgentPlistTests.swift`
 - `PingTests/AutoStartPolicyTests.swift`
-- `PingTests/LaunchLedgerTests.swift`
-- `PingTests/SingleInstanceGuardTests.swift`
+- `PingTests/AutoStartLaunchGuardTests.swift`
+- `PingTests/AutoStartSettingsWiringTests.swift`
 
 수정:
 
-- `project.yml` — Copy Files 빌드 페이즈
-- `Ping/AppDelegate.swift` — `applicationWillFinishLaunching`에 중복 가드, `applicationDidFinishLaunching`에 정책 적용 + 원장 기록/60초 리셋
+- `project.yml` — Copy Files 빌드 페이즈 + 테스트 fixture(cp / inputFiles / outputFiles)
+- `Ping/AppDelegate.swift` — `applicationWillFinishLaunching`에 중복 가드, `applicationDidFinishLaunching`에 정책 적용
 - `Ping/UI/Setup/SettingsScene.swift` — 토글 배선 교체 (문구 불변)
-- `Ping/Core/UserPreferences.swift` — `PingPreferenceKeys`에 `autostartUserChoice`, `autostartLaunchLedger` 추가
+- `Ping/Core/UserPreferences.swift` — `PingPreferenceKeys`에 `autostartUserChoice` 추가
 
 ## 6. 에러 처리
 
 | 상황 | 처리 |
 |---|---|
-| `agent.register()` throw | 사용자 토글로 인한 것이면 기존 `autoLaunchError` 경로로 표시(문구 그대로). 자동 마이그레이션 중이면 조용히 실패하고 `userChoice`를 저장하지 않아 다음 실행에서 재시도 |
-| `mainApp.unregister()` throw | agent 등록을 진행하지 않는다. 중복 실행보다 미등록이 낫다 |
-| status `.requiresApproval` | 사용자가 시스템 설정에서 껐다는 뜻. 존중하고 아무것도 하지 않는다 |
-| status `.notFound` + `userChoice == true` | 재등록 (자가 치유) |
-| 크래시 루프 감지 | agent 등록 해제 + 로컬 알림. `userChoice`는 `false`로 저장 |
+| `agent.register()` throw (토글) | `userChoice`는 이미 저장된 뒤다. 기존 `autoLaunchError` 문구를 그대로 표시하고, 다음 기동에서 정책이 자가 치유 |
+| `agent.register()` throw (기동 시) | 조용히 로그만 남기고 `userChoice`를 저장하지 않아 다음 기동에서 재시도 |
+| `mainApp.unregister()` throw | agent는 이미 등록된 상태로 남는다. 둘 다 등록된 상태는 §4.5 가드가 흡수하고, `userChoice`가 저장되지 않아 다음 기동이 해제를 재시도 |
+| status `.requiresApproval` | 사용자가 시스템 설정에서 껐다는 뜻. 존중하고 아무것도 하지 않는다 (`userChoice`가 `nil`이든 `true`든 동일) |
+| status `.notFound` / `.notRegistered` + `userChoice == true` | 재등록 (자가 치유) |
+| status `.unknown` | 우리가 모르는 상태다. 아무것도 하지 않는다 |
 
 ## 7. 테스트
 
 ### 자동 (PingTests)
 
-- **`AutoStartPolicyTests`** — (userChoice ∈ {nil, true, false}) × (agentStatus ∈ {enabled, requiresApproval, notRegistered, notFound}) × (mainAppStatus 동일 4종) 전수 매핑. 특히 두 가지를 못박는다: `userChoice == false`는 어떤 status 조합에서도 `.registerAgent`를 내지 않는다. `userChoice != nil`이면 `mainAppStatus`가 결과를 바꾸지 않는다.
-- **`LaunchLedgerTests`** — 시계 주입. 단명 4회는 미발동, 5회에 발동. 중간에 60초 생존이 끼면 리셋.
-- **`SingleInstanceGuardTests`** — 러닝앱 0/1/2개일 때의 판정.
+- **`AutoStartAgentPlistTests`** — 번들된 plist를 실제로 읽어 `SuccessfulExit=false` · `RunAtLoad` · `BundleProgram` 상대 경로 · Label · `ThrottleInterval`을 못박는다. 값이 틀리면 진짜로 실패한다.
+- **`AutoStartPolicyTests`** — (userChoice ∈ {nil, true, false}) × (agentStatus 5종) × (mainAppStatus 5종) 전수 매핑. 못박는 것 셋: `userChoice == false`는 어떤 조합에서도 `.registerAgent`/`.migrateFromMainApp`을 내지 않는다. `userChoice != nil`이면 `mainAppStatus`가 결과를 바꾸지 않는다. **첫 실행 분기와 자가 치유 분기가 같은 `agentStatus`에 같은 판단을 내린다** — 이 대칭성 테스트가 실제로 `.unknown` 비대칭을 잡아냈다.
+- **`AutoStartLaunchGuardTests`** — 러닝앱 0/1/2개일 때의 가드 판정 + `AppDelegate`가 가드와 `applyPolicyAtLaunch()`를 실제로 호출하는지 소스 계약.
+- **`AutoStartSettingsWiringTests`** — 토글이 `mainApp`이 아닌 agent를 조작하는지, 화면 문구 7종이 그대로인지.
 
 ### 수동 검증 (SMAppService는 단위 테스트 불가)
 
+**Debug 빌드로는 검증할 수 없다.** ad-hoc 서명(`TeamIdentifier=not set`)이라 `SMAppService` 등록이 실패한다. Developer ID로 서명한 Release 빌드를 `/Applications` 또는 `~/Applications`에 두고 해야 한다(`AppInstallLocation.canUseSparkleUpdates()`가 통과하는 위치여야 등록을 시도한다).
+
 ```sh
-# 1. 등록 확인
-launchctl print gui/501/com.youngminpark.ping.Ping.keepalive
+U=$(id -u)
 
-# 2. 서명 무결성 (plist가 번들 서명에 포함됐는지)
-codesign --verify --deep --strict /Applications/Ping.app
+# 1. 등록과 BundleProgram 해석 확인
+launchctl print "gui/$U/com.youngminpark.ping.Ping.keepalive"
+#   → program identifier = Contents/MacOS/Ping (mode: 2)
 
-# 3. 비정상 종료 → 재실행되는가
-kill -9 $(pgrep -f "Ping.app/Contents/MacOS/Ping")
-#   → 30초 안에 새 pid로 재기동
+# 2. 등록 직후 인스턴스가 1개인가 (가드 동작)
+#   runs = 1 이 찍히고 살아있는 프로세스는 1개여야 한다
 
-# 4. 정상 종료 → 재실행 안 되는가
-#   메뉴바 › 종료  → 재기동하지 않아야 함
+# 3. launchd 감시 하에 올리기 (로그인 시점 재현)
+launchctl kickstart "gui/$U/com.youngminpark.ping.Ping.keepalive"
 
-# 5. cache_delete 경로 실측 (재현 가능하면)
-log stream --predicate 'eventMessage CONTAINS "youngminpark.ping"' \
-  | grep -i "terminat\|exited"
+# 4. 비정상 종료 → 재실행
+kill -9 <launchctl print가 보여주는 pid>
+#   → 30초 안에 runs 증가 + 새 pid
+
+# 5. 정상 종료 → 미재실행
+osascript -e 'tell application id "com.youngminpark.ping.Ping" to quit'
+#   → last exit code = 0, runs 유지, state = not running
+
+# 6. 원복
+launchctl bootout "gui/$U/com.youngminpark.ping.Ping.keepalive"
+defaults delete com.youngminpark.ping.Ping ping.autostart.userChoice
 ```
+
+**주의**: launchd가 띄운 프로세스는 `argv[0]`이 상대 경로(`Contents/MacOS/Ping`)라 `pgrep -f "Ping.app/Contents/MacOS/Ping"`에 잡히지 않는다. pid는 `launchctl print`에서 읽어야 한다.
 
 ## 8. 범위 밖
 
