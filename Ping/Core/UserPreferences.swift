@@ -5,6 +5,7 @@ enum PingPreferenceKeys {
     static let notificationSound = "ping.notifications.sound"
     static let roomSetupDeferred = "ping.rooms.setupDeferred"
     static let appearanceMode = "ping.appearance.mode"
+    static let autostartUserChoice = "ping.autostart.userChoice"
 }
 
 enum PingNotificationSound: String, CaseIterable, Identifiable {
