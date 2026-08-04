@@ -47,6 +47,11 @@ targets:
           CODE_SIGN_ENTITLEMENTS: Ping.entitlements
     sources:
       - path: Ping
+      - path: Resources/LaunchAgents/com.youngminpark.ping.Ping.keepalive.plist
+        buildPhase:
+          copyFiles:
+            destination: wrapper
+            subpath: Contents/Library/LaunchAgents
     resources:
       - path: Resources
         optional: true
@@ -184,6 +189,7 @@ targets:
           cp "$PROJECT_DIR/supabase/migrations/20260602094828_canonical_room_searchable_names.sql" "$DST/20260602094828_canonical_room_searchable_names.sql"
           cp "$PROJECT_DIR/supabase/migrations/20260603052554_fix_profile_upsert_nickname_ambiguity.sql" "$DST/20260603052554_fix_profile_upsert_nickname_ambiguity.sql"
           cp "$PROJECT_DIR/supabase/migrations/20260617034843_room_capacity_eight_members.sql" "$DST/20260617034843_room_capacity_eight_members.sql"
+          cp "$PROJECT_DIR/Resources/LaunchAgents/com.youngminpark.ping.Ping.keepalive.plist" "$DST/com.youngminpark.ping.Ping.keepalive.plist"
           cp "$PROJECT_DIR/project.yml" "$DST/project.yml"
           cp "$PROJECT_DIR/AGENTS.md" "$DST/AGENTS.md"
           cp "$PROJECT_DIR/PING_PROJECT_SPECIFICATION.md" "$DST/PING_PROJECT_SPECIFICATION.md"
@@ -271,6 +277,7 @@ targets:
           - "$(PROJECT_DIR)/Ping/Info.plist"
           - "$(PROJECT_DIR)/README.md"
           - "$(PROJECT_DIR)/Resources/Supabase.example.plist"
+          - "$(PROJECT_DIR)/Resources/LaunchAgents/com.youngminpark.ping.Ping.keepalive.plist"
         outputFiles:
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/GlassButton.swift"
           - "$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/GlassChip.swift"
