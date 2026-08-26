@@ -211,6 +211,21 @@ A: `AppDelegate`는 `XCTestConfigurationFilePath` 환경에서 bootstrap을 건�
 **Q: `xcodegen generate` 후 빌드가 깨집니다.**
 A: 1) `xcodebuild clean` 후 재빌드, 2) `.swiftpm/` 및 `Ping.xcodeproj` 삭제 후 재생성, 3) `Package.resolved` 가 stale 가능하므로 삭제.
 
+**Q: iPhone이 "연결됐어요" 빈 룸 리스트만 보여주거나, 데스크톱에 "기존 Supabase 익명 세션을 복구할 수 없습니다" 모달이 뜹니다.**
+A: 공유 세션 락아웃입니다. QR 핸드오프는 세션을 **복사**하므로 Mac·iPhone·Watch가 refresh token 사슬 하나를 공유하고, 먼저 갱신한 기기가 나머지 기기의 토큰을 revoked로 만듭니다. revoked 토큰은 `security_refresh_token_reuse_interval` 안에서만 통합니다. **`enable_refresh_token_rotation` 플래그를 보고 판단하지 마세요** — 꺼져 있어도 부모 토큰은 revoked 됩니다(이걸로 두 번 오진했습니다). 확인 방법:
+
+```bash
+TOK=$(security find-generic-password -s "Supabase CLI" -a supabase -w)
+# api.supabase.com은 python urllib을 Cloudflare 1010으로 차단하므로 curl을 쓸 것
+curl -s -H "Authorization: Bearer $TOK" \
+  https://api.supabase.com/v1/projects/<ref>/config/auth | jq .security_refresh_token_reuse_interval
+curl -s -X POST -H "Authorization: Bearer $TOK" -H "Content-Type: application/json" \
+  -d '{"query":"select revoked, created_at, updated_at from auth.refresh_tokens where user_id='"'"'<uid>'"'"' order by created_at desc limit 10"}' \
+  https://api.supabase.com/v1/projects/<ref>/database/query
+```
+
+`supabase config push` 는 쓰지 마세요 — config.toml 전체(242키)를 밀어 운영의 다른 설정까지 덮어씁니다. 한 필드만 PATCH 하세요.
+
 **Q: DMG 첫 실행 시 "확인되지 않은 개발자" 경고가 뜹니다.**
 A: ad-hoc 서명이라 정상입니다. **우클릭 → 열기 → 다시 열기** 로 한 번 우회하면 이후 일반 실행됩니다. README에 안내됨.
 
