@@ -25,6 +25,11 @@ struct ThreadView: View {
     @State private var replyTarget: ReplyTarget?
     @State private var reactionPickerTarget: ReactionPickerTarget?
     @State private var reactionsByTargetId: [String: [String: ThreadReactionAggregate]] = [:]
+    @State private var loadError: Error?
+
+    /// Same rule as the inbox: a thread that failed to load must not look like a
+    /// thread with no messages.
+    private var problem: ConnectionProblem? { ConnectionProblem(loadError) }
 
     private let timestampWidth: CGFloat = 64
     private let timestampGap: CGFloat = 12
@@ -42,6 +47,13 @@ struct ThreadView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            if let problem {
+                ConnectionProblemBanner(
+                    problem: problem,
+                    onRetry: { Task { await load() } },
+                    onReconnect: { AppEnvironment.shared.disconnect() }
+                )
+            }
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 10) {
@@ -313,9 +325,11 @@ struct ThreadView: View {
             chats = try await client.roomChatMessages(roomId: roomId)
         } catch {
             Self.log.error("thread load failed (room \(roomId, privacy: .public)): \(error, privacy: .public)")
+            loadError = error
             isLoading = false
             return
         }
+        loadError = nil
         var merged: [ThreadItem] = videos.map { .video($0) } + chats.map { .chat($0) }
         merged.sort { $0.date < $1.date }
         items = merged
@@ -330,8 +344,13 @@ struct ThreadView: View {
 
         while !Task.isCancelled {
             await refreshRoomName(client: client)
-            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            try? await Task.sleep(nanoseconds: pollInterval)
         }
+    }
+
+    /// Matches the inbox: brisk while healthy, slow once the server is refusing.
+    private var pollInterval: UInt64 {
+        loadError == nil ? 2_000_000_000 : 10_000_000_000
     }
 
     private func refreshRoomName(client: PingSupabaseClient) async {

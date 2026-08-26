@@ -79,11 +79,28 @@ public actor PingSupabaseClient {
         return try await send(request)
     }
 
-    /// The in-flight refresh shared by all concurrent callers. Supabase rotates
-    /// (single-use) refresh tokens, so two simultaneous refreshes would make the
-    /// second fail with `refresh_token_already_used`. Coalescing collapses them
-    /// into one network call that consumes the refresh token exactly once.
+    /// The in-flight refresh shared by all concurrent callers. Supabase issues a
+    /// new refresh token on every swap, so two simultaneous refreshes would make
+    /// the second fail with `refresh_token_already_used`. Coalescing collapses
+    /// them into one network call that consumes the refresh token exactly once.
     private var refreshTask: Task<SupabaseSession, Error>?
+
+    /// Paces retries after a recoverable refresh failure.
+    private var backoff = PingAuthBackoff()
+
+    /// Latched once the refresh token is rejected outright. There is no way back
+    /// from this on-device — the identity has to be handed off again — so we stop
+    /// asking rather than retrying forever.
+    private var isSessionExpired = false
+
+    /// The failure the last refresh attempt produced, replayed to callers that
+    /// arrive while the backoff window is still open. Callers get the real cause
+    /// instead of a silent empty result.
+    private var lastRefreshError: Error?
+
+    /// Whether this client has given up on its session. The host app shows a
+    /// re-pair affordance instead of an empty screen when this is true.
+    public func isAuthExpired() -> Bool { isSessionExpired }
 
     private func validAccessToken() async throws -> String {
         if !session.needsRefresh { return session.accessToken }
@@ -96,7 +113,19 @@ public actor PingSupabaseClient {
 
         // Join an in-flight refresh instead of starting a competing one.
         if let refreshTask {
-            return try await refreshTask.value
+            do {
+                return try await refreshTask.value
+            } catch {
+                throw Self.mapped(error)
+            }
+        }
+
+        if isSessionExpired { throw PingKitError.sessionExpired }
+
+        // Still inside the backoff window: replay the real cause without adding
+        // another request to a server that just told us it could not serve one.
+        guard backoff.shouldAttempt(now: Date()) else {
+            throw lastRefreshError ?? PingKitError.unavailable
         }
 
         let refreshToken = session.refreshToken
@@ -104,12 +133,37 @@ public actor PingSupabaseClient {
         refreshTask = task
         defer { refreshTask = nil }
 
-        let refreshed = try await task.value
-        // Only the caller that owns the task commits the rotated session; the
-        // followers above receive the same value without re-applying it.
-        session = refreshed
-        onSessionUpdate?(refreshed)
-        return refreshed
+        do {
+            let refreshed = try await task.value
+            backoff.recordSuccess()
+            lastRefreshError = nil
+            // Only the caller that owns the task commits the new session; the
+            // followers above receive the same value without re-applying it.
+            session = refreshed
+            onSessionUpdate?(refreshed)
+            return refreshed
+        } catch {
+            let mapped = Self.mapped(error)
+            if (mapped as? PingKitError) == .sessionExpired {
+                isSessionExpired = true
+            } else {
+                backoff.recordFailure(now: Date())
+            }
+            lastRefreshError = mapped
+            throw mapped
+        }
+    }
+
+    /// A 400/401 from the token endpoint means the refresh token itself was
+    /// rejected (revoked, already used, or unknown) — permanent. Everything else
+    /// (offline, 429, 5xx) is a blip and must keep its original cause so callers
+    /// and logs can tell the two apart.
+    private static func mapped(_ error: Error) -> Error {
+        guard case let PingKitError.requestFailed(statusCode, _) = error,
+              statusCode == 400 || statusCode == 401 else {
+            return error
+        }
+        return PingKitError.sessionExpired
     }
 
     private func refresh(refreshToken: String) async throws -> SupabaseSession {

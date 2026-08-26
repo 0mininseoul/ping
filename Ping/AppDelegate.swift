@@ -1,5 +1,6 @@
 import AppKit
 import Combine
+import Network
 import OSLog
 import SwiftUI
 
@@ -42,6 +43,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var bootstrapTask: Task<Void, Never>?
     private var bootstrapRetryTask: Task<Void, Never>?
     private var bootstrapFailureCount = 0
+    private var networkMonitor: NWPathMonitor?
     private var cameraStartTask: Task<Void, Never>?
     private var pendingInviteToken: String?
     private var currentMirrorMode: CaptureMode?
@@ -92,6 +94,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
 
             UpdaterController.shared.start()
+            startNetworkRecoveryMonitor()
             startBootstrapTaskIfNeeded()
         }
     }
@@ -112,6 +115,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         invitationObserverTask?.cancel()
         incomingMessageTask?.cancel()
         desktopPresenceTask?.cancel()
+        networkMonitor?.cancel()
+        networkMonitor = nil
         cancelPlaybackPrefetches()
         cameraStartTask?.cancel()
         camera.stop()
@@ -208,6 +213,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             onCaptureScreenFace: { [weak self] in self?.toggleMirror(mode: .screenFace) },
             onHistoryToggle: { [weak self] in self?.toggleRoomManager() }
         )
+    }
+
+    /// Auto-start launches Ping at login, often before Wi-Fi has associated and
+    /// DNS is answering. The first bootstrap then fails with a network error and,
+    /// without this, nothing ever tries again until the user quits and relaunches.
+    /// Watching reachability turns that into a self-healing wait.
+    private func startNetworkRecoveryMonitor() {
+        guard networkMonitor == nil else { return }
+
+        let monitor = NWPathMonitor()
+        monitor.pathUpdateHandler = { [weak self] path in
+            guard path.status == .satisfied else { return }
+            Task { @MainActor in
+                guard let self, self.appState.currentUser == nil else { return }
+                self.startBootstrapTaskIfNeeded()
+            }
+        }
+        monitor.start(queue: DispatchQueue(label: "com.youngminpark.ping.network-recovery"))
+        networkMonitor = monitor
     }
 
     private func startBootstrapTaskIfNeeded() {

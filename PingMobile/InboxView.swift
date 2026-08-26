@@ -12,13 +12,25 @@ struct InboxView: View {
 
     @State private var rooms: [PingRoom] = []
     @State private var isLoading = true
+    @State private var loadError: Error?
     @State private var showDisconnectConfirmation = false
+
+    /// Nil means "we reached the server". A dead session and an inbox with no
+    /// rooms are different states and must never render the same way — that
+    /// conflation is what hid a 26-day lockout behind the green success screen.
+    private var problem: ConnectionProblem? { ConnectionProblem(loadError) }
 
     var body: some View {
         Group {
-            if isLoading && rooms.isEmpty {
+            if isLoading && rooms.isEmpty && problem == nil {
                 loadingState
-            } else if rooms.isEmpty {
+            } else if rooms.isEmpty, let problem {
+                ConnectionProblemView(
+                    problem: problem,
+                    onRetry: { Task { await load() } },
+                    onReconnect: { AppEnvironment.shared.disconnect() }
+                )
+            } else if rooms.isEmpty, problem == nil {
                 emptyState
             } else {
                 List {
@@ -35,6 +47,17 @@ struct InboxView: View {
                     }
                 }
                 .listStyle(.insetGrouped)
+                // Keep the loaded list on screen and report the failure above it,
+                // rather than replacing rooms the user can still tap.
+                .safeAreaInset(edge: .top, spacing: 0) {
+                    if let problem {
+                        ConnectionProblemBanner(
+                            problem: problem,
+                            onRetry: { Task { await load() } },
+                            onReconnect: { AppEnvironment.shared.disconnect() }
+                        )
+                    }
+                }
             }
         }
         .navigationTitle("Ping")
@@ -48,10 +71,19 @@ struct InboxView: View {
                 .foregroundStyle(.red)
             }
             ToolbarItem(placement: .topBarTrailing) {
-                Label("연결됨", systemImage: "checkmark.seal.fill")
-                    .font(.caption2)
-                    .labelStyle(.titleAndIcon)
-                    .foregroundStyle(.green)
+                // The status pill has to follow reality; a green "연결됨" over a
+                // dead session is exactly how this bug stayed invisible.
+                if let problem {
+                    Label(problem.title, systemImage: problem.iconName)
+                        .font(.caption2)
+                        .labelStyle(.titleAndIcon)
+                        .foregroundStyle(.orange)
+                } else {
+                    Label("연결됨", systemImage: "checkmark.seal.fill")
+                        .font(.caption2)
+                        .labelStyle(.titleAndIcon)
+                        .foregroundStyle(.green)
+                }
             }
         }
         .refreshable { await load() }
@@ -169,8 +201,10 @@ struct InboxView: View {
         // failure here is what made the empty-inbox bug so hard to diagnose).
         do {
             rooms = try await client.myRooms()
+            loadError = nil
         } catch {
             Self.log.error("myRooms failed: \(error, privacy: .public)")
+            loadError = error
         }
         isLoading = false
     }
@@ -189,8 +223,14 @@ struct InboxView: View {
     private func pollRooms() async {
         while !Task.isCancelled {
             await load()
-            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            try? await Task.sleep(nanoseconds: pollInterval)
         }
+    }
+
+    /// Poll briskly while healthy, ease off once the server has told us it will
+    /// not answer. A broken session used to cost a request every 2s forever.
+    private var pollInterval: UInt64 {
+        loadError == nil ? 2_000_000_000 : 10_000_000_000
     }
 }
 
