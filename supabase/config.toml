@@ -163,13 +163,23 @@ jwt_expiry = 3600
 jwt_issuer = "https://qxjtprxvjmaxlbtljcjw.supabase.co/auth/v1"
 # Path to JWT signing key. DO NOT commit your signing keys file to git.
 # signing_keys_path = "./signing_keys.json"
-# Rotation is OFF in production so desktop, iPhone and Apple Watch can share one
-# handoff session without invalidating each other's refresh token. (config.toml
-# had drifted to `true`; aligned here to match the live project.)
+# Rotation is OFF in production. NOTE: this flag does NOT stop GoTrue from
+# revoking the parent token on every refresh -- verified against the live project
+# on 2026-08-26 (every parent row in auth.refresh_tokens has revoked = true while
+# this flag is false). All it does is skip the reuse-breach handling. The only
+# thing that actually keeps a revoked token usable is the reuse interval below.
 enable_refresh_token_rotation = false
-# Allows refresh tokens to be reused after expiry, up to the specified interval in seconds.
-# Requires enable_refresh_token_rotation = true. (No effect while rotation is off.)
-refresh_token_reuse_interval = 86400
+# How long a revoked (already-swapped) refresh token still works. This is the
+# real grace window, and it is load-bearing for us: `exportDeviceHandoff()` copies
+# ONE session to desktop + iPhone + Watch, so they all share a single token chain
+# (one auth.sessions row, ~1571 tokens deep). Whichever device refreshes first
+# revokes the token the others still hold. At the old 24h value, any device that
+# stayed offline longer than a day was permanently locked out with
+# `refresh_token_already_used` -- that is the "연결됐어요 with an empty room list"
+# bug (iPhone dead 2026-07-31 .. 2026-08-26) and the macOS "익명 세션을 복구할 수
+# 없습니다" modal. Widened to 10 years so a device that has been away for months
+# can still rejoin the chain. Reduce this only alongside per-device sessions.
+refresh_token_reuse_interval = 315360000
 # Allow/disallow new user signups to your project.
 enable_signup = true
 # Allow/disallow anonymous sign-ins to your project.

@@ -132,6 +132,7 @@
 		A2A8F13860B8335BA473B110 /* PIPCompositor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C961D96527E4B05B3F131D0 /* PIPCompositor.swift */; };
 		A35216D4802F7669D7CEE926 /* RoomSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B5BE5E27DBD69263538CCD7 /* RoomSearchView.swift */; };
 		A548B41AA3E0A501424B712B /* PairingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B86EF836E41F27EB9EA7504 /* PairingView.swift */; };
+		A77FAFBFABC6CC92264405AB /* ConnectionProblemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53E46A05E7C79241A3D66BFD /* ConnectionProblemView.swift */; };
 		AA6D58F4D096AF00DA5C5B80 /* UpdateReminderStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B5BB40E86D90C32CA784A61 /* UpdateReminderStoreTests.swift */; };
 		AB2E62FD9D04CB1415A796F5 /* UpdateReminderStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4D9879934F48283F7A2774C /* UpdateReminderStore.swift */; };
 		ACDDF0E513D2F7D330B6A9C7 /* SmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEBA01FC9DCA088BE83E5C4F /* SmokeTests.swift */; };
@@ -189,6 +190,7 @@
 		EFB2B0047CDF9C0ECEE1B2D6 /* ScreenFaceLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C56300160B566EFB16A4161 /* ScreenFaceLayoutTests.swift */; };
 		F0B715AF4A16126CA7926A1C /* MultiAccountGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F8F7409AE1AFA053895230D /* MultiAccountGate.swift */; };
 		F34AF31AD573EE56678B959E /* RoomTimelineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EE33710D375112C559C3B9B /* RoomTimelineView.swift */; };
+		F3A4989E3D7724D5972994CA /* SessionRecoveryContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA6EAB3A7C5E0C71367E2DA4 /* SessionRecoveryContractTests.swift */; };
 		F70CFEE73AAD78BC1C9074D7 /* NotificationLedger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74C0FE0C7DC03B3C263DCFC0 /* NotificationLedger.swift */; };
 		F7B15D253CEFD4BA923186FB /* MultiAccountGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D77E396E3C1D15BE710498ED /* MultiAccountGateTests.swift */; };
 		F7FF9BDB0AB6F7836A2AC2A4 /* ScreenCaptureViewport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 955EEFC8CA504F12D5F23658 /* ScreenCaptureViewport.swift */; };
@@ -320,6 +322,7 @@
 		4F542186B03D30E2C8BE833E /* OnboardingCopyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingCopyTests.swift; sourceTree = "<group>"; };
 		4FE080A97FEE2F48E3F6853A /* ScreenCaptureViewportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenCaptureViewportTests.swift; sourceTree = "<group>"; };
 		5251D41AA9E41DBE6D637EF1 /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScannerView.swift; sourceTree = "<group>"; };
+		53E46A05E7C79241A3D66BFD /* ConnectionProblemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionProblemView.swift; sourceTree = "<group>"; };
 		552333A6E0C0847053D21F1B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		57D8312BCCBDE5E2CBF7CDC2 /* ThreadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThreadView.swift; sourceTree = "<group>"; };
 		599B87DE1571A0E649CE5582 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -406,6 +409,7 @@
 		B5D3DB5C2FE7FCBB66A9C92D /* ReactionPersistenceContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReactionPersistenceContractTests.swift; sourceTree = "<group>"; };
 		B6D978D1D0ADEFE94F8E2D9D /* HotkeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyManager.swift; sourceTree = "<group>"; };
 		B9C7B22C9892024A2FA421F5 /* RoomPollingContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomPollingContractTests.swift; sourceTree = "<group>"; };
+		BA6EAB3A7C5E0C71367E2DA4 /* SessionRecoveryContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionRecoveryContractTests.swift; sourceTree = "<group>"; };
 		BA897CE96651014C4A14D9FF /* WindowPositioningTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowPositioningTests.swift; sourceTree = "<group>"; };
 		BC96E31CE0581FC30A97E77D /* SelfCaptureFilterPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelfCaptureFilterPolicy.swift; sourceTree = "<group>"; };
 		BCBB58248AD85A5BB4137D3F /* GlassPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassPanel.swift; sourceTree = "<group>"; };
@@ -530,6 +534,7 @@
 				6AAF79DFB70494C0A9C2E18B /* AppEnvironment.swift */,
 				552333A6E0C0847053D21F1B /* Assets.xcassets */,
 				F6B11EA47A90F6C103338B3A /* ChatImageAttachmentView.swift */,
+				53E46A05E7C79241A3D66BFD /* ConnectionProblemView.swift */,
 				599B87DE1571A0E649CE5582 /* ContentView.swift */,
 				1616675AE7695B824BD066DE /* DesktopInstallGuideView.swift */,
 				242765EC4E5CC70241BB46FB /* InboxView.swift */,
@@ -821,6 +826,7 @@
 				5EFC208F3B2DEB94FA5BF469 /* SearchableTextTests.swift */,
 				FCE7247150967CBCEC6BEFF3 /* SelectableTextLayoutTests.swift */,
 				75298125B3B44CCD5E2EEA54 /* SelfCaptureFilterPolicyTests.swift */,
+				BA6EAB3A7C5E0C71367E2DA4 /* SessionRecoveryContractTests.swift */,
 				A8DEB2830970ABFE4A394A01 /* SettingsSceneContractTests.swift */,
 				CEBA01FC9DCA088BE83E5C4F /* SmokeTests.swift */,
 				F2F40CF1E71B9600941F2BE1 /* StatusMenuBuilderTests.swift */,
@@ -1258,6 +1264,7 @@
 				A29C926DA0D7F0AC9D7285CA /* AppDelegate.swift in Sources */,
 				E030B5443F11FB84F2D44E02 /* AppEnvironment.swift in Sources */,
 				05C9AC42BAC6198AE227CAB6 /* ChatImageAttachmentView.swift in Sources */,
+				A77FAFBFABC6CC92264405AB /* ConnectionProblemView.swift in Sources */,
 				06BC9DFC1F527E3082A3B29A /* ContentView.swift in Sources */,
 				5AA7E9EB021EE17E4D1A1B15 /* DesktopInstallGuideView.swift in Sources */,
 				D16003558CADE09FB3893E91 /* InboxView.swift in Sources */,
@@ -1332,6 +1339,7 @@
 				19E9FFCD74332CB8A9D4EFE1 /* SearchableTextTests.swift in Sources */,
 				BAC0D847D9554D9F5BE8C122 /* SelectableTextLayoutTests.swift in Sources */,
 				220BAAE4CB0756A650EA6811 /* SelfCaptureFilterPolicyTests.swift in Sources */,
+				F3A4989E3D7724D5972994CA /* SessionRecoveryContractTests.swift in Sources */,
 				57E6FA3756604468815628BB /* SettingsSceneContractTests.swift in Sources */,
 				ACDDF0E513D2F7D330B6A9C7 /* SmokeTests.swift in Sources */,
 				2BE6D442750C42406D4CE6AF /* StatusMenuBuilderTests.swift in Sources */,
@@ -1514,7 +1522,7 @@
 				CODE_SIGN_ENTITLEMENTS = PingMobile/PingMobile.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 29;
+				CURRENT_PROJECT_VERSION = 30;
 				DEVELOPMENT_TEAM = 878FAHTFQJ;
 				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = PingMobile/Info.plist;
@@ -1539,7 +1547,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 29;
+				CURRENT_PROJECT_VERSION = 30;
 				DEVELOPMENT_TEAM = 878FAHTFQJ;
 				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = PingWatch/Info.plist;
@@ -1577,7 +1585,7 @@
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 29;
+				CURRENT_PROJECT_VERSION = 30;
 				DEVELOPMENT_TEAM = 878FAHTFQJ;
 				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = PingPushService/Info.plist;
@@ -1640,7 +1648,7 @@
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 29;
+				CURRENT_PROJECT_VERSION = 30;
 				DEVELOPMENT_TEAM = 878FAHTFQJ;
 				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = PingPushService/Info.plist;
@@ -1667,7 +1675,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 29;
+				CURRENT_PROJECT_VERSION = 30;
 				DEVELOPMENT_TEAM = 878FAHTFQJ;
 				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = PingWatch/Info.plist;
@@ -1758,7 +1766,7 @@
 				CODE_SIGN_ENTITLEMENTS = PingMobile/PingMobile.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 29;
+				CURRENT_PROJECT_VERSION = 30;
 				DEVELOPMENT_TEAM = 878FAHTFQJ;
 				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = PingMobile/Info.plist;

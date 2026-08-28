@@ -59,6 +59,14 @@ Windows 앱은 `windows/` 아래 별도 네이티브 클라이언트다.
 
 Ping은 이메일 로그인 없이 Supabase Anonymous Auth 세션을 로컬에 저장한다. 일반 업데이트나 `Ping.app` 교체는 기존 룸을 유지하지만, 앱 컨테이너의 `Application Support/Ping/SupabaseSession.json`을 삭제하면 새 익명 계정으로 시작한다. 온보딩 QA를 위해 세션을 지울 때는 반드시 이 파일을 먼저 백업하고, QA 뒤 원래 파일을 복구한 다음 Ping을 다시 실행한다.
 
+### 기기 간 세션 공유와 재사용 유예
+
+QR 핸드오프는 데스크톱의 세션을 **복사**한다. 그래서 Mac·iPhone·Apple Watch가 `auth.sessions` 행 하나와 refresh token 사슬 하나를 공유한다. Supabase는 갱신할 때마다 새 refresh token을 발급하고 부모 토큰을 revoked로 표시하므로, **먼저 갱신한 기기가 다른 기기가 들고 있던 토큰을 무효화한다.** revoked 토큰이 계속 통하는 유일한 이유는 `security_refresh_token_reuse_interval` 유예뿐이다.
+
+- 이 값이 기본 24시간이던 동안, 하루 넘게 꺼져 있던 기기는 돌아왔을 때 `refresh_token_already_used` 로 **영구 락아웃**됐다. iPhone이 "연결됐어요" 빈 룸 리스트만 26일간 보여준 원인이고, 데스크톱에서 "기존 Supabase 익명 세션을 복구할 수 없습니다" 모달이 뜬 원인도 같다.
+- 2026-08-26에 운영 값을 10년으로 넓혀 해결했다. `supabase/config.toml` 의 `refresh_token_reuse_interval` 이 그 값이며, 줄이려면 기기별 독립 세션 발급을 함께 설계해야 한다.
+- ⚠️ `enable_refresh_token_rotation = false` 는 이 문제를 막지 못한다. 이 플래그가 꺼져 있어도 부모 토큰은 revoked로 표시된다. 진단할 때 플래그가 아니라 `auth.refresh_tokens.revoked` 를 직접 확인할 것.
+
 ## 사용
 
 - Option+P: 얼굴만 거울을 띄운다.
@@ -84,6 +92,13 @@ macOS 앱은 Sparkle로 업데이트를 확인한다. 새 버전이 공개되면
 0.3.28 초기 빌드(38/39)에서 업데이트 설치 오류가 반복되면 랜딩페이지의 최신 macOS DMG를 한 번 수동으로 내려받아 `Ping.app`을 Applications 폴더에 덮어쓴다. 이 초기 빌드는 Sparkle installer helper 권한/서명이 잘못 들어간 상태라, 현재 실행 중인 앱만으로는 자동 업데이트 설치가 실패할 수 있다. build 40 이상은 Sparkle helper 권한을 보존하고 sandbox mach-lookup 예외를 포함한다.
 
 Windows 앱은 Sparkle을 사용하지 않는다. 비용 없는 배포는 self-signed MSIX를 작은 `PingSetup-v0.3.46.exe` 웹 설치파일로 감싸고, 설치 중 PC 아키텍처에 맞는 MSIX를 `https://0minping.vercel.app/downloads/windows/`에서 받는 방식이다. 최초 설치 시 installer가 Ping 공개 인증서를 등록한다. Microsoft Store, Azure Artifact Signing, OV 코드서명 인증서는 더 매끄러운 신뢰 UX를 제공하지만 비용 또는 외부 계정 검증이 필요하다.
+
+## v0.3.64 macOS/iOS 수정
+
+- 리프레시 실패를 일시적(오프라인·408·429·5xx)과 영구적(거부된 토큰)으로 구분해, 일시적 실패는 재시도 사다리로 보내고 영구적 실패만 세션 만료로 처리한다. 그전에는 모든 실패가 세션 만료가 되면서 재시도 사다리가 도달 불가능한 코드였고, 로그인 직후 Wi-Fi가 붙기 전에 앱이 뜨면 "기존 Supabase 익명 세션을 복구할 수 없습니다" 모달이 떴다.
+- 네트워크가 복구되면 백엔드 연결을 자동으로 다시 시도한다. 자동 시작(0.3.63)이 네트워크보다 먼저 앱을 띄우기 때문에, 그전에는 첫 실패 이후 앱을 껐다 켜기 전까지 복구되지 않았다.
+- iOS: 룸 목록이 비어 있는 것과 서버에 연결하지 못한 것을 화면에서 구분하고, 세션이 만료됐으면 다시 연결하기 버튼을 제공한다. 대화 화면은 일시적 오류에 기존 메시지를 지우지 않고 배너로 알린다.
+- iOS: 거부된 토큰으로 2초마다 무한 재시도하던 것을 멈추고, 복구 가능한 실패는 백오프로 간격을 늘린다.
 
 ## v0.3.62 macOS 수정
 

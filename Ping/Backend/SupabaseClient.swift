@@ -362,6 +362,17 @@ final class SupabaseClient: ObservableObject {
                         return recoveredSession
                     }
 
+                    // Offline, rate limited, or a backend fault is a blip, not a
+                    // lost identity. Keep the real cause so the bootstrap retry
+                    // ladder can pick it up; flattening everything into
+                    // `supabaseSessionExpired` made that ladder unreachable and
+                    // turned a slow Wi-Fi handshake at login into a dead-end alert.
+                    if BackendRetryPolicy.isTransient(error) {
+                        NSLog("Supabase refresh failed transiently; will retry: \(error)")
+                        throw error
+                    }
+
+                    NSLog("Supabase refresh rejected for user \(session.userId): \(error)")
                     throw PingError.supabaseSessionExpired(userId: session.userId)
                 }
             }
