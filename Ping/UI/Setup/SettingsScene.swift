@@ -72,6 +72,9 @@ private struct GeneralSettingsView: View {
     @AppStorage(PingPreferenceKeys.appearanceMode)
     private var appearanceMode = PingAppearanceMode.system.rawValue
 
+    @AppStorage(PingPreferenceKeys.autoPlayReceivedVideo)
+    private var autoPlayReceivedVideo = true
+
     @State private var autoLaunchEnabled = Self.isAutoLaunchEnabled()
     @State private var autoLaunchStatusText = Self.autoLaunchStatusText()
     @State private var autoLaunchError: String?
@@ -99,6 +102,18 @@ private struct GeneralSettingsView: View {
                     }
 
                     settingsGroup("알림과 화면") {
+                        settingRow(
+                            title: "받은 영상 바로 재생",
+                            subtitle: "상대가 보낸 영상을 알림 클릭 없이 화면에 바로 띄웁니다."
+                        ) {
+                            Toggle("", isOn: $autoPlayReceivedVideo)
+                                .labelsHidden()
+                        }
+
+                        Divider()
+                            .opacity(0.45)
+                            .padding(.leading, 148)
+
                         settingRow(title: "알림 소리", subtitle: "수신 알림 배너에 사용할 소리입니다.") {
                             Picker("알림 소리", selection: $notificationSound) {
                                 ForEach(PingNotificationSound.allCases) { sound in

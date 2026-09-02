@@ -84,8 +84,14 @@ final class PlaybackWindow: NSWindow {
         }
     }
 
-    func fadeIn() {
-        ForegroundPresenter.present(self)
+    /// - Parameter activatingApp: 자동 재생은 사용자가 쓰던 앱의 포커스를 뺏지 않는다.
+    ///   이때 창은 떠 있지만 Enter/Space/Esc는 Ping이 활성 상태가 된 뒤부터 듣는다.
+    func fadeIn(activatingApp: Bool = true) {
+        if activatingApp {
+            ForegroundPresenter.present(self)
+        } else {
+            orderFrontRegardless()
+        }
         installKeyMonitor()
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.20

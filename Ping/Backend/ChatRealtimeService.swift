@@ -43,6 +43,9 @@ final class ChatRealtimeService: ObservableObject {
     // MARK: Internal state
 
     private var subscribedRoomIds: Set<String> = []
+    private var lastSubscribeAttemptAt: Date?
+    /// 교체된 클라이언트의 상태 모니터를 식별하기 위한 세대 번호.
+    fileprivate var connectionGeneration: UInt64 = 0
 
     // Realtime path
     private var realtimeClient: RealtimeClientV2?
@@ -66,18 +69,44 @@ final class ChatRealtimeService: ObservableObject {
 
     // MARK: Public API
 
+    /// 호출자가 세션 토큰 조회 같은 준비 작업을 건너뛸 수 있도록 미리 알려준다.
+    func needsSubscription(roomIds: [String]) -> Bool {
+        currentPlan(for: Set(roomIds)) != .reuse
+    }
+
+    private func currentPlan(for requested: Set<String>) -> RealtimeSubscriptionPlan {
+        RealtimeSubscriptionPlan.plan(
+            requestedRoomIds: requested,
+            subscribedRoomIds: subscribedRoomIds,
+            state: connectionState,
+            hasLiveClient: realtimeClient != nil,
+            lastAttemptAt: lastSubscribeAttemptAt
+        )
+    }
+
     func subscribe(
         roomIds: [String],
         supabaseURL: URL,
         anonKey: String,
         accessToken: String?
     ) async {
-        guard !roomIds.isEmpty else {
+        let requested = Set(roomIds)
+        switch currentPlan(for: requested) {
+        case .unsubscribe:
             await unsubscribeAll()
             return
+        case .reuse:
+            return
+        case .resubscribe:
+            break
         }
 
-        subscribedRoomIds = Set(roomIds)
+        lastSubscribeAttemptAt = Date()
+
+        // 새로 붙기 전에 이전 클라이언트·채널·모니터 task를 반드시 걷어낸다.
+        await tearDownRealtime()
+
+        subscribedRoomIds = requested
         connectionState = .connecting
 
         // Try Realtime first; fall back to polling on any failure.
@@ -97,23 +126,29 @@ final class ChatRealtimeService: ObservableObject {
 
     func unsubscribeAll() async {
         subscribedRoomIds.removeAll()
-
-        // Tear down Realtime
-        realtimeMonitorTask?.cancel()
-        realtimeMonitorTask = nil
-        realtimeSubscriptions.forEach { $0.cancel() }
-        realtimeSubscriptions.removeAll()
-        if let client = realtimeClient {
-            await client.removeAllChannels()
-        }
-        realtimeChannels.removeAll()
-        realtimeClient = nil
+        await tearDownRealtime()
 
         // Tear down polling
         pollingTask?.cancel()
         pollingTask = nil
 
         connectionState = .disconnected
+    }
+
+    /// 클라이언트를 버리기 전에 모니터 task부터 끊는다. 살아남은 모니터는 죽은 연결의
+    /// 상태 변화를 계속 보고하며 `realtime_disconnected`를 무한히 남긴다.
+    private func tearDownRealtime() async {
+        connectionGeneration &+= 1
+        realtimeMonitorTask?.cancel()
+        realtimeMonitorTask = nil
+        realtimeSubscriptions.forEach { $0.cancel() }
+        realtimeSubscriptions.removeAll()
+        if let client = realtimeClient {
+            await client.removeAllChannels()
+            await client.disconnect()
+        }
+        realtimeChannels.removeAll()
+        realtimeClient = nil
     }
 
     // MARK: - Realtime path
@@ -234,10 +269,18 @@ final class ChatRealtimeService: ObservableObject {
         connectionState = .connected
 
         // Monitor client status to detect disconnects and fall back to polling.
+        connectionGeneration &+= 1
+        let generation = connectionGeneration
         let weakSelf = WeakBox(self)
         realtimeMonitorTask = Task.detached(priority: .utility) {
             for await status in client.statusChange {
+                if Task.isCancelled { break }
                 guard let svc = weakSelf.value else { break }
+                let isCurrent = await MainActor.run { svc.connectionGeneration == generation }
+                // 교체된 클라이언트의 모니터가 살아남아 상태를 되돌리거나 이벤트를
+                // 남기지 않도록, 자기 세대가 아니면 즉시 빠져나온다.
+                guard isCurrent else { break }
+
                 await MainActor.run {
                     switch status {
                     case .connected:

@@ -31,10 +31,14 @@ final class ForegroundPresentationContractTests: XCTestCase {
 
         let playMessage = try sourceSlice(
             in: appDelegate,
-            from: "private func playMessage(messageId: String)",
-            to: "private func cachedVideoURL"
+            from: "private func playMessage(messageId: String, activatesApp: Bool = true)",
+            to: "private func cancelPlaybackPrefetches"
         )
+        // 알림 클릭 경로는 앱을 앞으로 가져오고, 자동 재생 경로는 포커스를 뺏지 않는다.
+        XCTAssertTrue(playMessage.contains("if activatesApp {"))
         XCTAssertTrue(playMessage.contains("ForegroundPresenter.activateApp()"))
+        XCTAssertTrue(playMessage.contains("window.fadeIn(activatingApp: activatesApp)"))
+        XCTAssertTrue(playback.contains("orderFrontRegardless()"))
 
         XCTAssertTrue(playback.contains("ForegroundPresenter.present(self)"))
         XCTAssertTrue(playback.contains("ForegroundPresenter.present(expanded)"))

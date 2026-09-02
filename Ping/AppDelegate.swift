@@ -12,8 +12,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var roomManagerWindow: RoomManagerWindow?
     private var settingsWindow: SettingsWindow?
     private var playbackWindows: [PlaybackWindow] = []
-    private var playbackCache: [String: URL] = [:]
-    private var playbackPrefetchTasks: [String: Task<URL?, Never>] = [:]
+    private lazy var playbackVideoCache = PlaybackVideoCache { [weak self] message in
+        guard let self else { throw PingError.supabaseUnavailable }
+        return try await self.downloadMessageVideo(message)
+    }
 
     private let appState = AppState.shared
     private let camera = CameraManager()
@@ -315,17 +317,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
             for await rooms in roomService.observeMyRooms(uid: uid) {
                 appState.rooms = rooms
-                Task { @MainActor in
-                    let roomIds = rooms.compactMap(\.id)
-                    if let url = try? SupabaseClient.shared.configURL,
-                       let anonKey = try? SupabaseClient.shared.configAnonKey {
-                        let token = await SupabaseClient.shared.currentAccessToken()
-                        await self.chatRealtime.subscribe(
-                            roomIds: roomIds,
-                            supabaseURL: url,
-                            anonKey: anonKey,
-                            accessToken: token
-                        )
+
+                // 룸 폴링은 10초마다 같은 목록을 다시 흘려보낸다. 이미 붙어 있으면
+                // 세션 토큰 조회조차 하지 않는다.
+                let roomIds = rooms.compactMap(\.id)
+                if chatRealtime.needsSubscription(roomIds: roomIds) {
+                    Task { @MainActor in
+                        if let url = try? SupabaseClient.shared.configURL,
+                           let anonKey = try? SupabaseClient.shared.configAnonKey {
+                            let token = await SupabaseClient.shared.currentAccessToken()
+                            await self.chatRealtime.subscribe(
+                                roomIds: roomIds,
+                                supabaseURL: url,
+                                anonKey: anonKey,
+                                accessToken: token
+                            )
+                        }
                     }
                 }
                 if !rooms.isEmpty {
@@ -361,7 +368,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 guard let id = message.id, shouldNotify(messageId: id, uid: uid, message: message) else {
                     continue
                 }
-                await prefetchMessageVideo(message)
                 let didScheduleNotification = await LocalNotificationCenter.shared.notifyIncomingMessage(
                     senderNickname: message.senderNickname,
                     messageId: id,
@@ -370,6 +376,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 guard didScheduleNotification else { continue }
                 ledger.remember(.video, uid: uid, id: id)
                 try? await messageService.markNotified(messageId: id)
+
+                // 이 루프는 직렬이다. 다운로드를 여기서 기다리면 느린 한 건이 뒤따르는
+                // 모든 알림을 지연시키므로 재생 준비는 별도 task로 넘긴다.
+                let shouldAutoPlay = PingAutoPlayPreference.shouldAutoPlay(
+                    messageCreatedAt: message.createdAt,
+                    appStartedAt: appStartTime
+                )
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    guard await self.playbackVideoCache.prefetch(message) != nil else { return }
+                    if shouldAutoPlay {
+                        self.playMessage(messageId: id, activatesApp: false)
+                    }
+                }
             }
         }
     }
@@ -645,12 +665,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return room.name
     }
 
-    private func playMessage(messageId: String) {
+    /// - Parameter activatesApp: 알림을 눌러 들어온 경로는 앱을 앞으로 가져오지만,
+    ///   자동 재생은 사용자가 하던 작업의 포커스를 뺏지 않는다.
+    private func playMessage(messageId: String, activatesApp: Bool = true) {
         Task { @MainActor in
-            ForegroundPresenter.activateApp()
+            if activatesApp {
+                ForegroundPresenter.activateApp()
+            }
             do {
                 guard let message = try await messageService.get(messageId: messageId) else { return }
-                let localURL = try await cachedVideoURL(for: message)
+                let localURL = try await playbackVideoCache.url(for: message)
                 let shouldKeepReceivedVideo = LocalArchive.saveReceivedEnabled && message.allowsLocalSave
 
                 let screen = NSScreen.main ?? NSScreen.screens.first!
@@ -679,7 +703,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                         Task { @MainActor in
                             if !shouldKeepReceivedVideo {
                                 try? FileManager.default.removeItem(at: localURL)
-                                self?.playbackCache[messageId] = nil
+                                self?.playbackVideoCache.discard(messageId: messageId)
                             }
                             self?.playbackWindows.removeAll { $0.pingWindowId == windowId }
                         }
@@ -688,74 +712,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 window.pingWindowId = windowId
                 playbackWindows.append(window)
                 ClientEventService.shared.log("ping_received_view", properties: [
-                    "mode": message.captureMode.rawValue
+                    "mode": message.captureMode.rawValue,
+                    "auto": !activatesApp
                 ])
-                window.fadeIn()
+                window.fadeIn(activatingApp: activatesApp)
             } catch {
                 NSLog("Playback failed: \(error)")
             }
         }
     }
 
-    private func cachedVideoURL(for message: VideoMessage) async throws -> URL {
-        guard let messageId = message.id else {
-            return try await downloadMessageVideo(message)
-        }
-
-        if let cachedURL = playbackCache[messageId],
-           FileManager.default.fileExists(atPath: cachedURL.path) {
-            return cachedURL
-        }
-
-        if let prefetchTask = playbackPrefetchTasks[messageId],
-           let prefetchedURL = await prefetchTask.value,
-           FileManager.default.fileExists(atPath: prefetchedURL.path) {
-            playbackCache[messageId] = prefetchedURL
-            return prefetchedURL
-        }
-
-        let url = try await downloadMessageVideo(message)
-        playbackCache[messageId] = url
-        return url
-    }
-
-    @discardableResult
-    private func prefetchMessageVideo(_ message: VideoMessage) async -> URL? {
-        guard let messageId = message.id else {
-            return try? await cachedVideoURL(for: message)
-        }
-
-        if let cachedURL = playbackCache[messageId],
-           FileManager.default.fileExists(atPath: cachedURL.path) {
-            return cachedURL
-        }
-
-        if let prefetchTask = playbackPrefetchTasks[messageId] {
-            return await prefetchTask.value
-        }
-
-        let task = Task { @MainActor [weak self] () -> URL? in
-            guard let self else { return nil }
-
-            do {
-                return try await self.cachedVideoURL(for: message)
-            } catch {
-                NSLog("Video prefetch failed: \(error)")
-                return nil
-            }
-        }
-
-        playbackPrefetchTasks[messageId] = task
-        let url = await task.value
-        playbackPrefetchTasks[messageId] = nil
-        return url
-    }
-
     private func cancelPlaybackPrefetches() {
-        for task in playbackPrefetchTasks.values {
-            task.cancel()
-        }
-        playbackPrefetchTasks.removeAll()
+        playbackVideoCache.cancelAll()
     }
 
     private func downloadMessageVideo(_ message: VideoMessage) async throws -> URL {
@@ -1172,7 +1140,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         for window in playbackWindows { window.orderOut(nil) }
         playbackWindows.removeAll()
-        playbackCache.removeAll()
+        playbackVideoCache.reset()
 
         notifiedChatMessageIds.removeAll()
 
