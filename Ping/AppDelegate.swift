@@ -1075,6 +1075,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             lastSelectedRoomId: appState.lastSelectedRoomId
         )
 
+        // 이 결정은 원격에서 볼 수 없어 여러 차례 오진했다. 판단 근거를 함께 남긴다.
+        ClientEventService.shared.log("chat_notify_decision", properties: [
+            "suppressed": isViewingRoom,
+            "app_active": NSApp.isActive,
+            "window_visible": roomManagerWindow?.isVisible ?? false,
+            "room_id": msg.roomId
+        ])
+
         if isViewingRoom { return }
 
         let roomName = appState.rooms.first(where: { $0.id == msg.roomId })?.name ?? "룸"

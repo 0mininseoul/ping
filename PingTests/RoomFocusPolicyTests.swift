@@ -121,3 +121,52 @@ final class RoomFocusPolicyTests: XCTestCase {
         return try String(contentsOf: repoRoot.appendingPathComponent(relativePath), encoding: .utf8)
     }
 }
+
+// MARK: - Chat notification handling contracts
+
+final class ChatNotificationHandlingContractTests: XCTestCase {
+    /// 회귀 방지: dismiss도 "보겠다"로 처리해 알림을 쓸어 지우면 룸이 열리고
+    /// 그 룸의 알림이 전부 정리됐다. 계측 결과를 오독하게 만든 원인이기도 하다.
+    func testDismissingAChatNotificationDoesNotOpenTheRoom() throws {
+        let source = try readRepositoryFile("Ping/Notifications/LocalNotificationCenter.swift")
+
+        XCTAssertTrue(
+            source.contains("guard actionIdentifier != UNNotificationDismissActionIdentifier else { return }")
+        )
+    }
+
+    /// 설정의 "알림 소리"는 수신 알림 전체에 적용된다고 안내한다.
+    func testChatNotificationsRespectTheSoundPreference() throws {
+        let source = try readRepositoryFile("Ping/Notifications/LocalNotificationCenter.swift")
+
+        let chatBody = try sourceSlice(
+            in: source,
+            from: "func notifyIncomingChat(",
+            to: "func notifyChatCatchUp("
+        )
+        XCTAssertTrue(chatBody.contains("content.sound = notificationSound()"))
+        XCTAssertFalse(chatBody.contains("content.sound = .default"))
+    }
+
+    /// 이 결정은 원격에서 관측할 수 없어 여러 차례 오진했다.
+    func testTheNotifyDecisionIsInstrumented() throws {
+        let source = try readRepositoryFile("Ping/AppDelegate.swift")
+
+        XCTAssertTrue(source.contains("\"chat_notify_decision\""))
+        XCTAssertTrue(source.contains("\"suppressed\": isViewingRoom"))
+        XCTAssertTrue(source.contains("\"app_active\": NSApp.isActive"))
+    }
+
+    private func readRepositoryFile(_ relativePath: String) throws -> String {
+        let repoRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        return try String(contentsOf: repoRoot.appendingPathComponent(relativePath), encoding: .utf8)
+    }
+
+    private func sourceSlice(in source: String, from startMarker: String, to endMarker: String) throws -> String {
+        let start = try XCTUnwrap(source.range(of: startMarker)?.lowerBound)
+        let end = try XCTUnwrap(source.range(of: endMarker, range: start..<source.endIndex)?.lowerBound)
+        return String(source[start..<end])
+    }
+}

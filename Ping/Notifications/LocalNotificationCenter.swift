@@ -130,7 +130,9 @@ final class LocalNotificationCenter: NSObject, UNUserNotificationCenterDelegate 
         content.title = "\(message.senderNickname) · \(roomName)"
         let body = message.previewText.isEmpty ? "사진을 보냈습니다" : message.previewText
         content.body = body.count > 200 ? String(body.prefix(200)) + "…" : body
-        content.sound = .default
+        // 설정의 "알림 소리"는 수신 알림 배너 전체에 적용된다고 안내한다.
+        // 채팅만 .default로 고정돼 있어 "없음"을 골라도 소리가 났다.
+        content.sound = notificationSound()
         content.userInfo = [
             "type": "chat",
             "chat_id": message.id ?? "",
@@ -244,11 +246,15 @@ final class LocalNotificationCenter: NSObject, UNUserNotificationCenterDelegate 
             }
 
             // Chat notifications are identified by their "type" key.
-            if infoType == "chat",
-               let chatId, let chatRoomId {
-                clearDeliveredNotifications(roomId: chatRoomId)
-                onViewChatMessage?(chatId, chatRoomId)
-                return
+            // 쓸어 넘겨 지운 것(dismiss)은 "보겠다"가 아니다. 구분하지 않으면 알림을
+            // 지우기만 해도 룸이 열리고 그 룸의 알림이 전부 정리된다.
+            if infoType == "chat" {
+                guard actionIdentifier != UNNotificationDismissActionIdentifier else { return }
+                if let chatId, let chatRoomId {
+                    clearDeliveredNotifications(roomId: chatRoomId)
+                    onViewChatMessage?(chatId, chatRoomId)
+                    return
+                }
             }
 
             switch actionIdentifier {
