@@ -56,7 +56,8 @@ final class PlaybackWindow: NSWindow {
         backgroundColor = .clear
         level = .floating
         hasShadow = false
-        ignoresMouseEvents = true
+        // 자동 재생은 사용자가 부르지 않은 창이므로 클릭 한 번으로 지울 수 있어야 한다.
+        ignoresMouseEvents = false
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         isReleasedWhenClosed = false
 
@@ -67,6 +68,9 @@ final class PlaybackWindow: NSWindow {
             controllerBox: controllerBox,
             onFirstPlayEnd: { [weak self] in
                 self?.handleFirstPlayEnd()
+            },
+            onDismiss: { [weak self] in
+                self?.handleClose()
             }
         )
             .frame(width: size.width, height: size.height)
@@ -84,14 +88,10 @@ final class PlaybackWindow: NSWindow {
         }
     }
 
-    /// - Parameter activatingApp: 자동 재생은 사용자가 쓰던 앱의 포커스를 뺏지 않는다.
-    ///   이때 창은 떠 있지만 Enter/Space/Esc는 Ping이 활성 상태가 된 뒤부터 듣는다.
-    func fadeIn(activatingApp: Bool = true) {
-        if activatingApp {
-            ForegroundPresenter.present(self)
-        } else {
-            orderFrontRegardless()
-        }
+    func fadeIn() {
+        // 키 감시가 로컬 모니터라 앱이 활성 상태여야 Enter/Space/Esc가 들어온다.
+        // 포커스를 넘기지 않으면 창을 지울 방법이 사라지므로 자동 재생도 활성화한다.
+        ForegroundPresenter.present(self)
         installKeyMonitor()
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.20
@@ -213,8 +213,10 @@ private struct PlaybackWindowContent: View {
     let shape: AnyShape
     let controllerBox: PlaybackView.ControllerBox
     let onFirstPlayEnd: @MainActor @Sendable () -> Void
+    let onDismiss: @MainActor @Sendable () -> Void
 
     @State private var showsControlsHint = false
+    @State private var isHovering = false
 
     var body: some View {
         ZStack {
@@ -238,15 +240,39 @@ private struct PlaybackWindowContent: View {
                 }
                 .transition(.opacity)
             }
+
+            if isHovering {
+                PlaybackDismissBadge()
+                    .transition(.opacity)
+            }
         }
         .animation(.easeOut(duration: 0.18), value: showsControlsHint)
-        .allowsHitTesting(false)
+        .animation(.easeOut(duration: 0.12), value: isHovering)
+        .contentShape(shape)
+        .onHover { isHovering = $0 }
+        .onTapGesture { onDismiss() }
+    }
+}
+
+private struct PlaybackDismissBadge: View {
+    var body: some View {
+        VStack {
+            HStack {
+                Spacer()
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 18, weight: .semibold))
+                    .symbolRenderingMode(.palette)
+                    .foregroundStyle(Color.white, Color.black.opacity(0.55))
+                    .padding(10)
+            }
+            Spacer()
+        }
     }
 }
 
 private struct PlaybackControlsHint: View {
     var body: some View {
-        Text("↵ 다시 재생 · Esc 닫기")
+        Text("↵ 다시 재생 · 클릭 또는 Esc 닫기")
             .font(PingFont.caption)
             .foregroundStyle(.white)
             .lineLimit(1)

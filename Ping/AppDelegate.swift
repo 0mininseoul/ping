@@ -387,7 +387,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     guard let self else { return }
                     guard await self.playbackVideoCache.prefetch(message) != nil else { return }
                     if shouldAutoPlay {
-                        self.playMessage(messageId: id, activatesApp: false)
+                        self.playMessage(messageId: id, isAutoPlay: true)
                     }
                 }
             }
@@ -665,13 +665,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return room.name
     }
 
-    /// - Parameter activatesApp: 알림을 눌러 들어온 경로는 앱을 앞으로 가져오지만,
-    ///   자동 재생은 사용자가 하던 작업의 포커스를 뺏지 않는다.
-    private func playMessage(messageId: String, activatesApp: Bool = true) {
+    /// - Parameter isAutoPlay: 계측용 구분. 두 경로 모두 앱을 앞으로 가져온다 —
+    ///   포커스를 넘기지 않으면 로컬 키 감시가 죽어 Esc로 창을 지울 수 없다.
+    private func playMessage(messageId: String, isAutoPlay: Bool = false) {
         Task { @MainActor in
-            if activatesApp {
-                ForegroundPresenter.activateApp()
-            }
+            ForegroundPresenter.activateApp()
             do {
                 guard let message = try await messageService.get(messageId: messageId) else { return }
                 let localURL = try await playbackVideoCache.url(for: message)
@@ -713,9 +711,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 playbackWindows.append(window)
                 ClientEventService.shared.log("ping_received_view", properties: [
                     "mode": message.captureMode.rawValue,
-                    "auto": !activatesApp
+                    "auto": isAutoPlay
                 ])
-                window.fadeIn(activatingApp: activatesApp)
+                window.fadeIn()
             } catch {
                 NSLog("Playback failed: \(error)")
             }

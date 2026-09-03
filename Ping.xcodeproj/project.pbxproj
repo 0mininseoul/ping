@@ -18,6 +18,7 @@
 		06BC9DFC1F527E3082A3B29A /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 599B87DE1571A0E649CE5582 /* ContentView.swift */; };
 		09D937C3A5246BE80AB78C1A /* PingMobileOnboardingContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2225B62EC954CFD86429E093 /* PingMobileOnboardingContractTests.swift */; };
 		0C63FD5926C2755B5048FA20 /* RoomCapacityContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 186228D198F99431A3E1EBCE /* RoomCapacityContractTests.swift */; };
+		0F07A1B35AD0C56B76156B20 /* FreshPingDeliveryContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A223E96504BB069F9BFB9CA8 /* FreshPingDeliveryContractTests.swift */; };
 		101EB766A4EB32C6DB95BF68 /* PingMobileImageAttachmentContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C912E515D4217420B24DAAB /* PingMobileImageAttachmentContractTests.swift */; };
 		106539313B2378466650F94D /* PartnerPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A06C0316F0F1AFE5297BE0C /* PartnerPicker.swift */; };
 		13BB58129EF1392D96B3753A /* RoomDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 961E0B236B19718866C9702B /* RoomDetailView.swift */; };
@@ -390,6 +391,7 @@
 		9DA8354482E6065AA5CBDD0C /* PingWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PingWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9E1F6F2D8E154DB411DE015B /* WatchAppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchAppDelegate.swift; sourceTree = "<group>"; };
 		A0546AA276FA90796D5CD11E /* PingMobileTimestampRevealContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PingMobileTimestampRevealContractTests.swift; sourceTree = "<group>"; };
+		A223E96504BB069F9BFB9CA8 /* FreshPingDeliveryContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FreshPingDeliveryContractTests.swift; sourceTree = "<group>"; };
 		A3E3F4481E793E98BF26304F /* ForegroundPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForegroundPresenter.swift; sourceTree = "<group>"; };
 		A442835C646C43BA7F20E0EA /* PingMobileApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PingMobileApp.swift; sourceTree = "<group>"; };
 		A4A1E99D8A2F055B3DD2924E /* KeyboardRoutingContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardRoutingContractTests.swift; sourceTree = "<group>"; };
@@ -812,6 +814,7 @@
 				96B89FB193F948DD67E28BD3 /* DesktopPresenceContractTests.swift */,
 				E0CE48710A798DC7E4F5F387 /* EntitlementsTests.swift */,
 				252CD0C48E3BD775FA887F14 /* ForegroundPresentationContractTests.swift */,
+				A223E96504BB069F9BFB9CA8 /* FreshPingDeliveryContractTests.swift */,
 				4768EC8284B544E3649C4507 /* HistoryViewModelTests.swift */,
 				3CC9A5C9C5BA8FF0D9D30E0A /* InviteLinkContractTests.swift */,
 				A4A1E99D8A2F055B3DD2924E /* KeyboardRoutingContractTests.swift */,
@@ -1329,6 +1332,7 @@
 				71727BE893C91EFA23DD7F85 /* DesktopPresenceContractTests.swift in Sources */,
 				67FBBC00ABEE4FDC9A8E5496 /* EntitlementsTests.swift in Sources */,
 				80E2A55BBE956261C463262D /* ForegroundPresentationContractTests.swift in Sources */,
+				0F07A1B35AD0C56B76156B20 /* FreshPingDeliveryContractTests.swift in Sources */,
 				06AFB9CF51890A927220471E /* HistoryViewModelTests.swift in Sources */,
 				315501BEACA5034EC49BB7B3 /* InviteLinkContractTests.swift in Sources */,
 				D1F98BCF92D6A7D7BD4FAFA5 /* KeyboardRoutingContractTests.swift in Sources */,
@@ -1759,7 +1763,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 77;
+				CURRENT_PROJECT_VERSION = 78;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -1779,7 +1783,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 0.3.65;
+				MARKETING_VERSION = 0.3.66;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -1853,7 +1857,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 77;
+				CURRENT_PROJECT_VERSION = 78;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1867,7 +1871,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 0.3.65;
+				MARKETING_VERSION = 0.3.66;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				OTHER_CODE_SIGN_FLAGS = "--requirements '=designated => identifier \"com.youngminpark.ping.Ping\"'";

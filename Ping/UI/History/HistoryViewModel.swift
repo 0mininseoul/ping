@@ -126,9 +126,24 @@ final class HistoryViewModel: ObservableObject {
 
     private func rememberLoadedIncomingVideosRead() {
         guard let uid = appState.currentUser?.id else { return }
-        for video in loadedVideos where video.receiverUid == uid {
-            guard let id = video.id else { continue }
+        for id in Self.videoIdsToMarkRead(loadedVideos, uid: uid) {
             notificationLedger.remember(.video, uid: uid, id: id)
+        }
+    }
+
+    /// 룸을 열었다고 방금 도착한 핑까지 "알림함"으로 적으면 안 된다. 수신 폴링은 10초
+    /// 주기라, 도착 직후 수신자가 룸을 열면 아직 뜨지도 않은 알림이 취소된다.
+    /// 유예 시간 안에 들어온 영상은 원장에 적지 않고 알림 경로에 맡긴다.
+    static func videoIdsToMarkRead(
+        _ videos: [VideoMessage],
+        uid: String,
+        now: Date = Date()
+    ) -> [String] {
+        let cutoff = now.addingTimeInterval(-PingNotificationGrace.freshVideoWindow)
+        return videos.compactMap { video in
+            guard video.receiverUid == uid, let id = video.id else { return nil }
+            if let createdAt = video.createdAt, createdAt > cutoff { return nil }
+            return id
         }
     }
 

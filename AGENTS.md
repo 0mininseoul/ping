@@ -51,7 +51,7 @@ Supabase CLI 작업은 반드시 `./scripts/supabase-ping.sh` wrapper로 수행�
 ### Supabase Free 저장소
 영상은 Supabase Storage의 비공개 `ping-videos` 버킷에 `<senderUid>/<videoId>.mp4` 경로로 저장합니다. 테이블/RLS/RPC/Storage 정책은 `supabase/migrations/20260517000100_create_ping_backend.sql`이 단일 진실 출처입니다. 서버 예약 작업 없이 앱 실행 시 `ping_cleanup_expired_data()` RPC로 만료 데이터를 best-effort 정리합니다.
 
-### App 버전 — `0.3.65`
+### App 버전 — `0.3.66`
 - `project.yml` → `settings.base.MARKETING_VERSION`
 - `scripts/build-release.sh` → 빌드 산출물 자동 추출
 - `README.md` 의 DMG 파일명 예시

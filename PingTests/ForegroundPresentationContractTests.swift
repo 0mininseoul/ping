@@ -31,14 +31,20 @@ final class ForegroundPresentationContractTests: XCTestCase {
 
         let playMessage = try sourceSlice(
             in: appDelegate,
-            from: "private func playMessage(messageId: String, activatesApp: Bool = true)",
+            from: "private func playMessage(messageId: String, isAutoPlay: Bool = false)",
             to: "private func cancelPlaybackPrefetches"
         )
-        // 알림 클릭 경로는 앱을 앞으로 가져오고, 자동 재생 경로는 포커스를 뺏지 않는다.
-        XCTAssertTrue(playMessage.contains("if activatesApp {"))
+        // 자동 재생도 앱을 앞으로 가져온다. 로컬 키 감시는 앱이 활성일 때만 이벤트를
+        // 받으므로, 포커스를 넘기지 않으면 Esc로 창을 지울 수 없다.
         XCTAssertTrue(playMessage.contains("ForegroundPresenter.activateApp()"))
-        XCTAssertTrue(playMessage.contains("window.fadeIn(activatingApp: activatesApp)"))
-        XCTAssertTrue(playback.contains("orderFrontRegardless()"))
+        XCTAssertTrue(playMessage.contains("window.fadeIn()"))
+        XCTAssertFalse(playMessage.contains("if activatesApp {"))
+
+        // 클릭 한 번으로도 지울 수 있어야 한다.
+        XCTAssertTrue(playback.contains("ignoresMouseEvents = false"))
+        XCTAssertTrue(playback.contains("onDismiss: { [weak self] in"))
+        XCTAssertTrue(playback.contains(".onTapGesture { onDismiss() }"))
+        XCTAssertFalse(playback.contains(".allowsHitTesting(false)"))
 
         XCTAssertTrue(playback.contains("ForegroundPresenter.present(self)"))
         XCTAssertTrue(playback.contains("ForegroundPresenter.present(expanded)"))

@@ -9,6 +9,13 @@ enum PingPreferenceKeys {
     static let autoPlayReceivedVideo = "ping.playback.autoPlayReceived"
 }
 
+/// 방금 도착한 핑을 "이미 알림함"으로 취급하지 않는 유예 시간.
+/// 수신 폴링이 10초 주기라, 룸을 여는 동작이 아직 뜨지도 않은 알림을 취소하는 것을 막는다.
+/// 서버 `ping_mark_room_read`도 같은 값을 쓴다 — 한쪽만 바꾸면 레이스가 되살아난다.
+enum PingNotificationGrace {
+    static let freshVideoWindow: TimeInterval = 60
+}
+
 /// 받은 영상을 알림 클릭 없이 바로 띄울지에 대한 설정. 미설정은 켜짐으로 읽는다.
 enum PingAutoPlayPreference {
     static var isEnabled: Bool {
