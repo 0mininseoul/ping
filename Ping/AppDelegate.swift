@@ -34,6 +34,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let ledger = NotificationLedger()
 
     private var notifiedChatMessageIds: Set<String> = []
+    private var deliveringVideoIds: Set<String> = []
     private var isSwitchingAccount = false
     private var cancellables: Set<AnyCancellable> = []
 
@@ -41,6 +42,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var invitationObserverTask: Task<Void, Never>?
     private var incomingMessageTask: Task<Void, Never>?
     private var chatCatchUpTask: Task<Void, Never>?
+    private var incomingVideoPokeTask: Task<Void, Never>?
     private var desktopPresenceTask: Task<Void, Never>?
     private var bootstrapTask: Task<Void, Never>?
     private var bootstrapRetryTask: Task<Void, Never>?
@@ -116,6 +118,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         roomObserverTask?.cancel()
         invitationObserverTask?.cancel()
         incomingMessageTask?.cancel()
+        incomingVideoPokeTask?.cancel()
         desktopPresenceTask?.cancel()
         networkMonitor?.cancel()
         networkMonitor = nil
@@ -328,6 +331,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                             let token = await SupabaseClient.shared.currentAccessToken()
                             await self.chatRealtime.subscribe(
                                 roomIds: roomIds,
+                                uid: uid,
                                 supabaseURL: url,
                                 anonKey: anonKey,
                                 accessToken: token
@@ -365,31 +369,59 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         incomingMessageTask = Task { @MainActor in
             for await message in messageService.observeIncoming(uid: uid) {
-                guard let id = message.id, shouldNotify(messageId: id, uid: uid, message: message) else {
-                    continue
-                }
-                let didScheduleNotification = await LocalNotificationCenter.shared.notifyIncomingMessage(
-                    senderNickname: message.senderNickname,
-                    messageId: id,
-                    roomId: message.roomId
-                )
-                guard didScheduleNotification else { continue }
-                ledger.remember(.video, uid: uid, id: id)
-                try? await messageService.markNotified(messageId: id)
+                await deliverIncomingVideo(message, uid: uid)
+            }
+        }
+    }
 
-                // 이 루프는 직렬이다. 다운로드를 여기서 기다리면 느린 한 건이 뒤따르는
-                // 모든 알림을 지연시키므로 재생 준비는 별도 task로 넘긴다.
-                let shouldAutoPlay = PingAutoPlayPreference.shouldAutoPlay(
-                    messageCreatedAt: message.createdAt,
-                    appStartedAt: appStartTime
-                )
-                Task { @MainActor [weak self] in
-                    guard let self else { return }
-                    guard await self.playbackVideoCache.prefetch(message) != nil else { return }
-                    if shouldAutoPlay {
-                        self.playMessage(messageId: id, isAutoPlay: true)
-                    }
+    /// Realtime이 붙어 있으면 도착 즉시, 아니면 10초 폴링이 이 경로로 들어온다.
+    /// 두 경로가 같은 메시지를 동시에 물 수 있으므로 진행 중 id를 따로 막는다 —
+    /// ledger 기록은 알림을 await 한 뒤라 그것만으로는 겹침을 못 막는다.
+    private func deliverIncomingVideo(_ message: VideoMessage, uid: String) async {
+        guard let id = message.id, shouldNotify(messageId: id, uid: uid, message: message) else {
+            return
+        }
+        guard !deliveringVideoIds.contains(id) else { return }
+        deliveringVideoIds.insert(id)
+        defer { deliveringVideoIds.remove(id) }
+
+        let didScheduleNotification = await LocalNotificationCenter.shared.notifyIncomingMessage(
+            senderNickname: message.senderNickname,
+            messageId: id,
+            roomId: message.roomId
+        )
+        guard didScheduleNotification else { return }
+        ledger.remember(.video, uid: uid, id: id)
+        try? await messageService.markNotified(messageId: id)
+
+        // 다운로드를 여기서 기다리면 느린 한 건이 뒤따르는 모든 알림을 지연시키므로
+        // 재생 준비는 별도 task로 넘긴다.
+        let shouldAutoPlay = PingAutoPlayPreference.shouldAutoPlay(
+            messageCreatedAt: message.createdAt,
+            appStartedAt: appStartTime
+        )
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            guard await self.playbackVideoCache.prefetch(message) != nil else { return }
+            if shouldAutoPlay {
+                self.playMessage(messageId: id, isAutoPlay: true)
+            }
+        }
+    }
+
+    /// Realtime INSERT 신호를 받으면 폴링 주기를 기다리지 않고 곧바로 읽어 온다.
+    private func fetchIncomingVideosNow() {
+        guard let uid = appState.currentUser?.id else { return }
+        incomingVideoPokeTask?.cancel()
+        incomingVideoPokeTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            do {
+                for message in try await self.messageService.incomingMessages() {
+                    if Task.isCancelled { return }
+                    await self.deliverIncomingVideo(message, uid: uid)
                 }
+            } catch {
+                NSLog("Realtime incoming video fetch failed: \(error)")
             }
         }
     }
@@ -1018,6 +1050,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @MainActor
     private func handleChatRealtimeEvent(_ event: ChatRealtimeService.Event) {
+        if case .incomingVideo = event {
+            fetchIncomingVideosNow()
+            return
+        }
         guard case .chatInserted(let msg) = event else { return }
         guard msg.senderUid != appState.currentUser?.id else { return }
         guard let id = msg.id, !notifiedChatMessageIds.contains(id) else { return }

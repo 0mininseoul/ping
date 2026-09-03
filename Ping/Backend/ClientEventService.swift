@@ -42,7 +42,11 @@ final class ClientEventService {
 /// 진단 이벤트가 폭주하면 Free 플랜 DB가 통째로 잠긴다. 연결 상태 이벤트는 1건이 아니라
 /// 추세만 필요하므로 간격을 두고, 어떤 이벤트든 세션당 상한을 둬서 재발을 막는다.
 struct ClientEventThrottle {
-    static let diagnosticEvents: Set<String> = ["realtime_disconnected", "realtime_reconnected"]
+    static let diagnosticEvents: Set<String> = [
+        "realtime_disconnected",
+        "realtime_reconnected",
+        "realtime_connected"
+    ]
     static let diagnosticInterval: TimeInterval = 15 * 60
     static let sessionCap = 200
 

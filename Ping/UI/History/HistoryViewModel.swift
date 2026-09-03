@@ -178,6 +178,10 @@ final class HistoryViewModel: ObservableObject {
             groups = Self.groupTimelineByDay(videos: loadedVideos, chats: loadedChats, calendar: .current)
         case .reactionChanged:
             Task { await refreshReactions() }
+        case .incomingVideo:
+            // 영상 수신은 AppDelegate가 알림·자동 재생으로 처리한다. 타임라인은
+            // 룸을 다시 열거나 다음 로드에서 반영된다.
+            break
         }
     }
 

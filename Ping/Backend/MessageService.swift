@@ -84,6 +84,12 @@ final class MessageService {
         }
     }
 
+    /// Realtime 신호를 받았을 때 폴링 주기를 기다리지 않고 한 번 읽는다.
+    func incomingMessages() async throws -> [VideoMessage] {
+        let messages: [VideoMessage] = try await client.rpcArray("ping_incoming_messages")
+        return messages.sorted(by: Self.messageSortStatic)
+    }
+
     func observeIncoming(uid: String) -> AsyncStream<VideoMessage> {
         let client = self.client
         return AsyncStream { continuation in

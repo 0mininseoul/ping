@@ -49,6 +49,7 @@
 		2E6412BD4860FB69C0B3C49A /* DesignSystemContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6157E3107FE54D68F65EFCB /* DesignSystemContractTests.swift */; };
 		2F01792327B781BEF63AC173 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2AF4160B3B74FDD3CA18261B /* Assets.xcassets */; };
 		315501BEACA5034EC49BB7B3 /* InviteLinkContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CC9A5C9C5BA8FF0D9D30E0A /* InviteLinkContractTests.swift */; };
+		3722A719001508C27DD3F644 /* RealtimeDeliveryContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE1AE1184DF56D5F50BC10D1 /* RealtimeDeliveryContractTests.swift */; };
 		385227B9524A34105FB11714 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00EDA916E26BEAF2BAA3A0F3 /* NotificationService.swift */; };
 		39B71BEC21891E73BA4FCB96 /* PingMobileTimestampRevealContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0546AA276FA90796D5CD11E /* PingMobileTimestampRevealContractTests.swift */; };
 		3A42A12F85CF34A4D5F2F7CD /* OnboardingWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 050A0147A7508D00A8E2DE3B /* OnboardingWindow.swift */; };
@@ -167,6 +168,7 @@
 		CBA9098946084A74F1DDD04C /* CleanupService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 196AE189C92F647078653279 /* CleanupService.swift */; };
 		CC5A2067962877ECD13A30B2 /* ScreenFaceLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 327FC4862D3451ACBA1490B2 /* ScreenFaceLayout.swift */; };
 		CD48671985ADE8C6B4831F9B /* LocalArchive.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB469BD2ECF2AC4459C1A4D1 /* LocalArchive.swift */; };
+		CE3942642B0B92537357BCAB /* RealtimeEndpoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06E1751DAC8194F64B6199E8 /* RealtimeEndpoint.swift */; };
 		CE8B3DB276BFE8D087DEEFB5 /* PingDesign.swift in Sources */ = {isa = PBXBuildFile; fileRef = C56CBACCB04189EC83BDD330 /* PingDesign.swift */; };
 		D12F7E997BB6376FEF3F220D /* CameraPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 880D2B3F583FCC9102608E19 /* CameraPreviewView.swift */; };
 		D145DD48FDB755F20A1C5A99 /* CameraStartupContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B156E510EB6A9724929971C1 /* CameraStartupContractTests.swift */; };
@@ -281,6 +283,7 @@
 		050A0147A7508D00A8E2DE3B /* OnboardingWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingWindow.swift; sourceTree = "<group>"; };
 		05A1A2EA9F9A191DE3263C29 /* OnboardingFlowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlowTests.swift; sourceTree = "<group>"; };
 		06B4B9E0137AD6A34F151BF2 /* VideoRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoRecorder.swift; sourceTree = "<group>"; };
+		06E1751DAC8194F64B6199E8 /* RealtimeEndpoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealtimeEndpoint.swift; sourceTree = "<group>"; };
 		0C732B3F624FC27A02EBFF2D /* DevicePairingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevicePairingView.swift; sourceTree = "<group>"; };
 		0DB8EE7896F96DFAC0EFCA86 /* ScreenCoordinatesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenCoordinatesTests.swift; sourceTree = "<group>"; };
 		11AD29C27BBFCA0ECA929B41 /* PingMobileThreadInteractionsContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PingMobileThreadInteractionsContractTests.swift; sourceTree = "<group>"; };
@@ -471,6 +474,7 @@
 		FA17BAFB8C514438C7961E5F /* VideoRecordingContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoRecordingContractTests.swift; sourceTree = "<group>"; };
 		FCE7247150967CBCEC6BEFF3 /* SelectableTextLayoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectableTextLayoutTests.swift; sourceTree = "<group>"; };
 		FD69BFAD0704FB61C435A68E /* InvitationCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvitationCard.swift; sourceTree = "<group>"; };
+		FE1AE1184DF56D5F50BC10D1 /* RealtimeDeliveryContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealtimeDeliveryContractTests.swift; sourceTree = "<group>"; };
 		FE28695E12B3BFE879774504 /* LocalSavePermissionContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalSavePermissionContractTests.swift; sourceTree = "<group>"; };
 		FFCF08C61ECD845F231DFFE4 /* LocalNotificationCenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalNotificationCenter.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -632,6 +636,7 @@
 				5E744CF82AF7E6266CD82F92 /* InvitationService.swift */,
 				E8EEA4E1E7817FF473236F52 /* MessageService.swift */,
 				5ED8738899801C68C4659B20 /* ReactionService.swift */,
+				06E1751DAC8194F64B6199E8 /* RealtimeEndpoint.swift */,
 				F7F514D66CD0403721851CB6 /* RealtimeSubscriptionPlan.swift */,
 				5BB81E537D50111710D5B182 /* RoomService.swift */,
 				0323B3DFE22413AC6BB3627D /* StorageService.swift */,
@@ -841,6 +846,7 @@
 				DF791350460B22AC63D0CE32 /* PlaybackPrefetchContractTests.swift */,
 				C9E86C435BB8D970DD2B0A5E /* PlaybackVideoCacheTests.swift */,
 				B5D3DB5C2FE7FCBB66A9C92D /* ReactionPersistenceContractTests.swift */,
+				FE1AE1184DF56D5F50BC10D1 /* RealtimeDeliveryContractTests.swift */,
 				F36968515B5CE5927A2F3AF8 /* RealtimeSubscriptionPlanTests.swift */,
 				6BB8B40BB61BAE16EB12E239 /* ReleaseVersionContractTests.swift */,
 				186228D198F99431A3E1EBCE /* RoomCapacityContractTests.swift */,
@@ -1359,6 +1365,7 @@
 				489FD8469EFD7A09256A8F54 /* PlaybackPrefetchContractTests.swift in Sources */,
 				D36293AF38141A9F5286577E /* PlaybackVideoCacheTests.swift in Sources */,
 				EE1A8480D0A1A17293759871 /* ReactionPersistenceContractTests.swift in Sources */,
+				3722A719001508C27DD3F644 /* RealtimeDeliveryContractTests.swift in Sources */,
 				7AEF0ED392AB716EAEA45F31 /* RealtimeSubscriptionPlanTests.swift in Sources */,
 				00F43118BC5391A2FE1ABD0C /* ReleaseVersionContractTests.swift in Sources */,
 				0C63FD5926C2755B5048FA20 /* RoomCapacityContractTests.swift in Sources */,
@@ -1455,6 +1462,7 @@
 				F9F01F4FE990F1A34D5E5FCF /* RainbowBorder.swift in Sources */,
 				9417A23D794D6424D2530EB3 /* ReactionPickerView.swift in Sources */,
 				BF23CABA33619C05D34368D9 /* ReactionService.swift in Sources */,
+				CE3942642B0B92537357BCAB /* RealtimeEndpoint.swift in Sources */,
 				7F873A2296C4A935895AEAAB /* RealtimeSubscriptionPlan.swift in Sources */,
 				13BB58129EF1392D96B3753A /* RoomDetailView.swift in Sources */,
 				55EE1904D3FFDC0BCA14BB78 /* RoomLimits.swift in Sources */,
@@ -1763,7 +1771,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 78;
+				CURRENT_PROJECT_VERSION = 79;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -1783,7 +1791,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 0.3.66;
+				MARKETING_VERSION = 0.3.67;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -1857,7 +1865,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 78;
+				CURRENT_PROJECT_VERSION = 79;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1871,7 +1879,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 0.3.66;
+				MARKETING_VERSION = 0.3.67;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				OTHER_CODE_SIGN_FLAGS = "--requirements '=designated => identifier \"com.youngminpark.ping.Ping\"'";

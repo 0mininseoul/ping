@@ -25,6 +25,9 @@ final class ChatRealtimeService: ObservableObject {
     enum Event {
         case chatInserted(ChatMessage)
         case chatDeleted(messageId: String, roomId: String)
+        /// 나에게 온 영상이 방금 만들어졌다. 페이로드는 싣지 않는다 —
+        /// 수신자는 기존 RPC로 다시 읽어 중복 제거와 RLS를 그대로 태운다.
+        case incomingVideo
         case reactionChanged(
             targetKind: MessageReaction.TargetKind,
             targetId: String,
@@ -56,6 +59,11 @@ final class ChatRealtimeService: ObservableObject {
     // Polling path (fallback)
     private var pollingTask: Task<Void, Never>?
     private var seenChatIds: Set<String> = []
+    /// 폴백 폴링이 시작된 시각. 이보다 오래된 채팅은 조용히 기록만 하고 알리지 않는다.
+    /// 그러지 않으면 실행할 때마다 최근 20건이 "새 메시지"로 재생돼 알림이 폭주하고,
+    /// macOS가 그 폭주를 배너 없이 알림 센터로 흘려보낸다(2026-09-03 확인).
+    /// 밀린 채팅은 AppDelegate의 캐치업이 룸당 1건으로 묶어 알린다.
+    private var pollingBaseline: Date?
 
     // MARK: Init
 
@@ -86,6 +94,7 @@ final class ChatRealtimeService: ObservableObject {
 
     func subscribe(
         roomIds: [String],
+        uid: String?,
         supabaseURL: URL,
         anonKey: String,
         accessToken: String?
@@ -112,6 +121,7 @@ final class ChatRealtimeService: ObservableObject {
         // Try Realtime first; fall back to polling on any failure.
         let didConnect = await tryRealtime(
             roomIds: roomIds,
+            uid: uid,
             supabaseURL: supabaseURL,
             anonKey: anonKey,
             accessToken: accessToken
@@ -155,19 +165,13 @@ final class ChatRealtimeService: ObservableObject {
 
     private func tryRealtime(
         roomIds: [String],
+        uid: String?,
         supabaseURL: URL,
         anonKey: String,
         accessToken: String?
     ) async -> Bool {
-        // Build the Realtime endpoint from the Supabase project URL.
         // Supabase Realtime lives at <project-url>/realtime/v1.
-        guard var components = URLComponents(url: supabaseURL, resolvingAgainstBaseURL: false) else {
-            return false
-        }
-        components.path = (components.path as NSString)
-            .appendingPathComponent("realtime/v1")
-            .replacingOccurrences(of: "//", with: "/")
-        guard let realtimeURL = components.url else { return false }
+        let realtimeURL = RealtimeEndpoint.socketURL(for: supabaseURL)
 
         let capturedToken = accessToken
         var headers: [String: String] = ["apikey": anonKey]
@@ -266,7 +270,30 @@ final class ChatRealtimeService: ObservableObject {
             try? await channel.subscribeWithError()
         }
 
+        // 나에게 오는 영상은 룸이 아니라 수신자로 거른다. 페이로드는 쓰지 않고
+        // "지금 확인하라"는 신호로만 쓴다 — 중복 제거와 RLS는 기존 RPC 경로가 맡는다.
+        if let uid {
+            let videoChannel = client.channel("incoming-video-\(uid)")
+            let weakVideoSelf = WeakBox(self)
+            let videoSub = videoChannel.onPostgresChange(
+                InsertAction.self,
+                schema: "public",
+                table: "messages",
+                filter: "receiver_uid=eq.\(uid)"
+            ) { (_: InsertAction) in
+                Task { @MainActor in
+                    weakVideoSelf.value?.lastEvent = .incomingVideo
+                }
+            }
+            realtimeSubscriptions.append(videoSub)
+            realtimeChannels.append(videoChannel)
+            try? await videoChannel.subscribeWithError()
+        }
+
         connectionState = .connected
+        // 연결 성공을 남겨야 원격에서 실제로 붙었는지 확인할 수 있다.
+        // 실패 이벤트의 부재만으로는 판단이 안 된다.
+        ClientEventService.shared.log("realtime_connected")
 
         // Monitor client status to detect disconnects and fall back to polling.
         connectionGeneration &+= 1
@@ -375,6 +402,7 @@ final class ChatRealtimeService: ObservableObject {
 
     private func startPolling() {
         pollingTask?.cancel()
+        pollingBaseline = Date()
         let chatSvc = chatService
         pollingTask = Task.detached(priority: .utility) { [weak self] in
             while !Task.isCancelled {
@@ -394,6 +422,7 @@ final class ChatRealtimeService: ObservableObject {
                             for msg in messages.reversed() {
                                 guard let id = msg.id, !self.seenChatIds.contains(id) else { continue }
                                 self.seenChatIds.insert(id)
+                                guard self.isFreshForPolling(msg) else { continue }
                                 self.lastEvent = .chatInserted(msg)
                             }
                         }
@@ -402,6 +431,19 @@ final class ChatRealtimeService: ObservableObject {
                 try? await Task.sleep(nanoseconds: 10_000_000_000) // 10 s
             }
         }
+    }
+}
+
+extension ChatRealtimeService {
+    /// 폴링 시작 이후에 만들어진 채팅만 알림 대상이다.
+    func isFreshForPolling(_ message: ChatMessage) -> Bool {
+        Self.isFresh(messageCreatedAt: message.createdAt, pollingStartedAt: pollingBaseline)
+    }
+
+    static func isFresh(messageCreatedAt: Date?, pollingStartedAt: Date?) -> Bool {
+        guard let pollingStartedAt else { return true }
+        guard let messageCreatedAt else { return false }
+        return messageCreatedAt >= pollingStartedAt
     }
 }
 
