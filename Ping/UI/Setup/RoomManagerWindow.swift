@@ -261,7 +261,10 @@ struct RoomManagerView: View {
         }
         .onChange(of: selectedRoomId) { newValue in
             appState.lastSelectedRoomId = newValue
-            if let newValue {
+            // 앱이 앞에 없을 때 일어나는 자동 선택 변경으로 알림을 지우면 안 된다.
+            // 룸 창을 열어둔 채 다른 앱을 쓰는 동안 새 채팅이 오면, 방금 올라간 알림이
+            // 1~2초 뒤 이 경로로 지워져 사용자는 아무것도 못 봤다.
+            if let newValue, NSApp.isActive {
                 LocalNotificationCenter.shared.clearDeliveredNotifications(roomId: newValue)
             }
             updateScreenFaceExpansion(anchor: nil, context: nil)

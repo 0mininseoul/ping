@@ -148,6 +148,18 @@ final class ChatNotificationHandlingContractTests: XCTestCase {
         XCTAssertFalse(chatBody.contains("content.sound = .default"))
     }
 
+    /// 회귀 방지: 룸 창을 열어둔 채 다른 앱을 쓰는 동안 새 채팅이 오면, 방금 올라간
+    /// 알림이 룸 선택 변경 경로로 1~2초 뒤 지워져 사용자는 아무것도 못 봤다.
+    /// 계측(chat_notify_decision)은 suppressed=false였는데 알림이 사라진 이유가 이것이다.
+    func testBackgroundRoomSelectionDoesNotClearFreshNotifications() throws {
+        let source = try readRepositoryFile("Ping/UI/Setup/RoomManagerWindow.swift")
+
+        XCTAssertTrue(source.contains("if let newValue, NSApp.isActive {"))
+        XCTAssertFalse(
+            source.contains("if let newValue {\n                LocalNotificationCenter.shared.clearDeliveredNotifications")
+        )
+    }
+
     /// 이 결정은 원격에서 관측할 수 없어 여러 차례 오진했다.
     func testTheNotifyDecisionIsInstrumented() throws {
         let source = try readRepositoryFile("Ping/AppDelegate.swift")
