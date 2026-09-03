@@ -11,19 +11,20 @@ enum RealtimeSubscriptionPlan: Equatable {
     /// 구독할 룸이 없다.
     case unsubscribe
 
-    /// 초기 연결에 실패해 살아 있는 클라이언트가 없을 때 Realtime을 다시 시도하는 간격.
+    /// 연결이 죽은 상태에서 Realtime을 다시 시도하는 최소 간격.
     static let retryInterval: TimeInterval = 60
 
     /// - Parameters:
-    ///   - hasLiveClient: 클라이언트가 남아 있으면 스스로 재연결하므로 폴링 폴백 중에도
-    ///     새로 붙을 필요가 없다. 초기 연결 실패는 클라이언트를 남기지 않는다.
-    ///   - lastAttemptAt: 마지막 구독 시도 시각. 클라이언트 없이 폴링만 도는 상태에서
-    ///     재시도 간격을 재는 기준이다.
+    ///   - isSocketConnected: 클라이언트 **객체**가 아니라 실제 소켓 상태다. 객체가 살아
+    ///     있다는 사실은 연결을 보장하지 않는다. 객체 유무로 판단했던 0.3.66에서는 한 번
+    ///     끊기면 영구히 폴링에 머물렀다(자동 재연결을 믿었지만 만료 토큰으로는 복구되지
+    ///     않았다).
+    ///   - lastAttemptAt: 마지막 구독 시도 시각. 재시도 간격을 재는 기준이다.
     static func plan(
         requestedRoomIds: Set<String>,
         subscribedRoomIds: Set<String>,
         state: ChatRealtimeService.ConnectionState,
-        hasLiveClient: Bool,
+        isSocketConnected: Bool,
         lastAttemptAt: Date?,
         now: Date = Date(),
         retryInterval: TimeInterval = RealtimeSubscriptionPlan.retryInterval
@@ -38,18 +39,22 @@ enum RealtimeSubscriptionPlan: Equatable {
             return .resubscribe
         }
 
+        func retryIfDue() -> RealtimeSubscriptionPlan {
+            guard let lastAttemptAt else { return .resubscribe }
+            return now.timeIntervalSince(lastAttemptAt) >= retryInterval ? .resubscribe : .reuse
+        }
+
         switch state {
-        case .connected, .connecting:
+        case .connecting:
             return .reuse
         case .disconnected:
             return .resubscribe
+        case .connected:
+            // 상태 모니터가 놓친 조용한 종료를 여기서 잡는다.
+            return isSocketConnected ? .reuse : retryIfDue()
         case .fallbackPolling:
-            if hasLiveClient {
-                // 클라이언트가 살아 있으면 재연결과 상태 모니터가 복구를 맡는다.
-                return .reuse
-            }
-            guard let lastAttemptAt else { return .resubscribe }
-            return now.timeIntervalSince(lastAttemptAt) >= retryInterval ? .resubscribe : .reuse
+            // 폴백은 임시 우회여야 한다. 소켓이 살아 있지 않으면 간격을 지켜 다시 붙는다.
+            return isSocketConnected ? .reuse : retryIfDue()
         }
     }
 }

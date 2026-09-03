@@ -9,14 +9,14 @@ final class RealtimeSubscriptionPlanTests: XCTestCase {
         requested: Set<String>? = nil,
         subscribed: Set<String>? = nil,
         state: ChatRealtimeService.ConnectionState,
-        hasLiveClient: Bool = true,
+        isSocketConnected: Bool = true,
         lastAttemptAt: Date? = nil
     ) -> RealtimeSubscriptionPlan {
         RealtimeSubscriptionPlan.plan(
             requestedRoomIds: requested ?? rooms,
             subscribedRoomIds: subscribed ?? rooms,
             state: state,
-            hasLiveClient: hasLiveClient,
+            isSocketConnected: isSocketConnected,
             lastAttemptAt: lastAttemptAt ?? now,
             now: now
         )
@@ -32,29 +32,42 @@ final class RealtimeSubscriptionPlanTests: XCTestCase {
         XCTAssertEqual(plan(state: .connecting), .reuse)
     }
 
-    /// 클라이언트가 살아 있으면 재연결과 상태 모니터가 복구를 맡는다.
-    func testPollingFallbackWithALiveClientIsReused() {
-        XCTAssertEqual(plan(state: .fallbackPolling, hasLiveClient: true), .reuse)
+    /// 소켓이 실제로 붙어 있으면 굳이 다시 붙지 않는다.
+    func testPollingFallbackWithALiveSocketIsReused() {
+        XCTAssertEqual(plan(state: .fallbackPolling, isSocketConnected: true), .reuse)
     }
 
-    /// 초기 연결 실패는 클라이언트를 남기지 않으므로 스스로 복구되지 않는다.
-    /// 다만 10초마다가 아니라 재시도 간격을 지켜서 다시 붙는다.
-    func testPollingFallbackWithoutAClientWaitsForTheRetryInterval() {
+    /// 회귀 방지: 0.3.66은 클라이언트 **객체**가 남아 있으면 자동 재연결을 믿고
+    /// 아무것도 하지 않았다. 만료된 토큰으로는 복구되지 않아 한 번 끊기면 영구히
+    /// 10초 폴링에 머물렀다(영상 전달이 0.7초 → 10.1초로 되돌아감).
+    func testPollingFallbackWithADeadSocketRetriesAfterTheInterval() {
         XCTAssertEqual(
             plan(
                 state: .fallbackPolling,
-                hasLiveClient: false,
+                isSocketConnected: false,
+                lastAttemptAt: now.addingTimeInterval(-RealtimeSubscriptionPlan.retryInterval - 1)
+            ),
+            .resubscribe
+        )
+    }
+
+    func testPollingFallbackWithADeadSocketWaitsForTheRetryInterval() {
+        XCTAssertEqual(
+            plan(
+                state: .fallbackPolling,
+                isSocketConnected: false,
                 lastAttemptAt: now.addingTimeInterval(-10)
             ),
             .reuse
         )
     }
 
-    func testPollingFallbackWithoutAClientRetriesAfterTheInterval() {
+    /// 상태 모니터가 조용한 종료를 놓쳐 .connected로 남아 있어도 복구한다.
+    func testConnectedStateWithADeadSocketRetriesAfterTheInterval() {
         XCTAssertEqual(
             plan(
-                state: .fallbackPolling,
-                hasLiveClient: false,
+                state: .connected,
+                isSocketConnected: false,
                 lastAttemptAt: now.addingTimeInterval(-RealtimeSubscriptionPlan.retryInterval - 1)
             ),
             .resubscribe
@@ -87,7 +100,7 @@ final class RealtimeSubscriptionPlanTests: XCTestCase {
     /// 룸이 하나도 없는 계정에서 10초마다 해지를 반복하지 않는다.
     func testAlreadyIdleStaysIdle() {
         XCTAssertEqual(
-            plan(requested: [], subscribed: [], state: .disconnected, hasLiveClient: false),
+            plan(requested: [], subscribed: [], state: .disconnected, isSocketConnected: false),
             .reuse
         )
     }
@@ -111,6 +124,15 @@ final class RealtimeSubscriptionPlanTests: XCTestCase {
         XCTAssertTrue(source.contains("realtimeMonitorTask?.cancel()"))
         XCTAssertTrue(source.contains("await client.disconnect()"))
         XCTAssertTrue(source.contains("connectionGeneration &+= 1"))
+    }
+
+    /// 회귀 방지: 토큰을 캡처해 두면 jwt_exp(1시간) 뒤 재인증이 실패해 소켓이 닫히고,
+    /// 재연결도 같은 만료 토큰을 쓰므로 영구히 복구되지 않는다.
+    func testRealtimeReadsTheAccessTokenLazily() throws {
+        let source = try readRepositoryFile("Ping/Backend/ChatRealtimeService.swift")
+
+        XCTAssertTrue(source.contains("await SupabaseClient.shared.currentAccessToken()"))
+        XCTAssertFalse(source.contains("return { sendableTok }"))
     }
 
     /// 룸 폴링이 같은 목록을 흘릴 때 세션 토큰 조회까지 건너뛴다.

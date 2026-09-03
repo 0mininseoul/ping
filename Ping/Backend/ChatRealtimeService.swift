@@ -87,7 +87,7 @@ final class ChatRealtimeService: ObservableObject {
             requestedRoomIds: requested,
             subscribedRoomIds: subscribedRoomIds,
             state: connectionState,
-            hasLiveClient: realtimeClient != nil,
+            isSocketConnected: realtimeClient?.status == .connected,
             lastAttemptAt: lastSubscribeAttemptAt
         )
     }
@@ -179,10 +179,11 @@ final class ChatRealtimeService: ObservableObject {
             headers["Authorization"] = "Bearer \(token)"
         }
 
-        // Build a @Sendable closure for the access token.
-        let tokenClosure: (@Sendable () async throws -> String?)? = capturedToken.map { tok in
-            let sendableTok = tok
-            return { sendableTok }
+        // 토큰을 캡처해 두면 안 된다. access token은 1시간(jwt_exp=3600)이면 만료되고
+        // Realtime은 이 클로저로 주기적으로 재인증한다. 스냅샷을 돌려주면 만료된 토큰으로
+        // 재인증해 서버가 소켓을 닫고, 재연결도 같은 토큰이라 영구히 실패한다.
+        let tokenClosure: (@Sendable () async throws -> String?)? = {
+            await SupabaseClient.shared.currentAccessToken()
         }
 
         let options = RealtimeClientOptions(
