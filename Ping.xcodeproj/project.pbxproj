@@ -106,6 +106,7 @@
 		6FC1B535DD12B36BA7721FDD /* GlassPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCBB58248AD85A5BB4137D3F /* GlassPanel.swift */; };
 		7035C7FE65C8AC75092F13FB /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 124F74B5C81D2AD5BA394E96 /* KeyboardShortcuts */; };
 		71727BE893C91EFA23DD7F85 /* DesktopPresenceContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96B89FB193F948DD67E28BD3 /* DesktopPresenceContractTests.swift */; };
+		76CBF506EB56E81D81CB237B /* RoomFocusPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31574668BC358EDFDA617958 /* RoomFocusPolicy.swift */; };
 		776C909E046ADCF36EFB3CB8 /* UserService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 260A034212C7DCDAE4B05B4E /* UserService.swift */; };
 		784474049D097C6E7F6C56A7 /* DeviceHandoffPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = 311483C170DA8C628A197596 /* DeviceHandoffPayload.swift */; };
 		7AEF0ED392AB716EAEA45F31 /* RealtimeSubscriptionPlanTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F36968515B5CE5927A2F3AF8 /* RealtimeSubscriptionPlanTests.swift */; };
@@ -192,6 +193,7 @@
 		E5098E32A2ACA9ED9F8A2939 /* RoomService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BB81E537D50111710D5B182 /* RoomService.swift */; };
 		E78C9B4431F062FB15266922 /* ScreenCapturePermission.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE35E9FFD55B61D62E4BE8EB /* ScreenCapturePermission.swift */; };
 		E88C396E9E50FA27A25162ED /* InviteLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0194505B84DC32C2BA700F6C /* InviteLink.swift */; };
+		EBEDBF653FC0B25E20B9FBFF /* RoomFocusPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCE092F452DF1B3424ADA5D3 /* RoomFocusPolicyTests.swift */; };
 		ECF103DDCC0A6C69976373A1 /* DesktopPresenceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 002D151B2D97D19630FF11D6 /* DesktopPresenceService.swift */; };
 		ED2A3EB3872996158DA65761 /* MessageRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FD73952C51CA80616FFA8E6 /* MessageRowView.swift */; };
 		EE1A8480D0A1A17293759871 /* ReactionPersistenceContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5D3DB5C2FE7FCBB66A9C92D /* ReactionPersistenceContractTests.swift */; };
@@ -311,6 +313,7 @@
 		307DEEFD9006672888B273CE /* WatchSessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSessionStore.swift; sourceTree = "<group>"; };
 		311483C170DA8C628A197596 /* DeviceHandoffPayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceHandoffPayload.swift; sourceTree = "<group>"; };
 		31560A6E274345958FA506F7 /* com.youngminpark.ping.Ping.keepalive.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = com.youngminpark.ping.Ping.keepalive.plist; sourceTree = "<group>"; };
+		31574668BC358EDFDA617958 /* RoomFocusPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomFocusPolicy.swift; sourceTree = "<group>"; };
 		327FC4862D3451ACBA1490B2 /* ScreenFaceLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenFaceLayout.swift; sourceTree = "<group>"; };
 		35F242A1F9AF07C6AE883A24 /* ExpandedPlaybackWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpandedPlaybackWindow.swift; sourceTree = "<group>"; };
 		36410F2A63B9906DC8C06A8B /* PushRegistrar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushRegistrar.swift; sourceTree = "<group>"; };
@@ -427,6 +430,7 @@
 		BA897CE96651014C4A14D9FF /* WindowPositioningTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowPositioningTests.swift; sourceTree = "<group>"; };
 		BC96E31CE0581FC30A97E77D /* SelfCaptureFilterPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelfCaptureFilterPolicy.swift; sourceTree = "<group>"; };
 		BCBB58248AD85A5BB4137D3F /* GlassPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassPanel.swift; sourceTree = "<group>"; };
+		BCE092F452DF1B3424ADA5D3 /* RoomFocusPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomFocusPolicyTests.swift; sourceTree = "<group>"; };
 		BFA1291A4824203978317290 /* AccountsFileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountsFileTests.swift; sourceTree = "<group>"; };
 		C0B62D708A5A8B647FB677E8 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		C0F79541C73EA6A1AA177880 /* UpdaterController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdaterController.swift; sourceTree = "<group>"; };
@@ -536,6 +540,7 @@
 				DDF74D004DFD2F009A5DA36B /* Models.swift */,
 				8F8F7409AE1AFA053895230D /* MultiAccountGate.swift */,
 				62D2F7B67DB16ADA6741BD44 /* PingError.swift */,
+				31574668BC358EDFDA617958 /* RoomFocusPolicy.swift */,
 				E4C0907AE314021D2DFEC882 /* RoomLimits.swift */,
 				F760D624DE03E352A8514854 /* ScreenCoordinates.swift */,
 				E917296A7C45B0DEF90EEB1C /* SearchableText.swift */,
@@ -850,6 +855,7 @@
 				F36968515B5CE5927A2F3AF8 /* RealtimeSubscriptionPlanTests.swift */,
 				6BB8B40BB61BAE16EB12E239 /* ReleaseVersionContractTests.swift */,
 				186228D198F99431A3E1EBCE /* RoomCapacityContractTests.swift */,
+				BCE092F452DF1B3424ADA5D3 /* RoomFocusPolicyTests.swift */,
 				90A916C7BE813E0B77E80E22 /* RoomManagerUXContractTests.swift */,
 				2D52664C4393A5DF13065298 /* RoomOrderingContractTests.swift */,
 				B9C7B22C9892024A2FA421F5 /* RoomPollingContractTests.swift */,
@@ -1369,6 +1375,7 @@
 				7AEF0ED392AB716EAEA45F31 /* RealtimeSubscriptionPlanTests.swift in Sources */,
 				00F43118BC5391A2FE1ABD0C /* ReleaseVersionContractTests.swift in Sources */,
 				0C63FD5926C2755B5048FA20 /* RoomCapacityContractTests.swift in Sources */,
+				EBEDBF653FC0B25E20B9FBFF /* RoomFocusPolicyTests.swift in Sources */,
 				20190C7134FAB36ACA18CBBC /* RoomManagerUXContractTests.swift in Sources */,
 				3CDBE2E32C24C4B30FEC1870 /* RoomOrderingContractTests.swift in Sources */,
 				1A97477D3EE511BE6C924DB3 /* RoomPollingContractTests.swift in Sources */,
@@ -1465,6 +1472,7 @@
 				CE3942642B0B92537357BCAB /* RealtimeEndpoint.swift in Sources */,
 				7F873A2296C4A935895AEAAB /* RealtimeSubscriptionPlan.swift in Sources */,
 				13BB58129EF1392D96B3753A /* RoomDetailView.swift in Sources */,
+				76CBF506EB56E81D81CB237B /* RoomFocusPolicy.swift in Sources */,
 				55EE1904D3FFDC0BCA14BB78 /* RoomLimits.swift in Sources */,
 				D94A00EE205AF8CCF9BE4393 /* RoomListView.swift in Sources */,
 				AE0BAABF032564CD75C6AC48 /* RoomManagerWindow.swift in Sources */,

@@ -455,8 +455,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private var visibleRoomIdForPresence: String? {
-        guard let roomManagerWindow, roomManagerWindow.isVisible else { return nil }
-        return appState.lastSelectedRoomId
+        RoomFocusPolicy.activeRoomIdForPresence(
+            appIsActive: NSApp.isActive,
+            roomWindowIsVisible: roomManagerWindow?.isVisible ?? false,
+            lastSelectedRoomId: appState.lastSelectedRoomId
+        )
     }
 
     private func seedVideoNotificationLedgerFromHistoryCache(uid: String) {
@@ -1062,14 +1065,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             notifiedChatMessageIds = Set(notifiedChatMessageIds.suffix(500))
         }
 
-        // Suppress notification if RoomManagerWindow is visible AND that room is selected.
-        let suppressed: Bool = {
-            guard let window = roomManagerWindow, window.isVisible else { return false }
-            return appState.pendingRoomFocusId == msg.roomId
-                || appState.lastSelectedRoomId == msg.roomId
-        }()
+        // 지금 그 룸을 보고 있으면 알리지 않는다. 창이 떠 있다는 것만으로는 부족하다 —
+        // 가려진 창도 isVisible이 true라 알림이 조용히 사라졌다.
+        let isViewingRoom = RoomFocusPolicy.isViewingRoom(
+            roomId: msg.roomId,
+            appIsActive: NSApp.isActive,
+            roomWindowIsVisible: roomManagerWindow?.isVisible ?? false,
+            pendingRoomFocusId: appState.pendingRoomFocusId,
+            lastSelectedRoomId: appState.lastSelectedRoomId
+        )
 
-        if suppressed { return }
+        if isViewingRoom { return }
 
         let roomName = appState.rooms.first(where: { $0.id == msg.roomId })?.name ?? "룸"
         LocalNotificationCenter.shared.notifyIncomingChat(msg, roomName: roomName)
