@@ -20,6 +20,7 @@ struct ThreadView: View {
     @State private var sending = false
     @State private var loadingVideoId: String?
     @State private var playable: PlayableVideo?
+    @State private var imagePreview: ChatImagePreview?
     @StateObject private var thumbnails = ThumbnailStore()
     @State private var timestampRevealOffset: CGFloat = 0
     @State private var replyTarget: ReplyTarget?
@@ -81,6 +82,7 @@ struct ThreadView: View {
         .task { await load() }
         .task { await pollRoomName() }
         .fullScreenCover(item: $playable) { VideoPlayerScreen(video: $0) }
+        .fullScreenCover(item: $imagePreview) { ChatImagePreviewScreen(preview: $0) }
     }
 
     private func timestampRevealRow(for item: ThreadItem) -> some View {
@@ -177,7 +179,13 @@ struct ThreadView: View {
                 }
                 VStack(alignment: mine ? .trailing : .leading, spacing: 6) {
                     if chat.hasImage {
-                        ChatImageAttachmentView(message: chat)
+                        ChatImageAttachmentView(message: chat) { image in
+                            imagePreview = ChatImagePreview(
+                                id: chat.id,
+                                image: image,
+                                fileName: chat.mediaFileName
+                            )
+                        }
                     }
 
                     if !chat.body.isEmpty {
