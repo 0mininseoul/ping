@@ -192,6 +192,18 @@ Day 4 Task 4.3 에서 임시 EmptyView로 윈도우를 만든 뒤 `contentView` 
 ### Supabase 세션 저장과 Keychain 팝업
 앱 런타임의 Supabase Anonymous Auth 세션은 sandboxed Application Support의 `SupabaseSession.json`에 저장한다. ad-hoc 서명 앱을 `/Applications/Ping.app`로 자주 교체하면 기존 Keychain 항목 ACL이 "Ping이 저장된 비밀 정보를 사용하려고 합니다" 승인 팝업을 띄울 수 있으므로, `SupabaseSessionStore`의 자동 load/save/clear 경로에 `SecItem*` 호출을 다시 넣지 마세요. Sparkle appcast 서명용 Keychain 개인키는 별도 개념이다.
 
+### Supabase CLI named profile은 동작하지 않는다 (CLI 2.117.0)
+
+`supabase --profile <name>`은 pinned 이름인 `supabase` 외에는 전부
+`LegacyProfileLoadError: failed to read profile: Unsupported Config Type ""`로 죽는다.
+`~/.supabase/<name>.yaml|toml|json` 어느 형식으로 만들어도 같고, 기존에 있던
+`connectum-admin` 프로필도 마찬가지다. 즉 wrapper의 `PING_SUPABASE_PROFILE` 탈출구는
+현재 쓸 수 없다. 별도 계정으로 붙어야 하면 `.env.local`의 `SUPABASE_ACCESS_TOKEN`을
+export해 CLI를 직접 부르고, **wrapper가 하던 프로젝트 검증을 반드시 손으로 대신하라**:
+`projects list`에서 ref `qxjtprxvjmaxlbtljcjw` / org `nvyhcwxyemylsqjlbdpo` / name `Ping`을
+확인한 뒤에만 `link`/`db push`를 실행할 것. wrapper 자체는 `SUPABASE_ACCESS_TOKEN`이
+export된 셸에서 실행을 거부하므로 두 방식을 한 셸에서 섞지 말 것.
+
 ### Sandbox + 글로벌 단축키
 `KeyboardShortcuts` 는 Sandbox 안에서 동작합니다. 만약 단축키가 안 잡히면 entitlements 의 `com.apple.security.app-sandbox` 를 의심하기 전에 **시스템 설정 → 개인정보 보호 및 보안 → 입력 모니터링** 권한을 먼저 확인하세요.
 

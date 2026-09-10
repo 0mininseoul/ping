@@ -30,6 +30,11 @@ Resources/GoogleService-Info.plist
 firebase-debug.log
 .firebase/
 
+# Secrets — never commit. Supabase PAT는 계정 전체 권한을 가진다.
+.env
+.env.local
+.env.*.local
+
 # Supabase
 Resources/Supabase.plist
 # Windows: bundled backend config is injected at build time from CI secrets.
