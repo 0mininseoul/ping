@@ -134,6 +134,8 @@ struct VideoMessage: Codable, Identifiable, Hashable {
     var captureMode: CaptureMode
     var aspectRatio: Double?
     var allowsLocalSave: Bool
+    /// 자동 얼굴 회신으로 만들어진 메시지. 여기에 또 자동 회신하면 두 맥이 서로를 영원히 찍는다.
+    var isAutoReply: Bool
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -151,6 +153,7 @@ struct VideoMessage: Codable, Identifiable, Hashable {
         case captureMode = "capture_mode"
         case aspectRatio = "aspect_ratio"
         case allowsLocalSave = "allows_local_save"
+        case isAutoReply = "is_auto_reply"
     }
 
     init(from decoder: Decoder) throws {
@@ -170,6 +173,7 @@ struct VideoMessage: Codable, Identifiable, Hashable {
         self.captureMode = try c.decodeIfPresent(CaptureMode.self, forKey: .captureMode) ?? .faceOnly
         self.aspectRatio = try c.decodeIfPresent(Double.self, forKey: .aspectRatio)
         self.allowsLocalSave = try c.decodeIfPresent(Bool.self, forKey: .allowsLocalSave) ?? false
+        self.isAutoReply = try c.decodeIfPresent(Bool.self, forKey: .isAutoReply) ?? false
     }
 
     init(
@@ -187,7 +191,8 @@ struct VideoMessage: Codable, Identifiable, Hashable {
         expiresAt: Date,
         captureMode: CaptureMode = .faceOnly,
         aspectRatio: Double? = nil,
-        allowsLocalSave: Bool = false
+        allowsLocalSave: Bool = false,
+        isAutoReply: Bool = false
     ) {
         self.id = id
         self.roomId = roomId
@@ -204,6 +209,7 @@ struct VideoMessage: Codable, Identifiable, Hashable {
         self.captureMode = captureMode
         self.aspectRatio = aspectRatio
         self.allowsLocalSave = allowsLocalSave
+        self.isAutoReply = isAutoReply
     }
 
     func canBeSavedLocally(by uid: String?) -> Bool {

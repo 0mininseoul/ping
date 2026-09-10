@@ -84,6 +84,42 @@ final class MessageService {
         }
     }
 
+    /// 자동 얼굴 회신은 원 발신자 1명에게만, 받은 룸으로 되돌린다. 전송 대상을 여기서
+    /// 한 명으로 고정하는 것이 루프 차단의 2차 방어다 — 정책에 버그가 나도 팬아웃은 불가능하다.
+    func sendAutoReply(
+        to originalMessage: VideoMessage,
+        localVideoURL: URL,
+        senderUid: String,
+        senderNickname: String
+    ) async throws {
+        let receiverUid = originalMessage.senderUid
+        guard receiverUid != senderUid else { throw PingError.noRecipients }
+
+        let videoId = UUID().uuidString
+        let expiresAt = Date().addingTimeInterval(30 * 24 * 60 * 60)
+        let videoStoragePath = try await storage.uploadVideo(
+            localURL: localVideoURL,
+            senderUid: senderUid,
+            messageId: videoId,
+            authorizedUids: [receiverUid],
+            expiresAt: expiresAt
+        )
+
+        let _: String = try await client.rpcValue("ping_create_message", body: [
+            "room_uuid": originalMessage.roomId,
+            "receiver_uid": receiverUid,
+            "sender_nickname_text": senderNickname,
+            "video_id_text": videoId,
+            "video_url_text": videoStoragePath,
+            "x_ratio": originalMessage.mirrorPosition.xRatio,
+            "y_ratio": originalMessage.mirrorPosition.yRatio,
+            "capture_mode_text": CaptureMode.faceOnly.rawValue,
+            "aspect_ratio_value": 1.0,
+            "allows_local_save_value": LocalArchive.allowRecipientsToSaveMyVideos,
+            "is_auto_reply_value": true
+        ])
+    }
+
     /// Realtime 신호를 받았을 때 폴링 주기를 기다리지 않고 한 번 읽는다.
     func incomingMessages() async throws -> [VideoMessage] {
         let messages: [VideoMessage] = try await client.rpcArray("ping_incoming_messages")

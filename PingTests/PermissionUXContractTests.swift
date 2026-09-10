@@ -74,13 +74,46 @@ final class PermissionUXContractTests: XCTestCase {
         XCTAssertTrue(source.contains("알림 허용 창이 보이지 않으면 시스템 설정 > 알림에서 Ping을 켜주세요."))
     }
 
+    /// 신규 유저는 온보딩 권한 단계에서만 물어야 한다 — 런치 셋업이 프롬프트를 먼저
+    /// 소모하면 맥락 없는 팝업이 뜬다. 등록(카테고리)만 하고 요청은 하지 않는다.
     func testAppLaunchDoesNotConsumeNotificationPermissionPromptBeforeOnboarding() throws {
         let appDelegateSource = try readSourceFile("Ping/AppDelegate.swift")
         let notificationSource = try readSourceFile("Ping/Notifications/LocalNotificationCenter.swift")
 
         XCTAssertTrue(notificationSource.contains("func configure()"))
         XCTAssertTrue(appDelegateSource.contains("LocalNotificationCenter.shared.configure()"))
-        XCTAssertFalse(appDelegateSource.contains("LocalNotificationCenter.shared.requestAuthorization()"))
+
+        let setupBody = try XCTUnwrap(Self.functionBody(named: "setupNotifications", in: appDelegateSource))
+        XCTAssertFalse(setupBody.contains("requestAuthorization"))
+    }
+
+    /// 계정이 이미 있으면 온보딩이 아예 뜨지 않는다. 그 경로에 복구가 없으면 권한이 영원히
+    /// notDetermined로 남고, macOS는 그런 앱을 알림 레지스트리에 등록조차 하지 않아
+    /// 시스템 설정 › 알림 목록에서 Ping이 통째로 사라진다 — 사용자가 되돌릴 방법이 없다.
+    func testExistingAccountsRecoverNotificationPermissionOnboardingNeverAskedFor() throws {
+        let appDelegateSource = try readSourceFile("Ping/AppDelegate.swift")
+
+        XCTAssertTrue(appDelegateSource.contains("await recoverNotificationPermissionIfNeeded()"))
+        XCTAssertTrue(
+            appDelegateSource.contains("NotificationPermissionRecovery.shouldRequestAuthorization(for: status)")
+        )
+    }
+
+    func testSettingsLetTheUserTurnNotificationsBackOnWithoutReinstalling() throws {
+        let source = try readSourceFile("Ping/UI/Setup/SettingsScene.swift")
+
+        XCTAssertTrue(source.contains("\"알림 권한\""))
+        XCTAssertTrue(source.contains("\"알림 켜기\""))
+        XCTAssertTrue(source.contains("NotificationPermissionRecovery.action(for: notificationPermissionStatus)"))
+    }
+
+    private static func functionBody(named name: String, in source: String) -> String? {
+        guard let start = source.range(of: "func \(name)(") else { return nil }
+        let rest = source[start.upperBound...]
+        guard let end = rest.range(of: "\n    private func ") ?? rest.range(of: "\n    func ") else {
+            return String(rest)
+        }
+        return String(rest[..<end.lowerBound])
     }
 
     func testScreenRecordingPermissionPassiveCheckDoesNotTriggerScreenCapturePrompt() throws {

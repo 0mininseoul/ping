@@ -1,6 +1,7 @@
 import AppKit
 import KeyboardShortcuts
 import SwiftUI
+import UserNotifications
 
 @MainActor
 final class SettingsWindow: NSWindow {
@@ -75,6 +76,11 @@ private struct GeneralSettingsView: View {
     @AppStorage(PingPreferenceKeys.autoPlayReceivedVideo)
     private var autoPlayReceivedVideo = true
 
+    @AppStorage(PingPreferenceKeys.autoFaceReplyOnPing)
+    private var autoFaceReplyOnPing = true
+
+    @State private var notificationPermissionStatus: UNAuthorizationStatus = .notDetermined
+    @State private var isRequestingNotificationPermission = false
     @State private var autoLaunchEnabled = Self.isAutoLaunchEnabled()
     @State private var autoLaunchStatusText = Self.autoLaunchStatusText()
     @State private var autoLaunchError: String?
@@ -102,11 +108,29 @@ private struct GeneralSettingsView: View {
                     }
 
                     settingsGroup("알림과 화면") {
+                        notificationPermissionRow
+
+                        Divider()
+                            .opacity(0.45)
+                            .padding(.leading, 148)
+
                         settingRow(
                             title: "받은 영상 바로 재생",
                             subtitle: "상대가 보낸 영상을 알림 클릭 없이 화면에 바로 띄웁니다."
                         ) {
                             Toggle("", isOn: $autoPlayReceivedVideo)
+                                .labelsHidden()
+                        }
+
+                        Divider()
+                            .opacity(0.45)
+                            .padding(.leading, 148)
+
+                        settingRow(
+                            title: "핑 받으면 자동으로 얼굴 회신",
+                            subtitle: "핑을 실시간으로 받으면 얼굴을 3초 녹화해 보낸 사람에게 되돌려 보냅니다. 자동 회신에는 다시 회신하지 않습니다."
+                        ) {
+                            Toggle("", isOn: $autoFaceReplyOnPing)
                                 .labelsHidden()
                         }
 
@@ -186,6 +210,7 @@ private struct GeneralSettingsView: View {
         .onAppear {
             refreshAutoLaunchStatus()
             nicknameDraft = appState.currentUser?.nickname ?? ""
+            Task { await refreshNotificationPermissionStatus() }
         }
         .onChange(of: appState.currentUser?.nickname) { newValue in
             nicknameDraft = newValue ?? ""
@@ -272,6 +297,64 @@ private struct GeneralSettingsView: View {
         }
 
         return "룸 검색과 초대 알림에 표시됩니다."
+    }
+
+    /// 온보딩을 건너뛴 기존 유저는 권한을 물어본 적이 없어 시스템 설정 › 알림 목록에
+    /// 앱이 아예 나타나지 않는다. 그 상태에서 사용자가 되돌릴 수 있는 유일한 지점이다.
+    private var notificationPermissionRow: some View {
+        settingRow(
+            title: "알림 권한",
+            subtitle: notificationPermissionSubtitle,
+            subtitleColor: notificationPermissionAction == .satisfied ? .secondary : .red
+        ) {
+            switch notificationPermissionAction {
+            case .satisfied:
+                Text(NotificationPermissionRecovery.statusText(for: notificationPermissionStatus))
+                    .font(PingFont.caption)
+                    .foregroundStyle(.secondary)
+            case .request:
+                Button("알림 켜기") {
+                    requestNotificationPermission()
+                }
+                .disabled(isRequestingNotificationPermission)
+            case .openSettings:
+                Button("시스템 설정 열기") {
+                    if let url = SetupPermissionKind.notifications.settingsURL {
+                        NSWorkspace.shared.open(url)
+                    }
+                }
+            }
+        }
+    }
+
+    private var notificationPermissionAction: NotificationPermissionRecovery.Action {
+        NotificationPermissionRecovery.action(for: notificationPermissionStatus)
+    }
+
+    private var notificationPermissionSubtitle: String {
+        switch notificationPermissionAction {
+        case .satisfied:
+            return "핑과 채팅 알림을 받습니다."
+        case .request:
+            return "아직 요청하지 않아 시스템 설정 › 알림 목록에도 Ping이 없습니다."
+        case .openSettings:
+            return "거부됨 — 시스템 설정 › 알림에서 Ping을 켜주세요."
+        }
+    }
+
+    private func requestNotificationPermission() {
+        isRequestingNotificationPermission = true
+        Task {
+            _ = await LocalNotificationCenter.shared.requestAuthorization()
+            await refreshNotificationPermissionStatus()
+            isRequestingNotificationPermission = false
+        }
+    }
+
+    private func refreshNotificationPermissionStatus() async {
+        notificationPermissionStatus = await UNUserNotificationCenter.current()
+            .notificationSettings()
+            .authorizationStatus
     }
 
     private func settingsGroup<Content: View>(

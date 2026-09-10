@@ -1,4 +1,4 @@
-# Ping — 실시간 3초 영상 메시지 macOS/Windows 앱 기획서 (v2.8)
+# Ping — 실시간 3초 영상 메시지 macOS/Windows 앱 기획서 (v2.9)
 
 ## 프로젝트 개요
 
@@ -66,9 +66,20 @@ macOS 26 이상에서는 `.pingGlassEffect()` wrapper가 SwiftUI 네이티브 `.
 | 카메라 | 필수 | 송신 불가, Settings 안내 |
 | 마이크 | 필수 | 음성 없는 영상 fallback 검토 |
 | 알림 | 필수 | 수신 polling은 가능하나 배너 미표시 |
+| 알림(미요청) | — | macOS가 앱을 알림 레지스트리에 등록하지 않아 시스템 설정 › 알림 목록에서 앱이 사라진다. 계정이 이미 있어 온보딩을 건너뛴 기기는 bootstrap에서 1회 복구 요청하고, 설정 › 일반 › `알림 권한` 행에서 언제든 다시 켤 수 있다. |
 | 자동 시작 | 옵션 | 수동 실행 |
 
 Windows packaged client는 Windows 11 24H2 미만에서는 설치 대상이 아니다. Onboarding은 OS 버전, elevated 실행 여부, Supabase config, camera, microphone, screen capture, notifications, hotkey 충돌, startup availability를 별도 row로 확인한다. 화면 캡처는 Windows Graphics Capture desktop interop을 기본 경로로 사용하고, DRM/protected content, secure desktop, 일부 GPU overlay는 검은 화면 또는 실패로 표시될 수 있다.
+
+### 자동 얼굴 회신 (macOS)
+
+- 핑을 **실시간으로** 받으면 수신자 맥이 얼굴을 3초 녹화해 보낸 사람 **한 명에게만** 되돌려 보낸다.
+- 설정 › 일반 › `핑 받으면 자동으로 얼굴 회신`으로 켜고 끈다. 기본값은 켜짐이다.
+- 녹화 중에는 우상단에 인디케이터를 띄운다. 포커스를 가져가지 않고 카메라 프리뷰도 띄우지 않는다.
+- 회신 메시지는 `messages.is_auto_reply = true`로 표시되고, **표시된 메시지에는 다시 자동 회신하지 않는다.** 전송 대상을 원 발신자 한 명으로 고정하는 것이 2차 방어다.
+- 다음 경우에는 생략하고 나중에 몰아 보내지 않는다: 설정 꺼짐, 자동 회신 메시지, 이미 회신한 메시지, 타임스탬프 없음, 도착한 지 60초가 지났거나 앱 시작 이전 메시지(맥이 꺼져 있거나 자고 있었던 경우), 카메라 권한 없음, 거울이 카메라 사용 중.
+- 스킵과 실패 사유는 `auto_face_reply_skipped` / `auto_face_reply_failed` / `auto_face_reply_sent` 이벤트로 남긴다.
+- Windows/iOS 클라이언트는 자동 회신을 녹화하지 않는다. 다만 그 클라이언트가 보낸 핑에는 macOS 수신자가 자동 회신한다.
 
 ### 룸과 파트너
 
@@ -409,6 +420,7 @@ ping/
 - 서버 영상과 메시지는 만료 후 best-effort cleanup 대상이다.
 - 로컬 영상은 사용자 디바이스에만 저장된다. 받은 영상의 영구 저장은 발신자가 허용한 메시지에만 앱 UX에서 제공한다.
 - 검색은 닉네임과 룸 이름 prefix만 사용한다.
+- 자동 얼굴 회신은 수신자 기기의 설정으로만 켜지고 꺼진다. 발신자가 상대의 녹화를 강제할 수 없고, 녹화 중에는 수신자 화면에 인디케이터가 표시된다.
 
 ## 향후 로드맵
 

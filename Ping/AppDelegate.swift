@@ -3,6 +3,7 @@ import Combine
 import Network
 import OSLog
 import SwiftUI
+import UserNotifications
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -32,6 +33,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let desktopPresenceService = DesktopPresenceService()
     private let appStartTime = Date()
     private let ledger = NotificationLedger()
+    private lazy var autoFaceReply = AutoFaceReplyCoordinator(
+        camera: camera,
+        messageService: messageService,
+        appStartedAt: appStartTime,
+        isMirrorUsingCamera: { [weak self] in self?.mirrorWindow != nil }
+    )
 
     private var notifiedChatMessageIds: Set<String> = []
     private var deliveringVideoIds: Set<String> = []
@@ -267,6 +274,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 SupabaseClient.shared.updateActiveNickname(existing.nickname)
                 MultiAccountGate.updateUnlock(forNickname: existing.nickname)
                 ClientEventService.shared.log("app_launched")
+                await recoverNotificationPermissionIfNeeded()
                 startObservers(uid: uid, opensRoomManagerWhenEmpty: !roomSetupWasDeferred)
                 runCleanup(uid: uid)
                 consumePendingInviteTokenIfAvailable()
@@ -283,6 +291,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             appState.backendStatusMessage = error.localizedDescription
             showSetupError(error)
         }
+    }
+
+    /// 온보딩은 계정이 이미 있으면 아예 뜨지 않는다. 그 경로로 들어온 맥은 알림 권한을
+    /// 한 번도 물어본 적이 없어 macOS 알림 레지스트리에 등록조차 안 되고, 시스템 설정 ›
+    /// 알림 목록에서 앱이 통째로 사라져 사용자가 되돌릴 방법이 없다. 여기서 한 번 요청해
+    /// 등록을 만든다. 이미 결정한 상태(허용/거부)는 건드리지 않는다.
+    private func recoverNotificationPermissionIfNeeded() async {
+        let status = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
+        guard NotificationPermissionRecovery.shouldRequestAuthorization(for: status) else { return }
+
+        let granted = await LocalNotificationCenter.shared.requestAuthorization()
+        ClientEventService.shared.log(
+            "notification_permission_recovered",
+            properties: ["granted": granted]
+        )
     }
 
     private func scheduleBackendBootstrapRetry(after error: Error) {
@@ -384,6 +407,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard !deliveringVideoIds.contains(id) else { return }
         deliveringVideoIds.insert(id)
         defer { deliveringVideoIds.remove(id) }
+
+        // 알림 권한이 없어도 자동 회신은 동작해야 하므로 아래 조기 반환보다 먼저 건다.
+        // 녹화·업로드를 여기서 기다리면 그동안 알림이 밀리므로 별도 task로 넘긴다.
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            await self.autoFaceReply.handleIncoming(message, currentUser: self.appState.currentUser)
+        }
 
         let didScheduleNotification = await LocalNotificationCenter.shared.notifyIncomingMessage(
             senderNickname: message.senderNickname,

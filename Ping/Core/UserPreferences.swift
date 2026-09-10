@@ -7,6 +7,7 @@ enum PingPreferenceKeys {
     static let appearanceMode = "ping.appearance.mode"
     static let autostartUserChoice = "ping.autostart.userChoice"
     static let autoPlayReceivedVideo = "ping.playback.autoPlayReceived"
+    static let autoFaceReplyOnPing = "ping.autoReply.faceOnPing"
 }
 
 /// 방금 도착한 핑을 "이미 알림함"으로 취급하지 않는 유예 시간.
@@ -39,6 +40,20 @@ enum PingAutoPlayPreference {
         guard isEnabled(in: defaults) else { return false }
         guard let messageCreatedAt else { return false }
         return messageCreatedAt > appStartedAt
+    }
+}
+
+/// 핑을 실시간으로 받으면 얼굴을 3초 녹화해 보낸 사람에게 되돌려 보낼지. 미설정은 켜짐으로 읽는다.
+enum PingAutoFaceReplyPreference {
+    static var isEnabled: Bool {
+        isEnabled(in: .standard)
+    }
+
+    static func isEnabled(in defaults: UserDefaults) -> Bool {
+        guard defaults.object(forKey: PingPreferenceKeys.autoFaceReplyOnPing) != nil else {
+            return true
+        }
+        return defaults.bool(forKey: PingPreferenceKeys.autoFaceReplyOnPing)
     }
 }
 
