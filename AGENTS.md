@@ -51,8 +51,13 @@ Supabase CLI 작업은 반드시 `./scripts/supabase-ping.sh` wrapper로 수행�
 ### Supabase Free 저장소
 영상은 Supabase Storage의 비공개 `ping-videos` 버킷에 `<senderUid>/<videoId>.mp4` 경로로 저장합니다. 테이블/RLS/RPC/Storage 정책은 `supabase/migrations/20260517000100_create_ping_backend.sql`이 단일 진실 출처입니다. 서버 예약 작업 없이 앱 실행 시 `ping_cleanup_expired_data()` RPC로 만료 데이터를 best-effort 정리합니다.
 
-### App 버전 — `0.3.72`
+### App 버전 — `0.3.72` (빌드 번호 `84`)
 - `project.yml` → `settings.base.MARKETING_VERSION`
+- `project.yml` → `settings.base.CURRENT_PROJECT_VERSION` — **함께 올려야 한다.**
+  Sparkle은 `CFBundleShortVersionString`이 아니라 **`CFBundleVersion`(빌드 번호)로**
+  업데이트를 구분한다. 빌드 번호를 안 올리면 `generate_appcast`가
+  `Duplicate updates are not supported ... contain the same bundle version`로 죽는다.
+  공증까지 다 끝난 뒤 마지막 단계에서 터지므로 빌드를 통째로 다시 돌려야 한다.
 - `scripts/build-release.sh` → 빌드 산출물 자동 추출
 - `README.md` 의 DMG 파일명 예시
 - release tag는 해당 버전 배포 시 생성
