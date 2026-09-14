@@ -43,6 +43,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var notifiedChatMessageIds: Set<String> = []
     private var deliveringVideoIds: Set<String> = []
+    private var pendingAutoReplyBatches: [String: AutoReplyBatch] = [:]
     private var isSwitchingAccount = false
     private var cancellables: Set<AnyCancellable> = []
 
@@ -433,9 +434,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         Task { @MainActor [weak self] in
             guard let self else { return }
-            guard await self.playbackVideoCache.prefetch(message) != nil else { return }
-            if shouldAutoPlay {
-                self.playMessage(messageId: id, isAutoPlay: true)
+            guard let localURL = await self.playbackVideoCache.prefetch(message) else { return }
+            guard shouldAutoPlay else { return }
+            // 한 핑에 여러 명이 답한다. 준비되는 대로 띄우면 같은 좌표에 하나씩 포개진다.
+            if message.isAutoReply {
+                self.enqueueAutoReply(message, localURL: localURL)
+            } else {
+                self.presentPlaybacks([Playback(message: message, localURL: localURL)], isAutoPlay: true)
             }
         }
     }
@@ -765,51 +770,134 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             do {
                 guard let message = try await messageService.get(messageId: messageId) else { return }
                 let localURL = try await playbackVideoCache.url(for: message)
-                let shouldKeepReceivedVideo = LocalArchive.saveReceivedEnabled && message.allowsLocalSave
-
-                let screen = NSScreen.main ?? NSScreen.screens.first!
-                let size = PlaybackWindow.size(for: message.captureMode, aspectRatio: message.aspectRatio, on: screen)
-                let visibleFrame = screen.visibleFrame
-                let center = ScreenCoordinates.denormalize(position: message.mirrorPosition, in: visibleFrame)
-                let origin = ScreenCoordinates.clamp(
-                    point: NSPoint(x: center.x - size.width / 2, y: center.y - size.height / 2),
-                    windowSize: size,
-                    inSafeArea: visibleFrame
-                )
-
-                let windowId = UUID()
-                let window = PlaybackWindow(
-                    videoURL: localURL,
-                    mode: message.captureMode,
-                    aspectRatio: message.aspectRatio,
-                    atScreenPoint: origin,
-                    screen: screen,
-                    onFirstPlayEnd: { [weak self] in
-                        Task { @MainActor in
-                            try? await self?.messageService.markSeen(messageId: messageId)
-                        }
-                    },
-                    onDone: { [weak self] in
-                        Task { @MainActor in
-                            if !shouldKeepReceivedVideo {
-                                try? FileManager.default.removeItem(at: localURL)
-                                self?.playbackVideoCache.discard(messageId: messageId)
-                            }
-                            self?.playbackWindows.removeAll { $0.pingWindowId == windowId }
-                        }
-                    }
-                )
-                window.pingWindowId = windowId
-                playbackWindows.append(window)
-                ClientEventService.shared.log("ping_received_view", properties: [
-                    "mode": message.captureMode.rawValue,
-                    "auto": isAutoPlay
-                ])
-                window.fadeIn()
+                presentPlaybacks([Playback(message: message, localURL: localURL)], isAutoPlay: isAutoPlay)
             } catch {
                 NSLog("Playback failed: \(error)")
             }
         }
+    }
+
+    /// 한 묶음을 통째로 받아 배치를 먼저 정하고, 창은 전부 만든 뒤 같이 띄운다.
+    /// 창을 하나씩 만들어 띄우면 자동 회신처럼 좌표가 같은 묶음이 한 점에 포개진다.
+    private func presentPlaybacks(_ items: [Playback], isAutoPlay: Bool) {
+        let items = items.filter { $0.message.id != nil }
+        guard !items.isEmpty else { return }
+
+        ForegroundPresenter.activateApp()
+
+        let screen = NSScreen.main ?? NSScreen.screens.first!
+        let visibleFrame = screen.visibleFrame
+        let sizes = items.map {
+            PlaybackWindow.size(for: $0.message.captureMode, aspectRatio: $0.message.aspectRatio, on: screen)
+        }
+        // 묶음의 중심은 원본 핑이 찍힌 자리다. 회신은 전부 그 좌표를 물고 온다.
+        let center = ScreenCoordinates.denormalize(position: items[0].message.mirrorPosition, in: visibleFrame)
+        let origins = PlaybackGroupLayout.origins(sizes: sizes, centeredAt: center, inSafeArea: visibleFrame)
+
+        var opened: [PlaybackWindow] = []
+        for (index, item) in items.enumerated() {
+            let message = item.message
+            let localURL = item.localURL
+            guard let messageId = message.id else { continue }
+            let shouldKeepReceivedVideo = LocalArchive.saveReceivedEnabled && message.allowsLocalSave
+
+            let windowId = UUID()
+            let window = PlaybackWindow(
+                videoURL: localURL,
+                mode: message.captureMode,
+                aspectRatio: message.aspectRatio,
+                atScreenPoint: origins[index],
+                screen: screen,
+                onFirstPlayEnd: { [weak self] in
+                    Task { @MainActor in
+                        try? await self?.messageService.markSeen(messageId: messageId)
+                    }
+                },
+                onDone: { [weak self] in
+                    Task { @MainActor in
+                        if !shouldKeepReceivedVideo {
+                            try? FileManager.default.removeItem(at: localURL)
+                            self?.playbackVideoCache.discard(messageId: messageId)
+                        }
+                        self?.playbackWindows.removeAll { $0.pingWindowId == windowId }
+                    }
+                }
+            )
+            window.pingWindowId = windowId
+            playbackWindows.append(window)
+            opened.append(window)
+            ClientEventService.shared.log("ping_received_view", properties: [
+                "mode": message.captureMode.rawValue,
+                "auto": isAutoPlay,
+                "group_size": items.count
+            ])
+        }
+
+        for window in opened { window.fadeIn() }
+    }
+
+    /// 자동 회신은 룸 단위로 모았다가 한 번에 띄운다. 준비되는 대로 하나씩 띄우면
+    /// 같은 좌표에 포개져 한 명씩 순서대로 뜨는 것처럼 보인다.
+    private func enqueueAutoReply(_ message: VideoMessage, localURL: URL) {
+        let roomId = message.roomId
+        var batch = pendingAutoReplyBatches[roomId] ?? AutoReplyBatch(firstArrivedAt: Date())
+        batch.items.append(Playback(message: message, localURL: localURL))
+        batch.flushTask?.cancel()
+        batch.flushTask = nil
+
+        let expected = expectedAutoReplyCount(roomId: roomId)
+        switch AutoReplyBatchPolicy.decide(
+            collected: batch.items.count,
+            expected: expected,
+            firstArrivedAt: batch.firstArrivedAt
+        ) {
+        case .present:
+            pendingAutoReplyBatches[roomId] = nil
+            presentAutoReplyBatch(batch, roomId: roomId, expected: expected, timedOut: false)
+        case .waitUntil(let deadline):
+            batch.flushTask = Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(max(0, deadline.timeIntervalSinceNow)))
+                guard !Task.isCancelled else { return }
+                self?.flushAutoReplyBatch(roomId: roomId)
+            }
+            pendingAutoReplyBatches[roomId] = batch
+        }
+    }
+
+    private func flushAutoReplyBatch(roomId: String) {
+        guard let batch = pendingAutoReplyBatches.removeValue(forKey: roomId) else { return }
+        batch.flushTask?.cancel()
+        presentAutoReplyBatch(
+            batch,
+            roomId: roomId,
+            expected: expectedAutoReplyCount(roomId: roomId),
+            timedOut: true
+        )
+    }
+
+    /// "회신이 하나만 떴다"는 신고를 추론이 아니라 조회로 답하기 위해 모인 수와 기대치를 남긴다.
+    private func presentAutoReplyBatch(_ batch: AutoReplyBatch, roomId: String, expected: Int, timedOut: Bool) {
+        guard !batch.items.isEmpty else { return }
+        ClientEventService.shared.log("auto_reply_batch_presented", properties: [
+            "room_id": roomId,
+            "collected": batch.items.count,
+            "expected": expected,
+            "timed_out": timedOut
+        ])
+        presentPlaybacks(batch.items, isAutoPlay: true)
+    }
+
+    /// 이 룸에서 회신이 올 수 있는 최대 인원. 룸 목록을 아직 못 받았으면 0을 돌려
+    /// 첫 회신에서 바로 띄운다 — 모르는 채로 기다리면 1:1에서도 수집 창만큼 늦게 뜬다.
+    private func expectedAutoReplyCount(roomId: String) -> Int {
+        guard let myUid = appState.currentUser?.id,
+              let room = appState.rooms.first(where: { $0.id == roomId }) else { return 0 }
+        return room.memberUids.filter { $0 != myUid }.count
+    }
+
+    private func cancelPendingAutoReplyBatches() {
+        for batch in pendingAutoReplyBatches.values { batch.flushTask?.cancel() }
+        pendingAutoReplyBatches.removeAll()
     }
 
     private func cancelPlaybackPrefetches() {
@@ -1243,6 +1331,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         roomManagerWindow?.close()
         roomManagerWindow = nil
 
+        cancelPendingAutoReplyBatches()
         for window in playbackWindows { window.orderOut(nil) }
         playbackWindows.removeAll()
         playbackVideoCache.reset()
@@ -1335,4 +1424,17 @@ private extension ProcessInfo {
     var isRunningUnitTests: Bool {
         environment["XCTestConfigurationFilePath"] != nil
     }
+}
+
+/// 재생 준비가 끝난 한 건. 묶음으로 배치를 계산하려면 창을 만들기 전에 전부 손에 있어야 한다.
+struct Playback {
+    let message: VideoMessage
+    let localURL: URL
+}
+
+/// 한 핑에 달린 자동 회신을 모으는 통. 마감은 첫 회신 시각에 고정한다.
+struct AutoReplyBatch {
+    let firstArrivedAt: Date
+    var items: [Playback] = []
+    var flushTask: Task<Void, Never>?
 }
