@@ -255,9 +255,8 @@ struct RoomManagerView: View {
             selectInitialRoomIfNeeded()
         }
         .onChange(of: appState.pendingRoomFocusId) { roomId in
-            guard let roomId else { return }
-            selectedRoomId = roomId
-            appState.pendingRoomFocusId = nil
+            guard roomId != nil else { return }
+            selectInitialRoomIfNeeded()
         }
         .onChange(of: selectedRoomId) { newValue in
             appState.lastSelectedRoomId = newValue
@@ -363,20 +362,24 @@ struct RoomManagerView: View {
         }
     }
 
+    /// 알림 클릭이 지정한 룸을 최우선으로 골라준다. onAppear와 onChange 양쪽이
+    /// 이 경로를 타야 룸 창이 닫혀 있다 열릴 때도 맞는 룸이 열린다.
     private func selectInitialRoomIfNeeded() {
-        if let selectedRoomId,
-           appState.rooms.contains(where: { $0.id == selectedRoomId }) {
-            return
+        let selection = RoomFocusPolicy.initialRoomSelection(
+            pendingRoomFocusId: appState.pendingRoomFocusId,
+            currentSelectionId: selectedRoomId,
+            lastSelectedRoomId: appState.lastSelectedRoomId,
+            availableRoomIds: appState.rooms.compactMap(\.id),
+            defaultRoomId: appState.defaultRoom?.id
+        )
+
+        if selection.consumesPendingFocus {
+            appState.pendingRoomFocusId = nil
         }
 
-        let persistedId = appState.lastSelectedRoomId
-        if let persistedId,
-           appState.rooms.contains(where: { $0.id == persistedId }) {
-            selectedRoomId = persistedId
-            return
+        if selectedRoomId != selection.roomId {
+            selectedRoomId = selection.roomId
         }
-
-        selectedRoomId = appState.defaultRoom?.id ?? appState.rooms.first?.id
     }
 
     private func moveRooms(from source: IndexSet, to destination: Int) {

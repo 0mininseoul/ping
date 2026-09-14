@@ -32,3 +32,44 @@ enum RoomFocusPolicy {
         return lastSelectedRoomId
     }
 }
+
+/// 룸 창을 열 때 어떤 룸을 고를지. 알림 클릭이 지정한 룸이 언제나 최우선이다.
+///
+/// 알림을 클릭하면 AppDelegate가 `pendingRoomFocusId`를 세운 **뒤** 룸 창을 연다.
+/// 창이 닫혀 있었으면 그 시점에 뷰가 새로 만들어지므로 SwiftUI `onChange`는 이미
+/// 지나간 변경을 보지 못하고, 예전 초기 선택 로직은 `lastSelectedRoomId`만 봐서
+/// 직전에 보던 룸이 열렸다(2026-09-14 확인). 두 경로가 같은 규칙을 타야 한다.
+extension RoomFocusPolicy {
+    struct InitialRoomSelection: Equatable {
+        let roomId: String?
+        /// 알림이 가리키는 룸을 실제로 선택했는가. 아직 룸 목록에 없어 선택하지
+        /// 못했다면 false여야 한다 — 여기서 소비해버리면 목록이 도착한 뒤
+        /// 적용할 기회가 사라진다.
+        let consumesPendingFocus: Bool
+    }
+
+    static func initialRoomSelection(
+        pendingRoomFocusId: String?,
+        currentSelectionId: String?,
+        lastSelectedRoomId: String?,
+        availableRoomIds: [String],
+        defaultRoomId: String?
+    ) -> InitialRoomSelection {
+        if let pendingRoomFocusId, availableRoomIds.contains(pendingRoomFocusId) {
+            return InitialRoomSelection(roomId: pendingRoomFocusId, consumesPendingFocus: true)
+        }
+
+        if let currentSelectionId, availableRoomIds.contains(currentSelectionId) {
+            return InitialRoomSelection(roomId: currentSelectionId, consumesPendingFocus: false)
+        }
+
+        if let lastSelectedRoomId, availableRoomIds.contains(lastSelectedRoomId) {
+            return InitialRoomSelection(roomId: lastSelectedRoomId, consumesPendingFocus: false)
+        }
+
+        return InitialRoomSelection(
+            roomId: defaultRoomId ?? availableRoomIds.first,
+            consumesPendingFocus: false
+        )
+    }
+}

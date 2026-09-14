@@ -95,7 +95,10 @@ final class RoomManagerUXContractTests: XCTestCase {
         XCTAssertTrue(source.contains("selectInitialRoomIfNeeded()"))
         XCTAssertTrue(source.contains("appState.lastSelectedRoomId"))
         XCTAssertTrue(source.contains("appState.defaultRoom?.id"))
-        XCTAssertTrue(source.contains("appState.rooms.contains(where: { $0.id == selectedRoomId })"))
+        // 선택 유효성 판단은 RoomFocusPolicy로 옮겼다. 알림이 지정한 룸을 최우선으로
+        // 고르려면 onAppear와 onChange가 같은 정책을 타야 한다.
+        XCTAssertTrue(source.contains("RoomFocusPolicy.initialRoomSelection("))
+        XCTAssertTrue(source.contains("availableRoomIds: appState.rooms.compactMap(\\.id)"))
     }
 
     func testHistoryTimelineUsesLocalThumbnailsWithoutRemoteFetchForCollapsedRows() throws {
