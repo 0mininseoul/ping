@@ -124,11 +124,15 @@ async function freshDesktopPresenceUids(
     : DEFAULT_DESKTOP_PRESENCE_TTL_SECONDS;
   const cutoff = new Date(Date.now() - effectiveTtlSeconds * 1000).toISOString();
 
+  // ended_at이 찍힌 행은 Ping을 끈 기기다. 마지막 접속 시각을 남기려고 행을 지우지
+  // 않으므로, 이 조건이 빠지면 앱을 끈 뒤에도 하트비트가 만료될 때까지 휴대폰
+  // 알림이 계속 막힌다.
   const { data, error } = await deps.supabase
     .from('desktop_presence')
     .select('uid')
     .in('uid', uids)
-    .gte('updated_at', cutoff);
+    .gte('updated_at', cutoff)
+    .is('ended_at', null);
 
   if (error) return { uids: new Set(), error };
 

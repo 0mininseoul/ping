@@ -1,11 +1,48 @@
 import { describe, it, expect, vi } from 'vitest';
 import { handlePush, type PushDeps } from '../../push';
 
+interface PresenceRow {
+  uid: string;
+  updated_at: string;
+  /// null이면 살아 있는 세션, 값이 있으면 Ping을 끈 기기다.
+  ended_at?: string | null;
+}
+
 interface FakeOptions {
   tokenQueryError?: { message: string } | null;
   signedUrlError?: { message: string } | null;
   signedUrl?: string | null;
-  desktopPresence?: Array<{ uid: string; updated_at: string }>;
+  desktopPresence?: PresenceRow[];
+}
+
+/// PostgREST 체인처럼 필터를 쌓았다가 await 시점에 적용한다. 필터를 정직하게
+/// 흉내 내야 쿼리에서 조건이 빠졌을 때 테스트가 조용히 통과하지 않는다.
+function presenceTable(rows: PresenceRow[]) {
+  return {
+    select() {
+      let result = rows;
+      const builder = {
+        in(_col: string, uids: string[]) {
+          result = result.filter((row) => uids.includes(row.uid));
+          return builder;
+        },
+        gte(_col: string, cutoff: string) {
+          result = result.filter((row) => row.updated_at >= cutoff);
+          return builder;
+        },
+        is(column: string, value: null) {
+          result = result.filter(
+            (row) => ((row as Record<string, unknown>)[column] ?? null) === value
+          );
+          return builder;
+        },
+        then(resolve: (value: { data: PresenceRow[]; error: null }) => unknown) {
+          return Promise.resolve({ data: result, error: null }).then(resolve);
+        },
+      };
+      return builder;
+    },
+  };
 }
 
 function fakeSupabase(
@@ -16,20 +53,7 @@ function fakeSupabase(
   const supabase = {
     from(table: string) {
       if (table === 'desktop_presence') {
-        return {
-          select() {
-            return {
-              in(_col: string, uids: string[]) {
-                return {
-                  gte: async () => ({
-                    data: (opts.desktopPresence ?? []).filter((row) => uids.includes(row.uid)),
-                    error: null,
-                  }),
-                };
-              },
-            };
-          },
-        };
+        return presenceTable(opts.desktopPresence ?? []);
       }
       return {
         select() {
@@ -168,6 +192,18 @@ describe('handlePush', () => {
     expect(send).not.toHaveBeenCalled();
   });
 
+  it('still pushes a video ping once the desktop session has ended', async () => {
+    const now = new Date().toISOString();
+    const { d, send } = deps(
+      {},
+      [{ token: 't1', environment: 'production' }],
+      { desktopPresence: [{ uid: 'rcv-1', updated_at: now, ended_at: now }] }
+    );
+    const out = await handlePush(insertBody, 's3cret', d);
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(out.body).toEqual({ sent: 1, removed: 0 });
+  });
+
   it('returns 500 when the device_tokens query errors', async () => {
     const { d, send } = deps(
       {},
@@ -196,7 +232,7 @@ describe('handlePush', () => {
 function chatFakeSupabase(
   members: Array<{ user_id: string }>,
   tokens: Array<{ token: string; environment: string }>,
-  desktopPresence: Array<{ uid: string; updated_at: string }> = []
+  desktopPresence: PresenceRow[] = []
 ) {
   const deleted: string[][] = [];
   const supabase = {
@@ -213,20 +249,7 @@ function chatFakeSupabase(
         };
       }
       if (table === 'desktop_presence') {
-        return {
-          select() {
-            return {
-              in(_col: string, uids: string[]) {
-                return {
-                  gte: async () => ({
-                    data: desktopPresence.filter((row) => uids.includes(row.uid)),
-                    error: null,
-                  }),
-                };
-              },
-            };
-          },
-        };
+        return presenceTable(desktopPresence);
       }
       // device_tokens
       return {
@@ -262,7 +285,7 @@ const chatBody = {
 function chatDeps(
   members: Array<{ user_id: string }>,
   tokens: Array<{ token: string; environment: string }>,
-  desktopPresence: Array<{ uid: string; updated_at: string }> = []
+  desktopPresence: PresenceRow[] = []
 ) {
   const { supabase, deleted } = chatFakeSupabase(members, tokens, desktopPresence);
   const send = vi.fn(async () => ({ status: 200, body: '' }));
@@ -301,6 +324,20 @@ describe('handlePush (chat)', () => {
     expect(out.code).toBe(200);
     expect(out.body).toEqual({ sent: 0, removed: 0, kind: 'chat', suppressed: 1 });
     expect(send).not.toHaveBeenCalled();
+  });
+
+  /// 종료한 데스크톱 세션이 계속 "켜져 있음"으로 읽히면, Ping을 끈 뒤에도 마지막
+  /// 하트비트가 만료될 때까지(최대 45초) 휴대폰 알림이 막힌다.
+  it('still pushes chat once the desktop session has ended', async () => {
+    const now = new Date().toISOString();
+    const { d, send } = chatDeps(
+      [{ user_id: 'rcv-1' }],
+      [{ token: 't1', environment: 'production' }],
+      [{ uid: 'rcv-1', updated_at: now, ended_at: now }]
+    );
+    const out = await handlePush(chatBody, 's3cret', d);
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(out.body).toEqual({ sent: 1, removed: 0, kind: 'chat' });
   });
 
   it('returns sent:0 when the room has no other members', async () => {
