@@ -3,12 +3,21 @@ import KeyboardShortcuts
 
 @MainActor
 enum StatusMenuBuilder {
+    /// 메뉴를 열 때마다 이 항목의 제목만 갈아끼운다.
+    static let presenceItemTag = 8801
+
     static func makeMenu(target: AnyObject) -> NSMenu {
         let menu = NSMenu()
 
         let status = NSMenuItem(title: "Ping", action: nil, keyEquivalent: "")
         status.isEnabled = false
         menu.addItem(status)
+
+        let presence = NSMenuItem(title: presenceTitle(names: []), action: nil, keyEquivalent: "")
+        presence.isEnabled = false
+        presence.tag = presenceItemTag
+        menu.addItem(presence)
+
         menu.addItem(NSMenuItem.separator())
 
         menu.addItem(command(title: "영상 보내기", action: Selector(("toggleMirrorAction")), shortcutName: .pingTrigger, target: target))
@@ -31,6 +40,11 @@ enum StatusMenuBuilder {
         menu.addItem(NSMenuItem(title: "종료", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
 
         return menu
+    }
+
+    static func presenceTitle(names: [String]) -> String {
+        guard !names.isEmpty else { return "접속 중인 사람 없음" }
+        return "접속 중 · " + names.joined(separator: ", ")
     }
 
     private static func command(

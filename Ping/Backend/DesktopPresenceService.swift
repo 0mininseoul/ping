@@ -21,6 +21,16 @@ final class DesktopPresenceService {
         try await client.rpcVoid("ping_update_desktop_presence", body: body)
     }
 
+    /// 같은 방 멤버들의 상태. desktop_presence의 RLS는 본인 행만 허용해서
+    /// 서버가 방 멤버십을 확인해주는 RPC로만 읽을 수 있다.
+    func roomPresence(roomIds: [String]) async throws -> [DesktopPresenceRow] {
+        guard !roomIds.isEmpty else { return [] }
+
+        return try await client.rpcArray("ping_room_desktop_presence", body: [
+            "room_uuids": roomIds
+        ])
+    }
+
     func clear() async {
         try? await client.rpcVoid("ping_clear_desktop_presence", body: [
             "device_id_text": deviceId,

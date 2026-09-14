@@ -66,6 +66,29 @@ final class DesktopPresenceContractTests: XCTestCase {
         XCTAssertTrue(push.contains("suppressed"))
     }
 
+    /// 멤버 팝오버는 열려 있는 동안에만 상태를 갱신한다. 평상시에 폴링하면
+    /// 6명짜리 서비스에 쓸데없는 요청만 쌓인다.
+    func testMembersPopoverShowsPresenceWhileOpen() throws {
+        let source = try readSourceFile("Ping/UI/Setup/RoomDetailView.swift")
+
+        XCTAssertTrue(source.contains("PresenceStore.shared"))
+        XCTAssertTrue(source.contains("presenceStore.refresh(roomIds: [roomId])"))
+        XCTAssertTrue(source.contains("DesktopPresencePolicy.lastSeenText("))
+    }
+
+    /// 메뉴바는 방에 종속되지 않으니 내 모든 방의 멤버를 합쳐 보여준다.
+    func testStatusMenuListsLiveMembers() throws {
+        let menu = try readSourceFile("Ping/StatusMenuBuilder.swift")
+        let appDelegate = try readSourceFile("Ping/AppDelegate.swift")
+
+        XCTAssertTrue(menu.contains("presenceItemTag"))
+        XCTAssertTrue(menu.contains("static func presenceTitle("))
+        XCTAssertTrue(appDelegate.contains("refreshStatusMenuPresence()"))
+        XCTAssertTrue(appDelegate.contains("DesktopPresencePolicy.liveMemberNames("))
+        // 메뉴를 열 때 조회한다. 상시 폴링이 아니다.
+        XCTAssertTrue(appDelegate.contains("func menuWillOpen("))
+    }
+
     func testSelectedRealtimeChatIsMarkedReadAgain() throws {
         let source = try readSourceFile("Ping/UI/History/HistoryViewModel.swift")
         let chatService = try readSourceFile("Ping/Backend/ChatMessageService.swift")

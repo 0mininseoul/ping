@@ -41,6 +41,25 @@ enum DesktopPresencePolicy {
         return merged
     }
 
+    /// 메뉴바에 세울 "접속 중" 이름들. 내 모든 방의 멤버를 합쳐서 보기 때문에
+    /// 두 방에 같이 있는 사람이 두 번 나오지 않게 이름을 하나로 모은다.
+    static func liveMemberNames(
+        memberUids: [String],
+        excluding myUid: String?,
+        presence: [String: MemberPresence],
+        nicknameForUid: (String) -> String
+    ) -> [String] {
+        var seen: Set<String> = []
+        var names: [String] = []
+
+        for uid in memberUids where uid != myUid {
+            guard presence[uid]?.isLive == true, seen.insert(uid).inserted else { continue }
+            names.append(nicknameForUid(uid))
+        }
+
+        return names.sorted()
+    }
+
     /// 오프라인 멤버 옆에 붙는 문구. 서버와 기기 시계가 어긋나 마지막 접속이
     /// 미래로 보여도 "-3분 전" 같은 문구가 나오면 안 된다.
     static func lastSeenText(_ lastSeenAt: Date, now: Date) -> String {

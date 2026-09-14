@@ -82,6 +82,79 @@ final class DesktopPresencePolicyTests: XCTestCase {
         XCTAssertEqual(lastSeenText(secondsAgo: -180), "방금 전")
     }
 
+    // MARK: - Live member labels (menubar)
+
+    func testOnlyLiveMembersAreListed() {
+        let names = DesktopPresencePolicy.liveMemberNames(
+            memberUids: ["a", "b"],
+            excluding: nil,
+            presence: [
+                "a": MemberPresence(isLive: true, lastSeenAt: now),
+                "b": MemberPresence(isLive: false, lastSeenAt: now)
+            ],
+            nicknameForUid: { ["a": "민수", "b": "영희"][$0] ?? "" }
+        )
+
+        XCTAssertEqual(names, ["민수"])
+    }
+
+    /// 메뉴바는 방 단위가 아니라 내 모든 방을 합쳐 보여준다. 두 방에 같이 있는
+    /// 사람이 두 번 나오면 안 된다.
+    func testAMemberSharedByTwoRoomsIsListedOnce() {
+        let names = DesktopPresencePolicy.liveMemberNames(
+            memberUids: ["a", "a", "b"],
+            excluding: nil,
+            presence: [
+                "a": MemberPresence(isLive: true, lastSeenAt: now),
+                "b": MemberPresence(isLive: true, lastSeenAt: now)
+            ],
+            nicknameForUid: { ["a": "민수", "b": "영희"][$0] ?? "" }
+        )
+
+        XCTAssertEqual(names, ["민수", "영희"])
+    }
+
+    func testMyOwnMacIsNotListed() {
+        let names = DesktopPresencePolicy.liveMemberNames(
+            memberUids: ["me", "a"],
+            excluding: "me",
+            presence: [
+                "me": MemberPresence(isLive: true, lastSeenAt: now),
+                "a": MemberPresence(isLive: true, lastSeenAt: now)
+            ],
+            nicknameForUid: { ["me": "나", "a": "민수"][$0] ?? "" }
+        )
+
+        XCTAssertEqual(names, ["민수"])
+    }
+
+    func testNamesAreSorted() {
+        let names = DesktopPresencePolicy.liveMemberNames(
+            memberUids: ["a", "b", "c"],
+            excluding: nil,
+            presence: [
+                "a": MemberPresence(isLive: true, lastSeenAt: now),
+                "b": MemberPresence(isLive: true, lastSeenAt: now),
+                "c": MemberPresence(isLive: true, lastSeenAt: now)
+            ],
+            nicknameForUid: { ["a": "지훈", "b": "가영", "c": "민수"][$0] ?? "" }
+        )
+
+        XCTAssertEqual(names, ["가영", "민수", "지훈"])
+    }
+
+    /// 하트비트를 한 번도 보낸 적 없는 멤버는 상태 자체가 없다.
+    func testMembersWithoutPresenceAreNotListed() {
+        let names = DesktopPresencePolicy.liveMemberNames(
+            memberUids: ["a"],
+            excluding: nil,
+            presence: [:],
+            nicknameForUid: { _ in "민수" }
+        )
+
+        XCTAssertTrue(names.isEmpty)
+    }
+
     // MARK: - Helpers
 
     private func row(uid: String, secondsAgo: TimeInterval, isLive: Bool) -> DesktopPresenceRow {

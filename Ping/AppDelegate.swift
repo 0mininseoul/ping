@@ -31,6 +31,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let chatRealtime = ChatRealtimeService()
     private let chatMessageService = ChatMessageService()
     private let desktopPresenceService = DesktopPresenceService()
+    private let presenceStore = PresenceStore.shared
     private let appStartTime = Date()
     private let ledger = NotificationLedger()
     private lazy var autoFaceReply = AutoFaceReplyCoordinator(
@@ -482,6 +483,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } catch {
             NSLog("Desktop presence heartbeat failed: \(error)")
         }
+    }
+
+    /// 메뉴를 여는 순간 직전 스냅샷으로 먼저 채우고, 응답이 오면 다시 채운다.
+    /// 상시 폴링을 하지 않으므로 첫 줄이 잠깐 이전 상태일 수 있다.
+    @MainActor
+    private func refreshStatusMenuPresence() async {
+        applyStatusMenuPresence()
+        await presenceStore.refresh(roomIds: appState.rooms.compactMap(\.id))
+        applyStatusMenuPresence()
+    }
+
+    @MainActor
+    private func applyStatusMenuPresence() {
+        guard let item = statusItem?.menu?.item(withTag: StatusMenuBuilder.presenceItemTag) else { return }
+
+        let rooms = appState.rooms
+        let names = DesktopPresencePolicy.liveMemberNames(
+            memberUids: rooms.flatMap(\.memberUids),
+            excluding: appState.currentUser?.id,
+            presence: presenceStore.members,
+            nicknameForUid: { uid in
+                rooms.compactMap { $0.memberNicknames[uid] }.first ?? "(알 수 없음)"
+            }
+        )
+
+        item.title = StatusMenuBuilder.presenceTitle(names: names)
     }
 
     private var visibleRoomIdForPresence: String? {
@@ -1297,6 +1324,10 @@ extension AppDelegate: NSMenuDelegate {
     nonisolated func menuWillOpen(_ menu: NSMenu) {
         let signposter = OSSignposter(subsystem: "com.youngminpark.ping.Ping", category: "polling")
         signposter.emitEvent("menu-will-open")
+
+        Task { @MainActor [weak self] in
+            await self?.refreshStatusMenuPresence()
+        }
     }
 }
 

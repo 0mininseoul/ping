@@ -13,6 +13,7 @@ struct RoomDetailView: View {
     var onScreenFaceExpansionChange: (ScreenFaceExpansionAnchor?, ScreenFaceExpansionContext?) -> Void
 
     @StateObject private var viewModel: HistoryViewModel
+    @ObservedObject private var presenceStore = PresenceStore.shared
     @State private var isMembersPopoverPresented: Bool = false
     @State private var editingRoomId: String?
     @State private var editingRoomName = ""
@@ -134,6 +135,8 @@ struct RoomDetailView: View {
 
     private var membersPopoverContent: some View {
         MembersPopoverView(
+            roomId: roomId,
+            presenceStore: presenceStore,
             memberUids: sortedMemberUids,
             totalCount: currentRoom?.memberUids.count ?? 0,
             ownerUid: currentRoom?.ownerUid ?? "",
@@ -294,6 +297,8 @@ struct RoomDetailView: View {
 }
 
 private struct MembersPopoverView: View {
+    let roomId: String
+    @ObservedObject var presenceStore: PresenceStore
     let memberUids: [String]
     let totalCount: Int
     let ownerUid: String
@@ -353,6 +358,7 @@ private struct MembersPopoverView: View {
                                 }
                             }
                             Spacer()
+                            presenceLabel(for: uid)
                         }
                         .padding(.horizontal, 14)
                         .padding(.vertical, 8)
@@ -360,6 +366,44 @@ private struct MembersPopoverView: View {
                 }
             }
         }
-        .frame(width: 260, height: min(CGFloat(totalCount * 48 + 60), 360))
+        .frame(width: 280, height: min(CGFloat(totalCount * 48 + 60), 360))
+        .task {
+            // 팝오버가 열려 있는 동안에만 돈다. 닫히면 task가 취소된다.
+            while !Task.isCancelled {
+                await presenceStore.refresh(roomIds: [roomId])
+                try? await Task.sleep(nanoseconds: 15_000_000_000)
+            }
+        }
+    }
+
+    /// 내 상태는 굳이 보여주지 않는다. 하트비트를 한 번도 보낸 적 없는 멤버는
+    /// 데스크톱 Ping을 쓴 적이 없다는 뜻이라 흐린 점만 남긴다.
+    @ViewBuilder
+    private func presenceLabel(for uid: String) -> some View {
+        if uid == myUid {
+            EmptyView()
+        } else if let presence = presenceStore.presence(for: uid) {
+            if presence.isLive {
+                statusDot(PingDesign.ColorToken.success)
+                    .help("접속 중")
+            } else {
+                HStack(spacing: 5) {
+                    statusDot(Color.secondary.opacity(0.45))
+                    Text(DesktopPresencePolicy.lastSeenText(presence.lastSeenAt, now: Date()))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                .help("마지막 접속")
+            }
+        } else {
+            statusDot(Color.secondary.opacity(0.22))
+                .help("데스크톱 Ping 기록 없음")
+        }
+    }
+
+    private func statusDot(_ color: Color) -> some View {
+        Circle()
+            .fill(color)
+            .frame(width: 7, height: 7)
     }
 }

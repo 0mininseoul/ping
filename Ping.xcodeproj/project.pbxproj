@@ -154,6 +154,7 @@
 		AD01F2054A51E668EFA20939 /* PingWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 120175272D55BF4CE32E1F4C /* PingWatchApp.swift */; };
 		AE0BAABF032564CD75C6AC48 /* RoomManagerWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2F526895AEBD9128DA1538F /* RoomManagerWindow.swift */; };
 		AF3DC3BABC1FF1344A9E0432 /* ThreadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57D8312BCCBDE5E2CBF7CDC2 /* ThreadView.swift */; };
+		B13EF105D863E721D1B06A99 /* PresenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FBD45E6D1473B5CE432B4B1 /* PresenceStore.swift */; };
 		B516DA8E35BE22691A6F324C /* LocalNotificationCenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFCF08C61ECD845F231DFFE4 /* LocalNotificationCenter.swift */; };
 		B5ADEAB2D74F268DF698CC0E /* WindowPositioningTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA897CE96651014C4A14D9FF /* WindowPositioningTests.swift */; };
 		B6A11640F9C354B97F970881 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 9A1A6B3E7AB732144F264705 /* Sparkle */; };
@@ -201,6 +202,7 @@
 		E5098E32A2ACA9ED9F8A2939 /* RoomService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BB81E537D50111710D5B182 /* RoomService.swift */; };
 		E78C9B4431F062FB15266922 /* ScreenCapturePermission.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE35E9FFD55B61D62E4BE8EB /* ScreenCapturePermission.swift */; };
 		E88C396E9E50FA27A25162ED /* InviteLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0194505B84DC32C2BA700F6C /* InviteLink.swift */; };
+		E91C8631166EB333C40E18E5 /* PresenceStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 207DA52677DB14EB713DE671 /* PresenceStoreTests.swift */; };
 		EBEDBF653FC0B25E20B9FBFF /* RoomFocusPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCE092F452DF1B3424ADA5D3 /* RoomFocusPolicyTests.swift */; };
 		ECF103DDCC0A6C69976373A1 /* DesktopPresenceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 002D151B2D97D19630FF11D6 /* DesktopPresenceService.swift */; };
 		ED2A3EB3872996158DA65761 /* MessageRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FD73952C51CA80616FFA8E6 /* MessageRowView.swift */; };
@@ -298,6 +300,7 @@
 		0876B14F71CA71CBCF712809 /* AutoFaceReplyPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoFaceReplyPolicyTests.swift; sourceTree = "<group>"; };
 		0C732B3F624FC27A02EBFF2D /* DevicePairingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevicePairingView.swift; sourceTree = "<group>"; };
 		0DB8EE7896F96DFAC0EFCA86 /* ScreenCoordinatesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenCoordinatesTests.swift; sourceTree = "<group>"; };
+		0FBD45E6D1473B5CE432B4B1 /* PresenceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PresenceStore.swift; sourceTree = "<group>"; };
 		11AD29C27BBFCA0ECA929B41 /* PingMobileThreadInteractionsContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PingMobileThreadInteractionsContractTests.swift; sourceTree = "<group>"; };
 		120175272D55BF4CE32E1F4C /* PingWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PingWatchApp.swift; sourceTree = "<group>"; };
 		1616675AE7695B824BD066DE /* DesktopInstallGuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesktopInstallGuideView.swift; sourceTree = "<group>"; };
@@ -308,6 +311,7 @@
 		196AE189C92F647078653279 /* CleanupService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleanupService.swift; sourceTree = "<group>"; };
 		199D7CD1E2E710997AE7A749 /* ScreenFaceExpansionOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenFaceExpansionOverlay.swift; sourceTree = "<group>"; };
 		1CAAECC60F6BE44D405DF213 /* StatusMenuBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusMenuBuilder.swift; sourceTree = "<group>"; };
+		207DA52677DB14EB713DE671 /* PresenceStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PresenceStoreTests.swift; sourceTree = "<group>"; };
 		2225B62EC954CFD86429E093 /* PingMobileOnboardingContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PingMobileOnboardingContractTests.swift; sourceTree = "<group>"; };
 		2319CC860C1B8D1CEC0E1E4E /* SupabaseDecodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseDecodingTests.swift; sourceTree = "<group>"; };
 		236B98B4323FB9FE9DEB2AF1 /* BackendRetryPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendRetryPolicyTests.swift; sourceTree = "<group>"; };
@@ -560,6 +564,7 @@
 				DDF74D004DFD2F009A5DA36B /* Models.swift */,
 				8F8F7409AE1AFA053895230D /* MultiAccountGate.swift */,
 				62D2F7B67DB16ADA6741BD44 /* PingError.swift */,
+				0FBD45E6D1473B5CE432B4B1 /* PresenceStore.swift */,
 				31574668BC358EDFDA617958 /* RoomFocusPolicy.swift */,
 				E4C0907AE314021D2DFEC882 /* RoomLimits.swift */,
 				F760D624DE03E352A8514854 /* ScreenCoordinates.swift */,
@@ -877,6 +882,7 @@
 				18CCBF09517648670FCCB72C /* PlaybackControlsContractTests.swift */,
 				DF791350460B22AC63D0CE32 /* PlaybackPrefetchContractTests.swift */,
 				C9E86C435BB8D970DD2B0A5E /* PlaybackVideoCacheTests.swift */,
+				207DA52677DB14EB713DE671 /* PresenceStoreTests.swift */,
 				B5D3DB5C2FE7FCBB66A9C92D /* ReactionPersistenceContractTests.swift */,
 				FE1AE1184DF56D5F50BC10D1 /* RealtimeDeliveryContractTests.swift */,
 				F36968515B5CE5927A2F3AF8 /* RealtimeSubscriptionPlanTests.swift */,
@@ -1401,6 +1407,7 @@
 				C37132F0098B315DD40EF93F /* PlaybackControlsContractTests.swift in Sources */,
 				489FD8469EFD7A09256A8F54 /* PlaybackPrefetchContractTests.swift in Sources */,
 				D36293AF38141A9F5286577E /* PlaybackVideoCacheTests.swift in Sources */,
+				E91C8631166EB333C40E18E5 /* PresenceStoreTests.swift in Sources */,
 				EE1A8480D0A1A17293759871 /* ReactionPersistenceContractTests.swift in Sources */,
 				3722A719001508C27DD3F644 /* RealtimeDeliveryContractTests.swift in Sources */,
 				7AEF0ED392AB716EAEA45F31 /* RealtimeSubscriptionPlanTests.swift in Sources */,
@@ -1502,6 +1509,7 @@
 				1B69B4BC0FAE0F8C498AD730 /* PlaybackVideoCache.swift in Sources */,
 				5786E8216FB61CB6DBE1397A /* PlaybackView.swift in Sources */,
 				D554E57BED49035560D4AE74 /* PlaybackWindow.swift in Sources */,
+				B13EF105D863E721D1B06A99 /* PresenceStore.swift in Sources */,
 				F9F01F4FE990F1A34D5E5FCF /* RainbowBorder.swift in Sources */,
 				9417A23D794D6424D2530EB3 /* ReactionPickerView.swift in Sources */,
 				BF23CABA33619C05D34368D9 /* ReactionService.swift in Sources */,
