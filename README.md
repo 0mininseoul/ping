@@ -34,7 +34,7 @@ Supabase Dashboard의 Authentication 설정에서 Anonymous sign-ins가 켜져 �
 
 ### macOS
 
-1. `Ping-v0.3.73.dmg`를 더블클릭해 마운트한다.
+1. `Ping-v0.3.74.dmg`를 더블클릭해 마운트한다.
 2. `Ping.app`을 Applications 폴더로 드래그한다.
 3. 더블클릭해 실행한다. Developer ID 서명 + Apple 공증(notarized) 빌드라 Gatekeeper 경고 없이 바로 열린다.
 4. 카메라, 마이크, 알림 권한을 허용한다.
@@ -93,7 +93,7 @@ macOS 앱은 Sparkle로 업데이트를 확인한다. 새 버전이 공개되면
 
 Windows 앱은 Sparkle을 사용하지 않는다. 비용 없는 배포는 self-signed MSIX를 작은 `PingSetup-v0.3.46.exe` 웹 설치파일로 감싸고, 설치 중 PC 아키텍처에 맞는 MSIX를 `https://0minping.vercel.app/downloads/windows/`에서 받는 방식이다. 최초 설치 시 installer가 Ping 공개 인증서를 등록한다. Microsoft Store, Azure Artifact Signing, OV 코드서명 인증서는 더 매끄러운 신뢰 UX를 제공하지만 비용 또는 외부 계정 검증이 필요하다.
 
-## 미출시 macOS 변경
+## v0.3.74 macOS
 
 - 자동 얼굴 회신은 모든 macOS 사용자에게 항상 적용된다. 설정에서 끌 수 없고 관련 선택 UI도 표시하지 않는다. 자동 회신 루프 차단, 60초 freshness 제한, 카메라 상태 확인, 녹화 인디케이터는 유지한다.
 - launchd KeepAlive가 실제 실행 중인 Ping 프로세스를 소유하도록 고쳤다. 수동 재실행과 Sparkle 업데이트 후 재실행은 등록을 현재 앱 번들로 갱신하고, 잠자기·메모리 압박·디스크 압박·크래시 중 비정상 종료되면 자동 복구한다. 사용자가 직접 종료한 경우에는 현재 로그인 세션에서 되살아나지 않는다.
