@@ -366,6 +366,7 @@ struct RoomTimelineView: View {
                     Task { await viewModel.toggleReaction(target: .video, targetId: vid, emoji: emoji) }
                 },
                 canSave: v.canBeSavedLocally(by: myUid),
+                canDelete: isMine || v.receiverUid == myUid,
                 usesExternalScreenFaceExpansion: usesExternalScreenFaceExpansion,
                 onScreenFaceExpansionChange: onScreenFaceExpansionChange
             )

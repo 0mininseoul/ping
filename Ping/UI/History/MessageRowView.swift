@@ -16,6 +16,8 @@ struct MessageRowView: View {
     let onDelete: () -> Void
     let onToggleReaction: (String) -> Void
     let canSave: Bool
+    /// 룸 전체 타임라인에는 내가 주고받지 않은 남의 회신도 뜬다. 그런 행은 지울 수 없다.
+    let canDelete: Bool
     let usesExternalScreenFaceExpansion: Bool
     let onScreenFaceExpansionChange: (ScreenFaceExpansionAnchor?, ScreenFaceExpansionContext?) -> Void
 
@@ -66,9 +68,13 @@ struct MessageRowView: View {
                         Label("저장", systemImage: "arrow.down.circle")
                     }
                 }
-                Divider()
-                Button(role: .destructive, action: onDelete) {
-                    Label("삭제", systemImage: "trash")
+                // ping_remove_video_message는 owner/recipient가 아닌 행을
+                // message_not_accessible로 거절한다. 누를 수 있게 두면 "삭제 실패"만 남는다.
+                if canDelete {
+                    Divider()
+                    Button(role: .destructive, action: onDelete) {
+                        Label("삭제", systemImage: "trash")
+                    }
                 }
             }
             if !isMine { Spacer() }
