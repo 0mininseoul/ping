@@ -20,6 +20,7 @@ enum AutoStartStatus: Equatable {
 enum AutoStartAction: Equatable {
     case none
     case registerAgent
+    case reregisterAgent
     case unregisterAgent
     /// 구 로그인 항목(`SMAppService.mainApp`)을 해제한 뒤 agent를 등록한다. 순서가 중요하다.
     case migrateFromMainApp
@@ -72,14 +73,15 @@ enum AutoStartPolicy {
     static func action(
         userChoice: Bool?,
         agentStatus: AutoStartStatus,
-        mainAppStatus: AutoStartStatus
+        mainAppStatus: AutoStartStatus,
+        isAgentManaged: Bool
     ) -> AutoStartAction {
         guard let userChoice else {
             // 한 번도 선택한 적 없음 = 신규 설치이거나 업데이트 후 첫 실행. 기본 ON으로 켠다.
             if mainAppStatus.isRegistered {
                 return .migrateFromMainApp
             }
-            return reconcileEnabled(agentStatus)
+            return reconcileEnabled(agentStatus, isAgentManaged: isAgentManaged)
         }
 
         guard userChoice else {
@@ -87,15 +89,20 @@ enum AutoStartPolicy {
             return agentStatus.isRegistered ? .unregisterAgent : .none
         }
 
-        return reconcileEnabled(agentStatus)
+        return reconcileEnabled(agentStatus, isAgentManaged: isAgentManaged)
     }
 
     /// "켜져 있어야 한다"가 확정된 뒤 현재 상태를 어떻게 맞출지 정한다.
     /// 첫 실행 분기와 자가 치유 분기가 같은 판단을 쓰도록 한 곳에 모았다 —
     /// 어긋나면 한쪽만 실패할 `register()`를 매 기동 반복한다.
-    private static func reconcileEnabled(_ agentStatus: AutoStartStatus) -> AutoStartAction {
+    private static func reconcileEnabled(
+        _ agentStatus: AutoStartStatus,
+        isAgentManaged: Bool
+    ) -> AutoStartAction {
         switch agentStatus {
-        case .enabled, .requiresApproval, .unknown:
+        case .enabled:
+            return isAgentManaged ? .none : .reregisterAgent
+        case .requiresApproval, .unknown:
             // requiresApproval은 사용자가 시스템 설정에서 껐다는 뜻이라 존중한다.
             // unknown은 우리가 모르는 상태다. 모르면 건드리지 않는다.
             return .none
@@ -166,7 +173,7 @@ final class AutoStartController {
     }
 
     /// 기동 시 1회 호출. 기본 ON 적용과 구 로그인 항목 마이그레이션을 수행한다.
-    func applyPolicyAtLaunch() {
+    func applyPolicyAtLaunch(isAgentManaged: Bool) async {
         // DerivedData나 .dmg에서 실행된 빌드는 등록하지 않는다. 등록하면 Xcode의 Stop(SIGKILL)이
         // 비정상 종료로 잡혀 KeepAlive가 개발 빌드를 되살리고, DerivedData를 지우면
         // 시스템 설정에 죽은 로그인 항목이 남는다.
@@ -176,7 +183,8 @@ final class AutoStartController {
         let action = AutoStartPolicy.action(
             userChoice: choice,
             agentStatus: status,
-            mainAppStatus: Self.map(SMAppService.mainApp.status)
+            mainAppStatus: Self.map(SMAppService.mainApp.status),
+            isAgentManaged: isAgentManaged
         )
 
         do {
@@ -185,8 +193,10 @@ final class AutoStartController {
                 break
             case .registerAgent:
                 try agent.register()
+            case .reregisterAgent:
+                try await reregisterAgent()
             case .unregisterAgent:
-                try agent.unregister()
+                try await agent.unregister()
             case .migrateFromMainApp:
                 // agent 등록이 먼저다. mainApp을 먼저 해제하면 register()가 실패했을 때
                 // 둘 다 없는 상태로 남고 복구 경로가 없다. 이 순서면 최악의 경우가
@@ -198,7 +208,7 @@ final class AutoStartController {
                 if !status.isRegistered {
                     try agent.register()
                 }
-                try SMAppService.mainApp.unregister()
+                try await SMAppService.mainApp.unregister()
             }
 
             if choice == nil {
@@ -208,5 +218,19 @@ final class AutoStartController {
             // 실패하면 userChoice를 저장하지 않는다. 다음 기동에서 다시 시도한다.
             logger.error("auto-start \(String(describing: action), privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
         }
+    }
+
+    private func reregisterAgent() async throws {
+        let service = agent
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            service.unregister { error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume()
+                }
+            }
+        }
+        try service.register()
     }
 }

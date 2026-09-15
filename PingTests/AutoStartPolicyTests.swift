@@ -11,7 +11,8 @@ final class AutoStartPolicyTests: XCTestCase {
         let action = AutoStartPolicy.action(
             userChoice: nil,
             agentStatus: .notRegistered,
-            mainAppStatus: .notRegistered
+            mainAppStatus: .notRegistered,
+            isAgentManaged: true
         )
 
         XCTAssertEqual(action, .registerAgent)
@@ -22,7 +23,8 @@ final class AutoStartPolicyTests: XCTestCase {
             let action = AutoStartPolicy.action(
                 userChoice: nil,
                 agentStatus: .notRegistered,
-                mainAppStatus: mainAppStatus
+                mainAppStatus: mainAppStatus,
+                isAgentManaged: true
             )
 
             XCTAssertEqual(action, .migrateFromMainApp, "mainAppStatus: \(mainAppStatus)")
@@ -33,7 +35,8 @@ final class AutoStartPolicyTests: XCTestCase {
         let action = AutoStartPolicy.action(
             userChoice: nil,
             agentStatus: .enabled,
-            mainAppStatus: .notRegistered
+            mainAppStatus: .notRegistered,
+            isAgentManaged: true
         )
 
         XCTAssertEqual(action, .none)
@@ -45,7 +48,8 @@ final class AutoStartPolicyTests: XCTestCase {
         let action = AutoStartPolicy.action(
             userChoice: nil,
             agentStatus: .requiresApproval,
-            mainAppStatus: .notRegistered
+            mainAppStatus: .notRegistered,
+            isAgentManaged: true
         )
 
         XCTAssertEqual(action, .none)
@@ -58,12 +62,14 @@ final class AutoStartPolicyTests: XCTestCase {
             let firstRun = AutoStartPolicy.action(
                 userChoice: nil,
                 agentStatus: agentStatus,
-                mainAppStatus: .notRegistered
+                mainAppStatus: .notRegistered,
+                isAgentManaged: true
             )
             let selfHeal = AutoStartPolicy.action(
                 userChoice: true,
                 agentStatus: agentStatus,
-                mainAppStatus: .notRegistered
+                mainAppStatus: .notRegistered,
+                isAgentManaged: true
             )
 
             XCTAssertEqual(firstRun, selfHeal, "agentStatus: \(agentStatus)")
@@ -77,7 +83,8 @@ final class AutoStartPolicyTests: XCTestCase {
             let action = AutoStartPolicy.action(
                 userChoice: true,
                 agentStatus: agentStatus,
-                mainAppStatus: .notRegistered
+                mainAppStatus: .notRegistered,
+                isAgentManaged: true
             )
 
             XCTAssertEqual(action, .registerAgent, "agentStatus: \(agentStatus)")
@@ -89,7 +96,8 @@ final class AutoStartPolicyTests: XCTestCase {
         let action = AutoStartPolicy.action(
             userChoice: true,
             agentStatus: .requiresApproval,
-            mainAppStatus: .notRegistered
+            mainAppStatus: .notRegistered,
+            isAgentManaged: true
         )
 
         XCTAssertEqual(action, .none)
@@ -103,7 +111,8 @@ final class AutoStartPolicyTests: XCTestCase {
                 let action = AutoStartPolicy.action(
                     userChoice: false,
                     agentStatus: agentStatus,
-                    mainAppStatus: mainAppStatus
+                    mainAppStatus: mainAppStatus,
+                    isAgentManaged: true
                 )
 
                 XCTAssertNotEqual(action, .registerAgent, "\(agentStatus)/\(mainAppStatus)")
@@ -114,11 +123,21 @@ final class AutoStartPolicyTests: XCTestCase {
 
     func testDisabledChoiceUnregistersOnlyWhenRegistered() {
         XCTAssertEqual(
-            AutoStartPolicy.action(userChoice: false, agentStatus: .enabled, mainAppStatus: .notRegistered),
+            AutoStartPolicy.action(
+                userChoice: false,
+                agentStatus: .enabled,
+                mainAppStatus: .notRegistered,
+                isAgentManaged: true
+            ),
             .unregisterAgent
         )
         XCTAssertEqual(
-            AutoStartPolicy.action(userChoice: false, agentStatus: .notRegistered, mainAppStatus: .notRegistered),
+            AutoStartPolicy.action(
+                userChoice: false,
+                agentStatus: .notRegistered,
+                mainAppStatus: .notRegistered,
+                isAgentManaged: true
+            ),
             .none
         )
     }
@@ -131,17 +150,43 @@ final class AutoStartPolicyTests: XCTestCase {
                 let withLegacy = AutoStartPolicy.action(
                     userChoice: userChoice,
                     agentStatus: .enabled,
-                    mainAppStatus: mainAppStatus
+                    mainAppStatus: mainAppStatus,
+                    isAgentManaged: true
                 )
                 let withoutLegacy = AutoStartPolicy.action(
                     userChoice: userChoice,
                     agentStatus: .enabled,
-                    mainAppStatus: .notRegistered
+                    mainAppStatus: .notRegistered,
+                    isAgentManaged: true
                 )
 
                 XCTAssertEqual(withLegacy, withoutLegacy, "\(userChoice)/\(mainAppStatus)")
             }
         }
+    }
+
+    func testEnabledUnmanagedLaunchRefreshesRegisteredAgent() {
+        XCTAssertEqual(
+            AutoStartPolicy.action(
+                userChoice: true,
+                agentStatus: .enabled,
+                mainAppStatus: .notRegistered,
+                isAgentManaged: false
+            ),
+            .reregisterAgent
+        )
+    }
+
+    func testEnabledManagedLaunchDoesNotRefreshAgent() {
+        XCTAssertEqual(
+            AutoStartPolicy.action(
+                userChoice: true,
+                agentStatus: .enabled,
+                mainAppStatus: .notRegistered,
+                isAgentManaged: true
+            ),
+            .none
+        )
     }
 
     // MARK: 컨트롤러

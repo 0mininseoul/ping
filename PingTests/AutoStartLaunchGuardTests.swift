@@ -63,7 +63,8 @@ final class AutoStartLaunchGuardTests: XCTestCase {
         let source = try readSourceFile("AppDelegate.swift")
 
         // 이 호출이 빠지면 기능 전체가 조용히 동작을 멈추고 단위 테스트는 전부 통과한다.
-        XCTAssertTrue(source.contains("AutoStartController.shared.applyPolicyAtLaunch()"))
+        XCTAssertTrue(source.contains("AutoStartController.shared.applyPolicyAtLaunch("))
+        XCTAssertTrue(source.contains("isAgentManaged: isAgentManagedProcess"))
     }
 
     private func readSourceFile(_ relativePath: String) throws -> String {

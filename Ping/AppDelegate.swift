@@ -108,7 +108,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setupHotkey()
 
         if !ProcessInfo.processInfo.isRunningUnitTests {
-            AutoStartController.shared.applyPolicyAtLaunch()
+            Task { @MainActor in
+                await AutoStartController.shared.applyPolicyAtLaunch(
+                    isAgentManaged: isAgentManagedProcess
+                )
+            }
 
             if showsOnboardingForQA {
                 showOnboardingPreviewForQA()
