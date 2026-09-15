@@ -38,6 +38,8 @@ export default function Routes() {
     <LandingPage
       macDownloadUrl={MAC_DOWNLOAD_URL}
       macVersion={MAC_APP_VERSION}
+      windowsDownloadUrl={WINDOWS_DOWNLOAD_URL}
+      windowsVersion={WINDOWS_APP_VERSION}
     />
   );
 }

@@ -7,11 +7,15 @@ import { Button } from "@/components/ui/button";
 interface FinalCTAProps {
   macDownloadUrl: string;
   macVersion: string;
+  windowsDownloadUrl: string;
+  windowsVersion: string;
 }
 
 export default function FinalCTA({
   macDownloadUrl,
   macVersion,
+  windowsDownloadUrl,
+  windowsVersion,
 }: FinalCTAProps) {
   return (
     <section id="download" className="border-t border-border py-28 md:py-32">
@@ -28,7 +32,7 @@ export default function FinalCTA({
             <div className="relative grid items-center gap-10 md:grid-cols-[1.1fr_0.9fr] md:gap-14">
               <div>
                 <Badge variant="accent" className="mb-5">
-                  macOS {macVersion}
+                  macOS {macVersion} · Windows {windowsVersion}
                 </Badge>
                 <h2 className="text-balance text-[clamp(2.2rem,3.75vw,3rem)] leading-[1.05] lg:whitespace-nowrap">
                   가장 쉽고 빠른 영상 메시지
@@ -56,11 +60,27 @@ export default function FinalCTA({
                       </Button>
                     </a>
                   </ClickSpark>
+                  <ClickSpark className="w-full">
+                    <a
+                      className="block w-full"
+                      href={windowsDownloadUrl}
+                      aria-label={`Ping ${windowsVersion} Windows 설치 프로그램 다운로드`}
+                    >
+                      <Button
+                        variant="secondary"
+                        size="lg"
+                        className="w-full"
+                      >
+                        <MonitorDown aria-hidden className="h-[18px] w-[18px]" />
+                        Download for Windows
+                      </Button>
+                    </a>
+                  </ClickSpark>
                 </div>
               </div>
             </div>
             <p className="mt-6 text-[11px] text-subtle md:whitespace-nowrap md:text-right">
-              macOS 13 Ventura+ · Apple Silicon Mac 권장 · DMG 직접 다운로드
+              macOS 13 Ventura+ · Windows 11 24H2+ · 설치 파일 직접 다운로드
             </p>
           </div>
         </ScrollFloat>

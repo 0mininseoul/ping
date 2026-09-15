@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 
 interface SiteNavProps {
   macDownloadUrl: string;
+  windowsDownloadUrl: string;
 }
 
 const links = [
@@ -16,6 +17,7 @@ const links = [
 
 export default function SiteNav({
   macDownloadUrl,
+  windowsDownloadUrl,
 }: SiteNavProps) {
   const [scrolled, setScrolled] = useState(false);
 
@@ -66,6 +68,13 @@ export default function SiteNav({
               <Download aria-hidden className="h-4 w-4" />
               <span className="hidden sm:inline">macOS 다운로드</span>
               <span className="sm:hidden">Mac</span>
+            </Button>
+          </a>
+          <a href={windowsDownloadUrl} aria-label="Download for Windows">
+            <Button variant="secondary" size="sm">
+              <Download aria-hidden className="h-4 w-4" />
+              <span className="hidden sm:inline">Windows 다운로드</span>
+              <span className="sm:hidden">Windows</span>
             </Button>
           </a>
         </div>
