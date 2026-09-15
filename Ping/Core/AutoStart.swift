@@ -172,7 +172,7 @@ final class AutoStartController {
         }
     }
 
-    /// 기동 시 1회 호출. 기본 ON 적용과 구 로그인 항목 마이그레이션을 수행한다.
+    /// 기동 시 1회 호출. 기본 ON 적용, 구 로그인 항목 마이그레이션, agent 재등록을 수행한다.
     func applyPolicyAtLaunch(isAgentManaged: Bool) async {
         // DerivedData나 .dmg에서 실행된 빌드는 등록하지 않는다. 등록하면 Xcode의 Stop(SIGKILL)이
         // 비정상 종료로 잡혀 KeepAlive가 개발 빌드를 되살리고, DerivedData를 지우면
