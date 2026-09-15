@@ -113,6 +113,39 @@ enum DuplicateInstanceTerminator {
     }
 }
 
+/// 재등록 뒤 소유권을 누가 갖는지 정한다.
+///
+/// 원래 설계는 launchd가 띄운 신참이 전임자에게 종료를 **요청**하는 것이었는데,
+/// 그 요청은 샌드박스에서 전달되지 않는다. `NSRunningApplication.terminate()`는 quit
+/// AppleEvent를 보내는 방식이고, Ping은 `com.apple.security.app-sandbox`가 켜진 채
+/// `com.apple.security.automation.apple-events` 권한이 없다. 그래서 0.3.75까지 중복
+/// 인스턴스가 그대로 남았다(창이 두 개 열리는 증상).
+///
+/// 남의 프로세스를 끝내는 건 신뢰할 수 없지만 **자기 자신을 끝내는 것은 언제나 허용된다.**
+/// 그래서 방향을 뒤집는다: 재등록을 한 쪽이, launchd가 새 인스턴스를 띄운 것을 확인하면
+/// 스스로 물러난다. 신호를 주고받을 필요가 없다.
+enum OwnershipHandoff {
+    enum Decision: Equatable {
+        /// launchd 인스턴스가 떴다. 내가 물러난다.
+        case handOff
+        /// 아직 안 떴다. 여기서 물러나면 앱이 통째로 사라진다.
+        case keepRunning
+    }
+
+    /// 재등록 직전 스냅샷에 없던 pid가 생겼는지만 본다. 그 pid가 곧 launchd가 띄운
+    /// 인스턴스다 — 우리가 방금 `register()`로 그러도록 시켰기 때문이다.
+    static func decide(
+        pidsBeforeRegister: Set<pid_t>,
+        currentPIDs: Set<pid_t>,
+        currentPID: pid_t
+    ) -> Decision {
+        let newcomers = currentPIDs
+            .subtracting(pidsBeforeRegister)
+            .subtracting([currentPID])
+        return newcomers.isEmpty ? .keepRunning : .handOff
+    }
+}
+
 /// 자동 시작 등록 상태를 어떻게 맞출지 정하는 순수 함수. 부작용이 없어 전수 테스트가 가능하다.
 enum AutoStartPolicy {
     static func action(
@@ -251,14 +284,23 @@ final class AutoStartController {
             isAgentManaged: isAgentManaged
         )
 
+        // 등록 직전의 인스턴스 목록. 등록이 새로 띄운 프로세스를 이것과의 차집합으로 가린다.
+        let pidsBeforeRegister = Set(
+            Bundle.main.bundleIdentifier
+                .map { SingleInstanceGuard.runningPIDs(forBundleIdentifier: $0) } ?? []
+        )
+        var didRegister = false
+
         do {
             switch action {
             case .none:
                 break
             case .registerAgent:
                 try agent.register()
+                didRegister = true
             case .reregisterAgent:
                 try await reregisterAgent()
+                didRegister = true
             case .unregisterAgent:
                 try await agent.unregister()
             case .migrateFromMainApp:
@@ -273,16 +315,52 @@ final class AutoStartController {
                     try agent.register()
                 }
                 try await SMAppService.mainApp.unregister()
+                didRegister = true
             }
 
             if choice == nil {
                 userChoice = true
+            }
+
+            // 내가 launchd가 띄운 프로세스가 아닌데 방금 등록을 했다면, launchd가 새
+            // 인스턴스를 띄웠을 것이다. 그쪽이 KeepAlive의 보호를 받는 프로세스이므로
+            // 내가 물러나야 한 개만 남고, 그 한 개가 감시 대상이 된다.
+            if didRegister && !isAgentManaged {
+                await handOffToLaunchdInstance(pidsBeforeRegister: pidsBeforeRegister)
             }
         } catch {
             // 실패하면 userChoice를 저장하지 않는다. 다음 기동에서 다시 시도한다.
             logger.error("auto-start \(String(describing: action), privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
         }
     }
+
+    /// launchd 인스턴스가 뜰 때까지만 기다렸다가 스스로 종료한다.
+    ///
+    /// 끝내 안 뜨면 **물러나지 않는다.** 등록이 조용히 실패했거나 launchd가 잡을 막은
+    /// 상황에서 내가 빠지면 사용자에게 앱이 통째로 사라진다.
+    private func handOffToLaunchdInstance(pidsBeforeRegister: Set<pid_t>) async {
+        guard let bundleIdentifier = Bundle.main.bundleIdentifier else { return }
+        let me = ProcessInfo.processInfo.processIdentifier
+
+        for _ in 0..<Self.handoffMaxChecks {
+            let current = Set(SingleInstanceGuard.runningPIDs(forBundleIdentifier: bundleIdentifier))
+            if OwnershipHandoff.decide(
+                pidsBeforeRegister: pidsBeforeRegister,
+                currentPIDs: current,
+                currentPID: me
+            ) == .handOff {
+                logger.notice("handing ownership to the launchd-managed instance; exiting")
+                exit(0)
+            }
+            try? await Task.sleep(nanoseconds: Self.handoffCheckIntervalNanoseconds)
+        }
+
+        // 여기 도달하면 등록은 성공했다는데 프로세스가 안 떴다는 뜻이다. 추론 말고 남긴다.
+        logger.error("registered the agent but no launchd-managed instance appeared; staying up")
+    }
+
+    private static let handoffMaxChecks = 40
+    private static let handoffCheckIntervalNanoseconds: UInt64 = 250_000_000
 
     private func reregisterAgent() async throws {
         let service = agent

@@ -192,3 +192,83 @@ final class DuplicateInstanceTerminatorTests: XCTestCase {
         XCTAssertEqual(forced, [])
     }
 }
+
+/// 소유권을 **내가 물러나는 방식**으로 넘기는지 검증한다.
+///
+/// 회귀 배경: 원래 설계는 신참이 전임자에게 종료를 요청하는 것이었는데, 그 요청은
+/// 샌드박스에서 전달되지 않는다(`terminate()`는 quit AppleEvent이고 Ping에는
+/// `com.apple.security.automation.apple-events` 권한이 없다). 0.3.75까지 중복
+/// 인스턴스가 그대로 남은 이유다.
+final class OwnershipHandoffTests: XCTestCase {
+    func testHandsOffWhenRegistrationStartedANewInstance() {
+        let decision = OwnershipHandoff.decide(
+            pidsBeforeRegister: [100],
+            currentPIDs: [100, 200],
+            currentPID: 100
+        )
+        XCTAssertEqual(decision, .handOff)
+    }
+
+    /// 안 떴는데 물러나면 사용자에게 앱이 통째로 사라진다. 등록이 조용히 실패했거나
+    /// launchd가 잡을 막은 경우가 여기 해당한다.
+    func testKeepsRunningWhenNoNewInstanceAppeared() {
+        let decision = OwnershipHandoff.decide(
+            pidsBeforeRegister: [100],
+            currentPIDs: [100],
+            currentPID: 100
+        )
+        XCTAssertEqual(decision, .keepRunning)
+    }
+
+    func testMyOwnPidIsNeverMistakenForTheNewcomer() {
+        // 등록 직전 스냅샷에 내가 빠져 있어도(경쟁 상황) 나를 신참으로 세면 안 된다.
+        let decision = OwnershipHandoff.decide(
+            pidsBeforeRegister: [],
+            currentPIDs: [100],
+            currentPID: 100
+        )
+        XCTAssertEqual(decision, .keepRunning)
+    }
+
+    func testPreexistingInstancesAreNotNewcomers() {
+        let decision = OwnershipHandoff.decide(
+            pidsBeforeRegister: [100, 300],
+            currentPIDs: [100, 300],
+            currentPID: 100
+        )
+        XCTAssertEqual(decision, .keepRunning)
+    }
+
+    func testHandsOffEvenWhenAnOlderInstanceAlsoLingers() {
+        let decision = OwnershipHandoff.decide(
+            pidsBeforeRegister: [100, 300],
+            currentPIDs: [100, 300, 400],
+            currentPID: 100
+        )
+        XCTAssertEqual(decision, .handOff)
+    }
+}
+
+/// 핸드오프가 실제로 배선돼 있는지 잠근다. 이 호출이 빠지면 중복 인스턴스가 조용히
+/// 돌아오고 유닛 테스트는 전부 통과한다 — 0.3.75에서 실제로 그랬다.
+final class OwnershipHandoffWiringTests: XCTestCase {
+    func testControllerHandsOffAfterRegisteringWhileUnmanaged() throws {
+        let source = try String(
+            contentsOf: URL(fileURLWithPath: #filePath)
+                .deletingLastPathComponent()
+                .deletingLastPathComponent()
+                .appendingPathComponent("Ping/Core/AutoStart.swift"),
+            encoding: .utf8
+        )
+
+        XCTAssertTrue(source.contains("handOffToLaunchdInstance("))
+        XCTAssertTrue(
+            source.contains("if didRegister && !isAgentManaged {"),
+            "등록을 했고 내가 launchd 프로세스가 아닐 때만 물러나야 한다"
+        )
+        XCTAssertTrue(
+            source.contains("exit(0)"),
+            "물러남은 정상 종료여야 한다. 비정상 종료면 KeepAlive가 나를 되살린다"
+        )
+    }
+}
