@@ -68,12 +68,16 @@ enum SingleInstanceGuard {
     }
 }
 
-/// 중복 인스턴스를 실제로 없앤다.
+/// 소유권 이전을 끝까지 완수한다.
 ///
-/// `NSRunningApplication.terminate()`가 true를 돌려줘도 그건 quit 이벤트를 **보냈다**는 뜻일
-/// 뿐이다. 기동 1초차라 이벤트 루프가 아직 이벤트를 처리하지 못하는 인스턴스는 그걸 흘리고,
-/// 재시도도 확인도 없던 탓에 두 인스턴스가 그대로 남았다(창이 두 개 열리는 증상).
-/// 요청하고, 죽었는지 확인하고, 기한을 넘기면 강제한다.
+/// 설계상 launchd가 띄운 인스턴스가 이겨야 한다(2026-09-15 keepalive-ownership 스펙).
+/// 그래야 살아남은 프로세스를 launchd가 감시하고 비정상 종료 뒤 되살릴 수 있다.
+/// 그런데 `NSRunningApplication.terminate()`가 true를 돌려줘도 그건 quit 이벤트를
+/// **보냈다**는 뜻일 뿐이다. 기동 직후의 전임자는 아직 이벤트 루프를 못 띄워 그걸 흘리고,
+/// 확인도 재시도도 없던 탓에 두 인스턴스가 그대로 남았다 — 창이 두 개 열리던 증상이다.
+///
+/// 그래서 매 시도마다 다시 요청한다. 한 번만 보내고 기다리면 흘러간 요청은 영영 다시
+/// 오지 않아, 남는 결말이 강제 종료뿐이다. 기한을 넘긴 경우에만 강제한다.
 enum DuplicateInstanceTerminator {
     /// 강제 종료까지 간 pid를 돌려준다. 주입된 클로저만 갈아끼우면 전수 테스트가 된다.
     @discardableResult
@@ -87,20 +91,21 @@ enum DuplicateInstanceTerminator {
     ) -> [pid_t] {
         guard !pids.isEmpty else { return [] }
 
-        for pid in pids {
-            politeQuit(pid)
-        }
-
         var remaining = pids
         var checks = 0
-        while checks < maxChecks {
+
+        while true {
             remaining = remaining.filter { !hasExited($0) }
             if remaining.isEmpty { return [] }
+            if checks >= maxChecks { break }
+
+            for pid in remaining {
+                politeQuit(pid)
+            }
             waitStep()
             checks += 1
         }
 
-        remaining = remaining.filter { !hasExited($0) }
         for pid in remaining {
             forceQuit(pid)
         }
@@ -110,27 +115,18 @@ enum DuplicateInstanceTerminator {
 
 /// 자동 시작 등록 상태를 어떻게 맞출지 정하는 순수 함수. 부작용이 없어 전수 테스트가 가능하다.
 enum AutoStartPolicy {
-    /// `registrationIsStale`은 "등록된 잡이 지금 번들이 아닌 다른 경로를 가리킨다"는 뜻이다.
-    /// 이게 없던 시절엔 `.enabled`인데 agent가 띄운 게 아니면 무조건 재등록했는데,
-    /// 사용자가 앱을 직접 실행하거나 macOS가 로그인 때 복원하기만 해도 그 조건이 성립한다.
-    /// 그 재등록이 `RunAtLoad`로 두 번째 인스턴스를 낳아 창이 두 개 열렸다.
     static func action(
         userChoice: Bool?,
         agentStatus: AutoStartStatus,
         mainAppStatus: AutoStartStatus,
-        isAgentManaged: Bool,
-        registrationIsStale: Bool = false
+        isAgentManaged: Bool
     ) -> AutoStartAction {
         guard let userChoice else {
             // 한 번도 선택한 적 없음 = 신규 설치이거나 업데이트 후 첫 실행. 기본 ON으로 켠다.
             if mainAppStatus.isRegistered {
                 return .migrateFromMainApp
             }
-            return reconcileEnabled(
-                agentStatus,
-                isAgentManaged: isAgentManaged,
-                registrationIsStale: registrationIsStale
-            )
+            return reconcileEnabled(agentStatus, isAgentManaged: isAgentManaged)
         }
 
         guard userChoice else {
@@ -138,11 +134,7 @@ enum AutoStartPolicy {
             return agentStatus.isRegistered ? .unregisterAgent : .none
         }
 
-        return reconcileEnabled(
-            agentStatus,
-            isAgentManaged: isAgentManaged,
-            registrationIsStale: registrationIsStale
-        )
+        return reconcileEnabled(agentStatus, isAgentManaged: isAgentManaged)
     }
 
     /// "켜져 있어야 한다"가 확정된 뒤 현재 상태를 어떻게 맞출지 정한다.
@@ -150,16 +142,11 @@ enum AutoStartPolicy {
     /// 어긋나면 한쪽만 실패할 `register()`를 매 기동 반복한다.
     private static func reconcileEnabled(
         _ agentStatus: AutoStartStatus,
-        isAgentManaged: Bool,
-        registrationIsStale: Bool
+        isAgentManaged: Bool
     ) -> AutoStartAction {
         switch agentStatus {
         case .enabled:
-            // agent가 띄운 인스턴스면 등록이 살아 있다는 증거다. 아니더라도 등록이
-            // 지금 번들을 가리키고 있으면 건드릴 이유가 없다. 재등록은 `register()`가
-            // 잡을 즉시 로드하면서 두 번째 프로세스를 만들기 때문에 공짜가 아니다.
-            if isAgentManaged { return .none }
-            return registrationIsStale ? .reregisterAgent : .none
+            return isAgentManaged ? .none : .reregisterAgent
         case .requiresApproval, .unknown:
             // requiresApproval은 사용자가 시스템 설정에서 껐다는 뜻이라 존중한다.
             // unknown은 우리가 모르는 상태다. 모르면 건드리지 않는다.
@@ -220,37 +207,6 @@ final class AutoStartController {
         }
     }
 
-    /// 마지막으로 `register()`에 성공했을 때의 번들 경로. 등록이 지금 번들을 가리키는지
-    /// 판단하는 유일한 근거다. `SMAppService`는 등록된 잡의 program path를 노출하지 않고,
-    /// 샌드박스에서 launchd에 직접 물을 수도 없어서 앱이 스스로 남긴다.
-    var registeredBundlePath: String? {
-        get { defaults.string(forKey: PingPreferenceKeys.autostartRegisteredBundlePath) }
-        set {
-            if let newValue {
-                defaults.set(newValue, forKey: PingPreferenceKeys.autostartRegisteredBundlePath)
-            } else {
-                defaults.removeObject(forKey: PingPreferenceKeys.autostartRegisteredBundlePath)
-            }
-        }
-    }
-
-    /// 기록이 없으면 "오래됐다"가 아니라 "모른다"다. 모를 때 재등록하면 이 수정이 막으려는
-    /// 중복 인스턴스를 그대로 한 번 만든다. 그래서 모를 때는 건드리지 않고 현재 경로를
-    /// 채택한다(아래 `adoptCurrentBundlePathIfUnknown`).
-    var registrationIsStale: Bool {
-        guard let recorded = registeredBundlePath else { return false }
-        return recorded != Bundle.main.bundlePath
-    }
-
-    private func recordRegisteredBundlePath() {
-        registeredBundlePath = Bundle.main.bundlePath
-    }
-
-    private func adoptCurrentBundlePathIfUnknown() {
-        guard registeredBundlePath == nil else { return }
-        recordRegisteredBundlePath()
-    }
-
     var status: AutoStartStatus {
         Self.map(agent.status)
     }
@@ -275,10 +231,8 @@ final class AutoStartController {
 
         if enabled {
             try agent.register()
-            recordRegisteredBundlePath()
         } else if status.isRegistered {
             try agent.unregister()
-            registeredBundlePath = nil
         }
     }
 
@@ -290,16 +244,11 @@ final class AutoStartController {
         guard AppInstallLocation.canUseSparkleUpdates() else { return }
 
         let choice = userChoice
-        let currentStatus = status
-        if currentStatus == .enabled {
-            adoptCurrentBundlePathIfUnknown()
-        }
         let action = AutoStartPolicy.action(
             userChoice: choice,
-            agentStatus: currentStatus,
+            agentStatus: status,
             mainAppStatus: Self.map(SMAppService.mainApp.status),
-            isAgentManaged: isAgentManaged,
-            registrationIsStale: registrationIsStale
+            isAgentManaged: isAgentManaged
         )
 
         do {
@@ -308,13 +257,10 @@ final class AutoStartController {
                 break
             case .registerAgent:
                 try agent.register()
-                recordRegisteredBundlePath()
             case .reregisterAgent:
                 try await reregisterAgent()
-                recordRegisteredBundlePath()
             case .unregisterAgent:
                 try await agent.unregister()
-                registeredBundlePath = nil
             case .migrateFromMainApp:
                 // agent 등록이 먼저다. mainApp을 먼저 해제하면 register()가 실패했을 때
                 // 둘 다 없는 상태로 남고 복구 경로가 없다. 이 순서면 최악의 경우가
@@ -327,7 +273,6 @@ final class AutoStartController {
                     try agent.register()
                 }
                 try await SMAppService.mainApp.unregister()
-                recordRegisteredBundlePath()
             }
 
             if choice == nil {

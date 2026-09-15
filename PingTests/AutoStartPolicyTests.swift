@@ -180,50 +180,15 @@ final class AutoStartPolicyTests: XCTestCase {
         }
     }
 
-    // MARK: 재등록은 등록이 실제로 낡았을 때만
-
-    /// 사용자가 직접 실행하거나 macOS가 로그인 때 복원하면 agent가 띄운 게 아니게 된다.
-    /// 예전엔 그것만으로 재등록했고, `register()`가 `RunAtLoad`로 두 번째 인스턴스를
-    /// 낳아 창이 두 개 열렸다. 등록이 지금 번들을 가리키면 아무것도 하지 않아야 한다.
-    func testEnabledUnmanagedLaunchDoesNotRefreshWhenRegistrationMatchesBundle() {
+    func testEnabledUnmanagedLaunchRefreshesRegisteredAgent() {
         XCTAssertEqual(
             AutoStartPolicy.action(
                 userChoice: true,
                 agentStatus: .enabled,
                 mainAppStatus: .notRegistered,
-                isAgentManaged: false,
-                registrationIsStale: false
-            ),
-            .none
-        )
-    }
-
-    /// 앱을 옮기면 등록이 옛 경로를 가리킨다. 이때는 자가 치유해야 한다.
-    func testEnabledUnmanagedLaunchRefreshesWhenRegistrationIsStale() {
-        XCTAssertEqual(
-            AutoStartPolicy.action(
-                userChoice: true,
-                agentStatus: .enabled,
-                mainAppStatus: .notRegistered,
-                isAgentManaged: false,
-                registrationIsStale: true
+                isAgentManaged: false
             ),
             .reregisterAgent
-        )
-    }
-
-    /// agent가 띄운 인스턴스는 등록이 살아 있다는 증거다. 낡았다는 신호가 있어도
-    /// 그 프로세스가 곧 반증이므로 재등록해서 자기 복제를 만들면 안 된다.
-    func testAgentManagedLaunchNeverRefreshesEvenWhenFlaggedStale() {
-        XCTAssertEqual(
-            AutoStartPolicy.action(
-                userChoice: true,
-                agentStatus: .enabled,
-                mainAppStatus: .notRegistered,
-                isAgentManaged: true,
-                registrationIsStale: true
-            ),
-            .none
         )
     }
 
