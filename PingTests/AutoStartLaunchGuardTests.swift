@@ -57,6 +57,12 @@ final class AutoStartLaunchGuardTests: XCTestCase {
         XCTAssertTrue(source.contains("exit(0)"))
         XCTAssertTrue(source.contains("case .replaceExisting(let pids)"))
         XCTAssertTrue(source.contains("NSRunningApplication(processIdentifier: pid)?.terminate()"))
+
+        let guardIndex = try XCTUnwrap(source.range(of: "switch singleInstanceAction()")?.lowerBound)
+        let activationIndex = try XCTUnwrap(source.range(of: "enforceAccessoryActivationPolicy()")?.lowerBound)
+        let setupIndex = try XCTUnwrap(source.range(of: "setupStatusBar()")?.lowerBound)
+        XCTAssertLessThan(guardIndex, activationIndex)
+        XCTAssertLessThan(activationIndex, setupIndex)
     }
 
     func testAppDelegateAppliesAutoStartPolicyAtLaunch() throws {

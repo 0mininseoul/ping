@@ -113,6 +113,25 @@ enum AutoStartPolicy {
     }
 }
 
+@MainActor
+enum AutoStartRegistration {
+    static func reregister(
+        unregister: (@escaping @Sendable (Error?) -> Void) -> Void,
+        register: () throws -> Void
+    ) async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            unregister { error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume()
+                }
+            }
+        }
+        try register()
+    }
+}
+
 /// 자동 시작 등록 상태를 관리한다. `SMAppService`를 호출하는 곳은 이 클래스 하나뿐이다.
 @MainActor
 final class AutoStartController {
@@ -222,15 +241,9 @@ final class AutoStartController {
 
     private func reregisterAgent() async throws {
         let service = agent
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            service.unregister { error in
-                if let error {
-                    continuation.resume(throwing: error)
-                } else {
-                    continuation.resume()
-                }
-            }
-        }
-        try service.register()
+        try await AutoStartRegistration.reregister(
+            unregister: { completion in service.unregister(completionHandler: completion) },
+            register: { try service.register() }
+        )
     }
 }

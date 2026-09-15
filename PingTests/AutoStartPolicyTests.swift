@@ -3,6 +3,11 @@ import XCTest
 @testable import Ping
 
 final class AutoStartPolicyTests: XCTestCase {
+    private enum StubError: Error, Equatable {
+        case unregister
+        case register
+    }
+
     private let allStatuses: [AutoStartStatus] = [.enabled, .requiresApproval, .notRegistered, .notFound, .unknown]
 
     // MARK: userChoice == nil — 기본 ON
@@ -197,6 +202,53 @@ final class AutoStartPolicyTests: XCTestCase {
             ),
             .none
         )
+    }
+
+    @MainActor
+    func testReregisterWaitsForUnregisterBeforeRegistering() async throws {
+        var events: [String] = []
+
+        try await AutoStartRegistration.reregister(
+            unregister: { completion in
+                events.append("unregister")
+                completion(nil)
+            },
+            register: {
+                events.append("register")
+            }
+        )
+
+        XCTAssertEqual(events, ["unregister", "register"])
+    }
+
+    @MainActor
+    func testReregisterDoesNotRegisterWhenUnregisterFails() async {
+        var didRegister = false
+
+        do {
+            try await AutoStartRegistration.reregister(
+                unregister: { completion in completion(StubError.unregister) },
+                register: { didRegister = true }
+            )
+            XCTFail("Expected unregister failure")
+        } catch {
+            XCTAssertEqual(error as? StubError, .unregister)
+        }
+
+        XCTAssertFalse(didRegister)
+    }
+
+    @MainActor
+    func testReregisterPropagatesRegisterFailure() async {
+        do {
+            try await AutoStartRegistration.reregister(
+                unregister: { completion in completion(nil) },
+                register: { throw StubError.register }
+            )
+            XCTFail("Expected register failure")
+        } catch {
+            XCTAssertEqual(error as? StubError, .register)
+        }
     }
 
     // MARK: 컨트롤러
