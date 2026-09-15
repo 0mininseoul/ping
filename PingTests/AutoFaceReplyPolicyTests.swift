@@ -5,7 +5,6 @@ final class AutoFaceReplyPolicyTests: XCTestCase {
     private let launch = Date(timeIntervalSince1970: 1_000_000)
 
     private func context(
-        isEnabled: Bool = true,
         incomingIsAutoReply: Bool = false,
         createdAtOffset: TimeInterval? = 5,
         nowOffset: TimeInterval = 10,
@@ -14,7 +13,6 @@ final class AutoFaceReplyPolicyTests: XCTestCase {
         isCameraBusy: Bool = false
     ) -> AutoFaceReplyPolicy.Context {
         AutoFaceReplyPolicy.Context(
-            isEnabled: isEnabled,
             incomingIsAutoReply: incomingIsAutoReply,
             messageCreatedAt: createdAtOffset.map { launch.addingTimeInterval($0) },
             appStartedAt: launch,
@@ -27,10 +25,6 @@ final class AutoFaceReplyPolicyTests: XCTestCase {
 
     func testRecordsForAFreshPingWhileEverythingIsReady() {
         XCTAssertEqual(AutoFaceReplyPolicy.decide(context()), .record)
-    }
-
-    func testSkipsWhenTheSettingIsOff() {
-        XCTAssertEqual(AutoFaceReplyPolicy.decide(context(isEnabled: false)), .skip(.disabled))
     }
 
     /// 루프 차단의 1차 방어. 자동으로 녹화돼 온 핑에는 절대 다시 녹화하지 않는다.
@@ -108,36 +102,4 @@ final class AutoFaceReplyPolicyTests: XCTestCase {
         )
     }
 
-    func testDisabledSettingIsReportedAheadOfEveryOtherReason() {
-        let decision = AutoFaceReplyPolicy.decide(
-            context(isEnabled: false, incomingIsAutoReply: true, isCameraAuthorized: false)
-        )
-        XCTAssertEqual(decision, .skip(.disabled))
-    }
-}
-
-final class AutoFaceReplyPreferenceTests: XCTestCase {
-    private var suiteName: String!
-    private var defaults: UserDefaults!
-
-    override func setUpWithError() throws {
-        suiteName = "AutoFaceReplyPreferenceTests.\(UUID().uuidString)"
-        defaults = UserDefaults(suiteName: suiteName)
-    }
-
-    override func tearDownWithError() throws {
-        defaults.removePersistentDomain(forName: suiteName)
-    }
-
-    func testDefaultsToOnWhenNeverSet() {
-        XCTAssertTrue(PingAutoFaceReplyPreference.isEnabled(in: defaults))
-    }
-
-    func testRespectsExplicitOptOut() {
-        defaults.set(false, forKey: PingPreferenceKeys.autoFaceReplyOnPing)
-        XCTAssertFalse(PingAutoFaceReplyPreference.isEnabled(in: defaults))
-
-        defaults.set(true, forKey: PingPreferenceKeys.autoFaceReplyOnPing)
-        XCTAssertTrue(PingAutoFaceReplyPreference.isEnabled(in: defaults))
-    }
 }
