@@ -85,6 +85,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         enforceAccessoryActivationPolicy()
     }
 
+    /// 마지막 폴백. 정상 경로에서는 전임자가 `handOffToLaunchdInstance`로 **스스로**
+    /// 물러나므로 여기까지 오지 않는다. 샌드박스 때문에 이 경로의 quit 요청은 전달되지
+    /// 않을 수 있고, 그래서 여기에만 의존하면 0.3.75처럼 중복이 남는다.
+    ///
     /// 소유권 이전은 시작만 여기서 하고, 확인과 강제는 런치 밖으로 내보낸다.
     ///
     /// `applicationWillFinishLaunching`은 런루프가 뜨기 전 메인 스레드다. 여기서 전임자가
@@ -99,7 +103,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let forced = DuplicateInstanceTerminator.replace(
                 pids: pids,
                 politeQuit: { NSRunningApplication(processIdentifier: $0)?.terminate() },
-                hasExited: { NSRunningApplication(processIdentifier: $0)?.isTerminated ?? true },
+                // `NSRunningApplication(processIdentifier:)`가 nil이면 "종료됨"으로 읽혔는데,
+                // 조회 실패와 실제 종료를 구분하지 못한다. 그렇게 오판하면 강제 폴백이
+                // 건너뛰어지고 로그조차 남지 않는다. 커널에 직접 묻는다.
+                hasExited: { pid in
+                    if kill(pid, 0) == 0 { return false }
+                    return errno == ESRCH
+                },
                 forceQuit: { NSRunningApplication(processIdentifier: $0)?.forceTerminate() },
                 waitStep: { Thread.sleep(forTimeInterval: 0.25) },
                 maxChecks: 8

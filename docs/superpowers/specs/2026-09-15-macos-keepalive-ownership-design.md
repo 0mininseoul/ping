@@ -129,3 +129,33 @@ No destructive installed-app test runs automatically as part of the source chang
 - Adding a separate helper executable or XPC service.
 - Changing Windows or iOS lifecycle behavior.
 - Fixing unrelated historical CFNetwork crashes unless a new crash report identifies them as the current cause.
+
+## Superseded: ownership transfer mechanism (2026-09-16)
+
+The "Deterministic single-instance ownership" section above specifies that the
+launchd-managed process "requests graceful termination of the unmanaged
+predecessor" via `NSRunningApplication.terminate()`. **That mechanism cannot
+work in this app.**
+
+`terminate()` delivers a quit Apple Event. Ping ships with
+`com.apple.security.app-sandbox` enabled and without
+`com.apple.security.automation.apple-events`, so the event is never delivered
+to the other process. The predecessor survives, and both instances stay up —
+two menu bar icons, two realtime subscriptions, doubled notifications. This was
+reproduced on the shipped 0.3.75 build: an unmanaged instance at T and a
+launchd-managed instance at T+1s were both still alive 25 seconds later, with no
+force-termination logged.
+
+A sandboxed process cannot reliably end another process, but it can always end
+itself. The ownership transfer is therefore inverted:
+
+- The unmanaged process is the one that re-registers the agent, which is what
+  starts the launchd-managed instance in the first place.
+- After a successful registration it watches for a PID that was not present
+  before the registration call, and exits successfully once one appears.
+- If no such process appears within the bounded wait, it stays up and logs the
+  failure. Stepping aside there would leave the user with no app at all.
+
+`.replaceExisting` remains as a last-resort fallback and now tests liveness with
+`kill(pid, 0)` rather than `NSRunningApplication.isTerminated`, which cannot
+distinguish a failed lookup from an exited process.
