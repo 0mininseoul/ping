@@ -48,7 +48,9 @@ macOS 26 이상에서는 `.pingGlassEffect()` wrapper가 SwiftUI 네이티브 `.
 
 - 글로벌 단축키: 기본 `Option + P`, `KeyboardShortcuts` 패키지 사용.
 - 메뉴바 상주 앱: `NSStatusItem`, 앱 번들은 `LSUIElement` agent로 분류해 Finder/Spotlight/응용프로그램 실행 중에도 Dock 아이콘을 만들지 않고, 런타임에서 accessory activation을 추가로 재적용한다.
-- 로그인 시 자동 시작: `SMAppService.mainApp` 기반 Settings 토글.
+- 로그인 시 자동 시작: `SMAppService.agent` 기반 KeepAlive와 Settings 토글. 기존 `SMAppService.mainApp` 등록은 최초 기동 시 마이그레이션한다.
+- 실행 중인 Ping은 launchd KeepAlive agent가 소유한다. 잠자기·메모리 압박·디스크 압박·크래시로 비정상 종료되면 자동 재실행하고, 사용자가 메뉴에서 종료하면 현재 로그인 세션에서는 재실행하지 않는다.
+- 수동 실행과 Sparkle 업데이트 후 재실행은 KeepAlive 등록을 현재 빌드로 갱신하고 launchd 관리 프로세스로 소유권을 넘긴다.
 - 자동 업데이트: Sparkle 2, `SUFeedURL = https://0minping.vercel.app/appcast.xml`, scheduled update는 gentle reminder 알림을 함께 표시.
 
 ### Windows 시스템 통합
