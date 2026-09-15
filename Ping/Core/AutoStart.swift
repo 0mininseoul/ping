@@ -25,6 +25,22 @@ enum AutoStartAction: Equatable {
     case migrateFromMainApp
 }
 
+enum PingLaunchOrigin {
+    static let agentServiceName = "com.youngminpark.ping.Ping.keepalive"
+
+    static func isAgentManaged(
+        environment: [String: String] = ProcessInfo.processInfo.environment
+    ) -> Bool {
+        environment["XPC_SERVICE_NAME"] == agentServiceName
+    }
+}
+
+enum SingleInstanceAction: Equatable {
+    case proceed
+    case yield
+    case replaceExisting([pid_t])
+}
+
 /// launchd가 띄운 인스턴스와 사용자가 띄운 인스턴스가 겹치는 것을 막는다.
 ///
 /// `SMAppService.register()`는 잡을 즉시 로드하고, plist의 `RunAtLoad`가 true라 launchd는
@@ -34,8 +50,14 @@ enum AutoStartAction: Equatable {
 enum SingleInstanceGuard {
     /// 이 판정은 기동 직후에만 호출된다. 우리 프로세스는 방금 떴으므로 목록의 다른 pid는
     /// 전부 우리보다 먼저 뜬 인스턴스다.
-    static func shouldYield(runningPIDs: [pid_t], currentPID: pid_t) -> Bool {
-        runningPIDs.contains { $0 != currentPID }
+    static func action(
+        runningPIDs: [pid_t],
+        currentPID: pid_t,
+        isAgentManaged: Bool
+    ) -> SingleInstanceAction {
+        let others = runningPIDs.filter { $0 != currentPID }
+        guard !others.isEmpty else { return .proceed }
+        return isAgentManaged ? .replaceExisting(others) : .yield
     }
 
     static func runningPIDs(forBundleIdentifier bundleIdentifier: String) -> [pid_t] {

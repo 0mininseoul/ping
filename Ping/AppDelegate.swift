@@ -60,6 +60,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var cameraStartTask: Task<Void, Never>?
     private var pendingInviteToken: String?
     private var currentMirrorMode: CaptureMode?
+    private let isAgentManagedProcess = PingLaunchOrigin.isAgentManaged()
 
     private var showsOnboardingForQA: Bool {
         #if DEBUG
@@ -70,21 +71,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillFinishLaunching(_ notification: Notification) {
-        if !ProcessInfo.processInfo.isRunningUnitTests, shouldYieldToRunningInstance() {
-            // exit(0)이어야 launchd가 비정상 종료로 보지 않는다. 0이 아니면 KeepAlive가
-            // 곧바로 다시 띄워 무한 루프가 된다.
-            exit(0)
+        if !ProcessInfo.processInfo.isRunningUnitTests {
+            switch singleInstanceAction() {
+            case .proceed:
+                break
+            case .yield:
+                exit(0)
+            case .replaceExisting(let pids):
+                for pid in pids {
+                    NSRunningApplication(processIdentifier: pid)?.terminate()
+                }
+            }
         }
 
         enforceAccessoryActivationPolicy()
     }
 
-    private func shouldYieldToRunningInstance() -> Bool {
-        guard let bundleIdentifier = Bundle.main.bundleIdentifier else { return false }
+    private func singleInstanceAction() -> SingleInstanceAction {
+        guard let bundleIdentifier = Bundle.main.bundleIdentifier else { return .proceed }
 
-        return SingleInstanceGuard.shouldYield(
+        return SingleInstanceGuard.action(
             runningPIDs: SingleInstanceGuard.runningPIDs(forBundleIdentifier: bundleIdentifier),
-            currentPID: ProcessInfo.processInfo.processIdentifier
+            currentPID: ProcessInfo.processInfo.processIdentifier,
+            isAgentManaged: isAgentManagedProcess
         )
     }
 
