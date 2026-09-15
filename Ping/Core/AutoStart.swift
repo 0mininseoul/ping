@@ -68,6 +68,51 @@ enum SingleInstanceGuard {
     }
 }
 
+/// 소유권 이전을 끝까지 완수한다.
+///
+/// 설계상 launchd가 띄운 인스턴스가 이겨야 한다(2026-09-15 keepalive-ownership 스펙).
+/// 그래야 살아남은 프로세스를 launchd가 감시하고 비정상 종료 뒤 되살릴 수 있다.
+/// 그런데 `NSRunningApplication.terminate()`가 true를 돌려줘도 그건 quit 이벤트를
+/// **보냈다**는 뜻일 뿐이다. 기동 직후의 전임자는 아직 이벤트 루프를 못 띄워 그걸 흘리고,
+/// 확인도 재시도도 없던 탓에 두 인스턴스가 그대로 남았다 — 창이 두 개 열리던 증상이다.
+///
+/// 그래서 매 시도마다 다시 요청한다. 한 번만 보내고 기다리면 흘러간 요청은 영영 다시
+/// 오지 않아, 남는 결말이 강제 종료뿐이다. 기한을 넘긴 경우에만 강제한다.
+enum DuplicateInstanceTerminator {
+    /// 강제 종료까지 간 pid를 돌려준다. 주입된 클로저만 갈아끼우면 전수 테스트가 된다.
+    @discardableResult
+    static func replace(
+        pids: [pid_t],
+        politeQuit: (pid_t) -> Void,
+        hasExited: (pid_t) -> Bool,
+        forceQuit: (pid_t) -> Void,
+        waitStep: () -> Void,
+        maxChecks: Int
+    ) -> [pid_t] {
+        guard !pids.isEmpty else { return [] }
+
+        var remaining = pids
+        var checks = 0
+
+        while true {
+            remaining = remaining.filter { !hasExited($0) }
+            if remaining.isEmpty { return [] }
+            if checks >= maxChecks { break }
+
+            for pid in remaining {
+                politeQuit(pid)
+            }
+            waitStep()
+            checks += 1
+        }
+
+        for pid in remaining {
+            forceQuit(pid)
+        }
+        return remaining
+    }
+}
+
 /// 자동 시작 등록 상태를 어떻게 맞출지 정하는 순수 함수. 부작용이 없어 전수 테스트가 가능하다.
 enum AutoStartPolicy {
     static func action(

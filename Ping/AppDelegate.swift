@@ -78,13 +78,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             case .yield:
                 exit(0)
             case .replaceExisting(let pids):
-                for pid in pids {
-                    NSRunningApplication(processIdentifier: pid)?.terminate()
-                }
+                replaceDuplicateInstances(pids)
             }
         }
 
         enforceAccessoryActivationPolicy()
+    }
+
+    /// 소유권 이전은 시작만 여기서 하고, 확인과 강제는 런치 밖으로 내보낸다.
+    ///
+    /// `applicationWillFinishLaunching`은 런루프가 뜨기 전 메인 스레드다. 여기서 전임자가
+    /// 죽기를 기다리면 그 시간만큼 우리 런치가 통째로 멈춘다. 기다릴 이유도 없다 —
+    /// 살아남는 쪽은 우리고, 전임자는 자기 속도로 종료하면 된다.
+    private func replaceDuplicateInstances(_ pids: [pid_t]) {
+        for pid in pids {
+            NSRunningApplication(processIdentifier: pid)?.terminate()
+        }
+
+        DispatchQueue.global(qos: .utility).async {
+            let forced = DuplicateInstanceTerminator.replace(
+                pids: pids,
+                politeQuit: { NSRunningApplication(processIdentifier: $0)?.terminate() },
+                hasExited: { NSRunningApplication(processIdentifier: $0)?.isTerminated ?? true },
+                forceQuit: { NSRunningApplication(processIdentifier: $0)?.forceTerminate() },
+                waitStep: { Thread.sleep(forTimeInterval: 0.25) },
+                maxChecks: 8
+            )
+            guard !forced.isEmpty else { return }
+            // 정중한 요청이 끝내 안 먹힌 경우다. 추론 말고 기록으로 남긴다 —
+            // 강제까지 갔는데 그마저 실패하면 중복이 살아남고, 그 사실을 알 길이 없다.
+            Logger(subsystem: "com.youngminpark.ping.Ping", category: "autostart")
+                .error("force-terminated duplicate instances: \(forced.map(String.init).joined(separator: ","), privacy: .public)")
+        }
     }
 
     private func singleInstanceAction() -> SingleInstanceAction {
