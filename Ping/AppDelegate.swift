@@ -78,9 +78,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             case .yield:
                 exit(0)
             case .replaceExisting(let pids):
-                for pid in pids {
-                    NSRunningApplication(processIdentifier: pid)?.terminate()
-                }
+                DuplicateInstanceTerminator.replace(
+                    pids: pids,
+                    politeQuit: { NSRunningApplication(processIdentifier: $0)?.terminate() },
+                    hasExited: { NSRunningApplication(processIdentifier: $0)?.isTerminated ?? true },
+                    forceQuit: { NSRunningApplication(processIdentifier: $0)?.forceTerminate() },
+                    waitStep: { Thread.sleep(forTimeInterval: 0.1) },
+                    maxChecks: 20
+                )
             }
         }
 

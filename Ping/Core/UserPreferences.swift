@@ -6,6 +6,7 @@ enum PingPreferenceKeys {
     static let roomSetupDeferred = "ping.rooms.setupDeferred"
     static let appearanceMode = "ping.appearance.mode"
     static let autostartUserChoice = "ping.autostart.userChoice"
+    static let autostartRegisteredBundlePath = "ping.autostart.registeredBundlePath"
     static let autoPlayReceivedVideo = "ping.playback.autoPlayReceived"
 }
 

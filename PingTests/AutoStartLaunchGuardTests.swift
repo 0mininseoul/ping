@@ -56,7 +56,11 @@ final class AutoStartLaunchGuardTests: XCTestCase {
         // exit(0)이어야 launchd가 비정상 종료로 보지 않아 재실행하지 않는다.
         XCTAssertTrue(source.contains("exit(0)"))
         XCTAssertTrue(source.contains("case .replaceExisting(let pids)"))
-        XCTAssertTrue(source.contains("NSRunningApplication(processIdentifier: pid)?.terminate()"))
+        // terminate()는 quit 이벤트를 보냈다는 뜻일 뿐이라, 기동 중인 대상은 그걸 흘린다.
+        // 확인과 강제 폴백까지 있어야 중복 인스턴스가 실제로 사라진다.
+        XCTAssertTrue(source.contains("DuplicateInstanceTerminator.replace("))
+        XCTAssertTrue(source.contains("?.terminate()"))
+        XCTAssertTrue(source.contains("?.forceTerminate()"))
 
         let guardIndex = try XCTUnwrap(source.range(of: "switch singleInstanceAction()")?.lowerBound)
         let activationIndex = try XCTUnwrap(source.range(of: "enforceAccessoryActivationPolicy()")?.lowerBound)
@@ -80,5 +84,100 @@ final class AutoStartLaunchGuardTests: XCTestCase {
     private func resourceURL(for relativePath: String) throws -> URL {
         let fileName = URL(fileURLWithPath: relativePath).lastPathComponent
         return try XCTUnwrap(Bundle(for: Self.self).resourceURL?.appendingPathComponent(fileName))
+    }
+}
+
+/// `.replaceExisting`이 실제로 중복을 없애는지 검증한다.
+///
+/// 회귀 배경: `NSRunningApplication.terminate()`는 quit 이벤트를 보냈다는 뜻일 뿐이라,
+/// 기동 중인 대상이 이벤트를 흘리면 중복 인스턴스가 그대로 살아남았다. 확인도 재시도도
+/// 없었던 것이 창이 두 개 열리던 원인의 절반이다.
+final class DuplicateInstanceTerminatorTests: XCTestCase {
+    func testPoliteQuitIsEnoughWhenTargetExits() {
+        var politeCalls: [pid_t] = []
+        var forceCalls: [pid_t] = []
+
+        let forced = DuplicateInstanceTerminator.replace(
+            pids: [101, 102],
+            politeQuit: { politeCalls.append($0) },
+            hasExited: { _ in true },
+            forceQuit: { forceCalls.append($0) },
+            waitStep: {},
+            maxChecks: 20
+        )
+
+        XCTAssertEqual(politeCalls, [101, 102])
+        XCTAssertEqual(forceCalls, [])
+        XCTAssertEqual(forced, [])
+    }
+
+    func testForcesWhenPoliteQuitIsIgnored() {
+        var forceCalls: [pid_t] = []
+        var waits = 0
+
+        let forced = DuplicateInstanceTerminator.replace(
+            pids: [101],
+            politeQuit: { _ in },
+            hasExited: { _ in false },
+            forceQuit: { forceCalls.append($0) },
+            waitStep: { waits += 1 },
+            maxChecks: 5
+        )
+
+        XCTAssertEqual(forceCalls, [101])
+        XCTAssertEqual(forced, [101])
+        XCTAssertEqual(waits, 5, "기한을 다 쓰고 나서 강제해야 한다")
+    }
+
+    func testStopsWaitingAsSoonAsTargetExits() {
+        var checks = 0
+        var waits = 0
+        var forceCalls: [pid_t] = []
+
+        let forced = DuplicateInstanceTerminator.replace(
+            pids: [101],
+            politeQuit: { _ in },
+            hasExited: { _ in
+                checks += 1
+                return checks > 2
+            },
+            forceQuit: { forceCalls.append($0) },
+            waitStep: { waits += 1 },
+            maxChecks: 20
+        )
+
+        XCTAssertEqual(forceCalls, [])
+        XCTAssertEqual(forced, [])
+        XCTAssertEqual(waits, 2, "죽자마자 멈춰야 한다")
+    }
+
+    func testForcesOnlyTheSurvivors() {
+        var forceCalls: [pid_t] = []
+
+        let forced = DuplicateInstanceTerminator.replace(
+            pids: [101, 102],
+            politeQuit: { _ in },
+            hasExited: { $0 == 101 },
+            forceQuit: { forceCalls.append($0) },
+            waitStep: {},
+            maxChecks: 3
+        )
+
+        XCTAssertEqual(forceCalls, [102])
+        XCTAssertEqual(forced, [102])
+    }
+
+    func testEmptyInputDoesNothing() {
+        var politeCalls = 0
+        let forced = DuplicateInstanceTerminator.replace(
+            pids: [],
+            politeQuit: { _ in politeCalls += 1 },
+            hasExited: { _ in false },
+            forceQuit: { _ in },
+            waitStep: {},
+            maxChecks: 20
+        )
+        XCTAssertEqual(politeCalls, 0)
+        XCTAssertEqual(forced, [])
     }
 }
