@@ -76,9 +76,6 @@ private struct GeneralSettingsView: View {
     @AppStorage(PingPreferenceKeys.autoPlayReceivedVideo)
     private var autoPlayReceivedVideo = true
 
-    @AppStorage(PingPreferenceKeys.autoFaceReplyOnPing)
-    private var autoFaceReplyOnPing = true
-
     @State private var notificationPermissionStatus: UNAuthorizationStatus = .notDetermined
     @State private var isRequestingNotificationPermission = false
     @State private var autoLaunchEnabled = Self.isAutoLaunchEnabled()
@@ -119,18 +116,6 @@ private struct GeneralSettingsView: View {
                             subtitle: "상대가 보낸 영상을 알림 클릭 없이 화면에 바로 띄웁니다."
                         ) {
                             Toggle("", isOn: $autoPlayReceivedVideo)
-                                .labelsHidden()
-                        }
-
-                        Divider()
-                            .opacity(0.45)
-                            .padding(.leading, 148)
-
-                        settingRow(
-                            title: "핑 받으면 자동으로 얼굴 회신",
-                            subtitle: "핑을 실시간으로 받으면 얼굴을 3초 녹화해 보낸 사람에게 되돌려 보냅니다. 자동 회신에는 다시 회신하지 않습니다."
-                        ) {
-                            Toggle("", isOn: $autoFaceReplyOnPing)
                                 .labelsHidden()
                         }
 

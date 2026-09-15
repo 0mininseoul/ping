@@ -11,7 +11,6 @@ enum AutoFaceReplyPolicy {
     static let freshnessWindow: TimeInterval = 60
 
     enum Skip: String, Equatable {
-        case disabled
         case autoReplyMessage
         case alreadyReplied
         case missingTimestamp
@@ -26,7 +25,6 @@ enum AutoFaceReplyPolicy {
     }
 
     struct Context {
-        var isEnabled: Bool
         var incomingIsAutoReply: Bool
         var messageCreatedAt: Date?
         var appStartedAt: Date
@@ -37,7 +35,6 @@ enum AutoFaceReplyPolicy {
     }
 
     static func decide(_ context: Context) -> Decision {
-        guard context.isEnabled else { return .skip(.disabled) }
         // 루프 차단 1차. 전송 대상을 원 발신자 1명으로 고정한 것이 2차 방어다.
         guard !context.incomingIsAutoReply else { return .skip(.autoReplyMessage) }
         guard !context.alreadyReplied else { return .skip(.alreadyReplied) }

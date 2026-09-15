@@ -83,12 +83,12 @@ final class AutoFaceReplyContractTests: XCTestCase {
         XCTAssertLessThan(hookIndex, guardIndex)
     }
 
-    func testCoordinatorDelegatesTheDecisionToThePolicy() throws {
+    func testCoordinatorDelegatesTheDecisionToThePolicyWithoutAUserPreference() throws {
         let source = try readFixture("AutoFaceReplyCoordinator.swift")
 
         XCTAssertTrue(source.contains("AutoFaceReplyPolicy.decide"))
         XCTAssertTrue(source.contains("incomingIsAutoReply: message.isAutoReply"))
-        XCTAssertTrue(source.contains("isEnabled: PingAutoFaceReplyPreference.isEnabled"))
+        XCTAssertFalse(source.contains("PingAutoFaceReplyPreference"))
         XCTAssertTrue(source.contains("auto_face_reply_skipped"))
     }
 
@@ -105,12 +105,19 @@ final class AutoFaceReplyContractTests: XCTestCase {
         XCTAssertFalse(source.contains("ForegroundPresenter"))
     }
 
-    func testSettingsExposeAnOnOffCheckboxForAutoFaceReply() throws {
+    func testSettingsDoNotExposeAnAutoFaceReplyOptOut() throws {
         let source = try readFixture("SettingsScene.swift")
 
-        XCTAssertTrue(source.contains("@AppStorage(PingPreferenceKeys.autoFaceReplyOnPing)"))
-        XCTAssertTrue(source.contains("핑 받으면 자동으로 얼굴 회신"))
-        XCTAssertTrue(source.contains("Toggle(\"\", isOn: $autoFaceReplyOnPing)"))
+        XCTAssertFalse(source.contains("PingPreferenceKeys.autoFaceReplyOnPing"))
+        XCTAssertFalse(source.contains("핑 받으면 자동으로 얼굴 회신"))
+        XCTAssertFalse(source.contains("$autoFaceReplyOnPing"))
+    }
+
+    func testPreferencesDoNotRetainTheObsoleteAutoReplyKey() throws {
+        let source = try readFixture("UserPreferences.swift")
+
+        XCTAssertFalse(source.contains("autoFaceReplyOnPing"))
+        XCTAssertFalse(source.contains("PingAutoFaceReplyPreference"))
     }
 
     private func readFixture(_ relativePath: String) throws -> String {

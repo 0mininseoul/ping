@@ -9,18 +9,27 @@ import SiteFooter from "@/components/sections/SiteFooter";
 interface LandingPageProps {
   macDownloadUrl: string;
   macVersion: string;
+  windowsDownloadUrl: string;
+  windowsVersion: string;
 }
 
 export default function LandingPage({
   macDownloadUrl,
   macVersion,
+  windowsDownloadUrl,
+  windowsVersion,
 }: LandingPageProps) {
   return (
     <main className="relative min-h-screen">
-      <SiteNav macDownloadUrl={macDownloadUrl} />
+      <SiteNav
+        macDownloadUrl={macDownloadUrl}
+        windowsDownloadUrl={windowsDownloadUrl}
+      />
       <Hero
         macDownloadUrl={macDownloadUrl}
         macVersion={macVersion}
+        windowsDownloadUrl={windowsDownloadUrl}
+        windowsVersion={windowsVersion}
       />
       <DemoStrip />
       <FeaturesGrid />
@@ -28,6 +37,8 @@ export default function LandingPage({
       <FinalCTA
         macDownloadUrl={macDownloadUrl}
         macVersion={macVersion}
+        windowsDownloadUrl={windowsDownloadUrl}
+        windowsVersion={windowsVersion}
       />
       <SiteFooter macVersion={macVersion} />
     </main>

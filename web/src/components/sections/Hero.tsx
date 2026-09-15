@@ -11,11 +11,15 @@ import BrandMark from "@/components/ui/brand-mark";
 interface HeroProps {
   macDownloadUrl: string;
   macVersion: string;
+  windowsDownloadUrl: string;
+  windowsVersion: string;
 }
 
 export default function Hero({
   macDownloadUrl,
   macVersion,
+  windowsDownloadUrl,
+  windowsVersion,
 }: HeroProps) {
   return (
     <section className="relative isolate overflow-hidden pt-32 pb-28 md:pt-44 md:pb-36">
@@ -69,6 +73,17 @@ export default function Hero({
                   <Button variant="primary" size="lg">
                     <MonitorDown aria-hidden className="h-[18px] w-[18px]" />
                     Download for macOS
+                  </Button>
+                </a>
+              </ClickSpark>
+              <ClickSpark>
+                <a
+                  href={windowsDownloadUrl}
+                  aria-label={`Ping ${windowsVersion} Windows 설치 프로그램 다운로드`}
+                >
+                  <Button variant="secondary" size="lg">
+                    <MonitorDown aria-hidden className="h-[18px] w-[18px]" />
+                    Download for Windows
                   </Button>
                 </a>
               </ClickSpark>
