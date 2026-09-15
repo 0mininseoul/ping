@@ -36,7 +36,6 @@ final class AutoFaceReplyCoordinator {
 
         let decision = AutoFaceReplyPolicy.decide(
             AutoFaceReplyPolicy.Context(
-                isEnabled: PingAutoFaceReplyPreference.isEnabled,
                 incomingIsAutoReply: message.isAutoReply,
                 messageCreatedAt: message.createdAt,
                 appStartedAt: appStartedAt,
