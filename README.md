@@ -34,7 +34,7 @@ Supabase Dashboard의 Authentication 설정에서 Anonymous sign-ins가 켜져 �
 
 ### macOS
 
-1. `Ping-v0.3.74.dmg`를 더블클릭해 마운트한다.
+1. `Ping-v0.3.75.dmg`를 더블클릭해 마운트한다.
 2. `Ping.app`을 Applications 폴더로 드래그한다.
 3. 더블클릭해 실행한다. Developer ID 서명 + Apple 공증(notarized) 빌드라 Gatekeeper 경고 없이 바로 열린다.
 4. 카메라, 마이크, 알림 권한을 허용한다.
@@ -92,6 +92,11 @@ macOS 앱은 Sparkle로 업데이트를 확인한다. 새 버전이 공개되면
 0.3.28 초기 빌드(38/39)에서 업데이트 설치 오류가 반복되면 랜딩페이지의 최신 macOS DMG를 한 번 수동으로 내려받아 `Ping.app`을 Applications 폴더에 덮어쓴다. 이 초기 빌드는 Sparkle installer helper 권한/서명이 잘못 들어간 상태라, 현재 실행 중인 앱만으로는 자동 업데이트 설치가 실패할 수 있다. build 40 이상은 Sparkle helper 권한을 보존하고 sandbox mach-lookup 예외를 포함한다.
 
 Windows 앱은 Sparkle을 사용하지 않는다. 비용 없는 배포는 self-signed MSIX를 작은 `PingSetup-v0.3.46.exe` 웹 설치파일로 감싸고, 설치 중 PC 아키텍처에 맞는 MSIX를 `https://0minping.vercel.app/downloads/windows/`에서 받는 방식이다. 최초 설치 시 installer가 Ping 공개 인증서를 등록한다. Microsoft Store, Azure Artifact Signing, OV 코드서명 인증서는 더 매끄러운 신뢰 UX를 제공하지만 비용 또는 외부 계정 검증이 필요하다.
+
+## v0.3.75 macOS
+
+- **실행할 때 창이 두 개 열리던 문제를 고쳤다.** launchd가 실행 중인 Ping의 소유권을 넘겨받을 때 이전 인스턴스에 종료를 요청하는데, 그 요청이 기동 직후의 인스턴스에게는 전달되지 않고 사라졌다. 확인도 재시도도 없어 두 인스턴스가 그대로 남았고, 메뉴바 아이콘도 알림도 두 벌이 됐다. 이제 종료를 확인될 때까지 다시 요청하고, 끝내 응답이 없으면 강제로 정리한다.
+- 같은 룸의 다른 사람이 보낸 자동 얼굴 회신도 방에서 모두 보이고 재생된다. 지울 수 없는 남의 메시지에는 삭제 버튼을 더 이상 표시하지 않는다.
 
 ## v0.3.74 macOS
 

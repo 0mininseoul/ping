@@ -51,7 +51,7 @@ Supabase CLI 작업은 반드시 `./scripts/supabase-ping.sh` wrapper로 수행�
 ### Supabase Free 저장소
 영상은 Supabase Storage의 비공개 `ping-videos` 버킷에 `<senderUid>/<videoId>.mp4` 경로로 저장합니다. 테이블/RLS/RPC/Storage 정책은 `supabase/migrations/20260517000100_create_ping_backend.sql`이 단일 진실 출처입니다. 서버 예약 작업 없이 앱 실행 시 `ping_cleanup_expired_data()` RPC로 만료 데이터를 best-effort 정리합니다.
 
-### App 버전 — `0.3.74` (빌드 번호 `86`)
+### App 버전 — `0.3.75` (빌드 번호 `87`)
 - `project.yml` → `settings.base.MARKETING_VERSION`
 - `project.yml` → `settings.base.CURRENT_PROJECT_VERSION` — **함께 올려야 한다.**
   Sparkle은 `CFBundleShortVersionString`이 아니라 **`CFBundleVersion`(빌드 번호)로**
