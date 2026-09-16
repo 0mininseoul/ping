@@ -15,8 +15,11 @@ enum AutoFaceReplyPolicy {
         case alreadyReplied
         case missingTimestamp
         case staleMessage
+        case displayAsleep
         case cameraUnavailable
         case cameraBusy
+        case staleInFlight
+        case interruptedBySleep
     }
 
     enum Decision: Equatable {
@@ -30,6 +33,7 @@ enum AutoFaceReplyPolicy {
         var appStartedAt: Date
         var now: Date
         var alreadyReplied: Bool
+        var isDisplayAsleep: Bool
         var isCameraAuthorized: Bool
         var isCameraBusy: Bool
     }
@@ -39,12 +43,26 @@ enum AutoFaceReplyPolicy {
         guard !context.incomingIsAutoReply else { return .skip(.autoReplyMessage) }
         guard !context.alreadyReplied else { return .skip(.alreadyReplied) }
         guard let createdAt = context.messageCreatedAt else { return .skip(.missingTimestamp) }
-        guard createdAt > context.appStartedAt,
-              context.now.timeIntervalSince(createdAt) <= freshnessWindow else {
+        guard createdAt > context.appStartedAt, isFresh(createdAt, now: context.now) else {
             return .skip(.staleMessage)
         }
+        // 맥이 잠들어도 다크웨이크 동안 네트워크는 살아 있어 핑이 "실시간"으로 도착한다.
+        // 카메라는 돌지 않으니 녹화가 멈춘 채 기다리다, 사용자가 깨운 순간 얼굴을 찍어 보낸다.
+        guard !context.isDisplayAsleep else { return .skip(.displayAsleep) }
         guard context.isCameraAuthorized else { return .skip(.cameraUnavailable) }
         guard !context.isCameraBusy else { return .skip(.cameraBusy) }
         return .record
+    }
+
+    /// 결정은 도착 순간에 내리지만 녹화와 전송은 그 뒤에 끝난다. 그 사이 맥이 잠들면 녹화가
+    /// 깨어날 때까지 멈췄다가 몇 시간 늦게 나간다(0.3.76). 녹화 직전과 전송 직전에 다시 잰다.
+    static func recheck(messageCreatedAt: Date?, now: Date, interruptedBySleep: Bool) -> Skip? {
+        guard !interruptedBySleep else { return .interruptedBySleep }
+        guard let messageCreatedAt, isFresh(messageCreatedAt, now: now) else { return .staleInFlight }
+        return nil
+    }
+
+    private static func isFresh(_ createdAt: Date, now: Date) -> Bool {
+        now.timeIntervalSince(createdAt) <= freshnessWindow
     }
 }
