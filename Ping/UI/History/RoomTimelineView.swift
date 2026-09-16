@@ -366,7 +366,7 @@ struct RoomTimelineView: View {
                     Task { await viewModel.toggleReaction(target: .video, targetId: vid, emoji: emoji) }
                 },
                 canSave: v.canBeSavedLocally(by: myUid),
-                canDelete: isMine || v.receiverUid == myUid,
+                canDelete: isMine ? SentMessageDeletionPolicy.canDelete(createdAt: v.createdAt, now: Date()) : v.receiverUid == myUid,
                 usesExternalScreenFaceExpansion: usesExternalScreenFaceExpansion,
                 onScreenFaceExpansionChange: onScreenFaceExpansionChange
             )
@@ -389,7 +389,7 @@ struct RoomTimelineView: View {
                     reactionPickerTargetKind = .chat
                     reactionPickerTargetId = c.id
                 },
-                onDelete: { Task { await viewModel.deleteChat(messageId: c.id ?? "") } },
+                onDelete: { Task { await viewModel.deleteChat(c) } },
                 onToggleReaction: { emoji in
                     guard let cid = c.id else { return }
                     Task { await viewModel.toggleReaction(target: .chat, targetId: cid, emoji: emoji) }

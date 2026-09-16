@@ -59,7 +59,7 @@ struct ChatMessageRowView: View {
                     .contextMenu {
                         Button("답장", action: onReply)
                         Button("이모지 반응", action: onReact)
-                        if isMine {
+                        if canDeleteNow {
                             Divider()
                             Button("삭제", action: onDelete)
                         }
@@ -102,13 +102,18 @@ struct ChatMessageRowView: View {
                         }
                         Button("답장", action: onReply)
                         Button("이모지 반응", action: onReact)
-                        if isMine {
+                        if canDeleteNow {
                             Divider()
                             Button("삭제", action: onDelete)
                         }
                     }
             }
         }
+    }
+
+    /// 보낸 뒤 5분이 지나면 서버가 거절한다. 텍스트 버블 메뉴는 우클릭하는 순간 만들어지므로 그 시각으로 잰다.
+    private var canDeleteNow: Bool {
+        isMine && SentMessageDeletionPolicy.canDelete(createdAt: message.createdAt, now: Date())
     }
 
     private var previewURL: URL? {
@@ -149,7 +154,7 @@ struct ChatMessageRowView: View {
         reactItem.representedObject = ContextMenuAction(action: onReact)
         menu.addItem(reactItem)
 
-        if isMine {
+        if canDeleteNow {
             menu.addItem(.separator())
             let deleteItem = NSMenuItem(title: "삭제", action: #selector(ContextMenuTarget.handle(_:)), keyEquivalent: "")
             deleteItem.target = ContextMenuTarget.shared
