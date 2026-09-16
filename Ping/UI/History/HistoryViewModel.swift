@@ -365,12 +365,19 @@ final class HistoryViewModel: ObservableObject {
         }
     }
 
-    func deleteChat(messageId: String) async {
+    func deleteChat(_ message: ChatMessage) async {
+        guard let messageId = message.id else { return }
+        // 메뉴는 그려질 때 판단한다. 띄워 둔 채 5분을 넘겼을 수 있으니 누른 순간 다시 잰다.
+        guard SentMessageDeletionPolicy.canDelete(createdAt: message.createdAt, now: Date()) else {
+            lastErrorMessage = SentMessageDeletionPolicy.expiredMessage
+            return
+        }
         do {
             try await chatService.deleteChat(messageId: messageId)
             loadedChats.removeAll { $0.id == messageId }
             groups = Self.groupTimelineByDay(videos: loadedVideos, chats: loadedChats, calendar: .current)
         } catch {
+            lastErrorMessage = Self.deleteFailureMessage(for: error)
             NSLog("Delete chat failed: \(error)")
         }
     }
@@ -452,6 +459,11 @@ final class HistoryViewModel: ObservableObject {
 
     func delete(message: VideoMessage, currentUid: String?) async {
         guard let id = message.id else { return }
+        if message.senderUid == currentUid,
+           !SentMessageDeletionPolicy.canDelete(createdAt: message.createdAt, now: Date()) {
+            lastErrorMessage = SentMessageDeletionPolicy.expiredMessage
+            return
+        }
         do {
             let result = try await messageService.removeMessageForCurrentUser(messageId: id)
             switch result {
@@ -474,8 +486,16 @@ final class HistoryViewModel: ObservableObject {
             }
             groups = Self.groupTimelineByDay(videos: loadedVideos, chats: loadedChats, calendar: .current)
         } catch {
-            lastErrorMessage = "삭제 실패: \(error.localizedDescription)"
+            lastErrorMessage = Self.deleteFailureMessage(for: error)
             NSLog("Delete failed: \(error)")
         }
+    }
+
+    /// 앱 시계가 서버보다 늦으면 메뉴는 떠도 서버가 5분 초과로 거절한다. 그때는 이유를 그대로 알린다.
+    private static func deleteFailureMessage(for error: Error) -> String {
+        if SentMessageDeletionPolicy.isWindowExpired(error) {
+            return SentMessageDeletionPolicy.expiredMessage
+        }
+        return "삭제 실패: \(error.localizedDescription)"
     }
 }

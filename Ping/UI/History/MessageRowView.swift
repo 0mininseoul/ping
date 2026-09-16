@@ -17,6 +17,7 @@ struct MessageRowView: View {
     let onToggleReaction: (String) -> Void
     let canSave: Bool
     /// 룸 전체 타임라인에는 내가 주고받지 않은 남의 회신도 뜬다. 그런 행은 지울 수 없다.
+    /// 내가 보낸 영상은 보낸 뒤 5분 안에만 지울 수 있다(`SentMessageDeletionPolicy`).
     let canDelete: Bool
     let usesExternalScreenFaceExpansion: Bool
     let onScreenFaceExpansionChange: (ScreenFaceExpansionAnchor?, ScreenFaceExpansionContext?) -> Void

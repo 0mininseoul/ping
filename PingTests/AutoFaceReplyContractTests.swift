@@ -92,6 +92,32 @@ final class AutoFaceReplyContractTests: XCTestCase {
         XCTAssertTrue(source.contains("auto_face_reply_skipped"))
     }
 
+    /// 도착 순간의 결정만 믿으면 잠 때문에 멈췄던 녹화가 깨어난 뒤 몇 시간 늦게 나간다.
+    /// 녹화 직전과 전송 직전에 다시 재야 한다.
+    func testCoordinatorRechecksFreshnessBeforeRecordingAndBeforeSending() throws {
+        let source = try readFixture("AutoFaceReplyCoordinator.swift")
+
+        let startIndex = try XCTUnwrap(source.range(of: "camera.startWithAudio()")?.upperBound)
+        let recordIndex = try XCTUnwrap(source.range(of: "recorder.recordClip")?.lowerBound)
+        let sendIndex = try XCTUnwrap(source.range(of: "messageService.sendAutoReply")?.lowerBound)
+
+        XCTAssertTrue(source[startIndex..<recordIndex].contains("guard !abandonIfNotLive(message)"))
+        XCTAssertTrue(source[recordIndex..<sendIndex].contains("guard !abandonIfNotLive(message)"))
+        XCTAssertTrue(source.contains("AutoFaceReplyPolicy.recheck("))
+    }
+
+    /// 다크웨이크에서는 앱이 핑을 받지만 카메라는 돌지 않는다. 디스플레이 상태를 정책에 넘기고,
+    /// 녹화 도중 잠들면 카메라를 끊어 깨어난 순간 다시 켜지지 않게 한다.
+    func testCoordinatorTracksDisplaySleepAndStopsAnInFlightReply() throws {
+        let source = try readFixture("AutoFaceReplyCoordinator.swift")
+
+        XCTAssertTrue(source.contains("isDisplayAsleep: Self.isDisplayAsleep"))
+        XCTAssertTrue(source.contains("CGDisplayIsAsleep(CGMainDisplayID())"))
+        XCTAssertTrue(source.contains("NSWorkspace.screensDidSleepNotification"))
+        XCTAssertTrue(source.contains("NSWorkspace.willSleepNotification"))
+        XCTAssertTrue(source.contains("movieOutput.stopRecording()"))
+    }
+
     /// 원격 트리거로 웹캠이 켜지므로 본인이 알아챌 수 있어야 하고,
     /// 하던 일을 방해하면 안 되므로 포커스는 가져가지 않는다.
     func testIndicatorAnnouncesRecordingWithoutStealingFocusOrShowingAPreview() throws {
