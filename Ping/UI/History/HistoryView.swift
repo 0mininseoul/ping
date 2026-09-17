@@ -98,8 +98,11 @@ struct HistoryView: View {
         case 36: // Enter: replay (only when video expanded and not in composer)
             // composer's Cmd+Enter is handled by RoomTimelineView's monitor before us
             guard !event.modifierFlags.contains(.command) else { return false }
-            viewModel.inlineController.replay()
-            return true
+            return HistoryReplayRouting.dispatch(
+                isFloatingPlaybackVisible: screenFacePlaybackWindow?.isVisible == true,
+                replayFloating: { screenFacePlaybackWindow?.replay() },
+                replayInline: { viewModel.inlineController.replay() }
+            )
         case 49: // Space: expand
             if let player = viewModel.inlineController.player,
                let id = viewModel.expandedMessageId {
@@ -184,5 +187,24 @@ struct HistoryView: View {
         if viewModel.expandedMessageId == messageId {
             viewModel.expandedMessageId = nil
         }
+    }
+}
+
+/// HistoryView's monitor is registered before the floating player's monitor,
+/// so it must dispatch Return to the active floating player before consuming it.
+enum HistoryReplayRouting {
+    @MainActor
+    @discardableResult
+    static func dispatch(
+        isFloatingPlaybackVisible: Bool,
+        replayFloating: @MainActor () -> Void,
+        replayInline: @MainActor () -> Void
+    ) -> Bool {
+        if isFloatingPlaybackVisible {
+            replayFloating()
+        } else {
+            replayInline()
+        }
+        return true
     }
 }

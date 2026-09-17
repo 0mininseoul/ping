@@ -174,6 +174,11 @@ final class ScreenFacePlaybackWindow: NSWindow {
         onDismiss()
     }
 
+    func replay() {
+        guard !isClosing else { return }
+        handleReplay()
+    }
+
     private func installKeyMonitor() {
         guard keyMonitor == nil else { return }
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in

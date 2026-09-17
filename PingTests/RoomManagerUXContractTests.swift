@@ -310,6 +310,30 @@ final class RoomManagerUXContractTests: XCTestCase {
         XCTAssertTrue(roomManagerSource.contains("dismissScreenFacePlayback()"))
     }
 
+    @MainActor
+    func testHistoryEnterReplayDispatchPrioritizesVisibleFloatingPlayer() {
+        var replayTargets: [String] = []
+
+        let floatingConsumed = HistoryReplayRouting.dispatch(
+            isFloatingPlaybackVisible: true,
+            replayFloating: { replayTargets.append("floating") },
+            replayInline: { replayTargets.append("inline") }
+        )
+
+        XCTAssertTrue(floatingConsumed)
+        XCTAssertEqual(replayTargets, ["floating"])
+
+        replayTargets.removeAll()
+        let inlineConsumed = HistoryReplayRouting.dispatch(
+            isFloatingPlaybackVisible: false,
+            replayFloating: { replayTargets.append("floating") },
+            replayInline: { replayTargets.append("inline") }
+        )
+
+        XCTAssertTrue(inlineConsumed)
+        XCTAssertEqual(replayTargets, ["inline"])
+    }
+
     func testScreenFacePlaybackFloatsAboveSidebarWithoutShrinkingSidebar() throws {
         let historySource = try readSourceFile("Ping/UI/History/HistoryView.swift")
         let rowSource = try readSourceFile("Ping/UI/History/MessageRowView.swift")
