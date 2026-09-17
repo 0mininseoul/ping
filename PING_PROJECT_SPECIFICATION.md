@@ -2,9 +2,9 @@
 
 ## 프로젝트 개요
 
-**Ping**은 macOS 13 Ventura 이상에서 동작하는 3초 영상 메시지 메뉴바 앱이며, Windows 11 24H2 이상용 네이티브 클라이언트를 같은 Supabase 룸/메시지 계약으로 제공한다. macOS는 Option+P/Option+L, Windows는 Alt+P/Alt+L로 거울을 띄우고, Enter로 정확히 3초 녹화한 뒤 review 재생에서 Enter로 Supabase를 통해 파트너에게 전송한다. 수신자는 로컬 알림을 클릭하면 발신자가 보낸 위치 또는 해당 플랫폼의 playback surface에서 3초 재생창을 본다.
+**Ping**은 macOS 13 Ventura 이상에서 동작하는 3초 영상 메시지 메뉴바 앱이며, Windows 11 24H2 이상용 네이티브 클라이언트를 같은 Supabase 룸/메시지 계약으로 제공한다. macOS는 Option+P/Option+L, Windows는 Alt+P/Alt+L로 거울을 띄우고, Enter로 정확히 3초 녹화한 뒤 review 재생에서 Enter로 Supabase를 통해 파트너에게 전송한다. macOS 수신자는 APNs 원격 알림 배너를 클릭하면 발신자가 보낸 위치 또는 히스토리 playback surface에서 3초 재생창을 본다.
 
-> 현재 구현(v0.3.41)은 v0.2.1 amendment를 반영해 녹화 길이를 3초로 사용한다. Option+P는 얼굴만, Option+L은 화면+얼굴 캡쳐, Option+O는 내 룸/히스토리 창 진입점이다. Windows 클라이언트는 Alt+P, Alt+L, Alt+O와 Alt+Shift+L quick screen+face send를 대응 단축키로 사용한다.
+> 현재 구현(v0.3.77)은 v0.2.1 amendment를 반영해 녹화 길이를 3초로 사용한다. Option+P는 얼굴만, Option+L은 화면+얼굴 캡쳐, Option+O는 내 룸/히스토리 창 진입점이다. Windows 클라이언트는 Alt+P, Alt+L, Alt+O와 Alt+Shift+L quick screen+face send를 대응 단축키로 사용한다.
 > macOS 앱은 Dock에 절대 표시되지 않도록 번들 `LSUIElement` agent 분류를 사용하고, 런타임에서도 accessory activation을 재적용한다. v0.3.39의 runtime-only Dock hiding은 Finder/Spotlight 실행 순간 Dock tile이 생길 수 있어 현재 정책이 아니다. v0.3.28은 Sparkle scheduled update 알림을 버전별 1회로 제한하고, 더 최신 버전이 나오면 기존 업데이트 알림을 최신 버전 알림 하나로 교체한다. v0.3.27은 룸 알림 정리, 최신 메시지 스크롤, Enter 전송/Shift+Enter 줄바꿈, 채팅 사진 첨부를 포함한다. v0.3.26은 화면+얼굴 메시지 확대 재생 크기를 키우고, 확대 시 해당 영상 하단이 보이도록 자동 스크롤한다. v0.3.25는 내 룸 화면에서 화면+얼굴 메시지를 확대할 때 영상이 사라지지 않도록 확장 overlay를 룸 매니저 루트에서 렌더링한다. v0.3.24는 화면+얼굴 프리뷰와 실제 저장 영상의 얼굴 PIP 비율을 같은 레이아웃 계약으로 통일하고, 히스토리 확대 재생 시 사이드바 폭을 유지한 채 영상이 사이드바 위로 확장되어 전체 화면이 잘리지 않게 한다. 발신자 제어형 로컬 저장 권한 설정도 포함한다. v0.3.23은 온보딩 권한 화면에서 macOS 권한 재확인이 지연돼도 이후 3~7단계를 계속 볼 수 있게 하고, 릴리즈 앱의 ad-hoc designated requirement를 bundle id 기준으로 고정해 업데이트 후 TCC 권한 판정이 빌드 해시 변화에 흔들리지 않도록 한다. v0.3.22의 온보딩 header/progress 고정, 미니멀 권한 체크리스트, 알림 프롬프트 시작 시점 소모 방지도 포함한다. 화면 녹화 권한의 passive check는 시스템 프롬프트를 띄우지 않는 CoreGraphics preflight만 사용하며, macOS가 요구하는 앱 재시작 안내를 표시한다. 기존 v0.3.21의 히스토리 타임스탬프 swipe reveal, 인라인 영상 재생 안정화, 그룹 룸 sender label, 다크모드 날짜 header 정리, 컴팩트 사이드바와 로컬 아카이브 fallback도 포함한다.
 
 ### 초기 검증 환경
@@ -61,13 +61,25 @@ macOS 26 이상에서는 `.pingGlassEffect()` wrapper가 SwiftUI 네이티브 `.
 - 히스토리: 열린 룸은 Supabase chat/video RPC를 짧은 주기로 polling해 macOS Realtime 히스토리와 유사하게 채팅, 첨부 이미지, 답장, 반응 변경을 반영하며, 채팅 알림 클릭 시 해당 룸의 알림 대상 채팅 row를 선택한다. 채팅 입력은 Enter 전송, Shift+Enter 줄바꿈을 사용한다.
 - 패키징: Windows App SDK packaged full-trust MSIX. 비용 없는 직접 배포는 signed MSIX를 `PingSetup-v0.3.30.exe` 웹 설치파일로 감싸고, 설치 중 `https://0minping.vercel.app/downloads/windows/`에서 PC 아키텍처에 맞는 MSIX를 내려받는 랜딩페이지 다운로드를 기본 UX로 사용한다. sideload zip은 fallback/debug 경로로 유지한다. Windows는 Sparkle을 사용하지 않고 MSIX/App Installer 또는 Store 업데이트 채널을 사용한다.
 
+### macOS 원격 알림과 라우팅
+
+- 영상, 채팅, 룸 초대의 macOS 배너는 APNs로만 전달한다. Realtime과 polling은 룸 상태, 히스토리 갱신, 실행 중 자동 회신을 위해 유지하며 이 이벤트에 대해 macOS 로컬 알림을 예약하지 않는다.
+- Sparkle 업데이트 알림처럼 기기에서 시작되는 업데이트 안내는 기존 로컬 알림 경로를 유지한다.
+- 라우팅은 수신자별로 배타적이다. live Mac presence는 `desktop_presence`의 `ended_at IS NULL` 행이 기존 45초 TTL 안에 갱신된 상태다.
+
+| 수신자 상태 | APNs 대상 |
+|---|---|
+| live Mac presence가 하나 이상 있음 | macOS 토큰만 |
+| live Mac presence가 없고 iOS/watchOS 토큰이 있음 | iOS/watchOS 토큰만 |
+| live Mac presence가 없고 iOS/watchOS 토큰도 없음 | macOS 토큰만 (Mac 앱이 실행 중이 아니어도 전달) |
+
 ### 권한
 
 | 권한 | 필수도 | 거부 시 동작 |
 |---|---|---|
 | 카메라 | 필수 | 송신 불가, Settings 안내 |
 | 마이크 | 필수 | 음성 없는 영상 fallback 검토 |
-| 알림 | 필수 | 수신 polling은 가능하나 배너 미표시 |
+| 알림 | 필수 | 권한을 거부하면 APNs 배너를 표시할 수 없지만 히스토리와 수신 처리는 계속한다 |
 | 알림(미요청) | — | macOS가 앱을 알림 레지스트리에 등록하지 않아 시스템 설정 › 알림 목록에서 앱이 사라진다. 계정이 이미 있어 온보딩을 건너뛴 기기는 bootstrap에서 1회 복구 요청하고, 설정 › 일반 › `알림 권한` 행에서 언제든 다시 켤 수 있다. |
 | 자동 시작 | 옵션 | 수동 실행 |
 
@@ -75,8 +87,8 @@ Windows packaged client는 Windows 11 24H2 미만에서는 설치 대상이 아�
 
 ### 자동 얼굴 회신 (macOS)
 
-- 핑을 **실시간으로** 받으면 수신자 맥이 얼굴을 3초 녹화해 보낸 사람 **한 명에게만** 되돌려 보낸다.
-- 모든 macOS 사용자에게 필수로 적용되며 설정에서 끌 수 없다.
+- 이미 실행 중인 macOS 프로세스가 새 영상 이벤트를 **실시간으로** 받으면 얼굴을 3초 녹화해 보낸 사람 **한 명에게만** 되돌려 보낸다.
+- 앱이 시작되기 전에 도착한 행, cold-start APNs 알림을 클릭해 불러온 행, polling catch-up 행으로는 자동 회신하지 않는다. 자동 회신은 이미 실행 중인 Mac의 live 이벤트에만 적용되며 설정에서 끌 수 없다.
 - 녹화 중에는 우상단에 인디케이터를 띄운다. 포커스를 가져가지 않고 카메라 프리뷰도 띄우지 않는다.
 - 회신 메시지는 `messages.is_auto_reply = true`로 표시되고, **표시된 메시지에는 다시 자동 회신하지 않는다.** 전송 대상을 원 발신자 한 명으로 고정하는 것이 2차 방어다.
 - 다음 경우에는 생략하고 나중에 몰아 보내지 않는다: 자동 회신 메시지, 이미 회신한 메시지, 타임스탬프 없음, 도착한 지 60초가 지났거나 앱 시작 이전 메시지(맥이 꺼져 있거나 자고 있었던 경우), 카메라 권한 없음, 거울이 카메라 사용 중.
@@ -149,10 +161,9 @@ Windows packaged client는 Windows 11 24H2 미만에서는 설치 대상이 아�
 
 ### 수신 재생
 
-- Supabase polling으로 새 메시지를 감지하면 로컬 알림을 띄운다.
-- 알림 클릭 또는 액션 선택 시 Storage에서 영상을 다운로드한다.
+- APNs 배너 클릭 또는 액션 선택 시 인증된 클라이언트가 Storage에서 영상을 다운로드한다. 영상·채팅·초대 이벤트의 macOS 배너를 Supabase polling이 대신 만들지 않는다.
 - 발신자의 `x_ratio`, `y_ratio`를 수신자 메인 스크린 좌표로 변환하고 safe area로 clamp한다.
-- Face-only는 200px 원형 playback window, screen+face는 저장된 `aspect_ratio` 기반 compact playback window에서 발신자 위치에 맞춰 재생한다.
+- Face-only는 200px 원형 playback window로 유지한다. screen+face는 룸 창 안 overlay 대신 별도 floating playback window에서 재생하며 목표 content width는 600pt, 높이는 저장된 `aspect_ratio`로 계산한다. 기본 룸 창 폭보다 넓어질 수 있고 화면 여백 32pt를 지키도록 비례 축소한다.
 - 첫 재생이 끝나면 `ping_mark_message_seen(message_uuid)`를 1회 호출하고, 창은 잠시 유지한다. `Enter`로 다시 재생하거나 `Esc`로 닫을 수 있으며, 추가 입력이 없으면 약 10초 뒤 fade-out한다.
 
 ### Settings
@@ -197,6 +208,12 @@ Windows packaged client는 Windows 11 24H2 미만에서는 설치 대상이 아�
 ```
 
 Supabase Dashboard에서 Anonymous sign-ins가 켜져 있어야 한다.
+
+### APNs 푸시 백엔드
+
+- `messages`, `chat_messages`, `invitations`의 INSERT는 Supabase Database Webhook으로 Vercel Hobby Node 함수 `https://0minping.vercel.app/api/push`에 전달한다. 이 함수가 service-role로 수신자 presence와 `device_tokens`를 조회한 뒤 APNs로 보낸다. 자세한 운영 절차는 `docs/PUSH_BACKEND_SETUP.md`를 따른다.
+- Vercel Production에는 `APNS_MACOS_BUNDLE_ID` (`com.youngminpark.ping.Ping`)와 `APNS_IOS_BUNDLE_ID` (`com.youngminpark.ping.PingMobile`)를 별도 topic으로 설정한다. `APNS_WATCHOS_BUNDLE_ID`는 선택 사항이며 없으면 iOS topic을 사용한다.
+- APNs 키, Supabase service-role key, webhook secret은 서버 환경 변수에만 두고 클라이언트나 저장소에 넣지 않는다. Vercel Hobby 플랜은 이 개인용 프로젝트의 예상 호출량에 사용한다.
 
 Windows 클라이언트는 macOS plist를 사용하지 않고 다음 JSON 파일을 읽는다.
 
@@ -255,9 +272,9 @@ Windows도 Settings > General의 닉네임 저장 시 `ping_upsert_profile`을 �
 
 ### 수신 플로우
 
-1. 앱 시작 후 `ping_incoming_messages()`를 10초 간격으로 polling한다.
-2. 세션 내 `yieldedIds`와 앱 전역 `notifiedMessageIds`로 중복 알림을 막는다.
-3. 알림 클릭 시 `ping_get_message(message_uuid)`로 최신 메타데이터를 읽는다.
+1. 앱 시작 후 `ping_incoming_messages()`를 10초 간격으로 polling하고 Realtime 이벤트로 히스토리와 실행 중 자동 회신을 갱신한다.
+2. 세션 내 `yieldedIds`와 앱 전역 `notifiedMessageIds`로 polling 중복 처리를 막는다. 이 처리는 APNs 배너를 대신 생성하지 않는다.
+3. APNs 알림 클릭 시 `ping_get_message(message_uuid)`로 최신 메타데이터를 읽는다.
 4. Storage 객체를 다운로드하고 원형 playback window를 연다.
 5. 재생 완료 후 `ping_mark_message_seen(message_uuid)`를 호출한다.
 
@@ -408,8 +425,9 @@ ping/
 | Option+L 확대/이동 | 프리뷰 창은 고정된 채 화면 영역만 1.0×~4.0×로 변경되고, Enter 후 녹화와 일치 |
 | Option+L 자기 제외 | 프리뷰 창이 캡처 영상 안에 다시 나타나지 않고, 제외 필터를 구성할 수 없으면 오류를 표시 |
 | 녹화 → 전송 | 업로드와 message 생성 후 윈도우 닫힘 |
-| 수신 알림 | 중복 없이 로컬 알림 표시 |
-| 알림 클릭 → 재생 | Storage 다운로드 후 3초 재생 |
+| 수신 알림 | 영상·채팅·초대 INSERT가 APNs 배너로만 전달되고 중복 로컬 이벤트 배너가 없음 |
+| APNs 라우팅 | live Mac이면 macOS만, live Mac이 없고 mobile token이 있으면 iOS/watchOS만, 둘 다 없으면 macOS만 수신 |
+| 알림 클릭 → 재생 | APNs payload의 식별자로 최신 메타데이터를 조회한 뒤 Storage 다운로드 후 3초 재생 |
 | 전체 발송 | 영상 하나를 공유하고 receiver별 메시지 생성 |
 | 자동 업데이트 | appcast와 EdDSA 서명 검증 |
 | Windows Alt+Shift+L | 기본 룸에 picker 없이 3초 screen+face 전송 |
@@ -424,7 +442,7 @@ ping/
 - 서버 영상과 메시지는 만료 후 best-effort cleanup 대상이다.
 - 로컬 영상은 사용자 디바이스에만 저장된다. 받은 영상의 영구 저장은 발신자가 허용한 메시지에만 앱 UX에서 제공한다.
 - 검색은 닉네임과 룸 이름 prefix만 사용한다.
-- 자동 얼굴 회신은 모든 macOS 사용자에게 필수로 적용된다. 자동 회신에는 다시 회신하지 않고, 오래된 핑과 카메라를 사용할 수 없는 상황은 건너뛰며, 녹화 중에는 수신자 화면에 인디케이터가 표시된다.
+- 자동 얼굴 회신은 이미 실행 중인 macOS가 fresh 영상 이벤트를 받을 때만 적용된다. APNs cold start/catch-up/오래된 핑에는 회신하지 않으며, 자동 회신에는 다시 회신하지 않고, 카메라를 사용할 수 없는 상황은 건너뛰며, 녹화 중에는 수신자 화면에 인디케이터가 표시된다.
 
 ## 향후 로드맵
 
