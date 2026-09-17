@@ -80,10 +80,10 @@ final class RemotePushRegistrar {
 
         do {
             try await SupabaseClient.shared.rpcVoid("ping_register_device_token", body: [
-                "p_token": token,
-                "p_platform": "macos",
-                "p_environment": apnsEnvironment,
-                "p_sound_preference": soundPreference
+                "token_text": token,
+                "platform_text": "macos",
+                "environment_text": apnsEnvironment,
+                "sound_preference_text": soundPreference
             ])
             guard SupabaseClient.shared.activeUserId == uid else { return }
             lastSuccessfulRegistration = key

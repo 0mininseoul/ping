@@ -63,7 +63,7 @@ final class DesktopPresenceContractTests: XCTestCase {
         XCTAssertTrue(push.contains("freshDesktopPresenceUids"))
         XCTAssertTrue(push.contains(".from('desktop_presence')"))
         XCTAssertTrue(push.contains("PUSH_DESKTOP_PRESENCE_TTL_SECONDS"))
-        XCTAssertTrue(push.contains("suppressed"))
+        XCTAssertTrue(push.contains("selectPushTokens"))
     }
 
     /// 멤버 팝오버는 열려 있는 동안에만 상태를 갱신한다. 평상시에 폴링하면
