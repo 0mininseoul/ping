@@ -36,8 +36,20 @@ where device_token.id = ranked_tokens.id
 alter table public.device_tokens
     drop constraint if exists device_tokens_uid_token_key;
 
-alter table public.device_tokens
-    add constraint device_tokens_platform_token_key unique (platform, token);
+do $$
+begin
+    if not exists (
+        select 1
+        from pg_catalog.pg_constraint
+        where conrelid = 'public.device_tokens'::regclass
+          and conname = 'device_tokens_platform_token_key'
+          and contype = 'u'
+    ) then
+        alter table public.device_tokens
+            add constraint device_tokens_platform_token_key unique (platform, token);
+    end if;
+end;
+$$;
 
 -- Drop the old overload so PostgREST has one unambiguous RPC signature.
 drop function if exists public.ping_register_device_token(text, text, text, text);
