@@ -155,8 +155,7 @@ struct RoomManagerView: View {
 
     @State private var selectedRoomId: String?
     @State private var isSearchPresented: Bool = false
-    @State private var screenFaceExpansionAnchor: ScreenFaceExpansionAnchor?
-    @State private var screenFaceExpansionContext: ScreenFaceExpansionContext?
+    @State private var screenFacePlaybackWindow: ScreenFacePlaybackWindow?
 
     @StateObject private var searchViewModel: RoomSearchViewModel
     private let searchInitialTab: RoomSearchTab
@@ -204,12 +203,6 @@ struct RoomManagerView: View {
         .removingDefaultSidebarToggle()
         .toolbar(.hidden, for: .windowToolbar)
         .frame(minWidth: 480, minHeight: 560)
-        .overlay {
-            ScreenFaceExpansionOverlay(
-                anchor: screenFaceExpansionAnchor,
-                context: screenFaceExpansionContext
-            )
-        }
         .sheet(isPresented: $isSearchPresented) {
             VStack(spacing: 0) {
                 HStack {
@@ -266,7 +259,10 @@ struct RoomManagerView: View {
             if let newValue, NSApp.isActive {
                 LocalNotificationCenter.shared.clearDeliveredNotifications(roomId: newValue)
             }
-            updateScreenFaceExpansion(anchor: nil, context: nil)
+            dismissScreenFacePlayback()
+        }
+        .onDisappear {
+            dismissScreenFacePlayback()
         }
     }
 
@@ -347,7 +343,7 @@ struct RoomManagerView: View {
                 roomService: roomService,
                 usesExternalScreenFaceExpansion: true,
                 onScreenFaceExpansionChange: { anchor, context in
-                    updateScreenFaceExpansion(anchor: anchor, context: context)
+                    handleScreenFaceExpansion(anchor: anchor, context: context)
                 }
             )
         } else {
@@ -395,12 +391,46 @@ struct RoomManagerView: View {
         }
     }
 
-    private func updateScreenFaceExpansion(
+    private func handleScreenFaceExpansion(
         anchor: ScreenFaceExpansionAnchor?,
         context: ScreenFaceExpansionContext?
     ) {
-        screenFaceExpansionAnchor = anchor
-        screenFaceExpansionContext = context
+        guard let context else {
+            dismissScreenFacePlayback()
+            return
+        }
+
+        presentScreenFacePlayback(context)
+    }
+
+    private func presentScreenFacePlayback(_ context: ScreenFaceExpansionContext) {
+        let messageId = context.message.id ?? context.message.videoId
+        if let window = screenFacePlaybackWindow {
+            if window.messageId == messageId { // same message toggles closed
+                dismissScreenFacePlayback()
+                return
+            }
+            window.close()
+            screenFacePlaybackWindow = nil
+        }
+
+        let parentWindow = NSApp.keyWindow ?? NSApp.mainWindow
+        let window = ScreenFacePlaybackWindow(
+            context: context,
+            parentWindow: parentWindow,
+            onDismiss: {
+                if self.screenFacePlaybackWindow?.messageId == messageId {
+                    self.screenFacePlaybackWindow = nil
+                }
+            }
+        )
+        screenFacePlaybackWindow = window
+        window.present()
+    }
+
+    private func dismissScreenFacePlayback() {
+        screenFacePlaybackWindow?.close()
+        screenFacePlaybackWindow = nil
     }
 
     private func joinRoom(_ room: Room) {

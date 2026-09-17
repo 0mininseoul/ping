@@ -1,4 +1,5 @@
 import XCTest
+@testable import Ping
 
 final class RoomManagerUXContractTests: XCTestCase {
     func testEmptyRoomStateOffersCreateAndFindActions() throws {
@@ -237,23 +238,95 @@ final class RoomManagerUXContractTests: XCTestCase {
         XCTAssertTrue(source.contains("playerLayer?.videoGravity = isCircle ? .resizeAspectFill : .resizeAspect"))
     }
 
-    func testScreenFaceExpansionOverlaysAcrossSidebarWithoutShrinkingSidebar() throws {
+    func testScreenFacePlaybackSizingUses600PointTargetAndVisibleFrameMargins() {
+        let largeFrame = CGRect(x: 0, y: 0, width: 1_800, height: 1_200)
+        let size = ScreenFacePlaybackSizing.size(
+            aspectRatio: 16.0 / 9.0,
+            visibleFrame: largeFrame
+        )
+
+        XCTAssertEqual(size.width, 600, accuracy: 0.0001)
+        XCTAssertEqual(size.height, 337.5, accuracy: 0.0001)
+
+        let tall = ScreenFacePlaybackSizing.size(
+            aspectRatio: 0.1,
+            visibleFrame: CGRect(x: 0, y: 0, width: 300, height: 1_000)
+        )
+        XCTAssertEqual(tall.height, 472, accuracy: 0.0001)
+        XCTAssertEqual(tall.width, 236, accuracy: 0.0001)
+
+        let wide = ScreenFacePlaybackSizing.size(
+            aspectRatio: 10,
+            visibleFrame: CGRect(x: 0, y: 0, width: 1_000, height: 300)
+        )
+        XCTAssertEqual(wide.width, 600, accuracy: 0.0001)
+        XCTAssertEqual(wide.height, 200, accuracy: 0.0001)
+    }
+
+    func testScreenFacePlaybackWindowIsSeparateFloatingAspectFitPlayer() throws {
+        let source = try readSourceFile("Ping/UI/History/ScreenFacePlaybackWindow.swift")
+
+        XCTAssertTrue(source.contains("final class ScreenFacePlaybackWindow: NSWindow"))
+        XCTAssertTrue(source.contains("styleMask: [.borderless]"))
+        XCTAssertTrue(source.contains("level = .floating"))
+        XCTAssertTrue(source.contains("videoGravity = .resizeAspect"))
+        XCTAssertTrue(source.contains("case 53"))
+        XCTAssertTrue(source.contains("case 36"))
+        XCTAssertTrue(source.contains("close()"))
+    }
+
+    func testScreenFacePlaybackOwnsOneWindowAndTogglesOrReplacesByMessage() throws {
+        let historySource = try readSourceFile("Ping/UI/History/HistoryView.swift")
+        let roomManagerSource = try readSourceFile("Ping/UI/Setup/RoomManagerWindow.swift")
+        let timelineSource = try readSourceFile("Ping/UI/History/RoomTimelineView.swift")
+        let rowSource = try readSourceFile("Ping/UI/History/MessageRowView.swift")
+
+        XCTAssertTrue(historySource.contains("ScreenFacePlaybackWindow"))
+        XCTAssertTrue(roomManagerSource.contains("ScreenFacePlaybackWindow"))
+        XCTAssertTrue(historySource.contains("same message"))
+        XCTAssertTrue(roomManagerSource.contains("same message"))
+        XCTAssertTrue(historySource.contains("presentScreenFacePlayback"))
+        XCTAssertTrue(roomManagerSource.contains("presentScreenFacePlayback"))
+        XCTAssertTrue(timelineSource.contains("onScreenFaceExpansionChange(nil, nil)"))
+        XCTAssertTrue(rowSource.contains("captureMode == .screenFace"))
+        XCTAssertFalse(historySource.contains("ScreenFaceExpansionOverlay("))
+        XCTAssertFalse(roomManagerSource.contains("ScreenFaceExpansionOverlay("))
+        XCTAssertFalse(rowSource.contains("ScreenFaceExpansionFrameReporter"))
+    }
+
+    func testScreenFacePlaybackDismissesForRoomParentCloseAndReplaysOnEnter() throws {
+        let playerSource = try readSourceFile("Ping/UI/History/ScreenFacePlaybackWindow.swift")
+        let historySource = try readSourceFile("Ping/UI/History/HistoryView.swift")
+        let roomManagerSource = try readSourceFile("Ping/UI/Setup/RoomManagerWindow.swift")
+
+        XCTAssertTrue(playerSource.contains("NSWindow.willCloseNotification"))
+        XCTAssertTrue(playerSource.contains("parentWindow"))
+        XCTAssertTrue(playerSource.contains("handleReplay"))
+        XCTAssertTrue(playerSource.contains("seek(to: .zero)"))
+        XCTAssertTrue(historySource.contains("onChange(of: viewModel.selectedRoomId)"))
+        XCTAssertTrue(historySource.contains("dismissScreenFacePlayback()"))
+        XCTAssertTrue(historySource.contains("guard let messageId = screenFacePlaybackWindow?.messageId else { return }"))
+        XCTAssertTrue(roomManagerSource.contains("onChange(of: selectedRoomId)"))
+        XCTAssertTrue(roomManagerSource.contains("dismissScreenFacePlayback()"))
+    }
+
+    func testScreenFacePlaybackFloatsAboveSidebarWithoutShrinkingSidebar() throws {
         let historySource = try readSourceFile("Ping/UI/History/HistoryView.swift")
         let rowSource = try readSourceFile("Ping/UI/History/MessageRowView.swift")
         let timelineSource = try readSourceFile("Ping/UI/History/RoomTimelineView.swift")
-        let overlaySource = try readSourceFile("Ping/UI/History/ScreenFaceExpansionOverlay.swift")
+        let playbackSource = try readSourceFile("Ping/UI/History/ScreenFacePlaybackWindow.swift")
         let roomManagerSource = try readSourceFile("Ping/UI/Setup/RoomManagerWindow.swift")
         let roomDetailSource = try readSourceFile("Ping/UI/Setup/RoomDetailView.swift")
 
         XCTAssertTrue(historySource.contains(".frame(minWidth: 220, idealWidth: 240, maxWidth: 320)"))
-        XCTAssertTrue(historySource.contains("ScreenFaceExpansionOverlay("))
-        XCTAssertTrue(roomManagerSource.contains("ScreenFaceExpansionOverlay("))
+        XCTAssertTrue(historySource.contains("ScreenFacePlaybackWindow"))
+        XCTAssertTrue(roomManagerSource.contains("ScreenFacePlaybackWindow"))
         XCTAssertTrue(roomManagerSource.contains("usesExternalScreenFaceExpansion: true"))
         XCTAssertTrue(roomDetailSource.contains("usesExternalScreenFaceExpansion: Bool = false"))
         XCTAssertTrue(timelineSource.contains("var usesExternalScreenFaceExpansion: Bool = false"))
-        XCTAssertTrue(rowSource.contains("ScreenFaceExpansionFrameReporter"))
-        XCTAssertTrue(overlaySource.contains("proxy.frame(in: .global)"))
-        XCTAssertTrue(overlaySource.contains("static func overlayX"))
+        XCTAssertFalse(rowSource.contains("ScreenFaceExpansionFrameReporter"))
+        XCTAssertTrue(playbackSource.contains("level = .floating"))
+        XCTAssertTrue(playbackSource.contains("parentFrame: roomWindow?.frame"))
         XCTAssertFalse(historySource.contains("sidebarWidthRange"))
         XCTAssertFalse(historySource.contains(".overlayPreferenceValue("))
         XCTAssertTrue(rowSource.contains("usesExternalScreenFaceExpansion"))

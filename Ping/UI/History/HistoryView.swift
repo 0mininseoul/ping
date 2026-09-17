@@ -9,8 +9,7 @@ struct HistoryView: View {
 
     @State private var keyMonitor: Any?
     @State private var expandedPlaybackWindow: ExpandedPlaybackWindow?
-    @State private var screenFaceExpansionAnchor: ScreenFaceExpansionAnchor?
-    @State private var screenFaceExpansionContext: ScreenFaceExpansionContext?
+    @State private var screenFacePlaybackWindow: ScreenFacePlaybackWindow?
 
     var body: some View {
         HSplitView {
@@ -28,7 +27,7 @@ struct HistoryView: View {
                     appState: appState,
                     usesExternalScreenFaceExpansion: true,
                     onScreenFaceExpansionChange: { anchor, context in
-                        updateScreenFaceExpansion(anchor: anchor, context: context)
+                        handleScreenFaceExpansion(anchor: anchor, context: context)
                     }
                 )
                     .frame(minWidth: 400)
@@ -40,12 +39,6 @@ struct HistoryView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .overlay {
-            ScreenFaceExpansionOverlay(
-                anchor: screenFaceExpansionAnchor,
-                context: screenFaceExpansionContext
-            )
-        }
         .onAppear {
             keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
                 handleKey(event) ? nil : event
@@ -56,14 +49,20 @@ struct HistoryView: View {
                 NSEvent.removeMonitor(keyMonitor)
                 self.keyMonitor = nil
             }
+            dismissScreenFacePlayback()
         }
         .onReceive(realtime.$lastEvent.compactMap { $0 }) { event in
             viewModel.handleRealtimeEvent(event)
         }
         .onChange(of: viewModel.expandedMessageId) { newValue in
-            if newValue != screenFaceExpansionAnchor?.messageId {
-                updateScreenFaceExpansion(anchor: nil, context: nil)
+            if let window = screenFacePlaybackWindow,
+               window.messageId != newValue {
+                dismissScreenFacePlayback()
             }
+        }
+        .onChange(of: viewModel.selectedRoomId) { _ in
+            dismissScreenFacePlayback()
+            viewModel.expandedMessageId = nil
         }
     }
 
@@ -138,11 +137,52 @@ struct HistoryView: View {
         }
     }
 
-    private func updateScreenFaceExpansion(
+    private func handleScreenFaceExpansion(
         anchor: ScreenFaceExpansionAnchor?,
         context: ScreenFaceExpansionContext?
     ) {
-        screenFaceExpansionAnchor = anchor
-        screenFaceExpansionContext = context
+        guard let context else {
+            dismissScreenFacePlayback()
+            return
+        }
+
+        presentScreenFacePlayback(context)
+    }
+
+    private func presentScreenFacePlayback(_ context: ScreenFaceExpansionContext) {
+        let messageId = context.message.id ?? context.message.videoId
+        if let window = screenFacePlaybackWindow {
+            if window.messageId == messageId { // same message toggles closed
+                dismissScreenFacePlayback()
+                return
+            }
+            window.close()
+            screenFacePlaybackWindow = nil
+        }
+
+        let parentWindow = NSApp.keyWindow ?? NSApp.mainWindow
+        let window = ScreenFacePlaybackWindow(
+            context: context,
+            parentWindow: parentWindow,
+            onDismiss: {
+                if self.screenFacePlaybackWindow?.messageId == messageId {
+                    self.screenFacePlaybackWindow = nil
+                }
+                if self.viewModel.expandedMessageId == messageId {
+                    self.viewModel.expandedMessageId = nil
+                }
+            }
+        )
+        screenFacePlaybackWindow = window
+        window.present()
+    }
+
+    private func dismissScreenFacePlayback() {
+        guard let messageId = screenFacePlaybackWindow?.messageId else { return }
+        screenFacePlaybackWindow?.close()
+        screenFacePlaybackWindow = nil
+        if viewModel.expandedMessageId == messageId {
+            viewModel.expandedMessageId = nil
+        }
     }
 }

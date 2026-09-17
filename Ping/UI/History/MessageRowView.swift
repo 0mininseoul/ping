@@ -32,7 +32,7 @@ struct MessageRowView: View {
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 4)
                 }
-                if isExpanded {
+                if isExpanded && !(usesExternalScreenFaceExpansion && message.captureMode == .screenFace) {
                     expandedVideo
                 } else {
                     thumbnail
@@ -87,27 +87,13 @@ struct MessageRowView: View {
 
     @ViewBuilder
     private var expandedVideo: some View {
-        if usesExternalScreenFaceExpansion && message.captureMode == .screenFace, let id = message.id {
-            let size = InlinePlayerView.playerSize(for: message)
-            let context = ScreenFaceExpansionContext(
-                message: message,
-                isMine: isMine,
-                archivePeerName: archivePeerName,
-                cacheService: cacheService,
-                controller: inlineController
-            )
-            ScreenFaceExpansionFrameReporter(messageId: id, size: size) { anchor in
-                onScreenFaceExpansionChange(anchor, anchor == nil ? nil : context)
-            }
-        } else {
-            InlinePlayerView(
-                message: message,
-                isMine: isMine,
-                archivePeerName: archivePeerName,
-                cacheService: cacheService,
-                controller: inlineController
-            )
-        }
+        InlinePlayerView(
+            message: message,
+            isMine: isMine,
+            archivePeerName: archivePeerName,
+            cacheService: cacheService,
+            controller: inlineController
+        )
     }
 
     private var thumbnail: some View {
