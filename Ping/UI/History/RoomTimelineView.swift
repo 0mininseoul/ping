@@ -64,7 +64,7 @@ struct RoomTimelineView: View {
                     didInitialScroll = false
                 }
                 .onChange(of: viewModel.expandedMessageId) { expandedMessageId in
-                    if usesExternalScreenFaceExpansion {
+                    if usesExternalScreenFaceExpansion, expandedMessageId != nil {
                         // A keyboard change to an inline face-only row must not leave
                         // a separate screen+face player above the room.
                         onScreenFaceExpansionChange(nil, nil)

@@ -55,10 +55,10 @@ struct HistoryView: View {
             viewModel.handleRealtimeEvent(event)
         }
         .onChange(of: viewModel.expandedMessageId) { newValue in
-            if let window = screenFacePlaybackWindow,
-               window.messageId != newValue {
-                dismissScreenFacePlayback()
-            }
+            guard let newValue else { return }
+            guard let window = screenFacePlaybackWindow,
+                  window.messageId != newValue else { return }
+            dismissScreenFacePlayback()
         }
         .onChange(of: viewModel.selectedRoomId) { _ in
             dismissScreenFacePlayback()

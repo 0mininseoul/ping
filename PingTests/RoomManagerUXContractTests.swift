@@ -310,6 +310,39 @@ final class RoomManagerUXContractTests: XCTestCase {
         XCTAssertTrue(roomManagerSource.contains("dismissScreenFacePlayback()"))
     }
 
+    func testScreenFaceTransitionClearsInlineSelectionWithoutDismissingNewPlayer() throws {
+        let timelineSource = try readSourceFile("Ping/UI/History/RoomTimelineView.swift")
+        let historySource = try readSourceFile("Ping/UI/History/HistoryView.swift")
+        let transition = try sourceSlice(
+            in: timelineSource,
+            from: "if isScreenFaceExternal",
+            to: "private func replyPreview"
+        )
+        let timelineChange = try sourceSlice(
+            in: timelineSource,
+            from: ".onChange(of: viewModel.expandedMessageId)",
+            to: ".onAppear"
+        )
+        let historyChange = try sourceSlice(
+            in: historySource,
+            from: ".onChange(of: viewModel.expandedMessageId)",
+            to: ".onChange(of: viewModel.selectedRoomId)"
+        )
+
+        XCTAssertTrue(timelineChange.contains("if usesExternalScreenFaceExpansion, expandedMessageId != nil"))
+        XCTAssertTrue(historyChange.contains("guard let newValue else { return }"))
+
+        let clearIndex = transition.distance(
+            from: transition.startIndex,
+            to: try XCTUnwrap(transition.range(of: "viewModel.expandedMessageId = nil")).lowerBound
+        )
+        let presentIndex = transition.distance(
+            from: transition.startIndex,
+            to: try XCTUnwrap(transition.range(of: "onScreenFaceExpansionChange(")).lowerBound
+        )
+        XCTAssertLessThan(clearIndex, presentIndex)
+    }
+
     @MainActor
     func testHistoryEnterReplayDispatchPrioritizesVisibleFloatingPlayer() {
         var replayTargets: [String] = []
