@@ -67,6 +67,25 @@ enum NotificationPayload: Equatable {
     }
 }
 
+enum DeferredInvitationAction: Equatable {
+    case accept(String)
+    case reject(String)
+}
+
+struct DeferredInvitationActionQueue {
+    private var actions: [DeferredInvitationAction] = []
+
+    mutating func enqueue(_ action: DeferredInvitationAction) {
+        guard !actions.contains(action) else { return }
+        actions.append(action)
+    }
+
+    mutating func drain() -> [DeferredInvitationAction] {
+        defer { actions.removeAll() }
+        return actions
+    }
+}
+
 @MainActor
 final class LocalNotificationCenter: NSObject, UNUserNotificationCenterDelegate {
     static let shared = LocalNotificationCenter()

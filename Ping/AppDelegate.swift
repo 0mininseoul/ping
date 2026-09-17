@@ -56,6 +56,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var networkMonitor: NWPathMonitor?
     private var cameraStartTask: Task<Void, Never>?
     private var pendingInviteToken: String?
+    private var deferredInvitationActions = DeferredInvitationActionQueue()
+    private var hasLoadedInvitationState = false
     private var currentMirrorMode: CaptureMode?
     private let isAgentManagedProcess = PingLaunchOrigin.isAgentManaged()
 
@@ -408,6 +410,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         roomObserverTask?.cancel()
         invitationObserverTask?.cancel()
         incomingMessageTask?.cancel()
+        hasLoadedInvitationState = false
         cancelPlaybackPrefetches()
         seedVideoNotificationLedgerFromHistoryCache(uid: uid)
         startDesktopPresenceHeartbeat()
@@ -453,6 +456,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         invitationObserverTask = Task { @MainActor in
             for await invitations in invitationService.observeIncoming(uid: uid) {
                 appState.pendingInvitations = invitations
+                hasLoadedInvitationState = true
+                processDeferredInvitationActions()
             }
         }
 
@@ -1236,10 +1241,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func acceptInvitation(inviteId: String) {
-        guard let invitation = appState.pendingInvitations.first(where: { $0.id == inviteId }),
+        guard hasLoadedInvitationState,
+              let invitation = appState.pendingInvitations.first(where: { $0.id == inviteId }),
               let currentUser = appState.currentUser,
               let uid = currentUser.id else {
-            showRoomManager()
+            deferInvitationAction(.accept(inviteId))
             return
         }
 
@@ -1254,8 +1260,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func rejectInvitation(inviteId: String) {
+        guard hasLoadedInvitationState, appState.currentUser != nil else {
+            deferInvitationAction(.reject(inviteId))
+            return
+        }
+
         Task {
             try? await invitationService.reject(inviteId: inviteId)
+        }
+    }
+
+    private func deferInvitationAction(_ action: DeferredInvitationAction) {
+        deferredInvitationActions.enqueue(action)
+        if appState.currentUser == nil {
+            startBootstrapTaskIfNeeded()
+        }
+    }
+
+    private func processDeferredInvitationActions() {
+        guard hasLoadedInvitationState, appState.currentUser?.id != nil else { return }
+
+        for action in deferredInvitationActions.drain() {
+            switch action {
+            case .accept(let inviteId):
+                acceptInvitation(inviteId: inviteId)
+            case .reject(let inviteId):
+                rejectInvitation(inviteId: inviteId)
+            }
         }
     }
 
@@ -1341,6 +1372,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         appState.currentUser = nil
         appState.rooms = []
         appState.pendingInvitations = []
+        deferredInvitationActions = DeferredInvitationActionQueue()
+        hasLoadedInvitationState = false
         appState.resetTransientState()
         appState.pendingRoomFocusId = nil
         appState.lastSelectedRoomId = nil

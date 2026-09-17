@@ -112,6 +112,40 @@ final class RemotePushContractTests: XCTestCase {
         XCTAssertTrue(source.contains("completionHandler([.banner, .sound])"))
     }
 
+    func testInvitationActionsHaveAnInMemoryDrainOncePathAfterBootstrap() throws {
+        let notifications = try readRepositoryFile("Ping/Notifications/LocalNotificationCenter.swift")
+        let appDelegate = try readRepositoryFile("Ping/AppDelegate.swift")
+
+        XCTAssertTrue(notifications.contains("enum DeferredInvitationAction"))
+        XCTAssertTrue(notifications.contains("struct DeferredInvitationActionQueue"))
+        XCTAssertTrue(notifications.contains("mutating func enqueue"))
+        XCTAssertTrue(notifications.contains("mutating func drain"))
+        XCTAssertTrue(appDelegate.contains("deferredInvitationActions"))
+        XCTAssertTrue(appDelegate.contains("hasLoadedInvitationState"))
+        XCTAssertTrue(appDelegate.contains("processDeferredInvitationActions()"))
+        let observer = try sourceSlice(
+            in: appDelegate,
+            from: "invitationObserverTask = Task",
+            to: "incomingMessageTask = Task"
+        )
+        let stateUpdate = try XCTUnwrap(observer.range(of: "appState.pendingInvitations = invitations"))
+        let drain = try XCTUnwrap(observer.range(of: "processDeferredInvitationActions()"))
+        XCTAssertLessThan(stateUpdate.lowerBound, drain.lowerBound)
+        XCTAssertTrue(appDelegate.contains("deferInvitationAction(.accept(inviteId))"))
+        XCTAssertTrue(appDelegate.contains("deferInvitationAction(.reject(inviteId))"))
+        XCTAssertFalse(appDelegate.contains("UserDefaults.standard.set(true, forKey: PingPreferenceKeys.invitation"))
+    }
+
+    func testDeferredInvitationActionQueueDeduplicatesAndDrainsExactlyOnce() {
+        var queue = DeferredInvitationActionQueue()
+        queue.enqueue(.accept("invite-1"))
+        queue.enqueue(.accept("invite-1"))
+        queue.enqueue(.reject("invite-2"))
+
+        XCTAssertEqual(queue.drain(), [.accept("invite-1"), .reject("invite-2")])
+        XCTAssertTrue(queue.drain().isEmpty)
+    }
+
     func testMacOSAPNsEntitlementsUseEnvironmentSpecificValuesWithoutChangingDeployment() throws {
         let release = try readPlist("Ping.entitlements")
         let debug = try readPlist("PingDebug.entitlements")
@@ -138,5 +172,11 @@ final class RemotePushContractTests: XCTestCase {
         let data = try Data(contentsOf: root.appendingPathComponent(relativePath))
         let plist = try PropertyListSerialization.propertyList(from: data, format: nil)
         return try XCTUnwrap(plist as? [String: Any])
+    }
+
+    private func sourceSlice(in source: String, from startMarker: String, to endMarker: String) throws -> String {
+        let start = try XCTUnwrap(source.range(of: startMarker)?.lowerBound)
+        let end = try XCTUnwrap(source.range(of: endMarker, range: start..<source.endIndex)?.lowerBound)
+        return String(source[start..<end])
     }
 }
