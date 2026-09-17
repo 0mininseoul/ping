@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { verifyWebhookSecret, parseMessageRecord } from '../webhook';
+import { verifyWebhookSecret, parseMessageRecord, parseInvitationRecord } from '../webhook';
 
 describe('verifyWebhookSecret', () => {
   it('accepts matching non-empty secret', () => {
@@ -47,5 +47,35 @@ describe('parseMessageRecord', () => {
     expect(parseMessageRecord({ ...good, table: 'chat_messages' })).toBeNull();
     expect(parseMessageRecord({ ...good, record: { ...good.record, video_id: undefined } })).toBeNull();
     expect(parseMessageRecord(null)).toBeNull();
+  });
+});
+
+describe('parseInvitationRecord', () => {
+  const good = {
+    type: 'INSERT',
+    table: 'invitations',
+    record: {
+      id: 'invite-1',
+      to_uid: 'rcv-1',
+      room_id: 'room-1',
+      from_nickname: '박영민',
+      room_name: '우리 방',
+    },
+  };
+
+  it('parses an invitations INSERT with the notification fields', () => {
+    expect(parseInvitationRecord(good)).toEqual({
+      inviteId: 'invite-1',
+      recipientUid: 'rcv-1',
+      roomId: 'room-1',
+      fromNickname: '박영민',
+      roomName: '우리 방',
+    });
+  });
+
+  it('ignores invitation events with missing required fields', () => {
+    expect(parseInvitationRecord({ ...good, table: 'messages' })).toBeNull();
+    expect(parseInvitationRecord({ ...good, record: { ...good.record, to_uid: undefined } })).toBeNull();
+    expect(parseInvitationRecord({ ...good, record: { ...good.record, room_name: undefined } })).toBeNull();
   });
 });

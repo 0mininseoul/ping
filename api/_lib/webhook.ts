@@ -51,3 +51,26 @@ export function parseChatRecord(body: unknown): ChatRecord | null {
     body: String(r.body),
   };
 }
+
+export interface InvitationRecord {
+  inviteId: string;
+  recipientUid: string;
+  roomId: string;
+  fromNickname: string;
+  roomName: string;
+}
+
+export function parseInvitationRecord(body: unknown): InvitationRecord | null {
+  if (!body || typeof body !== 'object') return null;
+  const b = body as Record<string, unknown>;
+  if (b.type !== 'INSERT' || b.table !== 'invitations' || !b.record) return null;
+  const r = b.record as Record<string, unknown>;
+  if (!r.id || !r.to_uid || !r.room_id || !r.from_nickname || !r.room_name) return null;
+  return {
+    inviteId: String(r.id),
+    recipientUid: String(r.to_uid),
+    roomId: String(r.room_id),
+    fromNickname: String(r.from_nickname),
+    roomName: String(r.room_name),
+  };
+}

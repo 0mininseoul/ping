@@ -46,7 +46,7 @@ function presenceTable(rows: PresenceRow[]) {
 }
 
 function fakeSupabase(
-  tokens: Array<{ token: string; environment: string }>,
+  tokens: Array<{ token: string; environment: string; platform?: 'macos' | 'ios' | 'watchos' }>,
   opts: FakeOptions = {}
 ) {
   const deleted: string[][] = [];
@@ -111,7 +111,7 @@ const insertBody = {
 
 function deps(
   overrides: Partial<PushDeps>,
-  tokens = [{ token: 't1', environment: 'production' }],
+  tokens: Array<{ token: string; environment: string; platform?: 'macos' | 'ios' | 'watchos' }> = [{ token: 't1', environment: 'production' }],
   opts: FakeOptions = {}
 ): {
   d: PushDeps;
@@ -180,16 +180,16 @@ describe('handlePush', () => {
     expect(send).not.toHaveBeenCalled();
   });
 
-  it('suppresses video push while the receiver has fresh desktop presence', async () => {
+  it('routes video push to the macOS token while the receiver has fresh desktop presence', async () => {
     const { d, send } = deps(
       {},
-      [{ token: 't1', environment: 'production' }],
+      [{ token: 't1', environment: 'production', platform: 'macos' }],
       { desktopPresence: [{ uid: 'rcv-1', updated_at: new Date().toISOString() }] }
     );
     const out = await handlePush(insertBody, 's3cret', d);
     expect(out.code).toBe(200);
-    expect(out.body).toEqual({ sent: 0, removed: 0, suppressed: 1 });
-    expect(send).not.toHaveBeenCalled();
+    expect(out.body).toEqual({ sent: 1, removed: 0 });
+    expect(send).toHaveBeenCalledTimes(1);
   });
 
   it('still pushes a video ping once the desktop session has ended', async () => {
@@ -231,7 +231,7 @@ describe('handlePush', () => {
 
 function chatFakeSupabase(
   members: Array<{ user_id: string }>,
-  tokens: Array<{ token: string; environment: string }>,
+  tokens: Array<{ token: string; environment: string; platform?: 'macos' | 'ios' | 'watchos' }>,
   desktopPresence: PresenceRow[] = []
 ) {
   const deleted: string[][] = [];
@@ -284,7 +284,7 @@ const chatBody = {
 
 function chatDeps(
   members: Array<{ user_id: string }>,
-  tokens: Array<{ token: string; environment: string }>,
+  tokens: Array<{ token: string; environment: string; platform?: 'macos' | 'ios' | 'watchos' }>,
   desktopPresence: PresenceRow[] = []
 ) {
   const { supabase, deleted } = chatFakeSupabase(members, tokens, desktopPresence);
@@ -314,16 +314,16 @@ describe('handlePush (chat)', () => {
     expect(out.body).toEqual({ sent: 1, removed: 0, kind: 'chat' });
   });
 
-  it('suppresses chat push for members with fresh desktop presence', async () => {
+  it('routes chat push to the macOS token for members with fresh desktop presence', async () => {
     const { d, send } = chatDeps(
       [{ user_id: 'rcv-1' }],
-      [{ token: 't1', environment: 'production' }],
+      [{ token: 't1', environment: 'production', platform: 'macos' }],
       [{ uid: 'rcv-1', updated_at: new Date().toISOString() }]
     );
     const out = await handlePush(chatBody, 's3cret', d);
     expect(out.code).toBe(200);
-    expect(out.body).toEqual({ sent: 0, removed: 0, kind: 'chat', suppressed: 1 });
-    expect(send).not.toHaveBeenCalled();
+    expect(out.body).toEqual({ sent: 1, removed: 0, kind: 'chat' });
+    expect(send).toHaveBeenCalledTimes(1);
   });
 
   /// 종료한 데스크톱 세션이 계속 "켜져 있음"으로 읽히면, Ping을 끈 뒤에도 마지막
@@ -346,5 +346,286 @@ describe('handlePush (chat)', () => {
     expect(out.code).toBe(200);
     expect(out.body).toEqual({ sent: 0, removed: 0 });
     expect(send).not.toHaveBeenCalled();
+  });
+});
+
+// --- Platform-aware routing and invitation pushes ---
+
+interface ModernTokenRow {
+  uid: string;
+  token: string;
+  platform: 'macos' | 'ios' | 'watchos';
+  environment: 'production' | 'sandbox';
+  sound_preference: 'default' | 'none';
+}
+
+interface ModernOptions {
+  tokens: ModernTokenRow[];
+  desktopPresence?: Array<PresenceRow & { platform?: 'macos' | 'windows' }>;
+  members?: Array<{ user_id: string; room_id?: string }>;
+  signedUrl?: string;
+}
+
+function modernSupabase(options: ModernOptions) {
+  const deleted: string[][] = [];
+  let signedUrlCalls = 0;
+
+  function rowsFor(table: string): Array<Record<string, unknown>> {
+    if (table === 'device_tokens') return options.tokens as unknown as Array<Record<string, unknown>>;
+    if (table === 'desktop_presence') return (options.desktopPresence ?? []) as unknown as Array<Record<string, unknown>>;
+    if (table === 'room_members') return (options.members ?? []) as unknown as Array<Record<string, unknown>>;
+    return [];
+  }
+
+  function table(tableName: string) {
+    return {
+      select() {
+        let result = rowsFor(tableName);
+        const builder = {
+          eq(column: string, value: unknown) {
+            result = result.filter((row) => row[column] === value);
+            return builder;
+          },
+          neq(column: string, value: unknown) {
+            result = result.filter((row) => row[column] !== value);
+            return builder;
+          },
+          in(column: string, values: unknown[]) {
+            result = result.filter((row) => values.includes(row[column]));
+            return builder;
+          },
+          gte(column: string, value: string) {
+            result = result.filter((row) => String(row[column]) >= value);
+            return builder;
+          },
+          is(column: string, value: null) {
+            result = result.filter((row) => (row[column] ?? null) === value);
+            return builder;
+          },
+          then(
+            resolve: (value: { data: Array<Record<string, unknown>>; error: null }) => unknown,
+            reject?: (reason: unknown) => unknown
+          ) {
+            return Promise.resolve({ data: result, error: null }).then(resolve, reject);
+          },
+        };
+        return builder;
+      },
+      delete() {
+        return {
+          in: async (_column: string, values: string[]) => {
+            deleted.push(values);
+            return { data: null, error: null };
+          },
+        };
+      },
+    };
+  }
+
+  const supabase = {
+    from(tableName: string) {
+      return table(tableName);
+    },
+    storage: {
+      from() {
+        return {
+          createSignedUrl: async () => {
+            signedUrlCalls += 1;
+            return {
+              data: { signedUrl: options.signedUrl ?? 'https://signed.example/clip.mp4' },
+              error: null,
+            };
+          },
+        };
+      },
+    },
+  };
+  return { supabase, deleted, get signedUrlCalls() { return signedUrlCalls; } };
+}
+
+function modernDeps(options: ModernOptions) {
+  const fake = modernSupabase(options);
+  const send = vi.fn(async () => ({ status: 200, body: '' }));
+  const d: PushDeps = {
+    supabase: fake.supabase as unknown as PushDeps['supabase'],
+    makeJwt: async () => 'jwt-abc',
+    send,
+    bundleIds: {
+      macos: 'com.example.mac',
+      ios: 'com.example.ios',
+      watchos: 'com.example.watch',
+    },
+    expectedSecret: 's3cret',
+  };
+  return { d, send, fake };
+}
+
+const modernVideoBody = {
+  type: 'INSERT',
+  table: 'messages',
+  record: {
+    id: 'msg-modern',
+    receiver_uid: 'receiver-1',
+    sender_uid: 'sender-1',
+    video_id: 'video-modern',
+    room_id: 'room-modern',
+    sender_nickname: '보낸 사람',
+  },
+};
+
+const modernTokenRows: ModernTokenRow[] = [
+  {
+    uid: 'receiver-1',
+    token: 'mac-modern',
+    platform: 'macos',
+    environment: 'production',
+    sound_preference: 'default',
+  },
+  {
+    uid: 'receiver-1',
+    token: 'ios-modern',
+    platform: 'ios',
+    environment: 'production',
+    sound_preference: 'default',
+  },
+  {
+    uid: 'receiver-1',
+    token: 'watch-modern',
+    platform: 'watchos',
+    environment: 'sandbox',
+    sound_preference: 'default',
+  },
+];
+
+describe('handlePush (platform-aware routing)', () => {
+  it('routes a live Mac receiver exclusively to macOS tokens and skips signed URL creation', async () => {
+    const { d, send, fake } = modernDeps({
+      tokens: modernTokenRows,
+      desktopPresence: [{ uid: 'receiver-1', updated_at: new Date().toISOString(), platform: 'macos' }],
+    });
+
+    const out = await handlePush(modernVideoBody, 's3cret', d);
+
+    expect(out.body).toEqual({ sent: 1, removed: 0 });
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send.mock.calls[0][0].token).toBe('mac-modern');
+    expect(send.mock.calls[0][0].bundleId).toBe('com.example.mac');
+    expect(send.mock.calls[0][0].payload.aps.category).toBe('ping.message');
+    expect(send.mock.calls[0][0].payload).not.toHaveProperty('videoSignedUrl');
+    expect(fake.signedUrlCalls).toBe(0);
+  });
+
+  it('routes an absent Mac receiver exclusively to mobile tokens and keeps the signed URL', async () => {
+    const { d, send, fake } = modernDeps({ tokens: modernTokenRows });
+
+    await handlePush(modernVideoBody, 's3cret', d);
+
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(send.mock.calls.map((call) => call[0].token)).toEqual(['ios-modern', 'watch-modern']);
+    expect(send.mock.calls.map((call) => call[0].bundleId)).toEqual([
+      'com.example.ios',
+      'com.example.watch',
+    ]);
+    expect(send.mock.calls.every((call) => call[0].payload.aps.category === 'PING_MESSAGE')).toBe(true);
+    expect(send.mock.calls.every((call) => call[0].payload.videoSignedUrl === 'https://signed.example/clip.mp4')).toBe(true);
+    expect(fake.signedUrlCalls).toBe(1);
+  });
+
+  it('falls back to macOS tokens when the receiver has no live Mac and no mobile token', async () => {
+    const { d, send, fake } = modernDeps({ tokens: [modernTokenRows[0]] });
+
+    await handlePush(modernVideoBody, 's3cret', d);
+
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send.mock.calls[0][0].token).toBe('mac-modern');
+    expect(send.mock.calls[0][0].payload).not.toHaveProperty('videoSignedUrl');
+    expect(fake.signedUrlCalls).toBe(0);
+  });
+
+  it('does not treat an ended Mac presence row as live', async () => {
+    const now = new Date().toISOString();
+    const { d, send } = modernDeps({
+      tokens: modernTokenRows,
+      desktopPresence: [{ uid: 'receiver-1', updated_at: now, ended_at: now, platform: 'macos' }],
+    });
+
+    await handlePush(modernVideoBody, 's3cret', d);
+
+    expect(send.mock.calls.map((call) => call[0].token)).toEqual(['ios-modern', 'watch-modern']);
+  });
+
+  it('routes each chat recipient independently by UID', async () => {
+    const tokens: ModernTokenRow[] = [
+      { ...modernTokenRows[0], uid: 'receiver-1', token: 'mac-r1' },
+      { ...modernTokenRows[1], uid: 'receiver-1', token: 'ios-r1' },
+      { ...modernTokenRows[1], uid: 'receiver-2', token: 'ios-r2' },
+      { ...modernTokenRows[2], uid: 'receiver-2', token: 'watch-r2' },
+    ];
+    const { d, send } = modernDeps({
+      tokens,
+      members: [
+        { user_id: 'receiver-1', room_id: 'room-1' },
+        { user_id: 'receiver-2', room_id: 'room-1' },
+      ],
+      desktopPresence: [{ uid: 'receiver-1', updated_at: new Date().toISOString(), platform: 'macos' }],
+    });
+
+    await handlePush(chatBody, 's3cret', d);
+
+    expect(send.mock.calls.map((call) => call[0].token)).toEqual(['mac-r1', 'ios-r2', 'watch-r2']);
+    expect(send.mock.calls[0][0].payload.type).toBe('chat');
+    expect(send.mock.calls[0][0].payload.chat_id).toBe('chat-1');
+    expect(send.mock.calls[1][0].payload.kind).toBe('chat');
+  });
+
+  it('pushes invitation inserts to the record recipient with macOS keys', async () => {
+    const invitation = {
+      type: 'INSERT',
+      table: 'invitations',
+      record: {
+        id: 'invite-modern',
+        to_uid: 'receiver-1',
+        room_id: 'room-modern',
+        from_nickname: '초대한 사람',
+        room_name: 'Ping 룸',
+      },
+    };
+    const { d, send } = modernDeps({ tokens: [modernTokenRows[0]] });
+
+    const out = await handlePush(invitation, 's3cret', d);
+
+    expect(out.body).toEqual({ sent: 1, removed: 0, kind: 'invitation' });
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send.mock.calls[0][0].collapseId).toBe('invite-modern');
+    expect(send.mock.calls[0][0].payload).toMatchObject({
+      inviteId: 'invite-modern',
+      room_id: 'room-modern',
+      from_nickname: '초대한 사람',
+      room_name: 'Ping 룸',
+    });
+    expect(send.mock.calls[0][0].payload.aps.category).toBe('ping.invitation');
+  });
+
+  it('omits sound for a selected macOS token with sound preference none', async () => {
+    const { d, send } = modernDeps({
+      tokens: [{ ...modernTokenRows[0], sound_preference: 'none' }],
+      desktopPresence: [{ uid: 'receiver-1', updated_at: new Date().toISOString(), platform: 'macos' }],
+    });
+
+    await handlePush(modernVideoBody, 's3cret', d);
+
+    expect(send.mock.calls[0][0].payload.aps).not.toHaveProperty('sound');
+  });
+
+  it('falls back to the iOS topic when no watchOS topic is configured', async () => {
+    const { d, send } = modernDeps({
+      tokens: [modernTokenRows[2]],
+    });
+    d.bundleIds = { macos: 'com.example.mac', ios: 'com.example.ios' };
+
+    await handlePush(modernVideoBody, 's3cret', d);
+
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send.mock.calls[0][0].bundleId).toBe('com.example.ios');
   });
 });
