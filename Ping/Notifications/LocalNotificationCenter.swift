@@ -1,10 +1,9 @@
 import AppKit
 import UserNotifications
 
-/// The server and the legacy local notification path use different naming
-/// conventions for identifiers. Parse both into one value before routing an
-/// action so a cold-start APNs payload follows the exact same handlers as a
-/// locally scheduled notification.
+/// APNs and the legacy local notification path use different naming conventions
+/// for identifiers. Parse both into one value before routing an action so a
+/// cold-start APNs payload follows the same handlers as an existing delivery.
 enum NotificationPayload: Equatable {
     case message(messageId: String, roomId: String?)
     case invitation(inviteId: String, roomId: String?)
@@ -165,98 +164,6 @@ final class LocalNotificationCenter: NSObject, UNUserNotificationCenterDelegate 
         ])
     }
 
-    func notifyIncomingMessage(senderNickname: String, messageId: String, roomId: String) async -> Bool {
-        let settings = await UNUserNotificationCenter.current().notificationSettings()
-        guard Self.canScheduleNotifications(settings) else {
-            NSLog("notifyIncomingMessage skipped: notifications are not authorized")
-            return false
-        }
-
-        let content = UNMutableNotificationContent()
-        content.title = "\(senderNickname)님이 영상을 보냈습니다"
-        content.sound = notificationSound()
-        content.categoryIdentifier = Category.incomingMessage.rawValue
-        content.userInfo = ["messageId": messageId, "room_id": roomId]
-
-        let request = UNNotificationRequest(
-            identifier: "ping.message.\(messageId)",
-            content: content,
-            trigger: nil
-        )
-        return await withCheckedContinuation { continuation in
-            UNUserNotificationCenter.current().add(request) { error in
-                if let error {
-                    NSLog("notifyIncomingMessage failed: \(error)")
-                    continuation.resume(returning: false)
-                    return
-                }
-                continuation.resume(returning: true)
-            }
-        }
-    }
-
-    func notifyIncomingChat(_ message: ChatMessage, roomName: String) {
-        let content = UNMutableNotificationContent()
-        content.title = "\(message.senderNickname) · \(roomName)"
-        let body = message.previewText.isEmpty ? "사진을 보냈습니다" : message.previewText
-        content.body = body.count > 200 ? String(body.prefix(200)) + "…" : body
-        // 설정의 "알림 소리"는 수신 알림 배너 전체에 적용된다고 안내한다.
-        // 채팅만 .default로 고정돼 있어 "없음"을 골라도 소리가 났다.
-        content.sound = notificationSound()
-        content.userInfo = [
-            "type": "chat",
-            "chat_id": message.id ?? "",
-            "room_id": message.roomId
-        ]
-        let request = UNNotificationRequest(
-            identifier: "chat-\(message.id ?? UUID().uuidString)",
-            content: content,
-            trigger: nil
-        )
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error { NSLog("notifyIncomingChat failed: \(error)") }
-        }
-    }
-
-    /// 전환 시 한 룸의 밀린 채팅을 묶어 1건으로 알린다. 탭하면 기존 채팅 핸들러가 룸을 연다.
-    func notifyChatCatchUp(roomId: String, roomName: String, unreadCount: Int, latestPreview: String) {
-        let content = UNMutableNotificationContent()
-        content.title = "\(roomName) · 새 메시지 \(unreadCount)개"
-        let body = latestPreview.isEmpty ? "사진을 보냈습니다" : latestPreview
-        content.body = body.count > 200 ? String(body.prefix(200)) + "…" : body
-        content.sound = notificationSound()
-        content.userInfo = [
-            "type": "chat",
-            "chat_id": "",
-            "room_id": roomId
-        ]
-        let request = UNNotificationRequest(
-            identifier: "chat-catchup-\(roomId)",
-            content: content,
-            trigger: nil
-        )
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error { NSLog("notifyChatCatchUp failed: \(error)") }
-        }
-    }
-
-    func notifyIncomingInvitation(_ invitation: Invitation) {
-        let inviteId = invitation.id ?? UUID().uuidString
-        let content = UNMutableNotificationContent()
-        content.title = "\(invitation.fromNickname)님이 룸에 초대했습니다"
-        content.body = invitation.roomName
-        content.sound = notificationSound()
-        content.categoryIdentifier = Category.incomingInvitation.rawValue
-        content.userInfo = ["inviteId": inviteId]
-
-        let request = UNNotificationRequest(
-            identifier: "ping.invitation.\(inviteId)",
-            content: content,
-            trigger: nil
-        )
-        UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
-    }
-
     func notifyUpdateAvailable(version: String) {
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [Self.updateAvailableIdentifier])
         UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: [Self.updateAvailableIdentifier])
@@ -353,23 +260,4 @@ final class LocalNotificationCenter: NSObject, UNUserNotificationCenterDelegate 
         completionHandler([.banner, .sound])
     }
 
-    private func notificationSound() -> UNNotificationSound? {
-        switch PingNotificationSound.current {
-        case .systemDefault:
-            return .default
-        case .none:
-            return nil
-        }
-    }
-
-    private static func canScheduleNotifications(_ settings: UNNotificationSettings) -> Bool {
-        switch settings.authorizationStatus {
-        case .authorized, .provisional, .ephemeral:
-            return true
-        case .denied, .notDetermined:
-            return false
-        @unknown default:
-            return false
-        }
-    }
 }

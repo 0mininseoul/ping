@@ -29,7 +29,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let storageService = StorageService()
     private let cleanupService = CleanupService()
     private let chatRealtime = ChatRealtimeService()
-    private let chatMessageService = ChatMessageService()
     private let desktopPresenceService = DesktopPresenceService()
     private let presenceStore = PresenceStore.shared
     private let appStartTime = Date()
@@ -41,7 +40,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         isMirrorUsingCamera: { [weak self] in self?.mirrorWindow != nil }
     )
 
-    private var notifiedChatMessageIds: Set<String> = []
     private var deliveringVideoIds: Set<String> = []
     private var pendingAutoReplyBatches: [String: AutoReplyBatch] = [:]
     private var isSwitchingAccount = false
@@ -50,7 +48,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var roomObserverTask: Task<Void, Never>?
     private var invitationObserverTask: Task<Void, Never>?
     private var incomingMessageTask: Task<Void, Never>?
-    private var chatCatchUpTask: Task<Void, Never>?
     private var incomingVideoPokeTask: Task<Void, Never>?
     private var desktopPresenceTask: Task<Void, Never>?
     private var bootstrapTask: Task<Void, Never>?
@@ -449,20 +446,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     if opensRoomManagerWhenEmpty, rooms.isEmpty, onboardingWindow == nil {
                         showRoomManager()
                     }
-
-                    // 룸 목록이 채워진 뒤 캐치업을 실행해야 묶음 알림에 실제 룸 이름이 들어간다.
-                    catchUpChatNotifications(uid: uid)
                 }
             }
         }
 
         invitationObserverTask = Task { @MainActor in
             for await invitations in invitationService.observeIncoming(uid: uid) {
-                for invitation in invitations {
-                    guard let id = invitation.id, !ledger.contains(.invite, uid: uid, id: id) else { continue }
-                    ledger.remember(.invite, uid: uid, id: id)
-                    LocalNotificationCenter.shared.notifyIncomingInvitation(invitation)
-                }
                 appState.pendingInvitations = invitations
             }
         }
@@ -485,19 +474,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         deliveringVideoIds.insert(id)
         defer { deliveringVideoIds.remove(id) }
 
-        // 알림 권한이 없어도 자동 회신은 동작해야 하므로 아래 조기 반환보다 먼저 건다.
-        // 녹화·업로드를 여기서 기다리면 그동안 알림이 밀리므로 별도 task로 넘긴다.
-        Task { @MainActor [weak self] in
-            guard let self else { return }
-            await self.autoFaceReply.handleIncoming(message, currentUser: self.appState.currentUser)
+        // 앱 시작 전에 쌓인 행은 cold start catch-up이다. 원격 알림을 눌러 앱이 뜬
+        // 경우에도 자동 회신 coordinator 자체에 들어가지 않도록 먼저 걸러낸다.
+        if isLiveVideoArrival(message) {
+            // 녹화·업로드를 여기서 기다리면 그동안 수신 행이 밀리므로 별도 task로 넘긴다.
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                await self.autoFaceReply.handleIncoming(message, currentUser: self.appState.currentUser)
+            }
         }
 
-        let didScheduleNotification = await LocalNotificationCenter.shared.notifyIncomingMessage(
-            senderNickname: message.senderNickname,
-            messageId: id,
-            roomId: message.roomId
-        )
-        guard didScheduleNotification else { return }
         ledger.remember(.video, uid: uid, id: id)
         try? await messageService.markNotified(messageId: id)
 
@@ -1277,38 +1263,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func handleChatRealtimeEvent(_ event: ChatRealtimeService.Event) {
         if case .incomingVideo = event {
             fetchIncomingVideosNow()
-            return
         }
-        guard case .chatInserted(let msg) = event else { return }
-        guard msg.senderUid != appState.currentUser?.id else { return }
-        guard let id = msg.id, !notifiedChatMessageIds.contains(id) else { return }
-        notifiedChatMessageIds.insert(id)
-        if notifiedChatMessageIds.count > 500 {
-            notifiedChatMessageIds = Set(notifiedChatMessageIds.suffix(500))
-        }
-
-        // 지금 그 룸을 보고 있으면 알리지 않는다. 창이 떠 있다는 것만으로는 부족하다 —
-        // 가려진 창도 isVisible이 true라 알림이 조용히 사라졌다.
-        let isViewingRoom = RoomFocusPolicy.isViewingRoom(
-            roomId: msg.roomId,
-            appIsActive: NSApp.isActive,
-            roomWindowIsVisible: roomManagerWindow?.isVisible ?? false,
-            pendingRoomFocusId: appState.pendingRoomFocusId,
-            lastSelectedRoomId: appState.lastSelectedRoomId
-        )
-
-        // 이 결정은 원격에서 볼 수 없어 여러 차례 오진했다. 판단 근거를 함께 남긴다.
-        ClientEventService.shared.log("chat_notify_decision", properties: [
-            "suppressed": isViewingRoom,
-            "app_active": NSApp.isActive,
-            "window_visible": roomManagerWindow?.isVisible ?? false,
-            "room_id": msg.roomId
-        ])
-
-        if isViewingRoom { return }
-
-        let roomName = appState.rooms.first(where: { $0.id == msg.roomId })?.name ?? "룸"
-        LocalNotificationCenter.shared.notifyIncomingChat(msg, roomName: roomName)
     }
 
     private func shouldNotify(messageId: String, uid: String, message: VideoMessage) -> Bool {
@@ -1324,39 +1279,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return message.createdAt != nil
     }
 
-    private func catchUpChatNotifications(uid: String) {
-        chatCatchUpTask?.cancel()
-        chatCatchUpTask = Task { @MainActor in
-            do {
-                let counts = try await chatMessageService.unreadChatCounts()
-                for (roomId, unread) in counts where unread > 0 {
-                    if Task.isCancelled { return }
-                    let messages = try await chatMessageService.roomChatMessages(roomId: roomId, limit: 20)
-                    let newOnes = messages.filter { msg in
-                        guard msg.senderUid != uid, let id = msg.id else { return false }
-                        return !ledger.contains(.chat, uid: uid, id: id)
-                    }
-                    guard !newOnes.isEmpty else { continue }
-
-                    for msg in newOnes {
-                        if let id = msg.id { ledger.remember(.chat, uid: uid, id: id) }
-                    }
-
-                    let roomName = appState.rooms.first(where: { $0.id == roomId })?.name ?? "룸"
-                    let latest = newOnes.max { lhs, rhs in
-                        (lhs.createdAt ?? .distantPast) < (rhs.createdAt ?? .distantPast)
-                    }
-                    LocalNotificationCenter.shared.notifyChatCatchUp(
-                        roomId: roomId,
-                        roomName: roomName,
-                        unreadCount: newOnes.count,
-                        latestPreview: latest?.previewText ?? ""
-                    )
-                }
-            } catch {
-                NSLog("Chat catch-up failed: \(error)")
-            }
-        }
+    private func isLiveVideoArrival(_ message: VideoMessage) -> Bool {
+        guard let createdAt = message.createdAt else { return false }
+        return createdAt > appStartTime
     }
 
     private func runCleanup(uid: String) {
@@ -1402,7 +1327,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         invitationObserverTask?.cancel(); invitationObserverTask = nil
         incomingMessageTask?.cancel(); incomingMessageTask = nil
         cancelPlaybackPrefetches()
-        chatCatchUpTask?.cancel(); chatCatchUpTask = nil
         stopDesktopPresenceHeartbeat()
 
         if mirrorWindow != nil { closeMirrorWindow() }
@@ -1413,8 +1337,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         for window in playbackWindows { window.orderOut(nil) }
         playbackWindows.removeAll()
         playbackVideoCache.reset()
-
-        notifiedChatMessageIds.removeAll()
 
         appState.currentUser = nil
         appState.rooms = []
