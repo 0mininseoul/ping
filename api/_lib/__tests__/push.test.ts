@@ -12,6 +12,7 @@ interface FakeOptions {
   tokenQueryError?: { message: string } | null;
   signedUrlError?: { message: string } | null;
   signedUrl?: string | null;
+  deleteError?: { message: string } | null;
   desktopPresence?: PresenceRow[];
 }
 
@@ -70,7 +71,7 @@ function fakeSupabase(
           return {
             in: async (_col: string, vals: string[]) => {
               deleted.push(vals);
-              return { data: null, error: null };
+              return { data: null, error: opts.deleteError ?? null };
             },
           };
         },
@@ -175,6 +176,78 @@ describe('handlePush', () => {
     const out = await handlePush(insertBody, 's3cret', d);
     expect(out.body).toEqual({ sent: 1, removed: 1 });
     expect(deleted).toEqual([['t2']]);
+  });
+
+  it('returns a retryable error for APNs failures while reporting mixed delivery safely', async () => {
+    const send = vi.fn(async (i: { token: string }) => ({
+      status: i.token === 't2' ? 503 : 200,
+      body: i.token === 't2' ? 'provider response must not be logged' : '',
+    }));
+    const { d } = deps({ send }, [
+      { token: 't1', environment: 'production' },
+      { token: 't2', environment: 'production' },
+    ]);
+
+    const out = await handlePush(insertBody, 's3cret', d);
+
+    // One attempt per token lets healthy devices receive this event now. The
+    // 500 asks the webhook to retry the event; collapseId remains the event id
+    // because this endpoint has no durable per-token delivery ledger.
+    expect(out).toEqual({
+      code: 500,
+      body: {
+        error: 'apns_error',
+        detail: 'APNs returned failure status 503',
+        sent: 1,
+        removed: 0,
+      },
+    });
+    expect(send).toHaveBeenCalledTimes(2);
+  });
+
+  it('surfaces a token cleanup error without counting 410 tokens as removed', async () => {
+    const send = vi.fn(async () => ({ status: 410, body: '' }));
+    const { d, deleted } = deps(
+      { send },
+      [{ token: 't1', environment: 'production' }],
+      { deleteError: { message: 'cleanup unavailable' } }
+    );
+
+    const out = await handlePush(insertBody, 's3cret', d);
+
+    expect(out).toEqual({
+      code: 500,
+      body: {
+        error: 'db_error',
+        detail: 'cleanup unavailable',
+        sent: 0,
+        removed: 0,
+      },
+    });
+    expect(deleted).toEqual([['t1']]);
+  });
+
+  it('logs only safe aggregate event and APNs status data', async () => {
+    const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    const send = vi.fn(async () => ({ status: 200, body: 'provider response must not be logged' }));
+    const { d } = deps(
+      { send },
+      [{ token: 'token-secret-suffix', environment: 'production' }]
+    );
+
+    try {
+      await handlePush(insertBody, 's3cret', d);
+      const output = log.mock.calls.map(([line]) => String(line)).join('\n');
+      expect(output).toMatch(/event=video/);
+      expect(output).toMatch(/status=200/);
+      expect(output).not.toContain('rcv-1');
+      expect(output).not.toContain('snd-1');
+      expect(output).not.toContain('room-1');
+      expect(output).not.toContain('secret-suffix');
+      expect(output).not.toContain('provider response must not be logged');
+    } finally {
+      log.mockRestore();
+    }
   });
 
   it('returns sent:0 when receiver has no tokens', async () => {
@@ -356,6 +429,27 @@ describe('handlePush (chat)', () => {
     expect(out.code).toBe(200);
     expect(out.body).toEqual({ sent: 0, removed: 0 });
     expect(send).not.toHaveBeenCalled();
+  });
+
+  it('does not log chat room, sender, or token identifiers', async () => {
+    const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    const { d } = chatDeps(
+      [{ user_id: 'receiver-secret' }],
+      [{ token: 'chat-token-secret-suffix', environment: 'production' }]
+    );
+
+    try {
+      await handlePush(chatBody, 's3cret', d);
+      const output = log.mock.calls.map(([line]) => String(line)).join('\n');
+      expect(output).toMatch(/event=chat/);
+      expect(output).toMatch(/status=200/);
+      expect(output).not.toContain('room-1');
+      expect(output).not.toContain('snd-1');
+      expect(output).not.toContain('receiver-secret');
+      expect(output).not.toContain('secret-suffix');
+    } finally {
+      log.mockRestore();
+    }
   });
 });
 
@@ -663,6 +757,53 @@ describe('handlePush (platform-aware routing)', () => {
     expect(out).toEqual({
       code: 500,
       body: { error: 'config_error', detail: 'APNS_MACOS_BUNDLE_ID is required for macOS push' },
+    });
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('trims mobile topics and ignores whitespace before using the safe legacy fallback', async () => {
+    const { d, send } = modernDeps({
+      tokens: [modernTokenRows[1], modernTokenRows[2]],
+    });
+    d.bundleIds = { macos: ' com.example.mac ', ios: '   ', watchos: '\t' };
+    d.bundleId = ' com.example.legacy ';
+
+    const out = await handlePush(modernVideoBody, 's3cret', d);
+
+    expect(out.body).toEqual({ sent: 2, removed: 0 });
+    expect(send.mock.calls.map((call) => call[0].bundleId)).toEqual([
+      'com.example.legacy',
+      'com.example.legacy',
+    ]);
+  });
+
+  it('trims the iOS topic before using it as the watchOS fallback', async () => {
+    const { d, send } = modernDeps({
+      tokens: [modernTokenRows[1], modernTokenRows[2]],
+    });
+    d.bundleIds = { macos: 'com.example.mac', ios: ' com.example.ios ', watchos: '  ' };
+    d.bundleId = 'com.example.legacy';
+
+    await handlePush(modernVideoBody, 's3cret', d);
+
+    expect(send.mock.calls.map((call) => call[0].bundleId)).toEqual([
+      'com.example.ios',
+      'com.example.ios',
+    ]);
+  });
+
+  it('fails before APNs when mobile topics and all fallbacks are empty', async () => {
+    const { d, send } = modernDeps({
+      tokens: [modernTokenRows[1]],
+    });
+    d.bundleIds = { macos: 'com.example.mac', ios: '   ', watchos: '\n' };
+    d.bundleId = '  ';
+
+    const out = await handlePush(modernVideoBody, 's3cret', d);
+
+    expect(out).toEqual({
+      code: 500,
+      body: { error: 'config_error', detail: 'APNS_IOS_BUNDLE_ID is required for ios push' },
     });
     expect(send).not.toHaveBeenCalled();
   });

@@ -42,6 +42,7 @@ export interface PushResult {
 }
 
 const DEFAULT_DESKTOP_PRESENCE_TTL_SECONDS = 45;
+type PushEventType = 'video' | 'chat' | 'invitation';
 
 interface ReceiverBatch {
   uid: string;
@@ -75,7 +76,7 @@ export async function handlePush(
     }
 
     const selected = result.batches.flatMap((batch) => batch.tokens);
-    console.log(`[push] video receiver=${video.receiverUid} tokens=${selected.length}`);
+    console.log(`[push] event=video selected=${selected.length}`);
     if (selected.length === 0) return { code: 200, body: { sent: 0, removed: 0 } };
 
     let videoSignedUrl: string | undefined;
@@ -88,7 +89,7 @@ export async function handlePush(
       videoSignedUrl = signed.signedUrl;
     }
 
-    const sendResult = await sendToTokens(deps, selected, video.messageId, (token) => {
+    const sendResult = await sendToTokens(deps, selected, video.messageId, 'video', (token) => {
       if (token.platform === 'macos') {
         return buildMacPingPayload({
           senderName: video.senderNickname,
@@ -122,7 +123,7 @@ export async function handlePush(
     const uids = (members ?? [])
       .map((m: { user_id?: unknown }) => (m.user_id ? String(m.user_id) : ''))
       .filter(Boolean);
-    console.log(`[push] chat room=${chat.roomId} sender=${chat.senderUid} otherMembers=${uids.length}`);
+    console.log(`[push] event=chat recipients=${uids.length}`);
     if (uids.length === 0) return { code: 200, body: { sent: 0, removed: 0 } };
 
     const result = await receiverBatches(deps, uids);
@@ -130,10 +131,10 @@ export async function handlePush(
       return { code: 500, body: { error: 'db_error', detail: result.error.message } };
     }
     const selected = result.batches.flatMap((batch) => batch.tokens);
-    console.log(`[push] chat tokens=${selected.length}`);
+    console.log(`[push] event=chat selected=${selected.length}`);
     if (selected.length === 0) return { code: 200, body: { sent: 0, removed: 0, kind: 'chat' } };
 
-    const sendResult = await sendToTokens(deps, selected, chat.chatId, (token) => {
+    const sendResult = await sendToTokens(deps, selected, chat.chatId, 'chat', (token) => {
       if (token.platform === 'macos') {
         return buildMacChatPayload({
           senderName: chat.senderNickname,
@@ -161,12 +162,12 @@ export async function handlePush(
       return { code: 500, body: { error: 'db_error', detail: result.error.message } };
     }
     const selected = result.batches.flatMap((batch) => batch.tokens);
-    console.log(`[push] invitation recipient=${invitation.recipientUid} tokens=${selected.length}`);
+    console.log(`[push] event=invitation selected=${selected.length}`);
     if (selected.length === 0) {
       return { code: 200, body: { sent: 0, removed: 0, kind: 'invitation' } };
     }
 
-    const sendResult = await sendToTokens(deps, selected, invitation.inviteId, (token) => {
+    const sendResult = await sendToTokens(deps, selected, invitation.inviteId, 'invitation', (token) => {
       const input = {
         inviteId: invitation.inviteId,
         roomId: invitation.roomId,
@@ -299,8 +300,10 @@ async function freshDesktopPresenceUids(
 /// Send one push per token (same event, platform-specific payload), pruning
 /// 410 Unregistered tokens.
 interface SendTokensError {
-  error: 'config_error';
+  error: 'config_error' | 'apns_error' | 'db_error';
   detail: string;
+  sent?: number;
+  removed?: number;
 }
 
 type SendTokensResult = { sent: number; removed: number } | SendTokensError;
@@ -317,55 +320,140 @@ async function sendToTokens(
   deps: PushDeps,
   tokens: DeviceToken[],
   collapseId: string,
+  eventType: PushEventType,
   makePayload: (token: DeviceToken) => unknown
 ): Promise<SendTokensResult> {
   const bundleIds = new Map<PushPlatform, string>();
   for (const token of tokens) {
     const bundleId = bundleIdFor(deps, token.platform);
-    if (token.platform === 'macos' && !bundleId) {
+    if (!bundleId) {
       return {
         error: 'config_error',
-        detail: 'APNS_MACOS_BUNDLE_ID is required for macOS push',
+        detail: token.platform === 'macos'
+          ? 'APNS_MACOS_BUNDLE_ID is required for macOS push'
+          : `${bundleEnvName(token.platform)} is required for ${token.platform} push`,
       };
     }
-    // Keep the existing iOS/watchOS topic fallbacks unchanged while enforcing
-    // a dedicated non-empty topic for macOS.
-    bundleIds.set(token.platform, bundleId ?? '');
+    bundleIds.set(token.platform, bundleId);
   }
 
   const jwt = await deps.makeJwt();
   let sent = 0;
   const gone: string[] = [];
+  const failureStatuses = new Set<number>();
+  let failureCount = 0;
+  let transportFailures = 0;
+  const statusCounts = new Map<number, number>();
+
+  // APNs and the database webhook are at-least-once boundaries. Attempt each
+  // selected token once so one provider failure does not starve healthy
+  // recipients, then return 500 for any non-200/non-410 result so the webhook
+  // retries. A replay can duplicate earlier successes because this endpoint
+  // has no durable per-token delivery ledger; the event collapse ID lets APNs
+  // coalesce pending copies while preserving the retry signal for failures.
   for (const token of tokens) {
     const payload = makePayload(token);
     if (payload === undefined) continue;
-    const res = await deps.send({
-      token: token.token,
-      environment: token.environment,
-      jwt,
-      bundleId: bundleIds.get(token.platform) as string,
-      collapseId,
-      payload,
-    });
-    console.log(
-      `[push] apns status=${res.status} platform=${token.platform} env=${token.environment} token=…${token.token.slice(-6)} body=${(res.body || '').slice(0, 160)}`
-    );
-    if (res.status === 200) sent++;
-    else if (res.status === 410) gone.push(token.token);
+    try {
+      const res = await deps.send({
+        token: token.token,
+        environment: token.environment,
+        jwt,
+        bundleId: bundleIds.get(token.platform) as string,
+        collapseId,
+        payload,
+      });
+      statusCounts.set(res.status, (statusCounts.get(res.status) ?? 0) + 1);
+      if (res.status === 200) sent++;
+      else if (res.status === 410) gone.push(token.token);
+      else {
+        failureStatuses.add(res.status);
+        failureCount++;
+      }
+    } catch {
+      transportFailures++;
+    }
   }
+
+  const statusSummary = formatStatusCounts(statusCounts, transportFailures);
+  if (statusSummary) {
+    console.log(`[push] apns event=${eventType} status=${statusSummary}`);
+  }
+
+  let removed = 0;
   if (gone.length > 0) {
-    await deps.supabase.from('device_tokens').delete().in('token', gone);
+    const { error: cleanupError } = await deps.supabase
+      .from('device_tokens')
+      .delete()
+      .in('token', gone);
+    if (cleanupError) {
+      console.log(`[push] result event=${eventType} status=cleanup_error sent=${sent} removed=0`);
+      return {
+        error: 'db_error',
+        detail: cleanupError.message,
+        sent,
+        removed: 0,
+      };
+    }
+    removed = gone.length;
   }
-  console.log(`[push] result sent=${sent} removed=${gone.length}`);
-  return { sent, removed: gone.length };
+
+  if (failureStatuses.size > 0 || transportFailures > 0) {
+    console.log(
+      `[push] result event=${eventType} status=error sent=${sent} removed=${removed} failures=${failureCount + transportFailures}`
+    );
+    return {
+      error: 'apns_error',
+      detail: apnsFailureDetail(failureStatuses, transportFailures),
+      sent,
+      removed,
+    };
+  }
+
+  console.log(`[push] result event=${eventType} status=ok sent=${sent} removed=${removed}`);
+  return { sent, removed };
 }
 
 function bundleIdFor(deps: PushDeps, platform: PushPlatform): string | undefined {
-  const mapped = deps.bundleIds?.[platform];
-  if (platform === 'macos') return mapped?.trim() || undefined;
+  const mapped = normalizeBundleId(deps.bundleIds?.[platform]);
+  if (platform === 'macos') return mapped;
   if (mapped) return mapped;
-  if (platform === 'watchos' && deps.bundleIds?.ios) return deps.bundleIds.ios;
-  return deps.bundleId ?? '';
+  if (platform === 'watchos') {
+    const iosTopic = normalizeBundleId(deps.bundleIds?.ios);
+    if (iosTopic) return iosTopic;
+  }
+  return normalizeBundleId(deps.bundleId);
+}
+
+function normalizeBundleId(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const normalized = value.trim();
+  return normalized || undefined;
+}
+
+function bundleEnvName(platform: PushPlatform): string {
+  return platform === 'watchos'
+    ? 'APNS_WATCHOS_BUNDLE_ID or APNS_IOS_BUNDLE_ID'
+    : 'APNS_IOS_BUNDLE_ID';
+}
+
+function formatStatusCounts(statusCounts: Map<number, number>, transportFailures: number): string {
+  const statuses = [...statusCounts.entries()]
+    .sort(([left], [right]) => left - right)
+    .map(([status, count]) => `${status}:${count}`);
+  if (transportFailures > 0) statuses.push(`transport_error:${transportFailures}`);
+  return statuses.join(',');
+}
+
+function apnsFailureDetail(failureStatuses: Set<number>, transportFailures: number): string {
+  const statuses = [...failureStatuses].sort((left, right) => left - right);
+  if (statuses.length === 1 && transportFailures === 0) {
+    return `APNs returned failure status ${statuses[0]}`;
+  }
+  if (statuses.length > 0) {
+    return `APNs returned failure statuses ${statuses.join(', ')}`;
+  }
+  return 'APNs request failed before receiving a response';
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
@@ -380,7 +468,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     { auth: { persistSession: false } }
   );
 
-  const legacyBundleId = process.env.APNS_BUNDLE_ID;
+  const legacyBundleId = normalizeBundleId(process.env.APNS_BUNDLE_ID);
+  const iosBundleId = normalizeBundleId(process.env.APNS_IOS_BUNDLE_ID) ?? legacyBundleId;
+  const watchosBundleId = normalizeBundleId(process.env.APNS_WATCHOS_BUNDLE_ID) ?? iosBundleId;
   const deps: PushDeps = {
     supabase,
     makeJwt: () =>
@@ -394,11 +484,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       // APNS_BUNDLE_ID is the historical iOS topic. Do not reuse it for
       // macOS, whose topic is a distinct App ID; an unset macOS topic should
       // fail at APNs rather than silently target the wrong application.
-      macos: process.env.APNS_MACOS_BUNDLE_ID,
-      ios: process.env.APNS_IOS_BUNDLE_ID ?? legacyBundleId,
-      watchos: process.env.APNS_WATCHOS_BUNDLE_ID
-        ?? process.env.APNS_IOS_BUNDLE_ID
-        ?? legacyBundleId,
+      macos: normalizeBundleId(process.env.APNS_MACOS_BUNDLE_ID),
+      ios: iosBundleId,
+      watchos: watchosBundleId,
     },
     expectedSecret: process.env.PUSH_WEBHOOK_SECRET as string,
   };
@@ -407,7 +495,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     const out = await handlePush(req.body, req.headers['x-webhook-secret'] as string | undefined, deps);
     res.status(out.code).json(out.body);
   } catch (err) {
-    console.error('push handler unhandled error', err);
+    console.error('[push] event=unknown status=internal_error');
     res.status(500).json({ error: 'internal_error' });
   }
 }
