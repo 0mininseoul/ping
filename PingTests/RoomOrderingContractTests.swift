@@ -72,12 +72,9 @@ final class RoomOrderingContractTests: XCTestCase {
         XCTAssertTrue(messageService.contains("func markNotified(messageId: String) async throws"))
         XCTAssertTrue(messageService.contains("\"ping_mark_message_notified\""))
 
-        XCTAssertTrue(appDelegate.contains("let didScheduleNotification = await LocalNotificationCenter.shared.notifyIncomingMessage"))
-        // 배달은 폴링과 Realtime이 공유하는 함수라 loop continue가 아니라 return이다.
-        XCTAssertTrue(appDelegate.contains("guard didScheduleNotification else { return }"))
-        let notifyRange = try XCTUnwrap(appDelegate.range(of: "LocalNotificationCenter.shared.notifyIncomingMessage"))
-        let markRange = try XCTUnwrap(appDelegate.range(of: "try? await messageService.markNotified(messageId: id)"))
-        XCTAssertLessThan(notifyRange.lowerBound, markRange.lowerBound)
+        XCTAssertTrue(appDelegate.contains("ledger.remember(.video, uid: uid, id: id)"))
+        XCTAssertTrue(appDelegate.contains("try? await messageService.markNotified(messageId: id)"))
+        XCTAssertFalse(appDelegate.contains("notifyIncomingMessage"))
     }
 
     func testSharedRoomModelsDecodeOrderAndUnreadMetadata() throws {
