@@ -4,8 +4,8 @@
 
 **Ping**은 macOS 13 Ventura 이상에서 동작하는 3초 영상 메시지 메뉴바 앱이며, Windows 11 24H2 이상용 네이티브 클라이언트를 같은 Supabase 룸/메시지 계약으로 제공한다. macOS는 Option+P/Option+L, Windows는 Alt+P/Alt+L로 거울을 띄우고, Enter로 정확히 3초 녹화한 뒤 review 재생에서 Enter로 Supabase를 통해 파트너에게 전송한다. macOS 수신자는 APNs 원격 알림 배너를 클릭하면 발신자가 보낸 위치 또는 히스토리 playback surface에서 3초 재생창을 본다.
 
-> 현재 구현(v0.3.77)은 v0.2.1 amendment를 반영해 녹화 길이를 3초로 사용한다. Option+P는 얼굴만, Option+L은 화면+얼굴 캡쳐, Option+O는 내 룸/히스토리 창 진입점이다. Windows 클라이언트는 Alt+P, Alt+L, Alt+O와 Alt+Shift+L quick screen+face send를 대응 단축키로 사용한다.
-> macOS 앱은 Dock에 절대 표시되지 않도록 번들 `LSUIElement` agent 분류를 사용하고, 런타임에서도 accessory activation을 재적용한다. v0.3.39의 runtime-only Dock hiding은 Finder/Spotlight 실행 순간 Dock tile이 생길 수 있어 현재 정책이 아니다. v0.3.28은 Sparkle scheduled update 알림을 버전별 1회로 제한하고, 더 최신 버전이 나오면 기존 업데이트 알림을 최신 버전 알림 하나로 교체한다. v0.3.27은 룸 알림 정리, 최신 메시지 스크롤, Enter 전송/Shift+Enter 줄바꿈, 채팅 사진 첨부를 포함한다. v0.3.26은 화면+얼굴 메시지 확대 재생 크기를 키우고, 확대 시 해당 영상 하단이 보이도록 자동 스크롤한다. v0.3.25는 내 룸 화면에서 화면+얼굴 메시지를 확대할 때 영상이 사라지지 않도록 확장 overlay를 룸 매니저 루트에서 렌더링한다. v0.3.24는 화면+얼굴 프리뷰와 실제 저장 영상의 얼굴 PIP 비율을 같은 레이아웃 계약으로 통일하고, 히스토리 확대 재생 시 사이드바 폭을 유지한 채 영상이 사이드바 위로 확장되어 전체 화면이 잘리지 않게 한다. 발신자 제어형 로컬 저장 권한 설정도 포함한다. v0.3.23은 온보딩 권한 화면에서 macOS 권한 재확인이 지연돼도 이후 3~7단계를 계속 볼 수 있게 하고, 릴리즈 앱의 ad-hoc designated requirement를 bundle id 기준으로 고정해 업데이트 후 TCC 권한 판정이 빌드 해시 변화에 흔들리지 않도록 한다. v0.3.22의 온보딩 header/progress 고정, 미니멀 권한 체크리스트, 알림 프롬프트 시작 시점 소모 방지도 포함한다. 화면 녹화 권한의 passive check는 시스템 프롬프트를 띄우지 않는 CoreGraphics preflight만 사용하며, macOS가 요구하는 앱 재시작 안내를 표시한다. 기존 v0.3.21의 히스토리 타임스탬프 swipe reveal, 인라인 영상 재생 안정화, 그룹 룸 sender label, 다크모드 날짜 header 정리, 컴팩트 사이드바와 로컬 아카이브 fallback도 포함한다.
+> 현재 구현(v0.3.78)은 v0.2.1 amendment를 반영해 녹화 길이를 3초로 사용한다. Option+P는 얼굴만, Option+L은 화면+얼굴 캡쳐, Option+O는 내 룸/히스토리 창 진입점이다. Windows 클라이언트는 Alt+P, Alt+L, Alt+O와 Alt+Shift+L quick screen+face send를 대응 단축키로 사용한다.
+> macOS 앱은 Dock에 절대 표시되지 않도록 번들 `LSUIElement` agent 분류를 사용하고, 런타임에서도 accessory activation을 재적용한다. v0.3.39의 runtime-only Dock hiding은 Finder/Spotlight 실행 순간 Dock tile이 생길 수 있어 현재 정책이 아니다. v0.3.28은 Sparkle scheduled update 알림을 버전별 1회로 제한하고, 더 최신 버전이 나오면 기존 업데이트 알림을 최신 버전 알림 하나로 교체한다. v0.3.27은 룸 알림 정리, 최신 메시지 스크롤, Enter 전송/Shift+Enter 줄바꿈, 채팅 사진 첨부를 포함한다. v0.3.26은 화면+얼굴 메시지 확대 재생 크기를 키우고, 확대 시 해당 영상 하단이 보이도록 자동 스크롤한다. v0.3.25는 내 룸 화면에서 화면+얼굴 메시지를 확대할 때 영상이 사라지지 않도록 확장 overlay를 룸 매니저 루트에서 렌더링한다. v0.3.24는 화면+얼굴 프리뷰와 실제 저장 영상의 얼굴 PIP 비율을 같은 레이아웃 계약으로 통일하고, 히스토리 확대 재생 시 사이드바 폭을 유지한 채 영상이 사이드바 위로 확장되어 전체 화면이 잘리지 않게 한다. 발신자 제어형 로컬 저장 권한 설정도 포함한다. v0.3.23은 온보딩 권한 화면에서 macOS 권한 재확인이 지연돼도 이후 3~7단계를 계속 볼 수 있게 하고, 릴리즈 앱의 designated requirement를 bundle id 기준으로 고정해 업데이트 후 TCC 권한 판정이 빌드 해시 변화에 흔들리지 않도록 했다. 현재 릴리즈는 팀과 bundle id에 고정된 Developer ID identity를 사용한다. v0.3.22의 온보딩 header/progress 고정, 미니멀 권한 체크리스트, 알림 프롬프트 시작 시점 소모 방지도 포함한다. 화면 녹화 권한의 passive check는 시스템 프롬프트를 띄우지 않는 CoreGraphics preflight만 사용하며, macOS가 요구하는 앱 재시작 안내를 표시한다. 기존 v0.3.21의 히스토리 타임스탬프 swipe reveal, 인라인 영상 재생 안정화, 그룹 룸 sender label, 다크모드 날짜 header 정리, 컴팩트 사이드바와 로컬 아카이브 fallback도 포함한다.
 
 ### 초기 검증 환경
 
@@ -235,7 +235,7 @@ Windows도 Settings > General의 닉네임 저장 시 `ping_upsert_profile`을 �
 - Supabase Anonymous Auth만 사용한다.
 - `SupabaseClient`는 access/refresh token을 sandboxed Application Support의 `SupabaseSession.json`에 저장하고, legacy `UserDefaults` 세션만 fallback으로 읽는다.
 - Sparkle 업데이트나 `/Applications/Ping.app` 교체는 앱 번들만 바꾸며, bundle id `com.youngminpark.ping.Ping`과 위 세션 파일 경로를 유지해야 기존 익명 계정과 룸이 그대로 연결된다.
-- ad-hoc으로 자주 교체 배포하는 현재 배포 방식에서는 macOS Keychain ACL 승인 팝업이 재발할 수 있으므로 앱 런타임 세션 저장/갱신 경로에서 Keychain을 사용하지 않는다. Sparkle appcast 서명용 개인키 Keychain 사용과는 별개다.
+- 릴리즈 앱을 교체 배포할 때 macOS Keychain ACL 승인 팝업이 재발하지 않도록 앱 런타임 세션 저장/갱신 경로에서 Keychain을 사용하지 않는다. Sparkle appcast 서명용 개인키 Keychain 사용과는 별개다.
 - 기존 세션 refresh가 실패하면 보존된 사용자 데이터를 잃지 않도록 새 익명 사용자로 자동 전환하지 않고 `supabaseSessionExpired`를 띄운다.
 
 ### 데이터 모델
@@ -349,8 +349,11 @@ xcodebuild -project Ping.xcodeproj -scheme Ping -destination "platform=macOS" te
 Release/DMG:
 
 ```bash
-./scripts/build-release.sh
+./scripts/build-release.sh \
+  --macos-provisioning-profile /secure/path/Ping-macOS.provisionprofile
 ```
+
+`PING_MACOS_PROVISIONING_PROFILE` 환경 변수로 같은 경로를 지정할 수도 있다.
 
 Windows Release/MSIX:
 
@@ -448,7 +451,7 @@ ping/
 
 | 항목 | 내용 |
 |---|---|
-| 정식 코드 서명 + notarization | Developer ID 배포 품질 개선 |
+| Developer ID 업데이트 권한 연속성 | 동일 Developer ID identity를 사용하는 후속 업데이트와, 이전 ad-hoc 릴리즈에서의 Screen Recording·카메라 재승인 여부를 실제 Mac 업데이트 QA에서 검증 |
 | 다중 모니터 정밀 처리 | 커서 또는 활성 디스플레이 기준 위치 |
 | 파트너별 거울 위치 | 룸마다 기본 위치 기억 |
 | 영상 품질 옵션 | 720p/1080p, 비트레이트 |
@@ -456,7 +459,7 @@ ping/
 
 ---
 
-- **문서 버전**: 2.2
+- **문서 버전**: 2.9
 - **작성일**: 2026-05-17
-- **최종 수정일**: 2026-05-19
+- **최종 수정일**: 2026-09-18
 - **상태**: Supabase 기반 MVP 구현 기준

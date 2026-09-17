@@ -21,6 +21,52 @@ final class MacPushReleaseContractTests: XCTestCase {
         XCTAssertLessThan(copy, outerSigning)
     }
 
+    func testReleaseScriptValidatesTheMacOSProfileIdentityAndPlatformBeforeBuild() throws {
+        let script = try readRepositoryFile("scripts/build-release.sh")
+        let build = try XCTUnwrap(
+            script.range(of: "xcodebuild ")?.lowerBound,
+            "release script must build only after validating the supplied profile"
+        )
+
+        let requiredChecks = [
+            "Print :Entitlements:com.apple.application-identifier",
+            "if [ \"$PROFILE_APPLICATION_IDENTIFIER\" != \"878FAHTFQJ.com.youngminpark.ping.Ping\" ]; then",
+            "Print :Entitlements:com.apple.developer.team-identifier",
+            "if [ \"$PROFILE_TEAM_IDENTIFIER\" != \"878FAHTFQJ\" ]; then",
+            "Print :Platform:0",
+            "if [ \"$PROFILE_PLATFORM\" != \"OSX\" ]; then",
+            "ExpirationDate",
+            "PROFILE_EXPIRATION_EPOCH",
+            "date -j -f \"%Y-%m-%dT%H:%M:%SZ\"",
+            "Print :Entitlements:com.apple.developer.aps-environment",
+            "if [ \"$PROFILE_APNS_ENV\" != \"production\" ]; then"
+        ]
+
+        for check in requiredChecks {
+            let location = try XCTUnwrap(
+                script.range(of: check)?.lowerBound,
+                "release script must validate profile field: \(check)"
+            )
+            XCTAssertLessThan(location, build, "profile validation must happen before xcodebuild: \(check)")
+        }
+    }
+
+    func testReleaseScriptRejectsMissingSparkleFrameworkInsteadOfSkippingItsSigning() throws {
+        let script = try readRepositoryFile("scripts/build-release.sh")
+
+        XCTAssertTrue(script.contains("if [ ! -d \"$SPARKLE_FRAMEWORK\" ]; then"))
+        XCTAssertTrue(script.contains("Required Sparkle.framework missing"))
+        XCTAssertFalse(script.contains("if [ -d \"$SPARKLE_FRAMEWORK\" ]; then"))
+
+        let guardLocation = try XCTUnwrap(
+            script.range(of: "if [ ! -d \"$SPARKLE_FRAMEWORK\" ]; then")?.lowerBound
+        )
+        let firstSparkleSigning = try XCTUnwrap(
+            script.range(of: "sign_preserving_metadata \"$SPARKLE_FRAMEWORK/Versions/B/Autoupdate\"")?.lowerBound
+        )
+        XCTAssertLessThan(guardLocation, firstSparkleSigning)
+    }
+
     func testReleaseScriptValidatesFinalProductionPushEntitlementAndKeepsDistributionChecks() throws {
         let script = try readRepositoryFile("scripts/build-release.sh")
 
