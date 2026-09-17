@@ -14,7 +14,9 @@ final class RemotePushRegistrar {
     private(set) var lastRegistrationError: Error?
 
     private var lastSuccessfulRegistration: RegistrationKey?
+    private var registrationGeneration = 0
     private var registrationTask: Task<Void, Never>?
+    private var registrationTaskSerial = 0
 
     private init() {}
 
@@ -51,6 +53,7 @@ final class RemotePushRegistrar {
         guard !encoded.isEmpty else { return }
 
         token = encoded
+        registrationGeneration &+= 1
         lastSuccessfulRegistration = nil
         lastRegistrationError = nil
 
@@ -78,20 +81,40 @@ final class RemotePushRegistrar {
         )
         if lastSuccessfulRegistration == key { return }
 
-        do {
-            try await SupabaseClient.shared.rpcVoid("ping_register_device_token", body: [
-                "token_text": token,
-                "platform_text": "macos",
-                "environment_text": apnsEnvironment,
-                "sound_preference_text": soundPreference
-            ])
-            guard SupabaseClient.shared.activeUserId == uid else { return }
-            lastSuccessfulRegistration = key
-            lastRegistrationError = nil
-        } catch {
-            lastRegistrationError = error
-            NSLog("APNs token registration failed for " + String(describing: error))
+        let generation = registrationGeneration
+        let previous = registrationTask
+        registrationTaskSerial &+= 1
+        let serial = registrationTaskSerial
+        let task = Task { @MainActor [weak self] in
+            await previous?.value
+            guard let self,
+                  self.registrationGeneration == generation,
+                  self.lastSuccessfulRegistration != key else { return }
+            await self.performRegistration(
+                uid: uid,
+                token: token,
+                key: key,
+                generation: generation
+            )
         }
+        registrationTask = task
+        await task.value
+        if registrationTaskSerial == serial {
+            registrationTask = nil
+        }
+    }
+
+    /// Account changes must wait for an RPC that was already sent. Task
+    /// cancellation cannot guarantee that URLSession has stopped a request on
+    /// the server, so the generation invalidates its result and the serial
+    /// queue keeps the next account's registration behind it.
+    func invalidatePendingRegistration() async {
+        registrationGeneration &+= 1
+        if let task = registrationTask {
+            await task.value
+        }
+        lastSuccessfulRegistration = nil
+        lastRegistrationError = nil
     }
 
     /// Force a re-registration after the local sound preference changes. The
@@ -109,9 +132,46 @@ final class RemotePushRegistrar {
     }
 
     private func scheduleRegistration(for uid: String) {
-        registrationTask?.cancel()
-        registrationTask = Task { @MainActor [weak self] in
+        guard let token, !token.isEmpty else { return }
+
+        Task { @MainActor [weak self] in
             await self?.registerIfPossible(uid: uid)
+        }
+    }
+
+    private func performRegistration(
+        uid: String,
+        token: String,
+        key: RegistrationKey,
+        generation: Int
+    ) async {
+        guard self.registrationGeneration == generation,
+              SupabaseClient.shared.activeUserId == uid,
+              self.token == token,
+              lastSuccessfulRegistration != key else {
+            return
+        }
+
+        do {
+            try await SupabaseClient.shared.rpcVoid("ping_register_device_token", body: [
+                "token_text": token,
+                "platform_text": "macos",
+                "environment_text": apnsEnvironment,
+                "sound_preference_text": key.soundPreference
+            ])
+            guard self.registrationGeneration == generation,
+                  SupabaseClient.shared.activeUserId == uid,
+                  self.token == token else { return }
+            lastSuccessfulRegistration = key
+            lastRegistrationError = nil
+        } catch is CancellationError {
+            return
+        } catch {
+            guard self.registrationGeneration == generation,
+                  SupabaseClient.shared.activeUserId == uid,
+                  self.token == token else { return }
+            lastRegistrationError = error
+            NSLog("APNs token registration failed for " + String(describing: error))
         }
     }
 

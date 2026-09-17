@@ -33,6 +33,22 @@ final class RemotePushContractTests: XCTestCase {
         XCTAssertTrue(settings.contains("await RemotePushRegistrar.shared.refreshSoundPreference(uid: uid)"))
     }
 
+    func testAccountChangeWaitsForStaleRemoteRegistrationBeforeBootstrappingNewAccount() throws {
+        let registrar = try readRepositoryFile("Ping/Notifications/RemotePushRegistrar.swift")
+        XCTAssertTrue(registrar.contains("registrationGeneration"))
+        XCTAssertTrue(registrar.contains("invalidatePendingRegistration"))
+        XCTAssertTrue(registrar.contains("await task.value"))
+        XCTAssertTrue(registrar.contains("guard self.registrationGeneration == generation"))
+        XCTAssertTrue(registrar.contains("token = encoded"))
+
+        let appDelegate = try readRepositoryFile("Ping/AppDelegate.swift")
+        XCTAssertTrue(appDelegate.contains("await self.teardownForAccountChange()"))
+        XCTAssertTrue(appDelegate.contains("await teardownForAccountChange()"))
+        let teardown = try XCTUnwrap(appDelegate.range(of: "await self.teardownForAccountChange()"))
+        let bootstrap = try XCTUnwrap(appDelegate.range(of: "await bootstrapBackend()"))
+        XCTAssertLessThan(teardown.lowerBound, bootstrap.lowerBound)
+    }
+
     func testNotificationCenterNormalizesRemoteAndLocalIdentifiersThroughOneParser() throws {
         let source = try readRepositoryFile("Ping/Notifications/LocalNotificationCenter.swift")
 

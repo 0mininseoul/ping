@@ -1393,7 +1393,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// 전환/추가 전 공통 정리: 옵저버·창·캐시·상태·인메모리 dedup.
-    private func teardownForAccountChange() {
+    private func teardownForAccountChange() async {
+        await RemotePushRegistrar.shared.invalidatePendingRegistration()
         bootstrapTask?.cancel(); bootstrapTask = nil
         bootstrapRetryTask?.cancel(); bootstrapRetryTask = nil
         bootstrapFailureCount = 0
@@ -1441,8 +1442,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // switchTo는 isSwitchingAccount를 건드리지 않으므로 여기서의 재확인은 무해하다.
         guard canSwitchAccountNow() else { return }
         isSwitchingAccount = true
-        teardownForAccountChange()
         Task { @MainActor in
+            await self.teardownForAccountChange()
             await chatRealtime.unsubscribeAll()
             await bootstrapBackend()
             isSwitchingAccount = false
@@ -1464,7 +1465,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         isSwitchingAccount = true
         do {
             let uid = try await SupabaseClient.shared.addAccount()
-            teardownForAccountChange()
+            await teardownForAccountChange()
             await chatRealtime.unsubscribeAll()
             showOnboarding(uid: uid)
         } catch {
