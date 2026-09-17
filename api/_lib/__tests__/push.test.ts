@@ -124,6 +124,11 @@ function deps(
     supabase: supabase as unknown as PushDeps['supabase'],
     makeJwt: async () => 'jwt-abc',
     send,
+    bundleIds: {
+      macos: 'com.example.app',
+      ios: 'com.example.app',
+      watchos: 'com.example.app',
+    },
     bundleId: 'com.example.app',
     expectedSecret: 's3cret',
     ...overrides,
@@ -293,6 +298,11 @@ function chatDeps(
     supabase: supabase as unknown as PushDeps['supabase'],
     makeJwt: async () => 'jwt-abc',
     send,
+    bundleIds: {
+      macos: 'com.example.app',
+      ios: 'com.example.app',
+      watchos: 'com.example.app',
+    },
     bundleId: 'com.example.app',
     expectedSecret: 's3cret',
   };
@@ -627,5 +637,33 @@ describe('handlePush (platform-aware routing)', () => {
 
     expect(send).toHaveBeenCalledTimes(1);
     expect(send.mock.calls[0][0].bundleId).toBe('com.example.ios');
+  });
+
+  it('returns a configuration error instead of using a legacy topic when the macOS topic is missing', async () => {
+    const { d, send } = modernDeps({ tokens: [modernTokenRows[0]] });
+    d.bundleIds = { ios: 'com.example.ios', watchos: 'com.example.watch' };
+    d.bundleId = 'com.example.legacy';
+
+    const out = await handlePush(modernVideoBody, 's3cret', d);
+
+    expect(out).toEqual({
+      code: 500,
+      body: { error: 'config_error', detail: 'APNS_MACOS_BUNDLE_ID is required for macOS push' },
+    });
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('returns a configuration error instead of using a legacy topic when the macOS topic is blank', async () => {
+    const { d, send } = modernDeps({ tokens: [modernTokenRows[0]] });
+    d.bundleIds = { macos: '   ', ios: 'com.example.ios', watchos: 'com.example.watch' };
+    d.bundleId = 'com.example.legacy';
+
+    const out = await handlePush(modernVideoBody, 's3cret', d);
+
+    expect(out).toEqual({
+      code: 500,
+      body: { error: 'config_error', detail: 'APNS_MACOS_BUNDLE_ID is required for macOS push' },
+    });
+    expect(send).not.toHaveBeenCalled();
   });
 });

@@ -107,7 +107,7 @@ export async function handlePush(
         videoSignedUrl,
       });
     });
-    return { code: 200, body: sendResult };
+    return responseForSendResult(sendResult);
   }
 
   // Text chat → push to the room's other members (chat is room-scoped).
@@ -150,7 +150,7 @@ export async function handlePush(
         chatId: chat.chatId,
       });
     });
-    return { code: 200, body: { ...sendResult, kind: 'chat' } };
+    return responseForSendResult(sendResult, { kind: 'chat' });
   }
 
   // Room invitation → push to the invitation's recipient only.
@@ -178,7 +178,7 @@ export async function handlePush(
         ? buildMacInvitationPayload(input)
         : buildInvitationPayload(input);
     });
-    return { code: 200, body: { ...sendResult, kind: 'invitation' } };
+    return responseForSendResult(sendResult, { kind: 'invitation' });
   }
 
   return { code: 200, body: { ignored: true } };
@@ -298,12 +298,41 @@ async function freshDesktopPresenceUids(
 
 /// Send one push per token (same event, platform-specific payload), pruning
 /// 410 Unregistered tokens.
+interface SendTokensError {
+  error: 'config_error';
+  detail: string;
+}
+
+type SendTokensResult = { sent: number; removed: number } | SendTokensError;
+
+function responseForSendResult(
+  result: SendTokensResult,
+  extra?: Record<string, unknown>
+): PushResult {
+  if ('error' in result) return { code: 500, body: result };
+  return { code: 200, body: { ...result, ...extra } };
+}
+
 async function sendToTokens(
   deps: PushDeps,
   tokens: DeviceToken[],
   collapseId: string,
   makePayload: (token: DeviceToken) => unknown
-): Promise<{ sent: number; removed: number }> {
+): Promise<SendTokensResult> {
+  const bundleIds = new Map<PushPlatform, string>();
+  for (const token of tokens) {
+    const bundleId = bundleIdFor(deps, token.platform);
+    if (token.platform === 'macos' && !bundleId) {
+      return {
+        error: 'config_error',
+        detail: 'APNS_MACOS_BUNDLE_ID is required for macOS push',
+      };
+    }
+    // Keep the existing iOS/watchOS topic fallbacks unchanged while enforcing
+    // a dedicated non-empty topic for macOS.
+    bundleIds.set(token.platform, bundleId ?? '');
+  }
+
   const jwt = await deps.makeJwt();
   let sent = 0;
   const gone: string[] = [];
@@ -314,7 +343,7 @@ async function sendToTokens(
       token: token.token,
       environment: token.environment,
       jwt,
-      bundleId: bundleIdFor(deps, token.platform),
+      bundleId: bundleIds.get(token.platform) as string,
       collapseId,
       payload,
     });
@@ -331,8 +360,9 @@ async function sendToTokens(
   return { sent, removed: gone.length };
 }
 
-function bundleIdFor(deps: PushDeps, platform: PushPlatform): string {
+function bundleIdFor(deps: PushDeps, platform: PushPlatform): string | undefined {
   const mapped = deps.bundleIds?.[platform];
+  if (platform === 'macos') return mapped?.trim() || undefined;
   if (mapped) return mapped;
   if (platform === 'watchos' && deps.bundleIds?.ios) return deps.bundleIds.ios;
   return deps.bundleId ?? '';
