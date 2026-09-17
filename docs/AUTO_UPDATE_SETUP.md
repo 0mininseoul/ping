@@ -24,14 +24,19 @@ Ping은 [Sparkle 2](https://sparkle-project.org/) 로 사용자 측 자동 업�
 ## 3. 릴리스
 
 ```bash
-./scripts/build-release.sh
+./scripts/build-release.sh \
+  --macos-provisioning-profile /secure/path/Ping-macOS.provisionprofile
 ```
+
+`PING_MACOS_PROVISIONING_PROFILE` 환경 변수로 같은 경로를 지정할 수도 있다.
 
 빌드 스크립트가 자동으로 처리하는 것:
 
-1. 앱 빌드 + ad-hoc 코드사인.
-2. DMG 생성, `dist/Ping-v<VERSION>.dmg` + `web/public/downloads/Ping-v<VERSION>.dmg` 복사.
-3. `generate_appcast` 가 `web/public/downloads/` 의 DMG를 스캔하고, Keychain의
+1. 앱 빌드 + Developer ID Application 코드 서명. 지정한 macOS provisioning profile의
+   `com.apple.developer.aps-environment=production` 권한을 검증해 앱에 임베드한다.
+2. Apple 공증(notarization) 제출과 ticket 스테이플.
+3. DMG 생성, `dist/Ping-v<VERSION>.dmg` + `web/public/downloads/Ping-v<VERSION>.dmg` 복사.
+4. `generate_appcast` 가 `web/public/downloads/` 의 DMG를 스캔하고, Keychain의
    개인키로 각 DMG를 EdDSA 서명한 뒤 `web/public/appcast.xml` 을 생성한다.
 
 이후 Vercel에 배포하면 `https://0minping.vercel.app/appcast.xml` 에서 appcast가 노출되고,
@@ -70,13 +75,26 @@ Sandboxed 앱이 Sparkle installer helper와 통신하려면 `Ping.entitlements`
 원래 entitlements를 보존해야 하므로 `Ping.entitlements` 를 nested helper에
 `--deep` 으로 덮어씌우면 안 된다.
 
-## 7. ad-hoc 서명과 EdDSA
+## 7. Developer ID 서명, APNs 프로필과 EdDSA
 
-Ping은 Developer ID 코드 서명을 사용하지 않고 ad-hoc 서명 (`-`) 만 사용한다.
-이 환경에서도 Sparkle은 EdDSA 서명만으로 업데이트의 진위를 검증한다. 즉
+Ping의 릴리즈 빌드는 Developer ID Application 인증서로 서명하고 Apple 공증 및
+staple을 거친다. Release 앱에는 `com.apple.developer.aps-environment=production`을
+허용하는 macOS provisioning profile을 `Contents/embedded.provisionprofile`로
+임베드해야 하며, `scripts/build-release.sh`가 profile과 최종 서명 entitlement를
+검증한다. profile과 Apple 자격증명은 저장소에 넣지 않는다.
+
+Sparkle은 이 코드 서명과 별도로 EdDSA 서명으로 업데이트의 진위를 검증한다. 즉
 `SUPublicEDKey` 가 박힌 현재 앱 → 동일 키로 서명된 새 DMG 만 신뢰한다.
-공격자가 임의 DMG로 사용자 앱을 속이려면 개인키(Keychain)가 필요하다.
+공격자가 임의 DMG로 사용자 앱을 속이려면 Sparkle 개인키(Keychain)가 필요하다.
 
-ad-hoc 서명 + hardened runtime 에서는 Sparkle.framework 로드 시 Team ID 검증이
-걸리므로 `com.apple.security.cs.disable-library-validation` entitlement가 필요하다.
-Developer ID 서명으로 전환하면 이 항목은 다시 검토할 것.
+Developer ID hardened runtime에서 Sparkle.framework를 로드하기 위해
+`com.apple.security.cs.disable-library-validation` entitlement를 유지한다. Sparkle
+내부 helper entitlements는 릴리즈 스크립트가 보존하며, `Ping.entitlements`를
+nested helper에 `--deep`으로 덮어쓰지 않는다.
+
+동일 팀과 bundle id에 고정된 Developer ID identity는 이후 Developer ID 서명
+업데이트의 TCC 권한 연속성을 지원한다. 이는 후속 업데이트에 대한 서명 계약이지
+권한 유지의 자동 보장을 의미하지 않는다. 이전 ad-hoc 릴리즈에서 Developer ID
+릴리즈로 처음 전환할 때는 Screen Recording 또는 카메라 권한을 다시 요청할 수
+있다. 배포 전 실제 Mac에서 이전 앱에 두 권한을 허용하고 Sparkle 업데이트를
+수행한 뒤 권한 상태와 촬영 동작을 다시 확인하는 것을 릴리즈 QA 항목으로 기록한다.

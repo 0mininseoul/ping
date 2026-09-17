@@ -61,6 +61,31 @@ if ! security cms -D -i "$MACOS_PROVISIONING_PROFILE" -o "$PROFILE_PLIST" >/dev/
   exit 1
 fi
 
+PROFILE_APPLICATION_IDENTIFIER="$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:com.apple.application-identifier' "$PROFILE_PLIST" 2>/dev/null || true)"
+if [ "$PROFILE_APPLICATION_IDENTIFIER" != "878FAHTFQJ.com.youngminpark.ping.Ping" ]; then
+  echo "The macOS provisioning profile is not for the Ping application." >&2
+  exit 1
+fi
+
+PROFILE_TEAM_IDENTIFIER="$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:com.apple.developer.team-identifier' "$PROFILE_PLIST" 2>/dev/null || true)"
+if [ "$PROFILE_TEAM_IDENTIFIER" != "878FAHTFQJ" ]; then
+  echo "The macOS provisioning profile belongs to an unexpected team." >&2
+  exit 1
+fi
+
+PROFILE_PLATFORM="$(/usr/libexec/PlistBuddy -c 'Print :Platform:0' "$PROFILE_PLIST" 2>/dev/null || true)"
+if [ "$PROFILE_PLATFORM" != "OSX" ]; then
+  echo "The provisioning profile must target macOS (OSX)." >&2
+  exit 1
+fi
+
+PROFILE_EXPIRATION="$(/usr/bin/plutil -extract ExpirationDate raw -o - "$PROFILE_PLIST" 2>/dev/null || true)"
+PROFILE_EXPIRATION_EPOCH="$(/bin/date -j -f "%Y-%m-%dT%H:%M:%SZ" "$PROFILE_EXPIRATION" "+%s" 2>/dev/null || true)"
+if [ -z "$PROFILE_EXPIRATION_EPOCH" ] || [ "$PROFILE_EXPIRATION_EPOCH" -le "$(/bin/date +%s)" ]; then
+  echo "The macOS provisioning profile is missing or expired." >&2
+  exit 1
+fi
+
 PROFILE_APNS_ENV="$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:com.apple.developer.aps-environment' "$PROFILE_PLIST" 2>/dev/null || true)"
 if [ "$PROFILE_APNS_ENV" != "production" ]; then
   echo "The macOS provisioning profile must grant com.apple.developer.aps-environment=production." >&2
@@ -122,7 +147,9 @@ xcodebuild \
   -scheme Ping \
   -configuration Release \
   -derivedDataPath build \
-  clean build
+  clean build \
+  CODE_SIGNING_ALLOWED=NO \
+  CODE_SIGNING_REQUIRED=NO
 
 APP="build/Build/Products/Release/Ping.app"
 EMBEDDED_PROFILE="$APP/Contents/embedded.provisionprofile"
@@ -162,13 +189,16 @@ sign_framework() {
 }
 
 SPARKLE_FRAMEWORK="$APP/Contents/Frameworks/Sparkle.framework"
-if [ -d "$SPARKLE_FRAMEWORK" ]; then
-  sign_preserving_metadata "$SPARKLE_FRAMEWORK/Versions/B/Autoupdate"
-  sign_preserving_metadata "$SPARKLE_FRAMEWORK/Versions/B/Updater.app"
-  sign_preserving_metadata "$SPARKLE_FRAMEWORK/Versions/B/XPCServices/Installer.xpc"
-  sign_preserving_metadata "$SPARKLE_FRAMEWORK/Versions/B/XPCServices/Downloader.xpc"
-  sign_framework "$SPARKLE_FRAMEWORK"
+if [ ! -d "$SPARKLE_FRAMEWORK" ]; then
+  echo "Required Sparkle.framework missing: $SPARKLE_FRAMEWORK" >&2
+  exit 1
 fi
+
+sign_preserving_metadata "$SPARKLE_FRAMEWORK/Versions/B/Autoupdate"
+sign_preserving_metadata "$SPARKLE_FRAMEWORK/Versions/B/Updater.app"
+sign_preserving_metadata "$SPARKLE_FRAMEWORK/Versions/B/XPCServices/Installer.xpc"
+sign_preserving_metadata "$SPARKLE_FRAMEWORK/Versions/B/XPCServices/Downloader.xpc"
+sign_framework "$SPARKLE_FRAMEWORK"
 
 # The APNs profile must be present before the outer signature is created. Keep
 # the profile supplied by the release operator; never download or generate one.

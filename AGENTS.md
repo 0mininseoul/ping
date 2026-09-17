@@ -26,7 +26,7 @@ Ping은 v0.1.4부터 **macOS 13 Ventura 이상**을 지원합니다. 학습 데�
 **Ping** — macOS 13 Ventura 이상에서 동작하는 3초 영상 메시지 메뉴바 앱. Option+P로 얼굴만 거울, Option+L로 화면+얼굴 거울이 뜨고, Enter로 녹화한 뒤 리뷰 화면에서 승인해 Supabase 경유로 파트너에게 전송. 수신자는 발신자가 지정한 위치에 그대로 재생한다.
 
 ### 핵심 문서 (반드시 모두 읽고 작업 시작)
-1. **`PING_PROJECT_SPECIFICATION.md`** — 기능/아키텍처/보안 명세 (v2.3)
+1. **`PING_PROJECT_SPECIFICATION.md`** — 기능/아키텍처/보안 명세 (v2.9)
 2. **`docs/superpowers/plans/2026-05-17-ping-mvp.md`** — Day 1~7 bite-sized 구현 플랜
 3. (본 파일) **`AGENTS.md`** — 본 에이전트 진입점
 
@@ -51,7 +51,7 @@ Supabase CLI 작업은 반드시 `./scripts/supabase-ping.sh` wrapper로 수행�
 ### Supabase Free 저장소
 영상은 Supabase Storage의 비공개 `ping-videos` 버킷에 `<senderUid>/<videoId>.mp4` 경로로 저장합니다. 테이블/RLS/RPC/Storage 정책은 `supabase/migrations/20260517000100_create_ping_backend.sql`이 단일 진실 출처입니다. 서버 예약 작업 없이 앱 실행 시 `ping_cleanup_expired_data()` RPC로 만료 데이터를 best-effort 정리합니다.
 
-### App 버전 — `0.3.77` (빌드 번호 `89`)
+### App 버전 — `0.3.78` (빌드 번호 `90`)
 - `project.yml` → `settings.base.MARKETING_VERSION`
 - `project.yml` → `settings.base.CURRENT_PROJECT_VERSION` — **함께 올려야 한다.**
   Sparkle은 `CFBundleShortVersionString`이 아니라 **`CFBundleVersion`(빌드 번호)로**
@@ -112,7 +112,7 @@ xcodebuild -project Ping.xcodeproj -scheme Ping \
 
 ```
 ping/
-├── PING_PROJECT_SPECIFICATION.md    # 변경 시 v2.3 → v2.4 등 버전 표시
+├── PING_PROJECT_SPECIFICATION.md    # 변경 시 v2.9 → v2.10 등 버전 표시
 ├── AGENTS.md                        # 본 파일
 ├── README.md                        # 최종 사용자용 설치 가이드
 ├── docs/superpowers/
@@ -127,7 +127,7 @@ ping/
 ├── Resources/                       # 앱 번들 리소스 (Assets, Supabase.example.plist 등)
 ├── design/mockups/                  # frontend-design 산출물 (HTML/CSS)
 ├── scripts/
-│   └── build-release.sh             # Release 빌드 + ad-hoc 서명 + DMG
+│   └── build-release.sh             # Release 빌드 + Developer ID 서명/공증 + DMG
 ├── build/                           # gitignore
 └── dist/                            # 배포 산출물 (DMG), gitignore
 ```
@@ -195,7 +195,9 @@ Day 4 Task 4.3 에서 임시 EmptyView로 윈도우를 만든 뒤 `contentView` 
 앱은 Sparkle 2로 자동 업데이트한다. `project.yml`의 `SUPublicEDKey`는 빌드 머신 Keychain에 있는 EdDSA 개인키와 짝을 이뤄야 한다. `Ping/Info.plist`는 XcodeGen 산출물이므로 직접 편집하지 말 것. 한 번도 셋업이 안 된 환경이라면 `docs/AUTO_UPDATE_SETUP.md` 의 1~2단계를 먼저 실행해야 빌드가 의미 있는 appcast를 만든다. `SUFeedURL`을 임의로 바꾸지 말 것 — `https://0minping.vercel.app/appcast.xml` 이 단일 진실 출처다.
 
 ### Supabase 세션 저장과 Keychain 팝업
-앱 런타임의 Supabase Anonymous Auth 세션은 sandboxed Application Support의 `SupabaseSession.json`에 저장한다. ad-hoc 서명 앱을 `/Applications/Ping.app`로 자주 교체하면 기존 Keychain 항목 ACL이 "Ping이 저장된 비밀 정보를 사용하려고 합니다" 승인 팝업을 띄울 수 있으므로, `SupabaseSessionStore`의 자동 load/save/clear 경로에 `SecItem*` 호출을 다시 넣지 마세요. Sparkle appcast 서명용 Keychain 개인키는 별도 개념이다.
+앱 런타임의 Supabase Anonymous Auth 세션은 sandboxed Application Support의 `SupabaseSession.json`에 저장한다. 릴리즈 앱을 `/Applications/Ping.app`로 교체할 때 기존 Keychain 항목 ACL 팝업이 생기지 않도록, `SupabaseSessionStore`의 자동 load/save/clear 경로에 `SecItem*` 호출을 다시 넣지 마세요. Sparkle appcast 서명용 Keychain 개인키는 별도 개념이다.
+
+동일 팀과 bundle id에 고정된 Developer ID identity는 이후 Developer ID 서명 업데이트의 TCC 권한 연속성을 지원한다. 이전 ad-hoc 릴리즈에서 Developer ID 릴리즈로 처음 전환할 때는 Screen Recording 또는 카메라 권한을 다시 요청할 수 있으므로, 실제 Mac에서 이전 앱에 권한을 허용한 뒤 Sparkle 업데이트를 수행하는 테스트를 릴리즈 QA에 포함하세요. 이 전환에서 권한이 유지된다고 가정하지 마세요.
 
 ### Supabase CLI named profile은 동작하지 않는다 (CLI 2.117.0)
 
@@ -243,8 +245,8 @@ curl -s -X POST -H "Authorization: Bearer $TOK" -H "Content-Type: application/js
 
 `supabase config push` 는 쓰지 마세요 — config.toml 전체(242키)를 밀어 운영의 다른 설정까지 덮어씁니다. 한 필드만 PATCH 하세요.
 
-**Q: DMG 첫 실행 시 "확인되지 않은 개발자" 경고가 뜹니다.**
-A: ad-hoc 서명이라 정상입니다. **우클릭 → 열기 → 다시 열기** 로 한 번 우회하면 이후 일반 실행됩니다. README에 안내됨.
+**Q: DMG 첫 실행 시 Gatekeeper 경고가 뜹니다.**
+A: v0.3.78 릴리즈 DMG는 Developer ID 서명과 Apple 공증/staple을 거치므로 정상 배포물이라면 경고 없이 열려야 합니다. 이전 ad-hoc 릴리즈에서 업데이트한 경우에는 Screen Recording 또는 카메라 권한 재승인 여부를 실제 Mac 업데이트 QA에서 확인하세요. 로컬 검증용 빌드나 오래된 DMG를 실행 중이면 최신 공증 DMG로 다시 확인합니다.
 
 ---
 
@@ -252,7 +254,7 @@ A: ad-hoc 서명이라 정상입니다. **우클릭 → 열기 → 다시 열기
 
 새 세션에서 코딩 시작 전 다음을 확인:
 
-- [ ] `PING_PROJECT_SPECIFICATION.md` (v2.3) 전체 읽음
+- [ ] `PING_PROJECT_SPECIFICATION.md` (v2.9) 전체 읽음
 - [ ] `docs/superpowers/plans/2026-05-17-ping-mvp.md` 의 해당 Day/Task 읽음
 - [ ] 본 `AGENTS.md` 의 "절대 하지 말 것" 4가지 숙지
 - [ ] `git status` 깨끗한가? 또는 어디까지 진행됐는가?
