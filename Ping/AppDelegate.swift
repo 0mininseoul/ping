@@ -164,6 +164,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         enforceAccessoryActivationPolicySoon()
     }
 
+    func application(
+        _ application: NSApplication,
+        didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
+    ) {
+        RemotePushRegistrar.shared.update(deviceToken: deviceToken)
+    }
+
+    func application(
+        _ application: NSApplication,
+        didFailToRegisterForRemoteNotificationsWithError error: Error
+    ) {
+        RemotePushRegistrar.shared.recordRegistrationFailure(error)
+    }
+
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         enforceAccessoryActivationPolicySoon()
         return false
@@ -224,6 +238,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func setupNotifications() {
         LocalNotificationCenter.shared.configure()
+
+        if !ProcessInfo.processInfo.isRunningUnitTests {
+            Task { @MainActor in
+                await RemotePushRegistrar.shared.registerForRemoteNotificationsIfAuthorized()
+            }
+        }
 
         LocalNotificationCenter.shared.onViewMessage = { [weak self] messageId in
             self?.playMessage(messageId: messageId)
@@ -288,8 +308,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         monitor.pathUpdateHandler = { [weak self] path in
             guard path.status == .satisfied else { return }
             Task { @MainActor in
-                guard let self, self.appState.currentUser == nil else { return }
-                self.startBootstrapTaskIfNeeded()
+                guard let self else { return }
+                if let uid = self.appState.currentUser?.id {
+                    await RemotePushRegistrar.shared.registerForRemoteNotificationsIfAuthorized()
+                    await RemotePushRegistrar.shared.registerIfPossible(uid: uid)
+                } else {
+                    self.startBootstrapTaskIfNeeded()
+                }
             }
         }
         monitor.start(queue: DispatchQueue(label: "com.youngminpark.ping.network-recovery"))
@@ -325,6 +350,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 MultiAccountGate.updateUnlock(forNickname: existing.nickname)
                 ClientEventService.shared.log("app_launched")
                 await recoverNotificationPermissionIfNeeded()
+                await RemotePushRegistrar.shared.registerForRemoteNotificationsIfAuthorized()
+                await RemotePushRegistrar.shared.registerIfPossible(uid: uid)
                 startObservers(uid: uid, opensRoomManagerWhenEmpty: !roomSetupWasDeferred)
                 runCleanup(uid: uid)
                 consumePendingInviteTokenIfAvailable()
@@ -1021,6 +1048,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     self.appState.currentUser = try await self.userService.get(uid: uid)
                     SupabaseClient.shared.updateActiveNickname(completion.nickname)
                     MultiAccountGate.updateUnlock(forNickname: completion.nickname)
+                    await RemotePushRegistrar.shared.registerForRemoteNotificationsIfAuthorized()
+                    await RemotePushRegistrar.shared.registerIfPossible(uid: uid)
 
                     let shouldOpenInviteSearch: Bool
                     switch completion.action {

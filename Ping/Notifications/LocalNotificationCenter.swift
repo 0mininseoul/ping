@@ -1,6 +1,73 @@
 import AppKit
 import UserNotifications
 
+/// The server and the legacy local notification path use different naming
+/// conventions for identifiers. Parse both into one value before routing an
+/// action so a cold-start APNs payload follows the exact same handlers as a
+/// locally scheduled notification.
+enum NotificationPayload: Equatable {
+    case message(messageId: String, roomId: String?)
+    case invitation(inviteId: String, roomId: String?)
+    case chat(chatId: String?, roomId: String)
+    case update(version: String?)
+    case unknown
+
+    var roomId: String? {
+        switch self {
+        case .message(_, let roomId), .invitation(_, let roomId):
+            return roomId
+        case .chat(_, let roomId):
+            return roomId
+        case .update, .unknown:
+            return nil
+        }
+    }
+
+    static func parse(userInfo: [AnyHashable: Any]) -> NotificationPayload {
+        let type = string(in: userInfo, keys: ["type", "notification_type", "event_type"])
+        let messageId = string(in: userInfo, keys: ["messageId", "message_id", "message_uuid"])
+        let inviteId = string(in: userInfo, keys: ["inviteId", "invite_id", "invitationId", "invitation_id"])
+        let chatId = string(in: userInfo, keys: ["chat_id", "chatId", "chat_uuid"])
+        let roomId = string(in: userInfo, keys: ["room_id", "roomId", "room_uuid"])
+        let version = string(in: userInfo, keys: ["version", "app_version"])
+
+        if type == "update" {
+            return .update(version: version)
+        }
+
+        if type == "chat", let roomId {
+            return .chat(chatId: chatId, roomId: roomId)
+        }
+
+        if let messageId {
+            return .message(messageId: messageId, roomId: roomId)
+        }
+
+        if let inviteId {
+            return .invitation(inviteId: inviteId, roomId: roomId)
+        }
+
+        if let chatId, let roomId {
+            return .chat(chatId: chatId, roomId: roomId)
+        }
+
+        if version != nil {
+            return .update(version: version)
+        }
+
+        return .unknown
+    }
+
+    private static func string(in userInfo: [AnyHashable: Any], keys: [String]) -> String? {
+        for key in keys {
+            guard let value = userInfo[AnyHashable(key)] as? String else { continue }
+            let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !normalized.isEmpty { return normalized }
+        }
+        return nil
+    }
+}
+
 @MainActor
 final class LocalNotificationCenter: NSObject, UNUserNotificationCenterDelegate {
     static let shared = LocalNotificationCenter()
@@ -40,6 +107,9 @@ final class LocalNotificationCenter: NSObject, UNUserNotificationCenterDelegate 
             let granted = try await UNUserNotificationCenter.current()
                 .requestAuthorization(options: [.alert, .sound, .badge])
             registerCategories()
+            if granted {
+                RemotePushRegistrar.shared.registerForRemoteNotifications()
+            }
             return granted
         } catch {
             return false
@@ -216,7 +286,8 @@ final class LocalNotificationCenter: NSObject, UNUserNotificationCenterDelegate 
         UNUserNotificationCenter.current().getDeliveredNotifications { notifications in
             let identifiers = notifications.compactMap { notification -> String? in
                 let info = notification.request.content.userInfo
-                guard info["room_id"] as? String == roomId else { return nil }
+                let parsedRoomId = NotificationPayload.parse(userInfo: info).roomId
+                guard parsedRoomId == roomId || info["room_id"] as? String == roomId else { return nil }
                 return notification.request.identifier
             }
             guard !identifiers.isEmpty else { return }
@@ -231,52 +302,43 @@ final class LocalNotificationCenter: NSObject, UNUserNotificationCenterDelegate 
     ) {
         let actionIdentifier = response.actionIdentifier
         let info = response.notification.request.content.userInfo
-        let messageId = info["messageId"] as? String
-        let messageRoomId = info["room_id"] as? String
-        let inviteId = info["inviteId"] as? String
-        let infoType = info["type"] as? String
-        let chatId = info["chat_id"] as? String
-        let chatRoomId = info["room_id"] as? String
+        let payload = NotificationPayload.parse(userInfo: info)
 
         Task { @MainActor in
-            if infoType == "update",
+            if case .update = payload,
                actionIdentifier == Action.viewUpdate.rawValue || actionIdentifier == UNNotificationDefaultActionIdentifier {
                 onCheckForUpdates?()
                 return
             }
 
-            // Chat notifications are identified by their "type" key.
-            // 쓸어 넘겨 지운 것(dismiss)은 "보겠다"가 아니다. 구분하지 않으면 알림을
-            // 지우기만 해도 룸이 열리고 그 룸의 알림이 전부 정리된다.
-            if infoType == "chat" {
+            switch payload {
+            case .chat(let chatId, let roomId):
+                // 쓸어 넘겨 지운 것(dismiss)은 "보겠다"가 아니다. 구분하지 않으면 알림을
+                // 지우기만 해도 룸이 열리고 그 룸의 알림이 전부 정리된다.
                 guard actionIdentifier != UNNotificationDismissActionIdentifier else { return }
-                if let chatId, let chatRoomId {
-                    clearDeliveredNotifications(roomId: chatRoomId)
-                    onViewChatMessage?(chatId, chatRoomId)
-                    return
+                clearDeliveredNotifications(roomId: roomId)
+                onViewChatMessage?(chatId ?? "", roomId)
+            case .message(let messageId, let roomId):
+                guard actionIdentifier == Action.viewMessage.rawValue
+                    || actionIdentifier == UNNotificationDefaultActionIdentifier else { return }
+                if let roomId {
+                    clearDeliveredNotifications(roomId: roomId)
                 }
-            }
-
-            switch actionIdentifier {
-            case Action.viewMessage.rawValue, UNNotificationDefaultActionIdentifier:
-                if let messageId {
-                    if let messageRoomId {
-                        clearDeliveredNotifications(roomId: messageRoomId)
-                    }
-                    onViewMessage?(messageId)
-                } else if let inviteId {
-                    _ = inviteId
+                onViewMessage?(messageId)
+            case .invitation(let inviteId, _):
+                // Invitation notifications can be opened from the default
+                // action, while accept/reject preserve their dedicated actions.
+                switch actionIdentifier {
+                case Action.viewMessage.rawValue, UNNotificationDefaultActionIdentifier:
                     onOpenInvitations?()
-                }
-            case Action.acceptInvite.rawValue:
-                if let inviteId {
+                case Action.acceptInvite.rawValue:
                     onAcceptInvitation?(inviteId)
-                }
-            case Action.rejectInvite.rawValue:
-                if let inviteId {
+                case Action.rejectInvite.rawValue:
                     onRejectInvitation?(inviteId)
+                default:
+                    break
                 }
-            default:
+            case .update, .unknown:
                 break
             }
         }
