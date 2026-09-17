@@ -203,6 +203,10 @@ private struct GeneralSettingsView: View {
         .onChange(of: appearanceMode) { newValue in
             (PingAppearanceMode(rawValue: newValue) ?? .system).apply()
         }
+        .onChange(of: notificationSound) { _ in
+            guard let uid = appState.currentUser?.id else { return }
+            Task { await RemotePushRegistrar.shared.refreshSoundPreference(uid: uid) }
+        }
     }
 
     private var accountSwitcherGroup: some View {
@@ -332,6 +336,9 @@ private struct GeneralSettingsView: View {
         Task {
             _ = await LocalNotificationCenter.shared.requestAuthorization()
             await refreshNotificationPermissionStatus()
+            if let uid = appState.currentUser?.id {
+                await RemotePushRegistrar.shared.registerIfPossible(uid: uid)
+            }
             isRequestingNotificationPermission = false
         }
     }

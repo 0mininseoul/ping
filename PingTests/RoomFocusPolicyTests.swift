@@ -4,7 +4,7 @@ import XCTest
 final class RoomFocusPolicyTests: XCTestCase {
     private let room = "room-1"
 
-    // MARK: - Chat notification suppression
+    // MARK: - Room focus policy
 
     func testViewingTheRoomSuppressesItsChatNotification() {
         XCTAssertTrue(
@@ -212,10 +212,9 @@ final class RoomFocusPolicyTests: XCTestCase {
 
     // MARK: - Source contract
 
-    func testAppDelegateChecksAppActivationForBothPaths() throws {
+    func testAppDelegateChecksAppActivationForPresence() throws {
         let source = try readRepositoryFile("Ping/AppDelegate.swift")
 
-        XCTAssertTrue(source.contains("RoomFocusPolicy.isViewingRoom("))
         XCTAssertTrue(source.contains("RoomFocusPolicy.activeRoomIdForPresence("))
         XCTAssertTrue(source.contains("appIsActive: NSApp.isActive"))
         // 창 가시성만 보던 옛 판단이 남아 있으면 안 된다.
@@ -243,22 +242,8 @@ final class ChatNotificationHandlingContractTests: XCTestCase {
         )
     }
 
-    /// 설정의 "알림 소리"는 수신 알림 전체에 적용된다고 안내한다.
-    func testChatNotificationsRespectTheSoundPreference() throws {
-        let source = try readRepositoryFile("Ping/Notifications/LocalNotificationCenter.swift")
-
-        let chatBody = try sourceSlice(
-            in: source,
-            from: "func notifyIncomingChat(",
-            to: "func notifyChatCatchUp("
-        )
-        XCTAssertTrue(chatBody.contains("content.sound = notificationSound()"))
-        XCTAssertFalse(chatBody.contains("content.sound = .default"))
-    }
-
     /// 회귀 방지: 룸 창을 열어둔 채 다른 앱을 쓰는 동안 새 채팅이 오면, 방금 올라간
     /// 알림이 룸 선택 변경 경로로 1~2초 뒤 지워져 사용자는 아무것도 못 봤다.
-    /// 계측(chat_notify_decision)은 suppressed=false였는데 알림이 사라진 이유가 이것이다.
     func testBackgroundRoomSelectionDoesNotClearFreshNotifications() throws {
         let source = try readRepositoryFile("Ping/UI/Setup/RoomManagerWindow.swift")
 
@@ -280,25 +265,10 @@ final class ChatNotificationHandlingContractTests: XCTestCase {
         XCTAssertFalse(source.contains("let persistedId = appState.lastSelectedRoomId"))
     }
 
-    /// 이 결정은 원격에서 관측할 수 없어 여러 차례 오진했다.
-    func testTheNotifyDecisionIsInstrumented() throws {
-        let source = try readRepositoryFile("Ping/AppDelegate.swift")
-
-        XCTAssertTrue(source.contains("\"chat_notify_decision\""))
-        XCTAssertTrue(source.contains("\"suppressed\": isViewingRoom"))
-        XCTAssertTrue(source.contains("\"app_active\": NSApp.isActive"))
-    }
-
     private func readRepositoryFile(_ relativePath: String) throws -> String {
         let repoRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
         return try String(contentsOf: repoRoot.appendingPathComponent(relativePath), encoding: .utf8)
-    }
-
-    private func sourceSlice(in source: String, from startMarker: String, to endMarker: String) throws -> String {
-        let start = try XCTUnwrap(source.range(of: startMarker)?.lowerBound)
-        let end = try XCTUnwrap(source.range(of: endMarker, range: start..<source.endIndex)?.lowerBound)
-        return String(source[start..<end])
     }
 }

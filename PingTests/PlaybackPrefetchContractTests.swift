@@ -10,17 +10,18 @@ final class PlaybackPrefetchContractTests: XCTestCase {
     }
 
     /// 회귀 방지: 다운로드를 수신 루프 안에서 기다리면 느린 한 건이 뒤따르는 모든
-    /// 알림을 막는다. 알림을 먼저 보내고 재생 준비는 별도 task로 넘겨야 한다.
-    func testNotificationIsPostedBeforeTheVideoDownloadIsAwaited() throws {
+    /// 메시지 처리를 막는다. 서버 dedup 기록을 먼저 남기고 재생 준비는 별도 task로 넘겨야 한다.
+    func testVideoIsMarkedNotifiedBeforeTheVideoDownloadIsAwaited() throws {
         let appDelegateSource = try readSourceFile("Ping/AppDelegate.swift")
 
-        let notificationRange = try XCTUnwrap(
-            appDelegateSource.range(of: "LocalNotificationCenter.shared.notifyIncomingMessage")
+        let markNotifiedRange = try XCTUnwrap(
+            appDelegateSource.range(of: "try? await messageService.markNotified(messageId: id)")
         )
         let prefetchRange = try XCTUnwrap(
             appDelegateSource.range(of: "await self.playbackVideoCache.prefetch(message)")
         )
-        XCTAssertLessThan(notificationRange.lowerBound, prefetchRange.lowerBound)
+        XCTAssertLessThan(markNotifiedRange.lowerBound, prefetchRange.lowerBound)
+        XCTAssertFalse(appDelegateSource.contains("notifyIncomingMessage"))
     }
 
     /// 회귀 방지: 프리페치 task 본문이 다시 진행 중 task를 조회하면 자기 자신을

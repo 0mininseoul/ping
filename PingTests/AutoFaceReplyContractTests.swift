@@ -72,15 +72,20 @@ final class AutoFaceReplyContractTests: XCTestCase {
         XCTAssertTrue(source.contains("\"room_uuid\": originalMessage.roomId"))
     }
 
-    /// 알림 권한이 없으면 notifyIncomingMessage가 조기 반환한다. 자동 회신이 그 뒤에 있으면
-    /// 권한 없는 맥에서는 영영 동작하지 않는다.
-    func testAutoReplyRunsBeforeTheNotificationPermissionEarlyReturn() throws {
+    /// APNs가 배너를 담당해도 실행 중 영상 observer의 자동 회신은 먼저 시작해야 한다.
+    func testAutoReplyRunsBeforeTheVideoIsMarkedNotified() throws {
         let source = try readFixture("AppDelegate.swift")
 
-        let hookIndex = try XCTUnwrap(source.range(of: "autoFaceReply.handleIncoming")?.lowerBound)
-        let guardIndex = try XCTUnwrap(source.range(of: "guard didScheduleNotification else")?.lowerBound)
+        let delivery = try sourceSlice(
+            in: source,
+            from: "private func deliverIncomingVideo",
+            to: "private func fetchIncomingVideosNow"
+        )
+        let hookIndex = try XCTUnwrap(delivery.range(of: "autoFaceReply.handleIncoming")?.lowerBound)
+        let markIndex = try XCTUnwrap(delivery.range(of: "ledger.remember(.video")?.lowerBound)
 
-        XCTAssertLessThan(hookIndex, guardIndex)
+        XCTAssertLessThan(hookIndex, markIndex)
+        XCTAssertFalse(delivery.contains("notifyIncomingMessage"))
     }
 
     func testCoordinatorDelegatesTheDecisionToThePolicyWithoutAUserPreference() throws {
@@ -151,5 +156,11 @@ final class AutoFaceReplyContractTests: XCTestCase {
         let fileURL = try XCTUnwrap(Bundle(for: Self.self).resourceURL?.appendingPathComponent(fileName))
 
         return try String(contentsOf: fileURL, encoding: .utf8)
+    }
+
+    private func sourceSlice(in source: String, from startMarker: String, to endMarker: String) throws -> String {
+        let start = try XCTUnwrap(source.range(of: startMarker)?.lowerBound)
+        let end = try XCTUnwrap(source.range(of: endMarker, range: start..<source.endIndex)?.lowerBound)
+        return String(source[start..<end])
     }
 }

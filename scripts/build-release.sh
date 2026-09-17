@@ -3,6 +3,70 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+usage() {
+  cat >&2 <<'EOF'
+Usage: ./scripts/build-release.sh --macos-provisioning-profile PATH
+
+The profile may also be supplied through PING_MACOS_PROVISIONING_PROFILE.
+EOF
+}
+
+MACOS_PROVISIONING_PROFILE="${PING_MACOS_PROVISIONING_PROFILE:-}"
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --macos-provisioning-profile|--provisioning-profile)
+      if [ "$#" -lt 2 ] || [ -z "$2" ]; then
+        echo "A path is required for $1." >&2
+        usage
+        exit 2
+      fi
+      MACOS_PROVISIONING_PROFILE="$2"
+      shift 2
+      ;;
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2
+      usage
+      exit 2
+      ;;
+  esac
+done
+
+if [ -z "$MACOS_PROVISIONING_PROFILE" ]; then
+  echo "A macOS provisioning profile is required for APNs release builds." >&2
+  echo "Pass --macos-provisioning-profile PATH or set PING_MACOS_PROVISIONING_PROFILE." >&2
+  exit 1
+fi
+
+if [ ! -f "$MACOS_PROVISIONING_PROFILE" ] || [ ! -r "$MACOS_PROVISIONING_PROFILE" ]; then
+  echo "macOS provisioning profile is missing or unreadable: $MACOS_PROVISIONING_PROFILE" >&2
+  exit 1
+fi
+
+PROFILE_PLIST="$(mktemp -t ping-provisioning-profile)"
+TMP_ENTITLEMENTS=""
+cleanup() {
+  rm -f "$PROFILE_PLIST"
+  if [ -n "$TMP_ENTITLEMENTS" ]; then
+    rm -f "$TMP_ENTITLEMENTS"
+  fi
+}
+trap cleanup EXIT
+
+if ! security cms -D -i "$MACOS_PROVISIONING_PROFILE" -o "$PROFILE_PLIST" >/dev/null 2>&1; then
+  echo "The macOS provisioning profile is not a valid signed profile: $MACOS_PROVISIONING_PROFILE" >&2
+  exit 1
+fi
+
+PROFILE_APNS_ENV="$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:com.apple.developer.aps-environment' "$PROFILE_PLIST" 2>/dev/null || true)"
+if [ "$PROFILE_APNS_ENV" != "production" ]; then
+  echo "The macOS provisioning profile must grant com.apple.developer.aps-environment=production." >&2
+  exit 1
+fi
+
 if [ ! -f "Resources/Supabase.plist" ]; then
   echo "Supabase.plist is required at Resources/Supabase.plist for release builds." >&2
   exit 1
@@ -61,6 +125,7 @@ xcodebuild \
   clean build
 
 APP="build/Build/Products/Release/Ping.app"
+EMBEDDED_PROFILE="$APP/Contents/embedded.provisionprofile"
 
 if [ ! -f "$APP/Contents/Resources/Supabase.plist" ]; then
   echo "Supabase.plist is required in the built app bundle." >&2
@@ -105,6 +170,14 @@ if [ -d "$SPARKLE_FRAMEWORK" ]; then
   sign_framework "$SPARKLE_FRAMEWORK"
 fi
 
+# The APNs profile must be present before the outer signature is created. Keep
+# the profile supplied by the release operator; never download or generate one.
+cp "$MACOS_PROVISIONING_PROFILE" "$EMBEDDED_PROFILE"
+if [ ! -f "$EMBEDDED_PROFILE" ]; then
+  echo "Failed to embed the macOS provisioning profile in the app bundle." >&2
+  exit 1
+fi
+
 # Sign the app last (outermost). The Developer ID designated requirement is
 # anchored to the team + bundle id and is stable across builds, so TCC grants
 # survive updates without the old ad-hoc requirement pin.
@@ -112,6 +185,23 @@ codesign --force --sign "$SIGN_IDENTITY" \
   --options runtime --timestamp \
   --entitlements Ping.entitlements \
   "$APP"
+
+TMP_ENTITLEMENTS="$(mktemp -t ping-final-entitlements)"
+if ! codesign -d --entitlements :- "$APP" > "$TMP_ENTITLEMENTS"; then
+  echo "Unable to inspect the final signed app entitlements." >&2
+  exit 1
+fi
+
+FINAL_APNS_ENV="$(/usr/libexec/PlistBuddy -c 'Print :com.apple.developer.aps-environment' "$TMP_ENTITLEMENTS" 2>/dev/null || true)"
+if [ "$FINAL_APNS_ENV" != "production" ]; then
+  echo "The final signed app must contain com.apple.developer.aps-environment=production." >&2
+  exit 1
+fi
+
+if [ ! -f "$EMBEDDED_PROFILE" ]; then
+  echo "The signed app is missing Contents/embedded.provisionprofile." >&2
+  exit 1
+fi
 
 codesign --verify --deep --strict --verbose=2 "$APP"
 

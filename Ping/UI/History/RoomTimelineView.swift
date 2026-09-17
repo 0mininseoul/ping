@@ -64,6 +64,11 @@ struct RoomTimelineView: View {
                     didInitialScroll = false
                 }
                 .onChange(of: viewModel.expandedMessageId) { expandedMessageId in
+                    if usesExternalScreenFaceExpansion, expandedMessageId != nil {
+                        // A keyboard change to an inline face-only row must not leave
+                        // a separate screen+face player above the room.
+                        onScreenFaceExpansionChange(nil, nil)
+                    }
                     guard let expandedMessageId else { return }
                     let expandedTimelineItemId = "video:" + expandedMessageId
                     Task { @MainActor in
@@ -341,11 +346,7 @@ struct RoomTimelineView: View {
                 showsSender: roomMemberCount >= 3,
                 onTap: {
                     withAnimation(videoExpansionAnimation) {
-                        if viewModel.expandedMessageId == v.id {
-                            viewModel.expandedMessageId = nil
-                        } else {
-                            viewModel.expandedMessageId = v.id
-                        }
+                        handleVideoTap(v, isMine: isMine, myUid: myUid)
                     }
                 },
                 cacheService: cacheService,
@@ -396,6 +397,36 @@ struct RoomTimelineView: View {
                 }
             )
         }
+    }
+
+    private func handleVideoTap(_ message: VideoMessage, isMine: Bool, myUid: String?) {
+        let messageId = message.id
+        let isScreenFaceExternal = usesExternalScreenFaceExpansion && message.captureMode == .screenFace
+
+        if isScreenFaceExternal {
+            // The room root owns the floating window and decides whether this is
+            // the same-message toggle. Keep the inline expansion state empty so
+            // Escape/parent dismissal cannot leave a stale selection behind.
+            viewModel.expandedMessageId = nil
+            onScreenFaceExpansionChange(
+                nil,
+                ScreenFaceExpansionContext(
+                    message: message,
+                    isMine: isMine,
+                    archivePeerName: archivePeerName(for: message, isMine: isMine, myUid: myUid),
+                    cacheService: cacheService,
+                    controller: viewModel.inlineController
+                )
+            )
+            return
+        }
+
+        let isSameMessage = messageId != nil && viewModel.expandedMessageId == messageId
+        if usesExternalScreenFaceExpansion {
+            onScreenFaceExpansionChange(nil, nil)
+        }
+
+        viewModel.expandedMessageId = isSameMessage ? nil : messageId
     }
 
     private func replyPreview(for chat: ChatMessage) -> ChatMessageRowView.ReplyPreview? {
