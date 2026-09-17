@@ -1242,10 +1242,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func acceptInvitation(inviteId: String) {
         guard hasLoadedInvitationState,
-              let invitation = appState.pendingInvitations.first(where: { $0.id == inviteId }),
               let currentUser = appState.currentUser,
               let uid = currentUser.id else {
             deferInvitationAction(.accept(inviteId))
+            return
+        }
+
+        guard let invitation = appState.pendingInvitations.first(where: { $0.id == inviteId }) else {
             return
         }
 

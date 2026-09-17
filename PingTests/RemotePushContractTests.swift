@@ -146,6 +146,27 @@ final class RemotePushContractTests: XCTestCase {
         XCTAssertTrue(queue.drain().isEmpty)
     }
 
+    func testLoadedMissingAcceptActionIsDiscardedInsteadOfRequeued() throws {
+        let appDelegate = try readRepositoryFile("Ping/AppDelegate.swift")
+        let accept = try sourceSlice(
+            in: appDelegate,
+            from: "private func acceptInvitation(inviteId: String)",
+            to: "private func rejectInvitation(inviteId: String)"
+        )
+
+        XCTAssertEqual(
+            accept.components(separatedBy: "deferInvitationAction(.accept(inviteId))").count,
+            2
+        )
+        let deferAction = try XCTUnwrap(accept.range(of: "deferInvitationAction(.accept(inviteId))"))
+        let missingInvitationGuard = try XCTUnwrap(
+            accept.range(
+                of: "guard let invitation = appState.pendingInvitations.first(where: { $0.id == inviteId }) else {\n            return\n        }"
+            )
+        )
+        XCTAssertLessThan(deferAction.upperBound, missingInvitationGuard.lowerBound)
+    }
+
     func testMacOSAPNsEntitlementsUseEnvironmentSpecificValuesWithoutChangingDeployment() throws {
         let release = try readPlist("Ping.entitlements")
         let debug = try readPlist("PingDebug.entitlements")
