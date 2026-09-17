@@ -339,7 +339,7 @@ async function sendToTokens(
 
   const jwt = await deps.makeJwt();
   let sent = 0;
-  const gone: string[] = [];
+  const gone: DeviceToken[] = [];
   const failureStatuses = new Set<number>();
   let failureCount = 0;
   let transportFailures = 0;
@@ -365,7 +365,7 @@ async function sendToTokens(
       });
       statusCounts.set(res.status, (statusCounts.get(res.status) ?? 0) + 1);
       if (res.status === 200) sent++;
-      else if (res.status === 410) gone.push(token.token);
+      else if (res.status === 410) gone.push(token);
       else {
         failureStatuses.add(res.status);
         failureCount++;
@@ -382,18 +382,22 @@ async function sendToTokens(
 
   let removed = 0;
   if (gone.length > 0) {
-    const { error: cleanupError } = await deps.supabase
-      .from('device_tokens')
-      .delete()
-      .in('token', gone);
-    if (cleanupError) {
-      console.log(`[push] result event=${eventType} status=cleanup_error sent=${sent} removed=0`);
-      return {
-        error: 'db_error',
-        detail: cleanupError.message,
-        sent,
-        removed: 0,
-      };
+    for (const token of gone) {
+      const cleanup = deps.supabase
+        .from('device_tokens')
+        .delete()
+        .eq('token', token.token)
+        .eq('platform', token.platform);
+      const { error: cleanupError } = await cleanup.eq('uid', token.uid);
+      if (cleanupError) {
+        console.log(`[push] result event=${eventType} status=cleanup_error sent=${sent} removed=0`);
+        return {
+          error: 'db_error',
+          detail: cleanupError.message,
+          sent,
+          removed: 0,
+        };
+      }
     }
     removed = gone.length;
   }

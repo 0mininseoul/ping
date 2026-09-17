@@ -16,6 +16,11 @@ interface FakeOptions {
   desktopPresence?: PresenceRow[];
 }
 
+interface DeleteFilter {
+  column: string;
+  value: unknown;
+}
+
 /// PostgREST 체인처럼 필터를 쌓았다가 await 시점에 적용한다. 필터를 정직하게
 /// 흉내 내야 쿼리에서 조건이 빠졌을 때 테스트가 조용히 통과하지 않는다.
 function presenceTable(rows: PresenceRow[]) {
@@ -47,10 +52,11 @@ function presenceTable(rows: PresenceRow[]) {
 }
 
 function fakeSupabase(
-  tokens: Array<{ token: string; environment: string; platform?: 'macos' | 'ios' | 'watchos' }>,
+  tokens: Array<{ token: string; environment: string; platform?: 'macos' | 'ios' | 'watchos'; uid?: string }>,
   opts: FakeOptions = {}
 ) {
   const deleted: string[][] = [];
+  const deleteFilters: DeleteFilter[][] = [];
   const supabase = {
     from(table: string) {
       if (table === 'desktop_presence') {
@@ -68,12 +74,25 @@ function fakeSupabase(
           };
         },
         delete() {
-          return {
-            in: async (_col: string, vals: string[]) => {
-              deleted.push(vals);
-              return { data: null, error: opts.deleteError ?? null };
+          const filters: DeleteFilter[] = [];
+          const builder = {
+            eq(column: string, value: unknown) {
+              filters.push({ column, value });
+              return builder;
+            },
+            in(column: string, values: string[]) {
+              filters.push({ column, value: values });
+              return builder;
+            },
+            then(resolve: (value: { data: null; error: { message: string } | null }) => unknown) {
+              deleteFilters.push(filters);
+              const tokenFilter = filters.find((filter) => filter.column === 'token');
+              const tokenValue = tokenFilter?.value;
+              deleted.push(Array.isArray(tokenValue) ? tokenValue : [String(tokenValue)]);
+              return Promise.resolve({ data: null, error: opts.deleteError ?? null }).then(resolve);
             },
           };
+          return builder;
         },
       };
     },
@@ -94,7 +113,7 @@ function fakeSupabase(
       },
     },
   };
-  return { supabase, deleted };
+  return { supabase, deleted, deleteFilters };
 }
 
 const insertBody = {
@@ -112,14 +131,15 @@ const insertBody = {
 
 function deps(
   overrides: Partial<PushDeps>,
-  tokens: Array<{ token: string; environment: string; platform?: 'macos' | 'ios' | 'watchos' }> = [{ token: 't1', environment: 'production' }],
+  tokens: Array<{ token: string; environment: string; platform?: 'macos' | 'ios' | 'watchos'; uid?: string }> = [{ token: 't1', environment: 'production' }],
   opts: FakeOptions = {}
 ): {
   d: PushDeps;
   send: ReturnType<typeof vi.fn>;
   deleted: string[][];
+  deleteFilters: DeleteFilter[][];
 } {
-  const { supabase, deleted } = fakeSupabase(tokens, opts);
+  const { supabase, deleted, deleteFilters } = fakeSupabase(tokens, opts);
   const send = vi.fn(async () => ({ status: 200, body: '' }));
   const d: PushDeps = {
     supabase: supabase as unknown as PushDeps['supabase'],
@@ -134,7 +154,7 @@ function deps(
     expectedSecret: 's3cret',
     ...overrides,
   };
-  return { d, send, deleted };
+  return { d, send, deleted, deleteFilters };
 }
 
 describe('handlePush', () => {
@@ -176,6 +196,32 @@ describe('handlePush', () => {
     const out = await handlePush(insertBody, 's3cret', d);
     expect(out.body).toEqual({ sent: 1, removed: 1 });
     expect(deleted).toEqual([['t2']]);
+  });
+
+  it('scopes 410 cleanup to the failed token platform and uid', async () => {
+    const send = vi.fn(async (input: { bundleId: string }) => ({
+      status: input.bundleId === 'com.example.ios' ? 410 : 200,
+      body: '',
+    }));
+    const { d, deleteFilters } = deps({ send }, [
+      { uid: 'rcv-1', token: 'shared-token', environment: 'production', platform: 'ios' },
+      { uid: 'rcv-1', token: 'shared-token', environment: 'production', platform: 'watchos' },
+    ]);
+    d.bundleIds = {
+      macos: 'com.example.mac',
+      ios: 'com.example.ios',
+      watchos: 'com.example.watch',
+    };
+
+    const out = await handlePush(insertBody, 's3cret', d);
+
+    expect(out.body).toEqual({ sent: 1, removed: 1 });
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(deleteFilters).toEqual([[
+      { column: 'token', value: 'shared-token' },
+      { column: 'platform', value: 'ios' },
+      { column: 'uid', value: 'rcv-1' },
+    ]]);
   });
 
   it('returns a retryable error for APNs failures while reporting mixed delivery safely', async () => {
