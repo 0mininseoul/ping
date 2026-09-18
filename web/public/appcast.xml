@@ -3,6 +3,23 @@
     <channel>
         <title>Ping</title>
         <item>
+            <title>0.3.79</title>
+            <pubDate>Fri, 18 Sep 2026 09:37:58 +0900</pubDate>
+            <link>https://0minping.vercel.app</link>
+            <sparkle:version>91</sparkle:version>
+            <sparkle:shortVersionString>0.3.79</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <enclosure url="https://0minping.vercel.app/downloads/Ping-v0.3.79.dmg" length="7898986" type="application/octet-stream" sparkle:edSignature="bCvSscT+cNi+t6M666pCbobfPSjzrkWWJ2vw5nE9ErtfctRwSVnPqckNICf/nESsQDrzDy93qEkUm/1o1WQlAA=="/>
+            <sparkle:deltas>
+                <enclosure url="https://0minping.vercel.app/downloads/Ping91-90.delta" sparkle:deltaFrom="90" length="322930" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976432" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="JV/ERsM4r9pk1tAiu7Bxmnb3FJULu4BhhaHzh9gEX8RMnkIx/ruEi8tUzmjnLdTyX3ybaMKAloBOAfbSoLLZDA=="/>
+                <enclosure url="https://0minping.vercel.app/downloads/Ping91-89.delta" sparkle:deltaFrom="89" length="1400614" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="EYnEV87wwkwuVqAV08lmlinMwfc0q4srieHJT3yRPH/4JMKRtZIWEf6nzPcoDJmX1zLtRZ0oRjsUJB5321auCQ=="/>
+                <enclosure url="https://0minping.vercel.app/downloads/Ping91-88.delta" sparkle:deltaFrom="88" length="1415170" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="TtpS3Eix2u0N55T4/aIJod+iMIcNSBcON+eVC6TVkVmGEvti8wIHKPnoofvTkDA29wSzqSTJsOV5B9yKiiwxCQ=="/>
+                <enclosure url="https://0minping.vercel.app/downloads/Ping91-87.delta" sparkle:deltaFrom="87" length="1429630" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="N/W9OdnsmIZW5OX/sFENW1WcsJqMGfsg1rJqijfxPaWryaPULYui5L3jO/VtfJ+trtFjiBQdHJZK7ufwxenhAw=="/>
+                <enclosure url="https://0minping.vercel.app/downloads/Ping91-86.delta" sparkle:deltaFrom="86" length="1440434" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="EIzc6RnuprTuoLURsQdjlsT5jEyt/9P/dVGRL6zFYn7fPqjCZE+JExLK5DIi1zEy4smxlLrW5deAaGhF6zVZBA=="/>
+            </sparkle:deltas>
+        </item>
+        <item>
             <title>0.3.78</title>
             <pubDate>Fri, 18 Sep 2026 01:15:12 +0900</pubDate>
             <link>https://0minping.vercel.app</link>
@@ -11,17 +28,10 @@
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
             <enclosure url="https://0minping.vercel.app/downloads/Ping-v0.3.78.dmg" length="7895382" type="application/octet-stream" sparkle:edSignature="aBcQXWEHEcJHEDNEW/b4ahV0LCw+BB2o1Fg0Kl5xB7G+Fogm186nOwg5+tIrqX6Jk94zIjaACrH/LrWPwsJ1Dw=="/>
-            <sparkle:deltas>
-                <enclosure url="https://0minping.vercel.app/downloads/Ping90-89.delta" sparkle:deltaFrom="89" length="1392938" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="b/+KN5b44co2IHIbGNdpbos0ZmDXDWoB+b7D6yo9rrJgOLwTHV5vNFdBHDH9VXKU/M9esyQNWVVBWznNBQ+GDQ=="/>
-                <enclosure url="https://0minping.vercel.app/downloads/Ping90-88.delta" sparkle:deltaFrom="88" length="1401006" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="/FWhOxC5oOJSI2BJhHV1shhbhV903Y8hOT99+wGgeA3QmdZYBqWDmKokuQZfpccKe0bJGTW8iXejOiFR/7PfCA=="/>
-                <enclosure url="https://0minping.vercel.app/downloads/Ping90-87.delta" sparkle:deltaFrom="87" length="1421686" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="06aWqFfBAEXFYpUjMU1pejs92AfE0hfDBWdMylRI6YlmofBHINKjVDQOkcpJeRjMJaqFaSb6Sn/c72EmjOFcCg=="/>
-                <enclosure url="https://0minping.vercel.app/downloads/Ping90-86.delta" sparkle:deltaFrom="86" length="1425730" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="YkdGHkCRWRT22qYjOtnUImIpY0oQMWDGzBoZoqDw52ZEuQoXX8MizLnnpEh8jhxLtuDAk4t0yV6Zk5LjtuyUDg=="/>
-                <enclosure url="https://0minping.vercel.app/downloads/Ping90-85.delta" sparkle:deltaFrom="85" length="1487786" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="977808" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="+3PU9CyB1RNUigNsoB26OJu8tFq5jxTOwiEaRC3yvEqY4cmzndyxpiHnOlgnYx3UsOo6FyPvYP5klYEwUeqAAg=="/>
-            </sparkle:deltas>
         </item>
         <item>
             <title>0.3.77</title>
-            <pubDate>Wed, 16 Sep 2026 17:23:58 +0900</pubDate>
+            <pubDate>Thu, 17 Sep 2026 09:17:25 +0900</pubDate>
             <link>https://0minping.vercel.app</link>
             <sparkle:version>89</sparkle:version>
             <sparkle:shortVersionString>0.3.77</sparkle:shortVersionString>
@@ -31,7 +41,7 @@
         </item>
         <item>
             <title>0.3.76</title>
-            <pubDate>Wed, 16 Sep 2026 01:50:31 +0900</pubDate>
+            <pubDate>Thu, 17 Sep 2026 09:17:25 +0900</pubDate>
             <link>https://0minping.vercel.app</link>
             <sparkle:version>88</sparkle:version>
             <sparkle:shortVersionString>0.3.76</sparkle:shortVersionString>
@@ -41,7 +51,7 @@
         </item>
         <item>
             <title>0.3.75</title>
-            <pubDate>Wed, 16 Sep 2026 01:13:12 +0900</pubDate>
+            <pubDate>Thu, 17 Sep 2026 09:17:25 +0900</pubDate>
             <link>https://0minping.vercel.app</link>
             <sparkle:version>87</sparkle:version>
             <sparkle:shortVersionString>0.3.75</sparkle:shortVersionString>
@@ -51,7 +61,7 @@
         </item>
         <item>
             <title>0.3.74</title>
-            <pubDate>Tue, 15 Sep 2026 11:14:10 +0900</pubDate>
+            <pubDate>Thu, 17 Sep 2026 09:17:25 +0900</pubDate>
             <link>https://0minping.vercel.app</link>
             <sparkle:version>86</sparkle:version>
             <sparkle:shortVersionString>0.3.74</sparkle:shortVersionString>
@@ -61,7 +71,7 @@
         </item>
         <item>
             <title>0.3.73</title>
-            <pubDate>Mon, 14 Sep 2026 11:33:12 +0900</pubDate>
+            <pubDate>Thu, 17 Sep 2026 09:17:25 +0900</pubDate>
             <link>https://0minping.vercel.app</link>
             <sparkle:version>85</sparkle:version>
             <sparkle:shortVersionString>0.3.73</sparkle:shortVersionString>
@@ -71,7 +81,7 @@
         </item>
         <item>
             <title>0.3.72</title>
-            <pubDate>Fri, 11 Sep 2026 00:28:54 +0900</pubDate>
+            <pubDate>Thu, 17 Sep 2026 09:17:25 +0900</pubDate>
             <link>https://0minping.vercel.app</link>
             <sparkle:version>84</sparkle:version>
             <sparkle:shortVersionString>0.3.72</sparkle:shortVersionString>
@@ -81,7 +91,7 @@
         </item>
         <item>
             <title>0.3.71</title>
-            <pubDate>Fri, 04 Sep 2026 00:58:49 +0900</pubDate>
+            <pubDate>Thu, 17 Sep 2026 09:17:25 +0900</pubDate>
             <link>https://0minping.vercel.app</link>
             <sparkle:version>83</sparkle:version>
             <sparkle:shortVersionString>0.3.71</sparkle:shortVersionString>
@@ -91,7 +101,7 @@
         </item>
         <item>
             <title>0.3.70</title>
-            <pubDate>Fri, 04 Sep 2026 00:25:13 +0900</pubDate>
+            <pubDate>Thu, 17 Sep 2026 09:17:25 +0900</pubDate>
             <link>https://0minping.vercel.app</link>
             <sparkle:version>82</sparkle:version>
             <sparkle:shortVersionString>0.3.70</sparkle:shortVersionString>
@@ -100,18 +110,8 @@
             <enclosure url="https://0minping.vercel.app/downloads/Ping-v0.3.70.dmg" length="7683729" type="application/octet-stream" sparkle:edSignature="CXazC70+/IdoINJuXWifp6+v2pdeiGBqlVFjA1alwdyoFEMHJFeu8iIguzDLv84tdVusRCETUSG8S0xGlheaBQ=="/>
         </item>
         <item>
-            <title>0.3.69</title>
-            <pubDate>Fri, 04 Sep 2026 00:16:26 +0900</pubDate>
-            <link>https://0minping.vercel.app</link>
-            <sparkle:version>81</sparkle:version>
-            <sparkle:shortVersionString>0.3.69</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <enclosure url="https://0minping.vercel.app/downloads/Ping-v0.3.69.dmg" length="7684249" type="application/octet-stream" sparkle:edSignature="ohrWSYHH1v/EONtztM0+3EIRSeXdsKkCkzlhCcVjiUHl+bWELQfV5k87IrR6NzZVDEcwR9qO5h5ZqFcdcRmUAQ=="/>
-        </item>
-        <item>
             <title>0.1.3</title>
-            <pubDate>Mon, 18 May 2026 17:09:49 +0900</pubDate>
+            <pubDate>Thu, 17 Sep 2026 09:17:24 +0900</pubDate>
             <link>https://0minping.vercel.app</link>
             <sparkle:version>5</sparkle:version>
             <sparkle:shortVersionString>0.1.3</sparkle:shortVersionString>
@@ -126,7 +126,7 @@
         </item>
         <item>
             <title>0.1.2</title>
-            <pubDate>Mon, 18 May 2026 16:37:04 +0900</pubDate>
+            <pubDate>Thu, 17 Sep 2026 09:17:24 +0900</pubDate>
             <link>https://0minping.vercel.app</link>
             <sparkle:version>4</sparkle:version>
             <sparkle:shortVersionString>0.1.2</sparkle:shortVersionString>
@@ -136,7 +136,7 @@
         </item>
         <item>
             <title>0.1.1</title>
-            <pubDate>Mon, 18 May 2026 14:28:45 +0900</pubDate>
+            <pubDate>Thu, 17 Sep 2026 09:17:24 +0900</pubDate>
             <link>https://0minping.vercel.app</link>
             <sparkle:version>3</sparkle:version>
             <sparkle:shortVersionString>0.1.1</sparkle:shortVersionString>
@@ -146,7 +146,7 @@
         </item>
         <item>
             <title>0.1.0</title>
-            <pubDate>Mon, 18 May 2026 02:50:52 +0900</pubDate>
+            <pubDate>Thu, 17 Sep 2026 09:17:24 +0900</pubDate>
             <link>https://0minping.vercel.app</link>
             <sparkle:version>2</sparkle:version>
             <sparkle:shortVersionString>0.1.0</sparkle:shortVersionString>
