@@ -246,6 +246,11 @@ private struct ScreenFacePlaybackContent: View {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .strokeBorder(Color.white.opacity(0.30), lineWidth: 1)
         }
+        .overlay(alignment: .top) {
+            ScreenFacePlaybackCloseHint()
+                .padding(.top, 10)
+                .allowsHitTesting(false)
+        }
         .task { await load() }
     }
 
@@ -292,6 +297,23 @@ private struct ScreenFacePlaybackContent: View {
             nickname: archivePeerName,
             date: createdAt
         )
+    }
+}
+
+private struct ScreenFacePlaybackCloseHint: View {
+    var body: some View {
+        Text("Esc 닫기")
+            .font(.system(size: 11, weight: .medium))
+            .foregroundStyle(.white)
+            .lineLimit(1)
+            .minimumScaleFactor(0.82)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background {
+                Capsule()
+                    .fill(Color.black.opacity(0.50))
+            }
+            .accessibilityElement(children: .combine)
     }
 }
 
