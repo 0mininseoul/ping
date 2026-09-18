@@ -310,6 +310,22 @@ final class RoomManagerUXContractTests: XCTestCase {
         XCTAssertTrue(roomManagerSource.contains("dismissScreenFacePlayback()"))
     }
 
+    func testScreenFacePlaybackShowsPersistentTopCenterEscapeHintWithoutInterceptingPlayback() throws {
+        let source = try readSourceFile("Ping/UI/History/ScreenFacePlaybackWindow.swift")
+        let content = try sourceSlice(
+            in: source,
+            from: "private struct ScreenFacePlaybackContent",
+            to: "private struct ScreenFacePlaybackPlayerBox"
+        )
+
+        XCTAssertTrue(content.contains(".overlay(alignment: .top)"))
+        XCTAssertTrue(content.contains("ScreenFacePlaybackCloseHint()"))
+        XCTAssertTrue(content.contains(".padding(.top, 10)"))
+        XCTAssertTrue(content.contains(".allowsHitTesting(false)"))
+        XCTAssertTrue(source.contains("Text(\"Esc 닫기\")"))
+        XCTAssertFalse(content.contains("@State private var showsCloseHint"))
+    }
+
     func testScreenFaceTransitionClearsInlineSelectionWithoutDismissingNewPlayer() throws {
         let timelineSource = try readSourceFile("Ping/UI/History/RoomTimelineView.swift")
         let historySource = try readSourceFile("Ping/UI/History/HistoryView.swift")
