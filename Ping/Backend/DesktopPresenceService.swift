@@ -9,10 +9,11 @@ final class DesktopPresenceService {
         self.client = client
     }
 
-    func update(activeRoomId: String?) async throws {
+    func update(activeRoomId: String?, isSleeping: Bool = false) async throws {
         var body: [String: Any] = [
             "device_id_text": deviceId,
-            "platform_text": "macos"
+            "platform_text": "macos",
+            "sleeping_bool": isSleeping
         ]
         if let activeRoomId {
             body["active_room_uuid"] = activeRoomId

@@ -50,6 +50,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var incomingMessageTask: Task<Void, Never>?
     private var incomingVideoPokeTask: Task<Void, Never>?
     private var desktopPresenceTask: Task<Void, Never>?
+    /// DarkWake로 하트비트가 몰래 새어나가도 "접속 중"으로 보고하지 않기 위한 상태.
+    private var isSystemAsleep = false
     private var bootstrapTask: Task<Void, Never>?
     private var bootstrapRetryTask: Task<Void, Never>?
     private var bootstrapFailureCount = 0
@@ -156,6 +158,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             UpdaterController.shared.start()
             startNetworkRecoveryMonitor()
             startBootstrapTaskIfNeeded()
+            observeSystemSleep()
         }
     }
 
@@ -550,10 +553,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func refreshDesktopPresence() async {
         do {
-            try await desktopPresenceService.update(activeRoomId: visibleRoomIdForPresence)
+            try await desktopPresenceService.update(
+                activeRoomId: visibleRoomIdForPresence,
+                isSleeping: isSystemAsleep
+            )
         } catch {
             NSLog("Desktop presence heartbeat failed: \(error)")
         }
+    }
+
+    /// 잠들기 직전/깨어난 직후에 한 번 더 하트비트를 찔러서 즉시 반영한다.
+    /// 15초 루프에 맡기면 최대 15초 지연되고, DarkWake로 루프가 한 번 더
+    /// 돌더라도 `isSystemAsleep`을 실어 보내므로 "접속 중"으로 잘못 새지 않는다.
+    private func observeSystemSleep() {
+        let center = NSWorkspace.shared.notificationCenter
+        center.addObserver(forName: NSWorkspace.willSleepNotification, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor in self?.handleSystemWillSleep() }
+        }
+        center.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor in self?.handleSystemDidWake() }
+        }
+    }
+
+    private func handleSystemWillSleep() {
+        isSystemAsleep = true
+        guard desktopPresenceTask != nil else { return }
+        Task { await refreshDesktopPresence() }
+    }
+
+    private func handleSystemDidWake() {
+        isSystemAsleep = false
+        guard desktopPresenceTask != nil else { return }
+        Task { await refreshDesktopPresence() }
     }
 
     /// 메뉴를 여는 순간 직전 스냅샷으로 먼저 채우고, 응답이 오면 다시 채운다.
