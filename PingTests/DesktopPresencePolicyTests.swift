@@ -155,13 +155,71 @@ final class DesktopPresencePolicyTests: XCTestCase {
         XCTAssertTrue(names.isEmpty)
     }
 
+    // MARK: - Sleeping state merge
+
+    /// 잠자기 중인 기기 하나뿐이면 사람도 잠자기 중이다.
+    func testASingleSleepingDeviceMakesTheMemberSleeping() {
+        let merged = DesktopPresencePolicy.merge([
+            row(uid: "a", secondsAgo: 5, isLive: false, isSleeping: true)
+        ])
+
+        XCTAssertEqual(merged["a"]?.isLive, false)
+        XCTAssertEqual(merged["a"]?.isSleeping, true)
+    }
+
+    /// 맥을 두 대 쓰는데 하나는 켜져 있고 하나는 잠들어 있으면 사람은 접속 중이다.
+    func testALiveDeviceOutranksASleepingDevice() {
+        let merged = DesktopPresencePolicy.merge([
+            row(uid: "a", secondsAgo: 7200, isLive: false, isSleeping: true),
+            row(uid: "a", secondsAgo: 5, isLive: true, isSleeping: false)
+        ])
+
+        XCTAssertEqual(merged["a"]?.isLive, true)
+        XCTAssertEqual(merged["a"]?.isSleeping, true)
+    }
+
+    // MARK: - Display status precedence
+
+    func testDisplayStatusIsLiveWhenLive() {
+        let presence = MemberPresence(isLive: true, isSleeping: true, lastSeenAt: now)
+        XCTAssertEqual(DesktopPresencePolicy.displayStatus(presence), .live)
+    }
+
+    func testDisplayStatusIsSleepingWhenNotLiveButSleeping() {
+        let presence = MemberPresence(isLive: false, isSleeping: true, lastSeenAt: now)
+        XCTAssertEqual(DesktopPresencePolicy.displayStatus(presence), .sleeping)
+    }
+
+    func testDisplayStatusIsOfflineWhenNeitherLiveNorSleeping() {
+        let presence = MemberPresence(isLive: false, isSleeping: false, lastSeenAt: now)
+        XCTAssertEqual(DesktopPresencePolicy.displayStatus(presence), .offline(lastSeenAt: now))
+    }
+
+    /// 잠자기 중인 사람은 "접속 중" 메뉴바 목록에 절대 끼면 안 된다.
+    func testSleepingMembersAreNotListedAsLive() {
+        let names = DesktopPresencePolicy.liveMemberNames(
+            memberUids: ["a"],
+            excluding: nil,
+            presence: ["a": MemberPresence(isLive: false, isSleeping: true, lastSeenAt: now)],
+            nicknameForUid: { _ in "민수" }
+        )
+
+        XCTAssertTrue(names.isEmpty)
+    }
+
     // MARK: - Helpers
 
-    private func row(uid: String, secondsAgo: TimeInterval, isLive: Bool) -> DesktopPresenceRow {
+    private func row(
+        uid: String,
+        secondsAgo: TimeInterval,
+        isLive: Bool,
+        isSleeping: Bool = false
+    ) -> DesktopPresenceRow {
         DesktopPresenceRow(
             uid: uid,
             lastSeenAt: now.addingTimeInterval(-secondsAgo),
-            isLive: isLive
+            isLive: isLive,
+            isSleeping: isSleeping
         )
     }
 

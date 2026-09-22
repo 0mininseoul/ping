@@ -383,13 +383,24 @@ private struct MembersPopoverView: View {
         if uid == myUid {
             EmptyView()
         } else if let presence = presenceStore.presence(for: uid) {
-            if presence.isLive {
+            switch DesktopPresencePolicy.displayStatus(presence) {
+            case .live:
                 statusDot(PingDesign.ColorToken.success)
                     .help("접속 중")
-            } else {
+            case .sleeping:
+                HStack(spacing: 5) {
+                    Image(systemName: "moon.zzz.fill")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.secondary)
+                    Text("잠자기 중")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                .help("잠자기 중")
+            case .offline(let lastSeenAt):
                 HStack(spacing: 5) {
                     statusDot(Color.secondary.opacity(0.45))
-                    Text(DesktopPresencePolicy.lastSeenText(presence.lastSeenAt, now: Date()))
+                    Text(DesktopPresencePolicy.lastSeenText(lastSeenAt, now: Date()))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
