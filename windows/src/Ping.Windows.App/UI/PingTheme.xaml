@@ -40,5 +40,7 @@
     <Style x:Key="PingIconButtonStyle" TargetType="Button">
         <Setter Property="Padding" Value="10,8" />
         <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="Background" Value="{ThemeResource PingInputBrush}" />
+        <Setter Property="BorderBrush" Value="{ThemeResource PingIdleBrush}" />
     </Style>
 </ResourceDictionary>

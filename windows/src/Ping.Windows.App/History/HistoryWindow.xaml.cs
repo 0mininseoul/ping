@@ -18,6 +18,7 @@ public sealed partial class HistoryWindow : UserControl
     private readonly HistoryViewModel viewModel;
     private readonly Window owner;
     private bool backendReady;
+    private readonly bool loadOnFirstLoaded;
     private bool isComposing;
     private bool ignoreCurrentEnter;
     public event EventHandler? RoomsRequested;
@@ -36,6 +37,7 @@ public sealed partial class HistoryWindow : UserControl
     private string? initialChatId;
     private bool isApplyingSelection;
     private string? lastScrolledRoomId;
+    private TimelineHistoryItem? pendingScrollItem;
 
     public HistoryWindow(
         Window owner,
@@ -49,6 +51,7 @@ public sealed partial class HistoryWindow : UserControl
     {
         this.owner = owner;
         backendReady = loadOnStart;
+        loadOnFirstLoaded = loadOnStart;
         this.viewModel = viewModel;
         this.downloadVideoAsync = downloadVideoAsync;
         this.saveVideoAsync = saveVideoAsync;
@@ -58,6 +61,12 @@ public sealed partial class HistoryWindow : UserControl
         InitializeComponent();
         uiDispatcher = new UiTaskDispatcher(() => DispatcherQueue.HasThreadAccess, action => DispatcherQueue.TryEnqueue(() => action()));
         Root.DataContext = viewModel;
+        VideosList.LayoutUpdated += (_, _) =>
+        {
+            if (pendingScrollItem is not { } target || VideosList.ActualHeight <= 0) return;
+            pendingScrollItem = null;
+            if (viewModel.Timeline.Contains(target)) VideosList.ScrollIntoView(target);
+        };
         viewModel.PropertyChanged += (_, args) =>
         {
             if (args.PropertyName is nameof(HistoryViewModel.SelectedRoom) or nameof(HistoryViewModel.DraftImagePath)) UpdateEmptyState();
@@ -71,8 +80,9 @@ public sealed partial class HistoryWindow : UserControl
             TimeSpan.FromSeconds(30),
             token => !backendReady || !IsWindowVisible(WindowNative.GetWindowHandle(owner)) ? Task.CompletedTask : RunAsync(() => viewModel.LoadSelectedRoomAsync(token)));
         Root.Loaded += HandleLoaded;
-        owner.Closed += async (_, _) =>
+        owner.Closed += async (_, args) =>
         {
+            if (args.Handled) return;
             removalPermissionTimer.Stop();
             await autoRefresh.StopAsync();
         };
@@ -86,7 +96,7 @@ public sealed partial class HistoryWindow : UserControl
     private async void HandleLoaded(object sender, RoutedEventArgs args)
     {
         UpdateEmptyState();
-        if (!backendReady) return;
+        if (!loadOnFirstLoaded) return;
         await ReloadRoomsAsync();
     }
 
@@ -374,7 +384,7 @@ public sealed partial class HistoryWindow : UserControl
             var currentRoomId = viewModel.SelectedRoom?.Id;
             if (viewModel.SelectedTimelineItem is not null)
             {
-                VideosList.ScrollIntoView(viewModel.SelectedTimelineItem);
+                pendingScrollItem = viewModel.SelectedTimelineItem;
             }
             else if (currentRoomId is not null && currentRoomId != lastScrolledRoomId)
             {
@@ -383,7 +393,9 @@ public sealed partial class HistoryWindow : UserControl
                 var newest = viewModel.Timeline.LastOrDefault();
                 if (newest is not null)
                 {
-                    DispatcherQueue.TryEnqueue(() => VideosList.ScrollIntoView(newest));
+                    // Bindings can make the list visible after this callback. Wait for
+                    // its measured layout before asking the ScrollViewer to reveal it.
+                    pendingScrollItem = newest;
                 }
             }
             if (currentRoomId is not null)

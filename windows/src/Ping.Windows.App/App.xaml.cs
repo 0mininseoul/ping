@@ -29,6 +29,13 @@ public partial class App : Application
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
+#if PING_UI_SMOKE
+        if (Diagnostics.UiSmokeRunner.OutputDirectory is not null)
+        {
+            _ = Diagnostics.UiSmokeRunner.RunAsync(this);
+            return;
+        }
+#endif
         window = new MainWindow();
         window.InitializeTrayWindowBehavior();
         coordinator = new AppCoordinator(window);

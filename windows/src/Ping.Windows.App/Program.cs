@@ -17,9 +17,17 @@ public static class Program
     [STAThread]
     public static int Main(string[] args)
     {
-        _ = args;
+        var diagnostic = false;
+#if PING_UI_SMOKE
+        if (args is ["--ui-smoke-output", var output])
+        {
+            Diagnostics.UiSmokeRunner.OutputDirectory = Path.GetFullPath(output);
+            diagnostic = true;
+        }
+        else return 64; // A fixture executable must never launch the real account path.
+#endif
         WinRT.ComWrappersSupport.InitializeComWrappers();
-        if (!DecideRedirection())
+        if (diagnostic || !DecideRedirection())
         {
             Application.Start(_ =>
             {

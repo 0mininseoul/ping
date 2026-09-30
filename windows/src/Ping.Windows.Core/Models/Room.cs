@@ -19,4 +19,8 @@ public sealed record Room(
     [property: JsonPropertyName("created_at")] DateTimeOffset? CreatedAt = null,
     [property: JsonPropertyName("room_order")] int? RoomOrder = null,
     [property: JsonPropertyName("unread_count")] int UnreadCount = 0,
-    [property: JsonPropertyName("latest_unread_at")] DateTimeOffset? LatestUnreadAt = null);
+    [property: JsonPropertyName("latest_unread_at")] DateTimeOffset? LatestUnreadAt = null)
+{
+    [JsonIgnore]
+    public string MemberCountLabel => $"{MemberUids.Count}명";
+}

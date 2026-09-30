@@ -21,23 +21,23 @@
 ## Task 1 — Presentation and safe composer contracts
 
 Files: HistoryRows.cs, HistoryViewModel.cs; new History/ComposerState.cs and tests; HistorySnapshot/HistoryViewModel tests.
-- [ ] Add failing cases for drafts across rooms, send failure/new typing/room switch, concurrent send, IME handling policy; message timestamp/day/ownership presentation.
-- [ ] Implement portable composer state and typed send outcome. UI bindings use per-room state, no blind clearing.
-- [ ] Verify complete App/Core suites; commit `feat(windows-chat): preserve drafts and composition while sending`.
+- [x] Add failing cases for drafts across rooms, send failure/new typing/room switch, concurrent send, IME handling policy; message timestamp/day/ownership presentation.
+- [x] Implement portable composer state and typed send outcome. UI bindings use per-room state, no blind clearing.
+- [x] Verify complete App/Core suites; commit `feat(windows-chat): preserve drafts and composition while sending`.
 
 ## Task 2 — Actual single-window messenger
 
 Files: MainWindow.xaml/.cs, App.xaml/.cs, Bootstrap/AppCoordinator.cs, History/HistoryWindow.xaml/.cs, theme dictionary.
-- [ ] Convert HistoryWindow to owned UserControl in MainWindow. Remove obsolete dashboard and route activation to one shell. Keep hiding and Quit semantics.
-- [ ] Apply Mac-reference spacing/surfaces, room details, unread badge, empty state, timeline metadata/context actions, compact composer, capture/room/settings controls, connection banner. Add automation labels/tab order.
-- [ ] Keep snapshots on UI thread, refresh selected conversation and rooms after connection, defer backend load until valid UID; suppress unintended selection callbacks during snapshot replacement.
-- [ ] Build WinUI/native; verify affected contracts; commit `feat(windows-ui): replace dashboard with unified messenger shell`.
+- [x] Convert HistoryWindow to owned UserControl in MainWindow. Remove obsolete dashboard and route activation to one shell. Keep hiding and Quit semantics.
+- [x] Apply Mac-reference spacing/surfaces, room details, unread badge, empty state, timeline metadata/context actions, compact composer, capture/room/settings controls, connection banner. Add automation labels/tab order.
+- [x] Keep snapshots on UI thread, refresh selected conversation and rooms after connection, defer backend load until valid UID; suppress unintended selection callbacks during snapshot replacement.
+- [x] Build WinUI/native; verify affected contracts; commit `feat(windows-ui): replace dashboard with unified messenger shell`.
 
 ## Task 3 — Actual WinUI rendering and interactions
 
 Files: isolated local UI smoke runner plus build support, verification report.
-- [ ] Add explicit diagnostic build/run path that creates fixture RPC/storage, never reads user account/backend files or runs tray/camera. Render own WinUI content to PNG, check sizes/selection/draft/context actions/theme/lifetime. Avoid testing on production rooms.
-- [ ] Run and inspect real rendered light/dark snapshots and any runtime failures; fix identified defects and meaningful regression cases.
+- [x] Add explicit diagnostic build/run path that creates fixture RPC/storage, never reads user account/backend files or runs tray/camera. Render own WinUI content to PNG, check sizes/selection/draft/context actions/theme/lifetime. Avoid testing on production rooms.
+- [x] Run and inspect real rendered light/dark snapshots and any runtime failures; fix identified defects and meaningful regression cases.
 - [ ] One independent review and correction, full tests/build/diff check; commit `test(windows-ui): verify compiled messenger shell and lifecycle`.
 
 ## Remaining full-product work

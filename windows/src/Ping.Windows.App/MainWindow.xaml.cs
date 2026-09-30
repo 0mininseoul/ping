@@ -10,7 +10,16 @@ public sealed partial class MainWindow : Window
     private AppWindow? appWindow;
     private bool allowClose;
     private HistoryWindow? messenger;
-    public MainWindow() => InitializeComponent();
+    public MainWindow()
+    {
+        InitializeComponent();
+        Closed += (_, args) =>
+        {
+            if (allowClose) return;
+            args.Handled = true;
+            appWindow?.Hide();
+        };
+    }
     public event EventHandler? BlockedRetryRequested;
     public event EventHandler? OpenRoomsRequested;
     public event EventHandler? NewPingRequested;

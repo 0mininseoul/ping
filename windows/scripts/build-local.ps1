@@ -3,11 +3,13 @@ param(
     [ValidateSet('x64', 'ARM64')][string]$Platform = 'x64',
     [ValidateSet('Debug', 'Release')][string]$Configuration = 'Debug',
     [string]$DotnetPath,
-    [switch]$Package
+    [switch]$Package,
+    [switch]$UiSmoke
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+if ($UiSmoke -and $Package) { throw 'Diagnostic fixture builds must not be packaged for distribution.' }
 $windowsRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 
 if ([string]::IsNullOrWhiteSpace($DotnetPath)) {
@@ -64,6 +66,7 @@ if ($Package) {
     }
     Write-Warning 'This creates an unsigned validation MSIX. It is not an installable public release.'
 }
+if ($UiSmoke) { $managedArguments += '-p:PingUiSmoke=true' }
 Invoke-Checked $DotnetPath $managedArguments
 Write-Host "Built $Platform $Configuration."
 if ($Package) { Write-Host "Validation packages: $packageRoot" }

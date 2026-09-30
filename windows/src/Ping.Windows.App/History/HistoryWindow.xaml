@@ -26,9 +26,7 @@
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                             <StackPanel Spacing="4">
                                 <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                                <TextBlock Foreground="{ThemeResource PingMutedBrush}" FontSize="12">
-                                    <Run Text="{Binding MemberUids.Count}" /><Run Text="명" />
-                                </TextBlock>
+                                <TextBlock Text="{Binding MemberCountLabel}" Foreground="{ThemeResource PingMutedBrush}" FontSize="12" />
                             </StackPanel>
                             <Border Grid.Column="1" Padding="7,3" CornerRadius="10" Background="{ThemeResource PingAccentBrush}"
                                 VerticalAlignment="Center" Visibility="{Binding UnreadCount, Converter={StaticResource UnreadVisibilityConverter}}">
@@ -183,7 +181,7 @@
                             TextWrapping="Wrap" MinHeight="40" MaxHeight="120" PlaceholderText="메시지 입력…" KeyDown="ChatBox_KeyDown" KeyUp="ChatBox_KeyUp" MaxLength="2000"
                             TextCompositionStarted="ChatCompositionStarted" TextCompositionEnded="ChatCompositionEnded" AutomationProperties.Name="메시지 입력"
                             BorderThickness="0" Background="Transparent" FontSize="14" />
-                        <Button Grid.Column="2" Click="SendChatButton_Click" IsEnabled="{Binding CanSend}" Style="{StaticResource PingIconButtonStyle}"
+                        <Button x:Name="SendButton" Grid.Column="2" Click="SendChatButton_Click" IsEnabled="{Binding CanSend}" Style="{StaticResource PingIconButtonStyle}"
                             AutomationProperties.Name="메시지 전송" ToolTipService.ToolTip="전송 (Enter)" VerticalAlignment="Bottom"><FontIcon Glyph="&#xE724;" FontSize="18" /></Button>
                     </Grid>
                     <TextBlock Text="Enter 전송 · Shift+Enter 줄바꿈" FontSize="10" Foreground="{ThemeResource PingMutedBrush}" Margin="46,0,0,0" />

@@ -5,6 +5,7 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
+                <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
                 <ResourceDictionary Source="UI/PingTheme.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
