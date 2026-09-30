@@ -743,11 +743,33 @@ public sealed class BackendContractTests
             () => service.DeleteChatMediaAsync("sender-uid/other/chat-images/message.png"));
     }
 
+    [Theory]
+    [InlineData("deleted", MessageRemovalResult.Deleted)]
+    [InlineData("hidden", MessageRemovalResult.Hidden)]
+    [InlineData("missing", MessageRemovalResult.Missing)]
+    public async Task RemovalUsesAuthoritativeServerResult(string value, MessageRemovalResult expected)
+    {
+        var rpc = new RecordingRpcClient { Value = value };
+        var service = new MessageService(rpc, new StubStorageService("unused"));
+        Assert.Equal(expected, await service.RemoveAsync("message-id"));
+        var call = Assert.Single(rpc.Calls);
+        Assert.Equal("ping_remove_video_message", call.Function);
+        Assert.Equal("message-id", Assert.IsType<MessageIdRpcBody>(call.Body).MessageUuid);
+    }
+
+    [Fact]
+    public async Task UnknownRemovalResultDoesNotPretendSuccess()
+    {
+        var service = new MessageService(new RecordingRpcClient { Value = "unrecognized" }, new StubStorageService("unused"));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.RemoveAsync("message-id"));
+    }
+
     private sealed class RecordingRpcClient : ISupabaseRpcClient
     {
         public List<(string Function, object Body)> Calls { get; } = [];
 
         public Exception? ValueException { get; init; }
+        public string Value { get; init; } = "message-id";
 
         public Task<IReadOnlyList<T>> RpcArrayAsync<T>(string function, object? body = null, CancellationToken cancellationToken = default)
         {
@@ -762,7 +784,7 @@ public sealed class BackendContractTests
                 return Task.FromException<T>(ValueException);
             }
 
-            object value = "message-id";
+            object value = Value;
             return Task.FromResult((T)value);
         }
 

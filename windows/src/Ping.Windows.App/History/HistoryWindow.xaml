@@ -154,7 +154,8 @@
                                             <Button
                                                 Padding="6,2"
                                                 Click="DeleteVideoButton_Click"
-                                                Content="Delete" />
+                                                Content="{Binding Video.RemovalLabel}"
+                                                Visibility="{Binding Video.DeleteVisibility}" />
                                         </StackPanel>
                                         <StackPanel Orientation="Horizontal" Spacing="4">
                                             <ItemsControl ItemsSource="{Binding Video.Reactions}">

@@ -20,6 +20,7 @@ public sealed partial class HistoryWindow : Window
     private readonly Func<VideoMessage, CancellationToken, Task> saveVideoAsync;
     private readonly MessageService messageService;
     private readonly HistoryAutoRefreshCoordinator autoRefresh;
+    private readonly Microsoft.UI.Dispatching.DispatcherQueueTimer removalPermissionTimer;
     private readonly List<PlaybackWindow> playbackWindows = [];
     private readonly string? initialRoomId;
     private readonly string? initialChatId;
@@ -43,11 +44,19 @@ public sealed partial class HistoryWindow : Window
         this.initialChatId = initialChatId;
         InitializeComponent();
         Root.DataContext = viewModel;
+        removalPermissionTimer = DispatcherQueue.CreateTimer();
+        removalPermissionTimer.Interval = TimeSpan.FromSeconds(1);
+        removalPermissionTimer.Tick += (_, _) => viewModel.RefreshRemovalPermissions();
+        removalPermissionTimer.Start();
         autoRefresh = new HistoryAutoRefreshCoordinator(
             TimeSpan.FromSeconds(30),
             token => RunAsync(() => viewModel.LoadSelectedRoomAsync(token)));
         Root.Loaded += HandleLoaded;
-        Closed += async (_, _) => await autoRefresh.StopAsync();
+        Closed += async (_, _) =>
+        {
+            removalPermissionTimer.Stop();
+            await autoRefresh.StopAsync();
+        };
         Activated += async (_, args) =>
         {
             if (args.WindowActivationState != WindowActivationState.Deactivated)

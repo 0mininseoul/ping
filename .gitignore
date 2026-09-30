@@ -54,6 +54,7 @@ windows/artifacts/
 windows/dist/
 windows/**/bin/
 windows/**/obj/
+windows/src/Ping.Windows.NativeCapture/Ping.Win.*/
 windows/certs/private/
 windows/certs/*.pfx
 windows/certs/*.p12

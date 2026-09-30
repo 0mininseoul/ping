@@ -20,6 +20,7 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
     private readonly ILinkPreviewService linkPreviewService;
     private readonly Func<string?> currentUidProvider;
     private readonly Func<string, bool> canMarkRoomRead;
+    private readonly Func<DateTimeOffset> nowProvider;
     private int loadGeneration;
     private int roomListGeneration;
     private string? timelineRoomId;
@@ -38,7 +39,8 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         IChatMediaStorageService storageService,
         Func<string?> currentUidProvider,
         ILinkPreviewService? linkPreviewService = null,
-        Func<string, bool>? canMarkRoomRead = null)
+        Func<string, bool>? canMarkRoomRead = null,
+        Func<DateTimeOffset>? nowProvider = null)
     {
         this.roomService = roomService;
         this.messageService = messageService;
@@ -48,6 +50,7 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         this.currentUidProvider = currentUidProvider;
         this.linkPreviewService = linkPreviewService ?? new LinkPreviewService();
         this.canMarkRoomRead = canMarkRoomRead ?? (_ => false);
+        this.nowProvider = nowProvider ?? (() => DateTimeOffset.UtcNow);
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -240,7 +243,7 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
 
         foreach (var video in videos)
         {
-            var row = new VideoHistoryItem(video, QuickReactions, ReactionsFor(reactionMap, ReactionTargetKind.Video, video.Id), currentUid);
+            var row = new VideoHistoryItem(video, QuickReactions, ReactionsFor(reactionMap, ReactionTargetKind.Video, video.Id), currentUid, nowProvider);
             Videos.Add(row);
         }
 
@@ -251,7 +254,7 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
                 QuickReactions,
                 ReactionsFor(reactionMap, ReactionTargetKind.Chat, chat.Id),
                 currentUid,
-                ReplyPreviewFor(chat, chatById, videoById));
+                ReplyPreviewFor(chat, chatById, videoById), nowProvider);
             Chats.Add(row);
         }
 
@@ -389,7 +392,7 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
 
     public async Task DeleteChatAsync(ChatHistoryItem item, CancellationToken cancellationToken = default)
     {
-        if (!item.IsMine || string.IsNullOrWhiteSpace(item.Message.Id))
+        if (!MessageRemovalPolicy.CanDeleteChat(item.Message.SenderUid, item.Message.CreatedAt, currentUidProvider(), nowProvider()) || string.IsNullOrWhiteSpace(item.Message.Id))
         {
             return;
         }
@@ -417,33 +420,31 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
             return;
         }
 
-        var currentUid = currentUidProvider();
-        if (string.Equals(item.Message.SenderUid, currentUid, StringComparison.Ordinal))
+        var action = MessageRemovalPolicy.ForVideo(item.Message.SenderUid, item.Message.ReceiverUid, item.Message.CreatedAt, currentUidProvider(), nowProvider());
+        if (action == MessageRemovalAction.None)
         {
-            await messageService.DeleteMessageAsync(item.Message.Id, cancellationToken);
+            return;
         }
-        else
+        var result = await messageService.RemoveAsync(item.Message.Id, cancellationToken);
+        var removedRows = Videos.Where(row => row.Message.Id == item.Message.Id
+            || (result == MessageRemovalResult.Deleted && row.Message.SenderUid == item.Message.SenderUid && row.Message.VideoUrl == item.Message.VideoUrl)).ToArray();
+        foreach (var row in removedRows)
         {
-            await messageService.HideMessageForReceiverAsync(item.Message.Id, cancellationToken);
-        }
-
-        Videos.Remove(item);
-        RemoveTimeline(item);
-        RemoveReactions(ReactionTargetKind.Video, item.Message.Id);
-        if (ReferenceEquals(SelectedVideo, item))
-        {
-            SelectedVideo = null;
-        }
-        if (string.Equals(SelectedTimelineItem?.Video?.Message.Id, item.Message.Id, StringComparison.Ordinal))
-        {
-            SelectedTimelineItem = null;
-        }
-        if (string.Equals(ReplyTarget?.VideoId, item.Message.Id, StringComparison.Ordinal))
-        {
-            ReplyTarget = null;
+            Videos.Remove(row);
+            RemoveTimeline(row);
+            if (row.Message.Id is { } id) RemoveReactions(ReactionTargetKind.Video, id);
+            if (ReferenceEquals(SelectedVideo, row)) SelectedVideo = null;
+            if (SelectedTimelineItem?.Video?.Message.Id == row.Message.Id) SelectedTimelineItem = null;
+            if (ReplyTarget?.VideoId == row.Message.Id) ReplyTarget = null;
         }
 
         StatusMessage = "Video removed.";
+    }
+
+    public void RefreshRemovalPermissions()
+    {
+        foreach (var row in Videos) row.RefreshRemovalPermission();
+        foreach (var row in Chats) row.RefreshRemovalPermission();
     }
 
     public async Task SaveVideoAsync(

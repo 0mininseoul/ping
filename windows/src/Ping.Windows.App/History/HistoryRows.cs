@@ -45,6 +45,8 @@ public sealed class TimelineHistoryItem
 
 public sealed class VideoHistoryItem : INotifyPropertyChanged
 {
+    private readonly string? currentUid;
+    private readonly Func<DateTimeOffset> nowProvider;
 #if WINDOWS
     private BitmapImage? thumbnailSource;
 #else
@@ -55,9 +57,12 @@ public sealed class VideoHistoryItem : INotifyPropertyChanged
         VideoMessage message,
         IReadOnlyCollection<string> quickReactions,
         IReadOnlyCollection<ReactionAggregate> reactions,
-        string? currentUid = null)
+        string? currentUid = null,
+        Func<DateTimeOffset>? nowProvider = null)
     {
         Message = message;
+        this.currentUid = currentUid;
+        this.nowProvider = nowProvider ?? (() => DateTimeOffset.UtcNow);
         Reactions = new ObservableCollection<ReactionAggregate>(reactions);
         QuickReactions = message.Id is null
             ? []
@@ -82,9 +87,19 @@ public sealed class VideoHistoryItem : INotifyPropertyChanged
 
     public bool CanSave { get; }
 
+    public MessageRemovalAction RemovalAction => MessageRemovalPolicy.ForVideo(Message.SenderUid, Message.ReceiverUid, Message.CreatedAt, currentUid, nowProvider());
+    public string RemovalLabel => RemovalAction == MessageRemovalAction.Hide ? "나에게서 숨기기" : "모두에게서 삭제";
+    public void RefreshRemovalPermission()
+    {
+        OnPropertyChanged(nameof(DeleteVisibility));
+        OnPropertyChanged(nameof(RemovalLabel));
+    }
+
     public event PropertyChangedEventHandler? PropertyChanged;
 
 #if WINDOWS
+    public Visibility DeleteVisibility => RemovalAction == MessageRemovalAction.None ? Visibility.Collapsed : Visibility.Visible;
+
     public Visibility SaveVisibility => CanSave ? Visibility.Visible : Visibility.Collapsed;
 
     public Visibility ThumbnailVisibility => thumbnailSource is null ? Visibility.Collapsed : Visibility.Visible;
@@ -93,6 +108,8 @@ public sealed class VideoHistoryItem : INotifyPropertyChanged
 
     public BitmapImage? ThumbnailSource
 #else
+    public bool DeleteVisibility => RemovalAction != MessageRemovalAction.None;
+
     public bool SaveVisibility => CanSave;
 
     public bool ThumbnailVisibility => thumbnailSource is not null;
@@ -122,6 +139,8 @@ public sealed class VideoHistoryItem : INotifyPropertyChanged
 
 public sealed class ChatHistoryItem : INotifyPropertyChanged
 {
+    private readonly string? currentUid;
+    private readonly Func<DateTimeOffset> nowProvider;
 #if WINDOWS
     private BitmapImage? imageSource;
     private BitmapImage? linkPreviewImageSource;
@@ -137,9 +156,12 @@ public sealed class ChatHistoryItem : INotifyPropertyChanged
         IReadOnlyCollection<string> quickReactions,
         IReadOnlyCollection<ReactionAggregate> reactions,
         string? currentUid = null,
-        string? replyPreview = null)
+        string? replyPreview = null,
+        Func<DateTimeOffset>? nowProvider = null)
     {
         Message = message;
+        this.currentUid = currentUid;
+        this.nowProvider = nowProvider ?? (() => DateTimeOffset.UtcNow);
         Reactions = new ObservableCollection<ReactionAggregate>(reactions);
         QuickReactions = message.Id is null
             ? []
@@ -167,6 +189,9 @@ public sealed class ChatHistoryItem : INotifyPropertyChanged
     public bool HasImageAttachment => !string.IsNullOrWhiteSpace(Message.MediaPath);
 
     public bool IsMine { get; }
+
+    public bool CanDelete => MessageRemovalPolicy.CanDeleteChat(Message.SenderUid, Message.CreatedAt, currentUid, nowProvider());
+    public void RefreshRemovalPermission() => OnPropertyChanged(nameof(DeleteVisibility));
 
     public string ReplyPreview { get; }
 
@@ -197,7 +222,7 @@ public sealed class ChatHistoryItem : INotifyPropertyChanged
 #if WINDOWS
     public Visibility AttachmentVisibility => HasImageAttachment ? Visibility.Visible : Visibility.Collapsed;
 
-    public Visibility DeleteVisibility => IsMine ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility DeleteVisibility => CanDelete ? Visibility.Visible : Visibility.Collapsed;
 
     public Visibility ImageVisibility => imageSource is null ? Visibility.Collapsed : Visibility.Visible;
 
@@ -215,7 +240,7 @@ public sealed class ChatHistoryItem : INotifyPropertyChanged
 #else
     public bool AttachmentVisibility => HasImageAttachment;
 
-    public bool DeleteVisibility => IsMine;
+    public bool DeleteVisibility => CanDelete;
 
     public bool ImageVisibility => imageSource is not null;
 

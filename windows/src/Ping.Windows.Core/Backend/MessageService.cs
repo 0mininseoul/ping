@@ -47,6 +47,18 @@ public sealed class MessageService(ISupabaseRpcClient client, IStorageService st
             new RoomMessagesRpcBody(roomId, beforeTimestamp, limit),
             cancellationToken);
 
+    public async Task<MessageRemovalResult> RemoveAsync(string messageId, CancellationToken cancellationToken = default)
+    {
+        var result = await client.RpcValueAsync<string>("ping_remove_video_message", new MessageIdRpcBody(messageId), cancellationToken).ConfigureAwait(false);
+        return result switch
+        {
+            "deleted" => MessageRemovalResult.Deleted,
+            "hidden" => MessageRemovalResult.Hidden,
+            "missing" => MessageRemovalResult.Missing,
+            _ => throw new InvalidOperationException("영상 삭제 결과를 확인할 수 없습니다.")
+        };
+    }
+
     public Task DeleteMessageAsync(string messageId, CancellationToken cancellationToken = default) =>
         client.RpcVoidAsync(
             "ping_delete_message",
@@ -156,6 +168,8 @@ public sealed class MessageService(ISupabaseRpcClient client, IStorageService st
         }
     }
 }
+
+public enum MessageRemovalResult { Deleted, Hidden, Missing }
 
 public sealed record SendVideoInput(
     IReadOnlyCollection<Room> Rooms,

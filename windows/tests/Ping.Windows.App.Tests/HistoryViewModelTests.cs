@@ -175,6 +175,63 @@ public sealed class HistoryViewModelTests
     }
 
     [Fact]
+    public async Task ExpiredSenderChatCannotBeRemoved()
+    {
+        var rpc = new RecordingHistoryRpcClient();
+        var now = BaseTime.AddMinutes(3);
+        var viewModel = ViewModel(rpc, nowProvider: () => now);
+        await viewModel.LoadAsync("room-1");
+        now = BaseTime.AddMinutes(8);
+        await viewModel.DeleteChatAsync(viewModel.Chats.Single());
+        Assert.Empty(rpc.DeletedChatIds);
+        Assert.Single(viewModel.Chats);
+    }
+
+    [Fact]
+    public async Task OpenTimelineUpdatesDeletePermissionWithoutNetworkRefresh()
+    {
+        var rpc = new RecordingHistoryRpcClient();
+        var now = BaseTime.AddMinutes(3);
+        var viewModel = ViewModel(rpc, nowProvider: () => now);
+        await viewModel.LoadAsync("room-1");
+        var row = viewModel.Chats.Single();
+        Assert.True(row.DeleteVisibility);
+        var notified = false;
+        row.PropertyChanged += (_, args) => notified |= args.PropertyName == nameof(row.DeleteVisibility);
+        now = BaseTime.AddMinutes(8);
+        viewModel.RefreshRemovalPermissions();
+        Assert.True(notified);
+        Assert.False(row.DeleteVisibility);
+    }
+
+    [Fact]
+    public async Task ServerRejectionKeepsVideoAndSelectedReply()
+    {
+        var rpc = new RecordingHistoryRpcClient();
+        var viewModel = ViewModel(rpc);
+        await viewModel.LoadAsync("room-1");
+        var row = viewModel.Timeline.First();
+        viewModel.SelectedTimelineItem = row;
+        viewModel.BeginReplyToVideo(row.Video!);
+        rpc.RemoveVideoException = new HttpRequestException("delete_window_expired");
+        await Assert.ThrowsAsync<HttpRequestException>(() => viewModel.DeleteVideoAsync(row.Video!));
+        Assert.Single(viewModel.Videos);
+        Assert.Same(row, viewModel.SelectedTimelineItem);
+        Assert.NotNull(viewModel.ReplyTarget);
+    }
+
+    [Fact]
+    public async Task ThirdPartyCannotHideGroupVideo()
+    {
+        var rpc = new RecordingHistoryRpcClient();
+        var viewModel = ViewModel(rpc, currentUidProvider: () => "third-party");
+        await viewModel.LoadAsync("room-1");
+        await viewModel.DeleteVideoAsync(viewModel.Videos.Single());
+        Assert.Empty(rpc.HiddenVideoIds);
+        Assert.Single(viewModel.Videos);
+    }
+
+    [Fact]
     public async Task DeleteChatAsync_OnlyDeletesOwnRows()
     {
         var rpc = new RecordingHistoryRpcClient();
@@ -320,7 +377,8 @@ public sealed class HistoryViewModelTests
     private static HistoryViewModel ViewModel(
         RecordingHistoryRpcClient rpc,
         IChatMediaStorageService? storage = null,
-        Func<string?>? currentUidProvider = null) =>
+        Func<string?>? currentUidProvider = null,
+        Func<DateTimeOffset>? nowProvider = null) =>
         new(
             new RoomService(rpc),
             new MessageService(rpc, new ThrowingStorageService()),
@@ -328,7 +386,8 @@ public sealed class HistoryViewModelTests
             new ReactionService(rpc),
             storage ?? new RecordingChatMediaStorage(),
             currentUidProvider ?? (() => "receiver"),
-            canMarkRoomRead: _ => true);
+            canMarkRoomRead: _ => true,
+            nowProvider: nowProvider ?? (() => BaseTime.AddMinutes(3)));
 
     private static VideoMessage VideoMessage(string id, string roomId, DateTimeOffset createdAt) =>
         new()
@@ -368,6 +427,7 @@ public sealed class HistoryViewModelTests
 
     private sealed class RecordingHistoryRpcClient : ISupabaseRpcClient
     {
+        public Exception? RemoveVideoException { get; set; }
         public List<string> MarkedReadRoomIds { get; } = [];
 
         public List<object> SentChatBodies { get; } = [];
@@ -418,6 +478,12 @@ public sealed class HistoryViewModelTests
         {
             _ = function;
             _ = cancellationToken;
+            if (function == "ping_remove_video_message")
+            {
+                if (RemoveVideoException is not null) return Task.FromException<T>(RemoveVideoException);
+                HiddenVideoIds.Add(MessageId(body));
+                return Task.FromResult((T)(object)"hidden");
+            }
             if (function == "ping_send_chat")
             {
                 SentChatBodies.Add(body ?? new { });

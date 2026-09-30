@@ -55,5 +55,8 @@ public sealed record VideoMessage
     [JsonPropertyName("allows_local_save")]
     public bool AllowsLocalSave { get; init; }
 
+    [JsonPropertyName("is_auto_reply")]
+    public bool IsAutoReply { get; init; }
+
     public bool CanBeSavedLocally(string? uid) => SenderUid == uid || AllowsLocalSave;
 }
