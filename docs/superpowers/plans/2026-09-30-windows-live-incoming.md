@@ -12,9 +12,9 @@
 
 ## Task 1 — Arrival policy and shared delivery ownership
 
-- [ ] RED/GREEN tests for live/startup/reconnect/click, missing/future timestamps, expiry, wrong receiver, preference off and 60-second autoplay freshness boundary. Notification-click replay remains explicit and is not suppressed by autoplay ledger.
-- [ ] Account-scoped bounded delivered/in-flight IDs, concurrent reservation, release on failure, commit after side effects. No tokens/body/QR in persistence or diagnostics. Keep startup catch-up notifications distinct from autoplay.
-- [ ] Full Core tests; commit `feat(windows-incoming): distinguish live arrivals and catch-up`.
+- [x] RED/GREEN tests for live/startup/reconnect/click, missing/future timestamps, expiry, wrong receiver, preference off and 60-second autoplay freshness boundary. Notification-click replay remains explicit and is not suppressed by autoplay ledger.
+- [x] Account-scoped bounded delivered/in-flight IDs, concurrent reservation, release on failure, commit after side effects. No tokens/body/QR in persistence or diagnostics. Keep startup catch-up notifications distinct from autoplay.
+- [x] Full Core tests; commit `feat(windows-incoming): distinguish live arrivals and catch-up`.
 
 ## Task 2 — Recoverable authenticated Realtime
 
