@@ -24,7 +24,8 @@ $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer
 if (-not (Test-Path -LiteralPath $vswhere)) { throw 'Visual Studio C++ build tools are required.' }
 $msbuild = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -find 'MSBuild\Current\Bin\MSBuild.exe' | Select-Object -First 1
 if ([string]::IsNullOrWhiteSpace($msbuild)) { throw 'Visual Studio v143 C++ build tools were not found.' }
-$vcTargets = [IO.Path]::GetFullPath((Join-Path (Split-Path -Parent $msbuild) '..\..\Microsoft\VC\v170')) + '\'
+# A trailing backslash escapes the closing quote in Windows PowerShell5.1 native arguments.
+$vcTargets = [IO.Path]::GetFullPath((Join-Path (Split-Path -Parent $msbuild) '..\..\Microsoft\VC\v170')) + '/'
 $targetFramework = 'net10.0-windows10.0.26100.0'
 $rid = if ($Platform -eq 'ARM64') { 'win-arm64' } else { 'win-x64' }
 $nativeRoot = Join-Path $windowsRoot 'src\Ping.Windows.NativeCapture'
