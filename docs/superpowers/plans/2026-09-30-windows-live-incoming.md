@@ -18,10 +18,10 @@
 
 ## Task 2 — Recoverable authenticated Realtime
 
-- [ ] Expose minimal current configuration/token access through SupabaseClient without logging secrets or bypassing its authentication lock.
-- [ ] Injectable WebSocket transport plus v1 protocol decoder, receive fragmentation/size limit, serialized sends, join success/timeout/failure, heartbeat acknowledgement timeout, latest token renewal, cancellation/disposal, bounded backoff. Subscribe chat/reaction room filters and incoming receiver filter; DELETE payloads lacking room metadata trigger safe refresh.
-- [ ] Fake transport tests for dropped socket, invalid frames, subscription rejection, token change, repeated start/room replacement, in-flight shutdown. No operational backend used by tests.
-- [ ] Full tests and WinUI build; commit `feat(windows-realtime): recover authenticated subscriptions`.
+- [x] Expose minimal current configuration/token access through SupabaseClient without logging secrets or bypassing its authentication lock.
+- [x] Injectable WebSocket transport plus v1 protocol decoder, receive fragmentation/size limit, serialized sends, join success/timeout/failure, heartbeat acknowledgement timeout, latest token renewal, cancellation/disposal, bounded backoff. Subscribe chat/reaction room filters and incoming receiver filter; DELETE payloads lacking room metadata trigger safe refresh.
+- [x] Fake transport tests for dropped socket, invalid frames, subscription rejection, token change, repeated start/room replacement, in-flight shutdown. No operational backend used by tests.
+- [x] Full tests and WinUI build; commit `feat(windows-realtime): recover authenticated subscriptions`.
 
 ## Task 3 — Actual incoming and playback integration
 

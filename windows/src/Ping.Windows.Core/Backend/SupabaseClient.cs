@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Ping.Windows.Core.Models;
+using Ping.Windows.Core.Realtime;
 
 namespace Ping.Windows.Core.Backend;
 
@@ -30,7 +31,7 @@ public interface ISupabaseRpcClient
     Task RpcVoidAsync(string function, object? body = null, CancellationToken cancellationToken = default);
 }
 
-public sealed class SupabaseClient : ISupabaseRpcClient, IDisposable
+public sealed class SupabaseClient : ISupabaseRpcClient, IRealtimeCredentialsProvider, IDisposable
 {
     private readonly HttpClient httpClient;
     private readonly bool ownsHttpClient;
@@ -50,6 +51,13 @@ public sealed class SupabaseClient : ISupabaseRpcClient, IDisposable
     }
 
     public string? CurrentUid => session?.UserId;
+
+    public async Task<RealtimeCredentials> GetRealtimeCredentialsAsync(CancellationToken cancellationToken = default)
+    {
+        var config = await LoadConfigurationAsync(cancellationToken).ConfigureAwait(false);
+        var current = await AuthenticatedSessionAsync(cancellationToken).ConfigureAwait(false);
+        return new(config.Url, config.AnonKey, current.AccessToken, current.UserId);
+    }
 
     public async Task<string> BootstrapAsync(CancellationToken cancellationToken = default)
     {

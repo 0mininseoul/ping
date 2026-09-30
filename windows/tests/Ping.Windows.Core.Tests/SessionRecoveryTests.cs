@@ -7,6 +7,25 @@ namespace Ping.Windows.Core.Tests;
 
 public sealed class SessionRecoveryTests
 {
+    [Fact]
+    public async Task RealtimeAndBootstrapShareOneRefreshAndCurrentIdentity()
+    {
+        using var fixture = new SessionFixture();
+        await fixture.WriteExpiredSessionAsync();
+        var calls = 0;
+        using var http = new HttpClient(new Handler(_ => { Interlocked.Increment(ref calls); return SessionFixture.AuthResponse(); }));
+        using var client = fixture.Client(http);
+        var bootstrap = client.BootstrapAsync();
+        var realtime = client.GetRealtimeCredentialsAsync();
+        await Task.WhenAll(bootstrap, realtime);
+        var credentials = await realtime;
+        Assert.Equal(1, calls);
+        Assert.Equal("existing-user", credentials.UserUid);
+        Assert.Equal("new-access", credentials.AccessToken);
+        Assert.Equal("https://example.supabase.co/", credentials.ProjectUrl.AbsoluteUri);
+        Assert.DoesNotContain("new-access", credentials.ToString());
+    }
+
     [Theory]
     [InlineData(408)]
     [InlineData(429)]
