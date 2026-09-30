@@ -35,17 +35,18 @@ public sealed class SupabaseClient : ISupabaseRpcClient, IDisposable
     private readonly HttpClient httpClient;
     private readonly bool ownsHttpClient;
     private readonly string configPath;
-    private readonly string sessionPath;
+    private readonly SupabaseSessionStore sessionStore;
     private readonly SemaphoreSlim authLock = new(1, 1);
     private SupabaseConfiguration? configuration;
     private SupabaseSession? session;
+    private volatile bool sessionPersistencePending;
 
     public SupabaseClient(HttpClient? httpClient = null, string? configPath = null, string? sessionPath = null)
     {
         this.httpClient = httpClient ?? new HttpClient();
         ownsHttpClient = httpClient is null;
         this.configPath = configPath ?? SupabaseConfigLocator.Resolve();
-        this.sessionPath = sessionPath ?? PingLocalPath("SupabaseSession.json");
+        sessionStore = new SupabaseSessionStore(sessionPath ?? PingLocalPath("SupabaseSession.json"));
     }
 
     public string? CurrentUid => session?.UserId;
@@ -156,7 +157,7 @@ public sealed class SupabaseClient : ISupabaseRpcClient, IDisposable
 
     private async Task<SupabaseSession> AuthenticatedSessionAsync(CancellationToken cancellationToken)
     {
-        if (session is { NeedsRefresh: false })
+        if (session is { NeedsRefresh: false } && !sessionPersistencePending)
         {
             return session;
         }
@@ -164,12 +165,12 @@ public sealed class SupabaseClient : ISupabaseRpcClient, IDisposable
         await authLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            if (session is { NeedsRefresh: false })
+            if (session is { NeedsRefresh: false } && !sessionPersistencePending)
             {
                 return session;
             }
 
-            session ??= await LoadSessionAsync(cancellationToken).ConfigureAwait(false);
+            session ??= await sessionStore.LoadAsync(cancellationToken).ConfigureAwait(false);
             SupabaseSession authenticated;
             if (session is null)
             {
@@ -181,7 +182,7 @@ public sealed class SupabaseClient : ISupabaseRpcClient, IDisposable
                 {
                     authenticated = await RefreshSessionAsync(session.RefreshToken, cancellationToken).ConfigureAwait(false);
                 }
-                catch (HttpRequestException ex)
+                catch (SupabaseRequestException ex) when (ex.IsSessionRejected)
                 {
                     throw new SupabaseSessionExpiredException(session.UserId, ex);
                 }
@@ -191,39 +192,16 @@ public sealed class SupabaseClient : ISupabaseRpcClient, IDisposable
                 authenticated = session;
             }
 
+            sessionPersistencePending = true;
             session = authenticated;
-            await SaveSessionAsync(authenticated, cancellationToken).ConfigureAwait(false);
+            await sessionStore.SaveAsync(authenticated, cancellationToken).ConfigureAwait(false);
+            sessionPersistencePending = false;
             return authenticated;
         }
         finally
         {
             authLock.Release();
         }
-    }
-
-    private async Task<SupabaseSession?> LoadSessionAsync(CancellationToken cancellationToken)
-    {
-        if (!File.Exists(sessionPath))
-        {
-            return null;
-        }
-
-        try
-        {
-            await using var stream = File.OpenRead(sessionPath);
-            return await JsonSerializer.DeserializeAsync<SupabaseSession>(stream, JsonOptions.Supabase, cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
-        {
-            return null;
-        }
-    }
-
-    private async Task SaveSessionAsync(SupabaseSession value, CancellationToken cancellationToken)
-    {
-        Directory.CreateDirectory(Path.GetDirectoryName(sessionPath) ?? ".");
-        await using var stream = File.Create(sessionPath);
-        await JsonSerializer.SerializeAsync(stream, value, JsonOptions.Supabase, cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<SupabaseSession> SignInAnonymouslyAsync(CancellationToken cancellationToken)
@@ -298,7 +276,9 @@ public sealed class SupabaseClient : ISupabaseRpcClient, IDisposable
         var data = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
         if (!response.IsSuccessStatusCode)
         {
-            throw new HttpRequestException($"Supabase request failed ({(int)response.StatusCode}): {ErrorMessage(data)}");
+            var retryAfter = response.Headers.RetryAfter?.Delta
+                ?? (response.Headers.RetryAfter?.Date is { } date ? date - DateTimeOffset.UtcNow : (TimeSpan?)null);
+            throw new SupabaseRequestException(response.StatusCode, data, retryAfter);
         }
 
         return data;
@@ -324,31 +304,6 @@ public sealed class SupabaseClient : ISupabaseRpcClient, IDisposable
         var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries)
             .Select(Uri.EscapeDataString);
         return new Uri($"{storageUrl}/object/authenticated/{Uri.EscapeDataString(bucket)}/{string.Join("/", segments)}");
-    }
-
-    private static string ErrorMessage(byte[] data)
-    {
-        if (data.Length == 0)
-        {
-            return "empty response body";
-        }
-
-        try
-        {
-            using var document = JsonDocument.Parse(data);
-            foreach (var key in new[] { "message", "error_description", "error", "msg" })
-            {
-                if (document.RootElement.TryGetProperty(key, out var value) && value.ValueKind == JsonValueKind.String)
-                {
-                    return value.GetString() ?? "unknown error";
-                }
-            }
-        }
-        catch (JsonException)
-        {
-        }
-
-        return System.Text.Encoding.UTF8.GetString(data);
     }
 
     public void Dispose()
