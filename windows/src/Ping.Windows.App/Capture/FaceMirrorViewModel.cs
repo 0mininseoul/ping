@@ -598,7 +598,6 @@ public sealed partial class FaceMirrorWindow : Window
         viewModel.PropertyChanged += HandleViewModelPropertyChanged;
         viewModel.FadeOutRequested += HandleFadeOutRequested;
         viewModel.CloseRequested += HandleCloseRequested;
-        Closed += HandleClosed;
         SetStateBrush();
         ConfigureWindow();
     }

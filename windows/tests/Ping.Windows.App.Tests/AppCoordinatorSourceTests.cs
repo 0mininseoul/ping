@@ -337,9 +337,12 @@ public sealed class AppCoordinatorSourceTests
             "Capture",
             "ScreenFaceMirrorViewModel.cs"));
 
-        Assert.Contains("Closed += HandleClosed;", face, StringComparison.Ordinal);
+        var captureRoot = Path.Combine(root, "windows", "src", "Ping.Windows.App", "Capture");
+        Assert.Contains("Closed=\"HandleClosed\"", File.ReadAllText(Path.Combine(captureRoot, "FaceMirrorWindow.xaml")), StringComparison.Ordinal);
+        Assert.DoesNotContain("Closed += HandleClosed;", face, StringComparison.Ordinal);
         Assert.Contains("viewModel.HandleWindowClosed();", face, StringComparison.Ordinal);
-        Assert.Contains("Closed += HandleClosed;", screenFace, StringComparison.Ordinal);
+        Assert.Contains("Closed=\"HandleClosed\"", File.ReadAllText(Path.Combine(captureRoot, "ScreenFaceMirrorWindow.xaml")), StringComparison.Ordinal);
+        Assert.DoesNotContain("Closed += HandleClosed;", screenFace, StringComparison.Ordinal);
         Assert.Contains("viewModel.HandleWindowClosed();", screenFace, StringComparison.Ordinal);
     }
 

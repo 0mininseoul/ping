@@ -635,28 +635,33 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
 public sealed partial class ScreenFaceMirrorWindow : Window
 {
     private readonly ScreenFaceMirrorViewModel viewModel;
-    private FaceRecorder? previewRecorder;
+    private IFacePreviewSession? previewRecorder;
+    private readonly Func<Ping.Windows.Core.Capture.CameraLease, IFacePreviewSession> previewFactory;
     private readonly Ping.Windows.Core.Capture.CameraLease cameraLease;
     private readonly CancellationTokenSource windowLifetime = new();
     public Task CameraShutdown { get; private set; } = Task.CompletedTask;
     private CancellationTokenSource? previewLoopCancellation;
     private Task? previewLoopTask;
+    private Task previewStopTask = Task.CompletedTask;
+    private Task previewStartTask = Task.CompletedTask;
+    private bool handlingEnter;
     private MediaPlayer? reviewPlayer;
     private AppWindow? appWindow;
     private IntPtr windowHandle;
     private bool shouldCloseAfterFade;
 
-    public ScreenFaceMirrorWindow(ScreenFaceMirrorViewModel viewModel, Ping.Windows.Core.Capture.CameraLease cameraLease)
+    public ScreenFaceMirrorWindow(ScreenFaceMirrorViewModel viewModel, Ping.Windows.Core.Capture.CameraLease cameraLease,
+        Func<Ping.Windows.Core.Capture.CameraLease, IFacePreviewSession>? previewFactory = null)
     {
         this.viewModel = viewModel;
         this.cameraLease = cameraLease;
+        this.previewFactory = previewFactory ?? (lease => new FaceRecorder(lease));
         InitializeComponent();
         Root.DataContext = viewModel;
         Root.Loaded += HandleLoaded;
         viewModel.PropertyChanged += HandleViewModelPropertyChanged;
         viewModel.FadeOutRequested += HandleFadeOutRequested;
         viewModel.CloseRequested += HandleCloseRequested;
-        Closed += HandleClosed;
         SetStateBrush();
         ConfigureWindow();
     }
@@ -672,17 +677,7 @@ public sealed partial class ScreenFaceMirrorWindow : Window
         if (args.Key == global::Windows.System.VirtualKey.Enter)
         {
             args.Handled = true;
-            if (viewModel.State != MirrorState.Reviewing)
-            {
-                await StopPreviewAsync();
-            }
-
-            await viewModel.HandleEnterAsync();
-            if (!viewModel.IsCloseRequested && !viewModel.HasReviewedClip)
-            {
-                _ = StartPreviewAsync();
-            }
-
+            await HandleEnterAsync();
             return;
         }
 
@@ -704,6 +699,20 @@ public sealed partial class ScreenFaceMirrorWindow : Window
             args.Handled = true;
             viewModel.HandleEscape();
         }
+    }
+
+    internal async Task HandleEnterAsync()
+    {
+        if (handlingEnter || windowLifetime.IsCancellationRequested) return;
+        handlingEnter = true;
+        try
+        {
+            if (viewModel.State != MirrorState.Reviewing) await StopPreviewAsync();
+            if (windowLifetime.IsCancellationRequested) return;
+            await viewModel.HandleEnterAsync();
+            if (!viewModel.IsCloseRequested && !viewModel.HasReviewedClip) _ = StartPreviewAsync();
+        }
+        finally { handlingEnter = false; }
     }
 
     private bool HandleTargetKey(global::Windows.System.VirtualKey key)
@@ -888,26 +897,29 @@ public sealed partial class ScreenFaceMirrorWindow : Window
         return Math.Max(min, Math.Min(max, value));
     }
 
-    private async Task StartPreviewAsync()
+    private Task StartPreviewAsync()
     {
+        if (!previewStartTask.IsCompleted) return previewStartTask;
+        return previewStartTask = StartPreviewCoreAsync();
+    }
+
+    private async Task StartPreviewCoreAsync()
+    {
+        await StopPreviewAsync();
         if (windowLifetime.IsCancellationRequested) return;
         if (viewModel.State == MirrorState.Reviewing || viewModel.HasReviewedClip)
         {
             return;
         }
 
-        if (previewLoopCancellation is not null)
-        {
-            await StopPreviewAsync();
-        }
-
         previewLoopCancellation = CancellationTokenSource.CreateLinkedTokenSource(windowLifetime.Token);
         var token = previewLoopCancellation.Token;
 
-        previewLoopTask = viewModel.RunPreviewLoopAsync(token);
+        var loopTask = viewModel.RunPreviewLoopAsync(token);
+        previewLoopTask = loopTask;
         try
         {
-            previewRecorder = new FaceRecorder(cameraLease);
+            previewRecorder = previewFactory(cameraLease);
             await previewRecorder.StartPreviewAsync(FacePreviewElement, token);
             if (token.IsCancellationRequested) return;
             FacePreviewPlaceholder.Visibility = Visibility.Collapsed;
@@ -920,7 +932,7 @@ public sealed partial class ScreenFaceMirrorWindow : Window
             FacePreviewPlaceholder.Visibility = Visibility.Visible;
         }
 
-        _ = previewLoopTask.ContinueWith(
+        _ = loopTask.ContinueWith(
             task =>
             {
                 _ = task.Exception;
@@ -930,12 +942,20 @@ public sealed partial class ScreenFaceMirrorWindow : Window
             TaskScheduler.Default);
     }
 
-    private async Task StopPreviewAsync()
+    private Task StopPreviewAsync()
+    {
+        if (!previewStopTask.IsCompleted) return previewStopTask;
+        return previewStopTask = StopPreviewCoreAsync();
+    }
+
+    private async Task StopPreviewCoreAsync()
     {
         var cancellation = previewLoopCancellation;
         var previewTask = previewLoopTask;
+        var recorder = previewRecorder;
         previewLoopCancellation = null;
         previewLoopTask = null;
+        previewRecorder = null;
         cancellation?.Cancel();
         if (previewTask is not null)
         {
@@ -952,8 +972,6 @@ public sealed partial class ScreenFaceMirrorWindow : Window
         cancellation?.Dispose();
         try
         {
-            var recorder = previewRecorder;
-            previewRecorder = null;
             if (recorder is not null) await recorder.StopPreviewAsync(FacePreviewElement);
         }
         catch (Exception)

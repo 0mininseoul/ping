@@ -31,7 +31,10 @@
             BorderBrush="{StaticResource PingBorderIdleBrush}"
             BorderThickness="1"
             CornerRadius="{StaticResource PingCornerRadius}">
-            <Grid Clip="{StaticResource PingScreenFaceClip}">
+            <Grid>
+                <Grid.Clip>
+                    <RectangleGeometry Rect="0,0,480,270" />
+                </Grid.Clip>
                 <Rectangle
                     Fill="#182024"
                     RadiusX="16"

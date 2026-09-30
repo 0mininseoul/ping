@@ -9,7 +9,7 @@ using Microsoft.UI.Xaml.Controls;
 
 namespace Ping.Windows.App.Capture;
 
-public sealed class FaceRecorder : IFaceRecorder, IAsyncDisposable
+public sealed class FaceRecorder : IFaceRecorder, IFacePreviewSession, IAsyncDisposable
 {
     private static readonly string TemporaryDirectory = Path.Combine(Path.GetTempPath(), "Ping");
     private readonly CameraDeviceSession<MediaCapture> session;

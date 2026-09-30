@@ -22,6 +22,7 @@ internal static class UiSmokeRunner
 {
     public static string? OutputDirectory { get; set; }
     private static readonly List<string> Checks = [];
+    private static bool failureWritten;
     private static void Step(string text) => File.AppendAllText(Path.Combine(OutputDirectory!, "phases.txt"), text + Environment.NewLine);
     private static void Check(bool condition, string label)
     {
@@ -143,6 +144,7 @@ internal static class UiSmokeRunner
             Step("Verifying owned native playback with a synthetic clip.");
             await PlaybackSmoke.RunAsync(window, OutputDirectory!, Check, RenderAsync);
             await AutoReplySmoke.RunAsync(window, Check, RenderAsync);
+            await CaptureLifetimeSmoke.RunAsync(Check);
 
             var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
             window.Close();
@@ -182,6 +184,8 @@ internal static class UiSmokeRunner
     private static void WriteFailure(Exception error)
     {
         Directory.CreateDirectory(OutputDirectory!);
+        if (failureWritten) return;
+        failureWritten = true;
         File.WriteAllText(Path.Combine(OutputDirectory!, "result.json"), JsonSerializer.Serialize(new { Success = false, Error = error.ToString(), Checks }, new JsonSerializerOptions { WriteIndented = true }));
         Step("FAILED " + error.GetType().Name);
     }
