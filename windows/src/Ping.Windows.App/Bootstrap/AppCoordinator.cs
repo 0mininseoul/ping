@@ -39,6 +39,8 @@ public sealed class AppCoordinator : IDisposable
     private readonly PermissionProbe permissionProbe;
     private readonly ScreenFaceQuickSendSettingsStore quickSendSettingsStore;
     private readonly MirrorPlacementStore mirrorPlacementStore;
+    private readonly ConnectionSupervisor connectionSupervisor;
+    private ConnectionLifecycleAdapter? connectionLifecycle;
     private IReadOnlyCollection<Room> rooms = [];
     private string? currentUid;
     private string currentNickname = Environment.UserName;
@@ -88,8 +90,10 @@ public sealed class AppCoordinator : IDisposable
         reactionService = new ReactionService(this.supabaseClient);
         cleanupService = new CleanupService(this.supabaseClient);
         localArchive = new LocalArchive(LocalArchive.DefaultRootDirectory());
-        incomingPoller = new IncomingMessagePoller(messageService);
-        incomingChatPoller = new IncomingChatPoller(chatService, roomService, () => currentUid);
+        incomingPoller = new IncomingMessagePoller(messageService, onError: HandleIncomingConnectionError);
+        incomingChatPoller = new IncomingChatPoller(chatService, roomService, () => currentUid, onError: HandleIncomingConnectionError);
+        connectionSupervisor = new ConnectionSupervisor(ConnectAndLoadRoomsAsync);
+        connectionSupervisor.StateChanged += HandleConnectionStateChanged;
         notificationController = new NotificationController(OpenMessageFromNotificationAsync, OpenChatFromNotificationAsync);
         screenFaceCaptureEngine = new NativeCaptureEngine();
         permissionProbe = new PermissionProbe(
@@ -123,7 +127,8 @@ public sealed class AppCoordinator : IDisposable
         notificationController.Start();
         ShowRegistrationState(lastHotkeyRegistrations);
         MaybeOpenOnboardingAtStartup(lastHotkeyRegistrations);
-        _ = BootstrapAndLoadRoomsAsync();
+        connectionLifecycle = new ConnectionLifecycleAdapter(connectionSupervisor);
+        connectionSupervisor.Start();
     }
 
     private void TryAddOrUpdateTrayIcon()
@@ -219,6 +224,10 @@ public sealed class AppCoordinator : IDisposable
             return;
         }
 
+        disposed = true;
+        connectionLifecycle?.Dispose();
+        connectionSupervisor.StateChanged -= HandleConnectionStateChanged;
+        _ = DisposeConnectionAsync();
         hotkeys.HotkeyPressed -= HandleHotkeyPressed;
         mainWindow.QuickSendToggleChanged -= HandleQuickSendToggleChanged;
         mainWindow.BlockedRetryRequested -= HandleBlockedRetryRequested;
@@ -229,12 +238,16 @@ public sealed class AppCoordinator : IDisposable
         StopIncomingPolling();
         StopIncomingChatPolling();
         notificationController.Dispose();
-        supabaseClient.Dispose();
         hotkeys.Dispose();
         quickSendCancellation?.Cancel();
         quickSendCancellation?.Dispose();
         tray.Dispose();
-        disposed = true;
+    }
+
+    private async Task DisposeConnectionAsync()
+    {
+        await connectionSupervisor.StopAsync();
+        supabaseClient.Dispose();
     }
 
     private IReadOnlyList<HotkeyRegistrationResult> RegisterSavedHotkeys()
@@ -371,14 +384,14 @@ public sealed class AppCoordinator : IDisposable
         {
             viewModel.RoomsChanged -= HandleRoomManagerRoomsChanged;
             roomManagerWindow = null;
-            _ = BootstrapAndLoadRoomsAsync();
+            connectionSupervisor.RequestReconnect();
         };
         roomManagerWindow.Activate();
     }
 
     private void HandleRoomManagerRoomsChanged(object? sender, EventArgs args)
     {
-        _ = BootstrapAndLoadRoomsAsync();
+        connectionSupervisor.RequestReconnect();
     }
 
     private void OpenHistoryWindow(string? preferredRoomId = null, string? preferredChatId = null)
@@ -871,7 +884,7 @@ public sealed class AppCoordinator : IDisposable
 
     private void StartIncomingPolling()
     {
-        StopIncomingPolling();
+        if (incomingPollingCancellation is not null) return;
         var cancellation = new CancellationTokenSource();
         incomingPollingCancellation = cancellation;
 
@@ -893,7 +906,7 @@ public sealed class AppCoordinator : IDisposable
 
     private void StartIncomingChatPolling()
     {
-        StopIncomingChatPolling();
+        if (incomingChatPollingCancellation is not null) return;
         var cancellation = new CancellationTokenSource();
         incomingChatPollingCancellation = cancellation;
 
@@ -1166,14 +1179,16 @@ public sealed class AppCoordinator : IDisposable
             _ => "All rooms"
         };
 
-    private async Task BootstrapAndLoadRoomsAsync()
+    private async Task ConnectAndLoadRoomsAsync(CancellationToken cancellationToken)
     {
-        try
+        var uid = await supabaseClient.BootstrapAsync(cancellationToken);
+        var profile = await userService.GetAsync(uid, cancellationToken);
+        var refreshedRooms = await roomService.MyRoomsAsync(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        await RunOnUiThreadAsync(() =>
         {
-            currentUid = await supabaseClient.BootstrapAsync();
-            var uid = currentUid;
-            await RunCleanupAsync();
-            var profile = await userService.GetAsync(uid);
+            if (disposed || cancellationToken.IsCancellationRequested) return;
+            currentUid = uid;
             if (!string.IsNullOrWhiteSpace(profile?.Nickname))
             {
                 currentNickname = profile.Nickname;
@@ -1182,7 +1197,7 @@ public sealed class AppCoordinator : IDisposable
             }
 
             remoteDefaultRoomId = profile?.LastUsedRoomId;
-            rooms = await roomService.MyRoomsAsync();
+            rooms = refreshedRooms;
             if (ResolvePreferredDefaultRoom(SendableRoomsFor(uid)) is { Id: { } defaultRoomId })
             {
                 SaveQuickSendDefaultRoom(defaultRoomId);
@@ -1211,30 +1226,51 @@ public sealed class AppCoordinator : IDisposable
                     ? "연결됨. 방을 만들거나 참여하면 전송할 수 있어요."
                     : $"연결됨. 전송 가능한 방 {sendableCount}개.");
             }
-        }
-        catch (Exception ex)
+        });
+        cancellationToken.ThrowIfCancellationRequested();
+        await RunCleanupAsync(cancellationToken);
+    }
+
+    private void HandleIncomingConnectionError(Exception error)
+    {
+        if (error is HttpRequestException or TimeoutException)
+            connectionSupervisor.RequestReconnect();
+    }
+
+    private void HandleConnectionStateChanged(ConnectionState state, Exception? error)
+    {
+        _ = RunOnUiThreadAsync(() =>
         {
-            mainWindow.HotkeyState.Text = $"백엔드 연결 차단됨: {ex.Message}";
-            ShowBlockedState(
-                "백엔드 연결",
-                "Ping이 백엔드에 연결하지 못했습니다. 인터넷 연결을 확인한 뒤 아래 '다시 시도'를 눌러주세요.",
-                ex.Message,
-                canRetry: true);
-        }
+            if (disposed || state == ConnectionState.Stopped) return;
+            var status = state switch
+            {
+                ConnectionState.Connecting => "연결하는 중…",
+                ConnectionState.Connected => "연결됨",
+                ConnectionState.Retrying => "연결이 끊겼습니다. 자동으로 다시 연결합니다.",
+                ConnectionState.SessionRejected => "기존 계정을 보존했습니다. 계정 연결 복구가 필요합니다.",
+                _ => "연결 설정을 확인해 주세요."
+            };
+            mainWindow.HotkeyState.Text = status;
+            historyWindow?.ReportConnectionStatus(state == ConnectionState.Connected ? null : status);
+            if (state is ConnectionState.SessionRejected or ConnectionState.ConfigurationRequired || currentUid is null)
+            {
+                ShowBlockedState("연결", status, error?.Message ?? status, canRetry: true);
+            }
+        });
     }
 
     private void HandleBlockedRetryRequested(object? sender, EventArgs args)
     {
         mainWindow.BlockedRetryButton.Visibility = Visibility.Collapsed;
         mainWindow.StateDetail.Text = "다시 연결하는 중...";
-        _ = BootstrapAndLoadRoomsAsync();
+        connectionSupervisor.RetryNow();
     }
 
-    private async Task RunCleanupAsync()
+    private async Task RunCleanupAsync(CancellationToken cancellationToken)
     {
         try
         {
-            await cleanupService.RunAsync();
+            await cleanupService.RunAsync(cancellationToken);
         }
         catch (Exception ex)
         {

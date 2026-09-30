@@ -442,6 +442,8 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         StatusMessage = exception.Message;
     }
 
+    public void ReportConnectionStatus(string? status) => StatusMessage = status ?? string.Empty;
+
     private async Task LoadChatImagesAsync(CancellationToken cancellationToken)
     {
         foreach (var row in Chats.Where(row => row.HasImageAttachment))

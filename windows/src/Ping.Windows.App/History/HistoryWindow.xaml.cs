@@ -158,6 +158,8 @@ public sealed partial class HistoryWindow : Window
     public bool IsViewingRoom(string roomId) =>
         string.Equals(viewModel.SelectedRoom?.Id, roomId, StringComparison.Ordinal);
 
+    public void ReportConnectionStatus(string? status) => viewModel.ReportConnectionStatus(status);
+
     private async void SendChatButton_Click(object sender, RoutedEventArgs args)
     {
         await SendChatFromComposerAsync();

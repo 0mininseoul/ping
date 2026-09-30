@@ -99,7 +99,7 @@ public sealed class AppCoordinatorSourceTests
         Assert.Contains("viewModel.RoomsChanged += HandleRoomManagerRoomsChanged;", coordinator, StringComparison.Ordinal);
         Assert.Contains("viewModel.RoomsChanged -= HandleRoomManagerRoomsChanged;", coordinator, StringComparison.Ordinal);
         Assert.Contains("private void HandleRoomManagerRoomsChanged", coordinator, StringComparison.Ordinal);
-        Assert.Contains("_ = BootstrapAndLoadRoomsAsync();", coordinator, StringComparison.Ordinal);
+        Assert.Contains("connectionSupervisor.RequestReconnect();", coordinator, StringComparison.Ordinal);
         Assert.Contains("await SendableRoomsForCaptureAsync(uid)", coordinator, StringComparison.Ordinal);
         Assert.Contains("rooms = await roomService.MyRoomsAsync();", coordinator, StringComparison.Ordinal);
         Assert.Contains("0 => \"No partner\"", coordinator, StringComparison.Ordinal);

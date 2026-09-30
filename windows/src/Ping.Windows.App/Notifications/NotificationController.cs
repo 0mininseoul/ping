@@ -16,26 +16,30 @@ public sealed class IncomingMessagePoller
     private readonly Func<CancellationToken, Task<IReadOnlyList<VideoMessage>>> loadMessagesAsync;
     private readonly Func<TimeSpan, CancellationToken, Task> delayAsync;
     private readonly TimeSpan interval;
+    private readonly Action<Exception>? onError;
 
     public IncomingMessagePoller(
         MessageService messageService,
         TimeSpan? interval = null,
-        Func<TimeSpan, CancellationToken, Task>? delayAsync = null)
+        Func<TimeSpan, CancellationToken, Task>? delayAsync = null,
+        Action<Exception>? onError = null)
         : this(
             messageService.IncomingAsync,
             interval,
-            delayAsync)
+            delayAsync, onError)
     {
     }
 
     public IncomingMessagePoller(
         Func<CancellationToken, Task<IReadOnlyList<VideoMessage>>> loadMessagesAsync,
         TimeSpan? interval = null,
-        Func<TimeSpan, CancellationToken, Task>? delayAsync = null)
+        Func<TimeSpan, CancellationToken, Task>? delayAsync = null,
+        Action<Exception>? onError = null)
     {
         this.loadMessagesAsync = loadMessagesAsync;
         this.interval = interval ?? DefaultInterval;
         this.delayAsync = delayAsync ?? ((duration, token) => Task.Delay(duration, token));
+        this.onError = onError;
     }
 
     public async Task RunAsync(
@@ -63,8 +67,9 @@ public sealed class IncomingMessagePoller
             {
                 throw;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                onError?.Invoke(ex);
             }
 
             await delayAsync(interval, cancellationToken).ConfigureAwait(false);
@@ -100,19 +105,22 @@ public sealed class IncomingChatPoller
     private readonly Func<string?> currentUidProvider;
     private readonly Func<TimeSpan, CancellationToken, Task> delayAsync;
     private readonly TimeSpan interval;
+    private readonly Action<Exception>? onError;
 
     public IncomingChatPoller(
         ChatMessageService chatService,
         RoomService roomService,
         Func<string?> currentUidProvider,
         TimeSpan? interval = null,
-        Func<TimeSpan, CancellationToken, Task>? delayAsync = null)
+        Func<TimeSpan, CancellationToken, Task>? delayAsync = null,
+        Action<Exception>? onError = null)
     {
         this.chatService = chatService;
         this.roomService = roomService;
         this.currentUidProvider = currentUidProvider;
         this.interval = interval ?? DefaultInterval;
         this.delayAsync = delayAsync ?? ((duration, token) => Task.Delay(duration, token));
+        this.onError = onError;
     }
 
     public async Task RunAsync(
@@ -138,8 +146,9 @@ public sealed class IncomingChatPoller
             {
                 throw;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                onError?.Invoke(ex);
             }
 
             await delayAsync(interval, cancellationToken).ConfigureAwait(false);
