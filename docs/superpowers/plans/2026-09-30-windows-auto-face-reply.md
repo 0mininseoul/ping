@@ -34,10 +34,10 @@ Files: create `windows/src/Ping.Windows.Core/Capture/AutoFaceReplyPolicy.cs`, `C
 
 Interfaces: `AutoFaceReplyPolicy.Decide(VideoMessage,string,IncomingArrivalSource,DateTimeOffset,DateTimeOffset,bool,bool,bool,bool)` returns typed skip reason or Record; `Recheck(VideoMessage,DateTimeOffset,bool)` rejects stale/interrupted work. `CameraOwnership.TryAcquire(CameraPurpose)` returns disposable lease; `AcquireManualAsync(CancellationToken)` cancels automatic owner and waits for disposal, returns null when another manual owner is active. Lease exposes cancellation token. `MessageService.SendAutoReplyAsync(AutoReplyVideoInput,Func<bool>,CancellationToken)` returns bool, rechecks permission after upload, deletes unused upload and creates exactly one RPC with face/flag/position.
 
-- [ ] Write RED tests for reply loops, duplicate/source/receiver/timestamp/expiry, freshness60 boundary, display/permission/busy and in-flight interruption.
-- [ ] Write RED lease tests for exclusivity, auto cancellation before manual grant, no grant before old cleanup, cancelled manual waiter and idempotent disposal.
-- [ ] Write RED fake RPC/storage tests for one sender, flag/face/ratio/position/save permission, no late create after upload, failure cleanup and rejected self/auto/mismatched receiver without upload.
-- [ ] Implement contracts; run full Core suite GREEN. Commit `feat(windows-auto-reply): enforce policy camera ownership and send contract`.
+- [x] Write RED tests for reply loops, duplicate/source/receiver/timestamp/expiry, freshness60 boundary, display/permission/busy and in-flight interruption.
+- [x] Write RED lease tests for exclusivity, auto cancellation before manual grant, no grant before old cleanup, cancelled manual waiter and idempotent disposal.
+- [x] Write RED fake RPC/storage tests for one sender, flag/face/ratio/position/save permission, no late create after upload, failure cleanup and rejected self/auto/mismatched receiver without upload.
+- [x] Implement contracts; run full Core suite GREEN. Commit `feat(windows-auto-reply): enforce policy camera ownership and send contract`.
 
 ## Task2 — Owned cancellable reply pipeline
 

@@ -143,6 +143,45 @@ public sealed class MessageService(ISupabaseRpcClient client, IStorageService st
         }
     }
 
+    public async Task<bool> SendAutoReplyAsync(AutoReplyVideoInput input, Func<bool> canSend,
+        CancellationToken cancellationToken = default)
+    {
+        var original = input.OriginalMessage;
+        if (string.IsNullOrWhiteSpace(input.SenderUid) || string.IsNullOrWhiteSpace(original.SenderUid)
+            || string.IsNullOrWhiteSpace(original.Id) || string.IsNullOrWhiteSpace(original.RoomId)
+            || original.IsAutoReply || original.SenderUid == input.SenderUid || original.ReceiverUid != input.SenderUid)
+            throw new ArgumentException("Automatic reply must target the original sender of a received ping.", nameof(input));
+
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!canSend()) return false;
+        var id = Guid.NewGuid().ToString();
+        var path = await storage.UploadVideoAsync(input.LocalVideoPath, input.SenderUid, id,
+            [original.SenderUid], DateTimeOffset.UtcNow.AddDays(30), cancellationToken).ConfigureAwait(false);
+        var mayBeReferenced = false;
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!canSend()) return false;
+            var position = NormalizeMirrorPosition(original.MirrorPosition);
+            // Losing a response is not proof that the server rejected the row.
+            mayBeReferenced = true;
+            _ = await client.RpcValueAsync<string>("ping_create_message", new CreateMessageRpcBody(
+                original.RoomId, original.SenderUid, input.SenderNickname, id, path, position.XRatio, position.YRatio,
+                CaptureMode.FaceOnly.ToWireValue(), 1, input.AllowsLocalSave, IsAutoReplyValue: true), cancellationToken).ConfigureAwait(false);
+            return true;
+        }
+        catch (SupabaseRequestException error) when ((int?)error.StatusCode is >= 400 and < 500
+            && error.StatusCode is not System.Net.HttpStatusCode.RequestTimeout and not System.Net.HttpStatusCode.TooManyRequests)
+        {
+            mayBeReferenced = false;
+            throw;
+        }
+        finally
+        {
+            if (!mayBeReferenced) await DeleteUploadedVideoQuietlyAsync(path).ConfigureAwait(false);
+        }
+    }
+
     private static DateTimeOffset MessageSortKey(VideoMessage message) =>
         message.CreatedAt ?? DateTimeOffset.MaxValue;
 
@@ -179,6 +218,9 @@ public sealed class MessageService(ISupabaseRpcClient client, IStorageService st
 
 public enum MessageRemovalResult { Deleted, Hidden, Missing }
 
+public sealed record AutoReplyVideoInput(VideoMessage OriginalMessage, string LocalVideoPath,
+    string SenderUid, string SenderNickname, bool AllowsLocalSave);
+
 public sealed record SendVideoInput(
     IReadOnlyCollection<Room> Rooms,
     string LocalVideoPath,
@@ -200,7 +242,8 @@ public sealed record CreateMessageRpcBody(
     [property: JsonPropertyName("y_ratio")] double YRatio,
     [property: JsonPropertyName("capture_mode_text")] string CaptureModeText,
     [property: JsonPropertyName("aspect_ratio_value")] double AspectRatioValue,
-    [property: JsonPropertyName("allows_local_save_value")] bool AllowsLocalSaveValue);
+    [property: JsonPropertyName("allows_local_save_value")] bool AllowsLocalSaveValue,
+    [property: JsonPropertyName("is_auto_reply_value"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool IsAutoReplyValue = false);
 
 public sealed record MessageIdRpcBody(
     [property: JsonPropertyName("message_uuid")] string MessageUuid);
