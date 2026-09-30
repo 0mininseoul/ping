@@ -29,7 +29,7 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
     private Room? selectedRoom;
     private VideoHistoryItem? selectedVideo;
     private TimelineHistoryItem? selectedTimelineItem;
-    private HistoryReplyTarget? replyTarget;
+    private readonly ComposerState composer = new();
     private string statusMessage = "History";
 
     public HistoryViewModel(
@@ -52,6 +52,7 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         this.linkPreviewService = linkPreviewService ?? new LinkPreviewService();
         this.canMarkRoomRead = canMarkRoomRead ?? (_ => false);
         this.nowProvider = nowProvider ?? (() => DateTimeOffset.UtcNow);
+        composer.Changed += NotifyComposerChanged;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -80,9 +81,11 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
             if (changedRoom) selectionRevision++;
             selectedRoom = value;
             Interlocked.Increment(ref loadGeneration);
-            if (changedRoom) ReplyTarget = null;
+            if (changedRoom) composer.SelectRoom(value?.Id);
             OnPropertyChanged();
             OnPropertyChanged(nameof(SelectedRoomName));
+            OnPropertyChanged(nameof(SelectedRoomMembers));
+            OnPropertyChanged(nameof(CanCompose));
             OnPropertyChanged(nameof(TimelineVisibility));
         }
     }
@@ -115,17 +118,24 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
 
     public HistoryReplyTarget? ReplyTarget
     {
-        get => replyTarget;
-        private set
-        {
-            replyTarget = value;
-            OnPropertyChanged();
-            OnPropertyChanged(nameof(ReplyPreviewText));
-            OnPropertyChanged(nameof(ReplyPreviewVisibility));
-        }
+        get => composer.Reply;
+        private set => composer.Reply = value;
     }
 
-    public string SelectedRoomName => SelectedRoom?.Name ?? "No room selected";
+    public string SelectedRoomName => SelectedRoom?.Name ?? "대화를 시작하세요";
+    public string SelectedRoomMembers => SelectedRoom is { } room ? $"{room.MemberUids.Count}명 · {string.Join(", ", room.MemberNicknames.Values)}" : "방을 만들거나 초대를 수락해 보세요";
+    public bool CanCompose => SelectedRoom?.Id is not null && !string.IsNullOrWhiteSpace(currentUidProvider());
+    public string DraftText { get => composer.Text; set => composer.Text = value; }
+    public string? DraftImagePath { get => composer.ImagePath; set => composer.ImagePath = value; }
+    public string DraftImageName => DraftImagePath is null ? "" : Path.GetFileName(DraftImagePath);
+    public bool IsSending => composer.IsSending;
+    public bool CanSend => CanCompose && composer.CanSend;
+
+    private void NotifyComposerChanged()
+    {
+        foreach (var name in new[] { nameof(DraftText), nameof(DraftImagePath), nameof(DraftImageName), nameof(ReplyTarget),
+            nameof(ReplyPreviewText), nameof(ReplyPreviewVisibility), nameof(CanSend), nameof(IsSending) }) OnPropertyChanged(name);
+    }
 
 #if WINDOWS
     public Visibility TimelineVisibility => timelineRoomId == SelectedRoom?.Id ? Visibility.Visible : Visibility.Collapsed;
@@ -304,21 +314,31 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         ReplyTarget = null;
     }
 
-    public async Task SendChatAsync(string body, string? localImagePath = null, CancellationToken cancellationToken = default)
+    public async Task<ChatSendOutcome> SendFromComposerAsync(CancellationToken cancellationToken = default)
     {
-        if (SelectedRoom?.Id is not { } roomId)
+        if (!CanCompose || composer.BeginSend() is not { } ticket) return ChatSendOutcome.NoContent;
+        var sent = false;
+        try
         {
-            return;
+            var outcome = await SendChatCoreAsync(ticket.RoomId, ticket.Text, ticket.ImagePath, ticket.Reply, cancellationToken, clearReply: false);
+            sent = outcome == ChatSendOutcome.Sent;
+            return outcome;
         }
+        finally { composer.CompleteSend(ticket, sent); }
+    }
 
+    public Task<ChatSendOutcome> SendChatAsync(string body, string? localImagePath = null, CancellationToken cancellationToken = default) =>
+        SelectedRoom?.Id is { } id ? SendChatCoreAsync(id, body, localImagePath, ReplyTarget, cancellationToken) : Task.FromResult(ChatSendOutcome.NoContent);
+
+    private async Task<ChatSendOutcome> SendChatCoreAsync(string roomId, string body, string? localImagePath, HistoryReplyTarget? reply, CancellationToken cancellationToken, bool clearReply = true)
+    {
         var trimmed = body.Trim();
         var hasImage = !string.IsNullOrWhiteSpace(localImagePath);
         if (!hasImage && string.IsNullOrWhiteSpace(trimmed))
         {
-            return;
+            return ChatSendOutcome.NoContent;
         }
-
-        var reply = ReplyTarget;
+        if (trimmed.Length > 2000) throw new InvalidOperationException("메시지는 2,000자까지 보낼 수 있습니다.");
         ChatMediaPayload? media = null;
         string? messageId = null;
         if (hasImage)
@@ -360,9 +380,18 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
             throw;
         }
 
-        ReplyTarget = null;
-        await LoadSelectedRoomAsync(cancellationToken);
-        StatusMessage = hasImage ? "Image sent." : "Chat sent.";
+        if (SelectedRoom?.Id == roomId)
+        {
+            if (clearReply && Equals(ReplyTarget, reply)) ReplyTarget = null;
+            try { await LoadSelectedRoomAsync(cancellationToken); }
+            catch (Exception)
+            {
+                StatusMessage = "메시지는 전송되었습니다. 대화를 다시 연결하면 새로 표시합니다.";
+                return ChatSendOutcome.Sent;
+            }
+            StatusMessage = hasImage ? "Image sent." : "Chat sent.";
+        }
+        return ChatSendOutcome.Sent;
     }
 
     private async Task DeleteUploadedChatMediaQuietlyAsync(string remotePath)
@@ -677,8 +706,14 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
             .ThenBy(row => row.SortKind)
             .ThenBy(row => row.SortId, StringComparer.Ordinal);
 
+        DateTime? previousDay = null;
         foreach (var row in rows)
         {
+            if (row.CreatedAt?.ToLocalTime() is { } timestamp && timestamp.Date != previousDay)
+            {
+                row.DayHeading = timestamp.Date == nowProvider().ToLocalTime().Date ? "오늘" : timestamp.ToString("yyyy년 M월 d일");
+                previousDay = timestamp.Date;
+            }
             Timeline.Add(row);
         }
     }

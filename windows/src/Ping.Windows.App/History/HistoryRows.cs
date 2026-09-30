@@ -31,12 +31,19 @@ public sealed class TimelineHistoryItem
     public string SortId => Video?.Message.Id ?? Chat?.Message.Id ?? string.Empty;
 
     public int SortKind => Video is not null ? 0 : 1;
+    public bool IsMine => Video?.IsMine ?? Chat?.IsMine ?? false;
+    public string SenderLabel => Video?.SenderNickname ?? Chat?.SenderNickname ?? "";
+    public string TimeLabel => CreatedAt?.ToLocalTime().ToString("HH:mm") ?? "";
+    public string DayHeading { get; internal set; } = "";
 
 #if WINDOWS
+    public HorizontalAlignment BubbleAlignment => IsMine ? HorizontalAlignment.Right : HorizontalAlignment.Left;
+    public Visibility DayHeadingVisibility => string.IsNullOrEmpty(DayHeading) ? Visibility.Collapsed : Visibility.Visible;
     public Visibility VideoVisibility => Video is null ? Visibility.Collapsed : Visibility.Visible;
 
     public Visibility ChatVisibility => Chat is null ? Visibility.Collapsed : Visibility.Visible;
 #else
+    public bool DayHeadingVisibility => !string.IsNullOrEmpty(DayHeading);
     public bool VideoVisibility => Video is not null;
 
     public bool ChatVisibility => Chat is not null;
@@ -82,6 +89,8 @@ public sealed class VideoHistoryItem : INotifyPropertyChanged
     public string VideoId => Message.VideoId;
 
     public CaptureMode CaptureMode => Message.CaptureMode;
+    public string ModeLabel => Message.CaptureMode == CaptureMode.ScreenFace ? "화면 + 얼굴" : "얼굴 핑";
+    public string AutoReplyLabel => Message.IsAutoReply ? "자동 회신" : "";
 
     public bool IsMine { get; }
 

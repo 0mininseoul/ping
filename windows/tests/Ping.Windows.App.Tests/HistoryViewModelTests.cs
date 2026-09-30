@@ -132,6 +132,69 @@ public sealed class HistoryViewModelTests
     }
 
     [Fact]
+    public async Task ComposerSendRetainsNewTextAndNewRoomImage()
+    {
+        var rpc = new RecordingHistoryRpcClient { SendGate = new(TaskCreationOptions.RunContinuationsAsynchronously) };
+        var vm = ViewModel(rpc);
+        await vm.LoadAsync("room-1");
+        vm.DraftText = "sent A";
+        var sending = vm.SendFromComposerAsync();
+        Assert.True(vm.IsSending);
+        Assert.Equal(ChatSendOutcome.NoContent, await vm.SendFromComposerAsync());
+        vm.DraftText = "new A";
+        await vm.SelectRoomAsync("room-2");
+        vm.DraftText = "keep B";
+        vm.DraftImagePath = "b.png";
+        rpc.SendGate.SetResult();
+        Assert.Equal(ChatSendOutcome.Sent, await sending);
+        Assert.Equal("keep B", vm.DraftText);
+        Assert.Equal("b.png", vm.DraftImagePath);
+        await vm.SelectRoomAsync("room-1");
+        Assert.Equal("new A", vm.DraftText);
+        Assert.Single(rpc.SentChatBodies);
+    }
+
+    [Fact]
+    public async Task TimelineCarriesDateTimeAndSenderDirection()
+    {
+        var vm = ViewModel(new RecordingHistoryRpcClient());
+        await vm.LoadAsync("room-1");
+        Assert.False(vm.Timeline.First().IsMine);
+        Assert.True(vm.Timeline.Last().IsMine);
+        Assert.NotEmpty(vm.Timeline.First().DayHeading);
+        Assert.Empty(vm.Timeline.Last().DayHeading);
+        Assert.All(vm.Timeline, row => Assert.NotEmpty(row.TimeLabel));
+    }
+
+    [Fact]
+    public async Task CompletingSendInPreviousRoomCannotClearNewRoomReply()
+    {
+        var rpc = new RecordingHistoryRpcClient { SendGate = new(TaskCreationOptions.RunContinuationsAsynchronously) };
+        var vm = ViewModel(rpc);
+        await vm.LoadAsync("room-1");
+        vm.BeginReplyToChat(vm.Chats.Single());
+        var sending = vm.SendChatAsync("send from room-1");
+        await vm.SelectRoomAsync("room-2");
+        vm.BeginReplyToChat(vm.Chats.Single());
+        var newReply = vm.ReplyTarget;
+        rpc.SendGate.SetResult();
+        await sending;
+        Assert.Same(newReply, vm.ReplyTarget);
+        Assert.Equal("room-2", vm.SelectedRoom?.Id);
+    }
+
+    [Fact]
+    public async Task AcknowledgedSendDoesNotBecomeFailureWhenTimelineRefreshFails()
+    {
+        var rpc = new RecordingHistoryRpcClient();
+        var vm = ViewModel(rpc);
+        await vm.LoadAsync("room-1");
+        rpc.FailRefreshAfterSend = true;
+        await vm.SendChatAsync("acknowledged");
+        Assert.Single(rpc.SentChatBodies);
+    }
+
+    [Fact]
     public async Task SendChatAsync_PreservesReplyTargetUntilSendSucceeds()
     {
         var rpc = new RecordingHistoryRpcClient();
@@ -427,6 +490,8 @@ public sealed class HistoryViewModelTests
 
     private sealed class RecordingHistoryRpcClient : ISupabaseRpcClient
     {
+        public TaskCompletionSource? SendGate { get; set; }
+        public bool FailRefreshAfterSend { get; set; }
         public Exception? RemoveVideoException { get; set; }
         public List<string> MarkedReadRoomIds { get; } = [];
 
@@ -445,6 +510,8 @@ public sealed class HistoryViewModelTests
             object? body = null,
             CancellationToken cancellationToken = default)
         {
+            if (FailRefreshAfterSend && SentChatBodies.Count > 0)
+                return Task.FromException<IReadOnlyList<T>>(new HttpRequestException("refresh offline"));
             _ = cancellationToken;
             object result = function switch
             {
@@ -492,10 +559,17 @@ public sealed class HistoryViewModelTests
                     return Task.FromException<T>(SendChatException);
                 }
 
+                if (SendGate is { } gate) return WaitForSendAsync<T>(gate, cancellationToken);
                 return Task.FromResult((T)(object)"new-chat-id");
             }
 
             throw new NotSupportedException();
+        }
+
+        private static async Task<T> WaitForSendAsync<T>(TaskCompletionSource gate, CancellationToken token)
+        {
+            await gate.Task.WaitAsync(token);
+            return (T)(object)"new-chat-id";
         }
 
         public Task RpcVoidAsync(

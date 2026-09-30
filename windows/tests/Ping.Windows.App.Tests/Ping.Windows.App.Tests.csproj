@@ -32,6 +32,7 @@
     <Compile Include="..\..\src\Ping.Windows.App\Capture\ScreenFaceMirrorViewModel.cs" Link="Capture\ScreenFaceMirrorViewModel.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\History\HistoryAutoRefreshCoordinator.cs" Link="History\HistoryAutoRefreshCoordinator.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\History\HistoryRows.cs" Link="History\HistoryRows.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\History\ComposerState.cs" Link="History\ComposerState.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\History\HistoryViewModel.cs" Link="History\HistoryViewModel.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\History\UiTaskDispatcher.cs" Link="History\UiTaskDispatcher.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Notifications\NotificationController.cs" Link="Notifications\NotificationController.cs" />
