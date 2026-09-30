@@ -465,16 +465,15 @@ public sealed class AppCoordinator : IDisposable
     {
         quickSendSettings = settings;
         quickSendSettingsStore.Save(quickSendSettings);
-        var uid = currentUid;
-        if (uid is null)
-        {
-            return;
-        }
+        RefreshDefaultRoomLabel();
+    }
 
-        var defaultRoom = ResolvePreferredDefaultRoom(SendableRoomsFor(uid));
+    private void RefreshDefaultRoomLabel()
+    {
+        var defaultRoom = currentUid is { } uid ? ResolvePreferredDefaultRoom(SendableRoomsFor(uid)) : null;
         mainWindow.ConfigureQuickSendSettings(
             quickSendSettings.Preferences.IsEnabled,
-            defaultRoom?.Name ?? "No sendable default room");
+            defaultRoom?.Name ?? (currentUid is null ? "연결 후 기본 전송 방이 표시됩니다" : "전송할 수 있는 방이 없어요"));
     }
 
     private void ShowRegistrationState(IReadOnlyList<HotkeyRegistrationResult> registrations)
@@ -802,8 +801,11 @@ public sealed class AppCoordinator : IDisposable
             return;
         }
 
-        remoteDefaultRoomId = roomId;
-        SaveQuickSendDefaultRoom(roomId);
+        await RunOnUiThreadAsync(() =>
+        {
+            remoteDefaultRoomId = roomId;
+            SaveQuickSendDefaultRoom(roomId);
+        });
         try
         {
             await userService.UpdateLastUsedRoomAsync(roomId, cancellationToken);
@@ -820,11 +822,13 @@ public sealed class AppCoordinator : IDisposable
     {
         if (string.Equals(quickSendSettings.DefaultRoomId, roomId, StringComparison.Ordinal))
         {
+            RefreshDefaultRoomLabel();
             return;
         }
 
         quickSendSettings = quickSendSettings with { DefaultRoomId = roomId };
         quickSendSettingsStore.Save(quickSendSettings);
+        RefreshDefaultRoomLabel();
     }
 
     private void StartIncomingPolling()
@@ -1109,6 +1113,7 @@ public sealed class AppCoordinator : IDisposable
         try
         {
             rooms = await roomService.MyRoomsAsync();
+            await RunOnUiThreadAsync(RefreshDefaultRoomLabel);
         }
         catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException or TaskCanceledException)
         {
@@ -1149,6 +1154,7 @@ public sealed class AppCoordinator : IDisposable
             {
                 SaveQuickSendDefaultRoom(defaultRoomId);
             }
+            RefreshDefaultRoomLabel();
 
             var sendableCount = rooms.Count(room =>
                 room.Id is not null

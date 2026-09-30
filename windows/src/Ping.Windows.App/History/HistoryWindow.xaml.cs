@@ -38,6 +38,7 @@ public sealed partial class HistoryWindow : UserControl
     private bool isApplyingSelection;
     private string? lastScrolledRoomId;
     private TimelineHistoryItem? pendingScrollItem;
+    private double? pendingScrollOffset;
 
     public HistoryWindow(
         Window owner,
@@ -47,7 +48,8 @@ public sealed partial class HistoryWindow : UserControl
         MessageService messageService,
         string? initialRoomId = null,
         string? initialChatId = null,
-        bool loadOnStart = true)
+        bool loadOnStart = true,
+        TimeSpan? refreshInterval = null)
     {
         this.owner = owner;
         backendReady = loadOnStart;
@@ -63,9 +65,18 @@ public sealed partial class HistoryWindow : UserControl
         Root.DataContext = viewModel;
         VideosList.LayoutUpdated += (_, _) =>
         {
-            if (pendingScrollItem is not { } target || VideosList.ActualHeight <= 0) return;
-            pendingScrollItem = null;
-            if (viewModel.Timeline.Contains(target)) VideosList.ScrollIntoView(target);
+            if (VideosList.ActualHeight <= 0 || VideosList.Visibility != Visibility.Visible) return;
+            if (pendingScrollItem is { } target)
+            {
+                pendingScrollItem = null;
+                pendingScrollOffset = null;
+                if (viewModel.Timeline.Contains(target)) VideosList.ScrollIntoView(target);
+            }
+            else if (pendingScrollOffset is { } offset && FindVisualChild<ScrollViewer>(VideosList) is { } scroll)
+            {
+                pendingScrollOffset = null;
+                scroll.ChangeView(null, Math.Min(offset, scroll.ScrollableHeight), null, true);
+            }
         };
         viewModel.PropertyChanged += (_, args) =>
         {
@@ -77,8 +88,12 @@ public sealed partial class HistoryWindow : UserControl
         removalPermissionTimer.Tick += (_, _) => viewModel.RefreshRemovalPermissions();
         removalPermissionTimer.Start();
         autoRefresh = new HistoryAutoRefreshCoordinator(
-            TimeSpan.FromSeconds(30),
-            token => !backendReady || !IsWindowVisible(WindowNative.GetWindowHandle(owner)) ? Task.CompletedTask : RunAsync(() => viewModel.LoadSelectedRoomAsync(token)));
+            refreshInterval ?? TimeSpan.FromSeconds(30),
+            token => RunAsync(async () =>
+            {
+                if (!backendReady || !IsWindowVisible(WindowNative.GetWindowHandle(owner))) return;
+                await viewModel.LoadSelectedRoomAsync(token);
+            }));
         Root.Loaded += HandleLoaded;
         owner.Closed += async (_, args) =>
         {
@@ -88,8 +103,8 @@ public sealed partial class HistoryWindow : UserControl
         };
         owner.Activated += async (_, args) =>
         {
-            if (args.WindowActivationState != WindowActivationState.Deactivated)
-                await RunAsync(() => viewModel.MarkVisibleRoomReadAsync());
+            if (backendReady && args.WindowActivationState != WindowActivationState.Deactivated)
+                await RefreshNowAsync();
         };
     }
 
@@ -371,7 +386,14 @@ public sealed partial class HistoryWindow : UserControl
 
     private async Task SendChatFromComposerAsync()
     {
-        await RunAsync(async () => { await viewModel.SendFromComposerAsync(); });
+        var sentRoomId = viewModel.SelectedRoom?.Id;
+        var outcome = ChatSendOutcome.NoContent;
+        await RunAsync(async () => { outcome = await viewModel.SendFromComposerAsync(); });
+        if (outcome == ChatSendOutcome.Sent && viewModel.SelectedRoom?.Id == sentRoomId)
+        {
+            pendingScrollItem = viewModel.Timeline.LastOrDefault();
+            VideosList.InvalidateMeasure();
+        }
     }
 
     private void ApplySelectionFromViewModel()
@@ -494,13 +516,36 @@ public sealed partial class HistoryWindow : UserControl
         return false;
     }
 
+    private static T? FindVisualChild<T>(DependencyObject root) where T : DependencyObject
+    {
+        for (var index = 0; index < VisualTreeHelper.GetChildrenCount(root); index++)
+        {
+            var child = VisualTreeHelper.GetChild(root, index);
+            if (child is T match) return match;
+            if (FindVisualChild<T>(child) is { } nested) return nested;
+        }
+        return null;
+    }
+
     private Task<bool> RunAsync(Func<Task> work) => uiDispatcher.RunAsync(() => RunOnUiAsync(work));
 
     private async Task<bool> RunOnUiAsync(Func<Task> work)
     {
         try
         {
+            var roomId = viewModel.SelectedRoom?.Id;
+            var previousLast = viewModel.Timeline.LastOrDefault();
+            var scroll = roomId == lastScrolledRoomId ? FindVisualChild<ScrollViewer>(VideosList) : null;
+            var offset = scroll?.VerticalOffset;
+            var followNewest = scroll is not null && scroll.ScrollableHeight - scroll.VerticalOffset <= 2;
             await work();
+            if (offset is not null && viewModel.SelectedRoom?.Id == roomId
+                && !ReferenceEquals(previousLast, viewModel.Timeline.LastOrDefault()))
+            {
+                if (followNewest) pendingScrollItem = viewModel.Timeline.LastOrDefault();
+                else pendingScrollOffset = offset;
+                VideosList.InvalidateMeasure();
+            }
             return true;
         }
         catch (Exception ex)

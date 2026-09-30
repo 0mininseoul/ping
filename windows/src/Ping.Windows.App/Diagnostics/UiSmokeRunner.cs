@@ -46,11 +46,11 @@ internal static class UiSmokeRunner
             var rpc = new FixtureRpc();
             var storage = new FixtureStorage();
             var vm = new HistoryViewModel(new RoomService(rpc), new MessageService(rpc, storage), new ChatMessageService(rpc),
-                new ReactionService(rpc), storage, () => "me", new FixtureLinks(), _ => false);
+                new ReactionService(rpc), storage, () => "me", new FixtureLinks(), _ => rpc.AllowRead);
             window = new MainWindow();
             window.InitializeTrayWindowBehavior();
             var shell = new HistoryWindow(window, vm, (_, _) => throw new NotSupportedException("No camera/video fixture"),
-                (_, _) => Task.CompletedTask, new MessageService(rpc, storage), loadOnStart: false);
+                (_, _) => Task.CompletedTask, new MessageService(rpc, storage), loadOnStart: false, refreshInterval: TimeSpan.FromSeconds(5));
             window.AttachMessenger(shell);
             shell.SetDefaultRoom("디자인 이야기");
             window.ShowShell();
@@ -109,6 +109,14 @@ internal static class UiSmokeRunner
             ((IInvokeProvider)new ButtonAutomationPeer(sendButton).GetPattern(PatternInterface.Invoke)).Invoke();
             await UntilAsync(() => rpc.Sent == 1 && !vm.IsSending);
             Check(chatBox.Text == "" && vm.ReplyTarget is null && rpc.Sent == 1, "successful send updates visible composer without duplicate RPC");
+            await UntilAsync(() => timelineScroll.VerticalOffset >= timelineScroll.ScrollableHeight - 2);
+            Check(timelineScroll.VerticalOffset >= timelineScroll.ScrollableHeight - 2, "sending keeps the newest message visible");
+            var readingOffset = Math.Min(35, timelineScroll.ScrollableHeight);
+            timelineScroll.ChangeView(null, readingOffset, null, true);
+            await Task.Delay(80);
+            await shell.RefreshNowAsync();
+            await Task.Delay(120);
+            Check(Math.Abs(timelineScroll.VerticalOffset - readingOffset) < 2, "refresh preserves a scrolled conversation viewport");
             Check(Descendants(roomsList).OfType<TextBlock>().Count(text => text.Text == "2명") == 2, "room member counts are visible in actual bindings");
 
             window.ReportStatus("오프라인입니다. 다시 연결하는 중…", true);
@@ -130,9 +138,23 @@ internal static class UiSmokeRunner
             window.Close();
             await Task.Delay(100);
             Check(!window.AppWindow.IsVisible, "window close hides instead of disposing messenger");
+            rpc.IncludeHiddenArrival = true;
+            var verifiedRead = false;
+            rpc.AllowRead = true;
+            rpc.OnMarkRead = () =>
+            {
+                if (verifiedRead) return;
+                Check(vm.Timeline.Any(row => row.SortId == "while-hidden"), "read acknowledgement follows displayed hidden arrival");
+                verifiedRead = true;
+            };
             window.ShowShell();
-            await Task.Delay(100);
+            await UntilAsync(() => vm.Timeline.Any(row => row.SortId == "while-hidden") && verifiedRead);
             Check(window.AppWindow.IsVisible && hwnd == WinRT.Interop.WindowNative.GetWindowHandle(window), "reopening reuses original window and HWND");
+            Check(vm.Timeline.Any(row => row.SortId == "while-hidden"), "foreground return refreshes hidden arrivals before read acknowledgement");
+            var readsBeforeTimer = rpc.TimelineReads;
+            rpc.RequireUiThread = true;
+            await UntilAsync(() => rpc.TimelineReads > readsBeforeTimer, 6);
+            Check(true, "real refresh timer updates snapshots on UI thread");
             shell.RequestedTheme = ElementTheme.Light;
             var scale = shell.XamlRoot.RasterizationScale;
             window.AppWindow.Resize(new((int)(760 * scale), (int)(540 * scale)));
@@ -154,9 +176,9 @@ internal static class UiSmokeRunner
         Step("FAILED " + error.GetType().Name);
     }
 
-    private static async Task UntilAsync(Func<bool> condition)
+    private static async Task UntilAsync(Func<bool> condition, int timeoutSeconds = 3)
     {
-        var deadline = DateTime.UtcNow.AddSeconds(3);
+        var deadline = DateTime.UtcNow.AddSeconds(timeoutSeconds);
         while (!condition())
         {
             if (DateTime.UtcNow >= deadline) throw new TimeoutException("UI fixture action did not settle.");
@@ -193,8 +215,16 @@ internal static class UiSmokeRunner
     private sealed class FixtureRpc : ISupabaseRpcClient
     {
         public int Sent;
+        public int TimelineReads;
+        public bool IncludeHiddenArrival;
+        public bool RequireUiThread;
+        public bool AllowRead;
+        public Action? OnMarkRead;
         public Task<IReadOnlyList<T>> RpcArrayAsync<T>(string function, object? body = null, CancellationToken cancellationToken = default)
         {
+            if (RequireUiThread && Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread() is null)
+                throw new InvalidOperationException("Fixture RPC was invoked outside the owning UI thread.");
+            if (function == "ping_room_chat_messages") Interlocked.Increment(ref TimelineReads);
             var room = body is RoomChatMessagesRpcBody chat ? chat.RoomUuid : body is RoomMessagesRpcBody video ? video.RoomUuid : "a";
             object result = function switch
             {
@@ -205,7 +235,7 @@ internal static class UiSmokeRunner
                     Chat("c1", "peer", "안녕! Windows에서도 이제 가볍게 핑을 보낼 수 있겠네 😊", -3),
                     Chat("c2", "me", "응, 대화하면서 3초 얼굴 영상도 바로 보낼 수 있어.", -2),
                     Chat("c3", "peer", "좋아. 자세한 이야기는 여기에서 이어가자!", -1)
-                } : Array.Empty<ChatMessage>(),
+                }.Concat(IncludeHiddenArrival ? new[] { Chat("while-hidden", "peer", "다시 열면 바로 보여야 하는 메시지", 0) } : Array.Empty<ChatMessage>()).ToArray() : Array.Empty<ChatMessage>(),
                 "ping_message_reactions" => Array.Empty<MessageReaction>(),
                 _ => throw new NotSupportedException(function)
             };
@@ -217,7 +247,11 @@ internal static class UiSmokeRunner
             Sent++;
             return Task.FromResult((T)(object)"fixture-sent-chat");
         }
-        public Task RpcVoidAsync(string function, object? body = null, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task RpcVoidAsync(string function, object? body = null, CancellationToken cancellationToken = default)
+        {
+            if (function == "ping_mark_room_read") OnMarkRead?.Invoke();
+            return Task.CompletedTask;
+        }
         private static Room Room(string id, string name, int unread) => new(id, name, name, "me", ["me", "peer"], new Dictionary<string, string> { ["me"] = "민", ["peer"] = "서연" }, RoomStatus.Open, UnreadCount: unread);
         private static ChatMessage Chat(string id, string sender, string text, int minutes) => new()
         { Id = id, RoomId = "a", SenderUid = sender, SenderNickname = sender == "me" ? "민" : "서연", Body = text, CreatedAt = DateTimeOffset.UtcNow.AddMinutes(minutes) };

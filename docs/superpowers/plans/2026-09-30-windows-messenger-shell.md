@@ -38,7 +38,7 @@ Files: MainWindow.xaml/.cs, App.xaml/.cs, Bootstrap/AppCoordinator.cs, History/H
 Files: isolated local UI smoke runner plus build support, verification report.
 - [x] Add explicit diagnostic build/run path that creates fixture RPC/storage, never reads user account/backend files or runs tray/camera. Render own WinUI content to PNG, check sizes/selection/draft/context actions/theme/lifetime. Avoid testing on production rooms.
 - [x] Run and inspect real rendered light/dark snapshots and any runtime failures; fix identified defects and meaningful regression cases.
-- [ ] One independent review and correction, full tests/build/diff check; commit `test(windows-ui): verify compiled messenger shell and lifecycle`.
+- [x] One independent review and correction, full tests/build/diff check; commit `test(windows-ui): verify compiled messenger shell and lifecycle`.
 
 ## Remaining full-product work
 
