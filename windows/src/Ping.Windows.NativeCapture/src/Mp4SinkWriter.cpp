@@ -136,7 +136,6 @@ namespace Ping::Windows::NativeCapture
         if (SUCCEEDED(hr)) hr = SetMediaTypeUInt32(audioOutputType.Get(), MF_MT_AUDIO_SAMPLES_PER_SECOND, audio.SamplesPerSecond);
         if (SUCCEEDED(hr)) hr = SetMediaTypeUInt32(audioOutputType.Get(), MF_MT_AUDIO_BITS_PER_SAMPLE, audio.BitsPerSample);
         if (SUCCEEDED(hr)) hr = SetMediaTypeUInt32(audioOutputType.Get(), MF_MT_AUDIO_AVG_BYTES_PER_SECOND, 8'000);
-        if (SUCCEEDED(hr)) hr = SetMediaTypeUInt32(audioOutputType.Get(), MF_MT_AUDIO_AVG_BYTES_PER_SECOND, 12'000);
         if (SUCCEEDED(hr)) hr = sinkWriter->AddStream(audioOutputType.Get(), &audioStreamIndex);
 
         ComPtr<IMFMediaType> audioInputType;

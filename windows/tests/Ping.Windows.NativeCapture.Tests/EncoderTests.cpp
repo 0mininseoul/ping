@@ -128,6 +128,9 @@ void EncoderChecks(wchar_t const* directory, void (*check)(bool, char const*))
     reader->GetNativeMediaType(AudioStream, 0, &sound);
     check(sound && SUCCEEDED(sound->GetGUID(MF_MT_SUBTYPE, &subtype)) && subtype == MFAudioFormat_AAC,
         "encoded clip contains AAC microphone-format track");
+    UINT32 audioBytesPerSecond = 0;
+    check(SUCCEEDED(sound->GetUINT32(MF_MT_AUDIO_AVG_BYTES_PER_SECOND, &audioBytesPerSecond)) && audioBytesPerSecond == 8'000,
+        "encoded AAC stream preserves64kbps budget");
     PROPVARIANT duration{};
     auto hr = reader->GetPresentationAttribute(MediaSource, MF_PD_DURATION, &duration);
     bool threeSeconds = SUCCEEDED(hr) && duration.vt == VT_UI8 && duration.uhVal.QuadPart >= 29'500'000

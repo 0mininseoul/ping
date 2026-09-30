@@ -15,7 +15,7 @@
 |---|---|
 | Core | 240개 통과 |
 | App | 266개 통과 |
-| native 합성·ABI·실제 codec fixture | 50개 통과 |
+| native 합성·ABI·실제 codec fixture | 51개 통과 (AAC 압축률 회귀 포함) |
 | 실제 WinUI 회귀 fixture | 63개 통과 |
 | x64 native / 일반 Release | 경고0, 오류0 |
 | product DLL export | 기존/V2 진입점6개 확인 |
@@ -23,6 +23,8 @@
 native fixture는 하드웨어 source 구현을 링크하지 않는다. crop/행 간격/크기/얼굴 합성을 자체 픽셀 배열로 검사하고, 취소된 V2 진입점은 fake source도 시작하지 않는 것을 확인한다. 관리 코드의 지연된 fake native 호출에서 취소 신호가 전달된 뒤에도 작업·핸들·카메라 사용권을 유지하고, 실제 작업 종료 후 파일 정리를 완료하는 것을 검사했다.
 
 실제 Media Foundation sink writer로 테스트 이미지와440Hz PCM을 3초 MP4로 압축하고 다시 읽었다. H264 영상, AAC 오디오 트랙,540×304 크기,3초 길이와 세 지점의 영상 색상을 확인했다. 이 검사는 실제 카메라·마이크 수집을 대체하지 않는다.
+
+Task3 재검토에서 AAC 압축률을 두 번 설정해64kbps가96kbps로 덮어써지는 오류를 발견했다. 최초50개 검사는 AAC 형식만 확인했으므로 당시64kbps 적용 주장은 충분히 검증되지 않았다. 결과 파일의 평균 바이트율 검사에서 RED를 확인한 뒤 중복 설정을 제거했고,8,000bytes/s(64kbps)를 읽는 회귀 검사를 포함해51개가 통과했다. RED 산출물은 `windows/artifacts/native-tests-67407561571b4655b10ee08a1af7c1e0/`, 수정 후 GREEN은 `windows/artifacts/native-tests-e2df3866c04c4b8d8485a75cc3e75d29/`다.
 
 압축 후 재읽기 검사에서 처음에는 위쪽이 파랑, 아래쪽이 빨강으로 뒤집혔다. top-down BGRA 입력의 `MF_MT_DEFAULT_STRIDE`를 명시한 뒤 위쪽 빨강·아래쪽 파랑·우하단 얼굴 색상이 유지됐다. signed stride/행 패딩 처리는 [Microsoft Image Stride](https://learn.microsoft.com/en-us/windows/win32/medfound/image-stride)와 [Uncompressed Video Buffers](https://github.com/MicrosoftDocs/win32/blob/docs/desktop-src/medfound/uncompressed-video-buffers.md)를 참고했다.
 
