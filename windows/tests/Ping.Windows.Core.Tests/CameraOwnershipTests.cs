@@ -59,4 +59,17 @@ public sealed class CameraOwnershipTests
         camera.InterruptAutomatic();
         Assert.False(manual.Token.IsCancellationRequested);
     }
+
+    [Fact]
+    public async Task ThrowingCancellationCallbackCannotStrandCameraOwnership()
+    {
+        var camera = new CameraOwnership();
+        using var automatic = camera.TryAcquire(CameraPurpose.AutomaticReply)!;
+        using var callback = automatic.Token.Register(() => throw new InvalidOperationException("broken device callback"));
+        var grant = camera.AcquireManualAsync();
+        Assert.False(grant.IsCompleted);
+        automatic.Dispose();
+        using var manual = await grant;
+        Assert.NotNull(manual);
+    }
 }

@@ -45,9 +45,9 @@ Files: create Core `Capture/AutoFaceReplyCoordinator.cs`, `CaptureActivityState.
 
 Interfaces: coordinator injects clock/current identity/capability, record callback `(TimeSpan,CancellationToken)->Task<string>`, indicator `(VideoMessage,CancellationToken)->Task<IAsyncDisposable>`, send callback `(AutoReplyVideoInput,Func<bool>,CancellationToken)->Task<bool>`, temporary-file cleanup callback. `HandleIncoming` starts only an eligible nonqueued attempt and returns typed decision; `StopAsync` cancels/awaits owned work. State tracks display/suspend with monotonic interruption generation.
 
-- [ ] RED tests for3second record→original sender, duplicate/racing arrivals, busy skip without deferred capture, startup/reconnect/history exclusions, sleep during initialization/record/upload, old identity, stale post-record and failed capture cleanup.
-- [ ] Implement owned pipeline, independent from playback/download and notification success. Reserve eligible IDs per account before asynchronous work, including failed/interrupted attempts. Check before record and before create, always dispose indicator/lease and delete temporary clip.
-- [ ] Full Core/App suites GREEN. Commit `feat(windows-auto-reply): own cancellable fresh reply attempts`.
+- [x] RED tests for3second record→original sender, duplicate/racing arrivals, busy skip without deferred capture, startup/reconnect/history exclusions, sleep during initialization/record/upload, old identity, stale post-record and failed capture cleanup.
+- [x] Implement owned pipeline, independent from playback/download and notification success. Reserve eligible IDs per account before asynchronous work, including failed/interrupted attempts. Check before record and before create, always dispose indicator/lease and delete temporary clip.
+- [x] Full Core/App suites GREEN. Commit `feat(windows-auto-reply): own cancellable fresh reply attempts`.
 
 ## Task3 — Native capture and runtime integration
 

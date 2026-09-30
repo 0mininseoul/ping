@@ -82,6 +82,7 @@ public sealed class CameraLease : IDisposable
     {
         try { cancellation.Cancel(); }
         catch (ObjectDisposedException) { }
+        catch (AggregateException) { }
     }
 
     public void Dispose()
