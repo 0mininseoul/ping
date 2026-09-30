@@ -25,11 +25,11 @@
 
 ## Task 3 — Actual incoming and playback integration
 
-- [ ] One owned observer connects Realtime invalidations and fallback polling through shared delivery coordinator; coalesce fetches, distinguish startup/reconnect batches, preserve periodic reconciliation, stop old tasks on termination/account change. Polling must not concurrently duplicate an event-driven fetch or notification.
-- [ ] Refresh room unread metadata/visible timeline and handle deletes/reactions; do not mark hidden rooms read. Notification delivery failures remain retryable. Server notified acknowledgement follows successful local delivery, without blocking later playback preparation.
-- [ ] Add persisted auto-play preference (default on), route automatic/notification/history replay through shared playback ownership/cache. Bound preparation concurrency, deduplicate pending windows, cancel lifetime work and isolate an item failure.
-- [ ] Native face200-DIP circle, screen history600-DIP target with32-DIP margins/aspect fit, sender position/DPI/display clamping, ended/replay/escape/10-second dismissal. Group auto-reply playback windows without overlap. Face thumbnails are circular; capture-specific sizes remain separate.
-- [ ] Real owned WinUI fixture tests for playback geometry/lifecycle and preference controls; mock delivery/read/notification/preparation flows. Full tests/build; commit `feat(windows-playback): present live pings through shared delivery`.
+- [x] One owned observer connects Realtime invalidations and fallback polling through shared delivery coordinator; coalesce fetches, distinguish startup/reconnect batches, preserve periodic reconciliation, stop old tasks on termination/account change. Polling must not concurrently duplicate an event-driven fetch or notification.
+- [x] Refresh room unread metadata/visible timeline and handle deletes/reactions; do not mark hidden rooms read. Notification delivery failures remain retryable. Server notified acknowledgement follows successful local delivery, without blocking later playback preparation.
+- [x] Add persisted auto-play preference (default on), route automatic/notification/history replay through shared playback ownership/cache. Bound preparation concurrency, deduplicate pending windows, cancel lifetime work and isolate an item failure.
+- [x] Native face200-DIP circle, screen history600-DIP target with32-DIP margins/aspect fit, sender position/DPI/display clamping, ended/replay/escape/10-second dismissal. Group auto-reply playback windows without overlap. Face thumbnails are circular; capture-specific sizes remain separate.
+- [x] Real owned WinUI fixture tests for playback geometry/lifecycle and preference controls; mock delivery/read/notification/preparation flows. Full tests/build; commit `feat(windows-playback): present live pings through shared delivery`.
 
 ## Task 4 — Review and verification
 

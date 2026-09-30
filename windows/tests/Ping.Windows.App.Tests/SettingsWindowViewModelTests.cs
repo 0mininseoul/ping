@@ -8,6 +8,40 @@ namespace Ping.Windows.App.Tests;
 public sealed class SettingsWindowViewModelTests
 {
     [Fact]
+    public void AutoPlayDefaultsOnAndPersistsOffWithoutReplacingCaptureSettings()
+    {
+        ScreenFaceQuickSendSettings? saved = null;
+        var original = ScreenFaceQuickSendSettings.Default with { DefaultRoomId = "room" };
+        var viewModel = new SettingsWindowViewModel("Peer", HotkeyBinding.Defaults(), original, settings => saved = settings, () => { });
+        Assert.True(viewModel.AutoPlayIncoming);
+        viewModel.AutoPlayIncoming = false;
+        Assert.NotNull(saved);
+        Assert.False(saved.AutoPlayIncoming);
+        Assert.Equal("room", saved.DefaultRoomId);
+        Assert.Equal(original.Preferences, saved.Preferences);
+        viewModel.ApplySettings(original);
+        Assert.True(viewModel.AutoPlayIncoming);
+    }
+
+    [Fact]
+    public void ExistingSettingsWithoutAutoPlayFieldDefaultOnAndRoundTripOff()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "PingSettingsStoreTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        var path = Path.Combine(directory, "settings.json");
+        try
+        {
+            File.WriteAllText(path, """{"DefaultRoomId":"room"}""");
+            var store = new ScreenFaceQuickSendSettingsStore(path);
+            var loaded = store.Load();
+            Assert.True(loaded.AutoPlayIncoming);
+            store.Save(loaded with { AutoPlayIncoming = false });
+            Assert.False(store.Load().AutoPlayIncoming);
+            Assert.Equal("room", store.Load().DefaultRoomId);
+        }
+        finally { Directory.Delete(directory, recursive: true); }
+    }
+    [Fact]
     public void StorageTogglesPersistThroughSettingsCallback()
     {
         ScreenFaceQuickSendSettings? saved = null;

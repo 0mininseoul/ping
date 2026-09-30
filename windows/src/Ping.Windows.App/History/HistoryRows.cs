@@ -89,6 +89,8 @@ public sealed class VideoHistoryItem : INotifyPropertyChanged
     public string VideoId => Message.VideoId;
 
     public CaptureMode CaptureMode => Message.CaptureMode;
+    public double ThumbnailWidth => CaptureMode == CaptureMode.FaceOnly ? 120 : 200;
+    public double ThumbnailHeight => CaptureMode == CaptureMode.FaceOnly ? 120 : 128;
     public string ModeLabel => Message.CaptureMode == CaptureMode.ScreenFace ? "화면 + 얼굴" : "얼굴 핑";
     public string AutoReplyLabel => Message.IsAutoReply ? "자동 회신" : "";
 

@@ -413,7 +413,7 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
                 new SendVideoInput(
                     targetSelector.SelectedRooms,
                     path,
-                    mirrorPosition,
+                    MirrorCoordinates.ToServicePosition(mirrorPosition),
                     context.SenderUid,
                     context.SenderNickname,
                     CaptureMode.ScreenFace,

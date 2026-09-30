@@ -76,6 +76,8 @@ public sealed record ScreenFaceQuickSendSettings
     public ScreenFaceQuickSendPreferences Preferences { get; init; } = ScreenFaceQuickSendPreferences.Default;
 
     public string? DefaultRoomId { get; init; }
+
+    public bool AutoPlayIncoming { get; init; } = true;
 }
 
 public sealed class ScreenFaceQuickSendSettingsStore
@@ -276,7 +278,7 @@ public sealed class QuickSendController
                 new SendVideoInput(
                     [room],
                     recordedPath,
-                    context.MirrorPosition,
+                    MirrorCoordinates.ToServicePosition(context.MirrorPosition),
                     context.SenderUid,
                     context.SenderNickname,
                     CaptureMode.ScreenFace,

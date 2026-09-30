@@ -11,6 +11,24 @@ public sealed class HistoryViewModelTests
     private static readonly DateTimeOffset BaseTime = new(2026, 1, 1, 10, 0, 0, TimeSpan.Zero);
 
     [Fact]
+    public async Task ApplyingIncomingRoomMetadataPreservesSelectedDraftAndDoesNotMarkRead()
+    {
+        var rpc = new RecordingHistoryRpcClient();
+        var viewModel = ViewModel(rpc);
+        await viewModel.LoadAsync("room-2");
+        viewModel.DraftText = "keep my draft";
+        rpc.MarkedReadRoomIds.Clear();
+        var timeline = viewModel.Timeline.ToArray();
+        var rooms = viewModel.Rooms.Select(room => room with { UnreadCount = 7 }).ToArray();
+        viewModel.ApplyRoomMetadata(rooms);
+        Assert.Equal("room-2", viewModel.SelectedRoom?.Id);
+        Assert.Equal(7, viewModel.SelectedRoom?.UnreadCount);
+        Assert.Equal("keep my draft", viewModel.DraftText);
+        Assert.Equal(timeline, viewModel.Timeline);
+        Assert.Empty(rpc.MarkedReadRoomIds);
+    }
+
+    [Fact]
     public async Task LoadAsync_SelectsPreferredRoomAndMarksItRead()
     {
         var rpc = new RecordingHistoryRpcClient();
@@ -401,7 +419,7 @@ public sealed class HistoryViewModelTests
         await first.WaitAsync(TimeSpan.FromSeconds(1));
         await coordinator.RefreshOnceAsync().WaitAsync(TimeSpan.FromSeconds(1));
 
-        Assert.Equal(2, Volatile.Read(ref calls));
+        Assert.Equal(3, Volatile.Read(ref calls));
     }
 
     [Fact]

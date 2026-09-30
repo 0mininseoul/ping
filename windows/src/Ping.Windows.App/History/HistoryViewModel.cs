@@ -81,8 +81,11 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
             var changedRoom = selectedRoom?.Id != value?.Id;
             if (changedRoom) selectionRevision++;
             selectedRoom = value;
-            Interlocked.Increment(ref loadGeneration);
-            if (changedRoom) composer.SelectRoom(value?.Id);
+            if (changedRoom)
+            {
+                Interlocked.Increment(ref loadGeneration);
+                composer.SelectRoom(value?.Id);
+            }
             OnPropertyChanged();
             OnPropertyChanged(nameof(SelectedRoomName));
             OnPropertyChanged(nameof(SelectedRoomMembers));
@@ -184,6 +187,15 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         var targetId = selectionRevision != requestedSelectionRevision ? SelectedRoom?.Id : preferredRoomId ?? previousSelectedId;
         SelectedRoom = Rooms.FirstOrDefault(room => string.Equals(room.Id, targetId, StringComparison.Ordinal)) ?? Rooms.FirstOrDefault();
         await LoadSelectedRoomAsync(cancellationToken);
+    }
+
+    public void ApplyRoomMetadata(IReadOnlyList<Room> refreshedRooms)
+    {
+        Interlocked.Increment(ref roomListGeneration);
+        var selectedId = SelectedRoom?.Id;
+        Rooms.Clear();
+        foreach (var room in refreshedRooms) Rooms.Add(room);
+        SelectedRoom = Rooms.FirstOrDefault(room => room.Id == selectedId) ?? Rooms.FirstOrDefault();
     }
 
     public async Task SelectRoomAsync(string roomId, CancellationToken cancellationToken = default)

@@ -8,7 +8,9 @@ public sealed class HistoryAutoRefreshCoordinator
     private readonly object sync = new();
     private CancellationTokenSource? cancellation;
     private Task? loopTask;
-    private int refreshInProgress;
+    private readonly object refreshSync = new();
+    private bool refreshInProgress;
+    private bool pendingRefresh;
 
     public HistoryAutoRefreshCoordinator(
         TimeSpan interval,
@@ -87,18 +89,34 @@ public sealed class HistoryAutoRefreshCoordinator
 
     public async Task RefreshOnceAsync(CancellationToken cancellationToken = default)
     {
-        if (Interlocked.Exchange(ref refreshInProgress, 1) == 1)
+        lock (refreshSync)
         {
-            return;
+            if (refreshInProgress) { pendingRefresh = true; return; }
+            refreshInProgress = true;
         }
-
+        var released = false;
         try
         {
-            await refreshAsync(cancellationToken).ConfigureAwait(false);
+            while (true)
+            {
+                lock (refreshSync) pendingRefresh = false;
+                await refreshAsync(cancellationToken).ConfigureAwait(false);
+                cancellationToken.ThrowIfCancellationRequested();
+                lock (refreshSync)
+                {
+                    if (pendingRefresh) continue;
+                    refreshInProgress = false;
+                    released = true;
+                    return;
+                }
+            }
         }
         finally
         {
-            Interlocked.Exchange(ref refreshInProgress, 0);
+            if (!released)
+            {
+                lock (refreshSync) { refreshInProgress = false; pendingRefresh = false; }
+            }
         }
     }
 

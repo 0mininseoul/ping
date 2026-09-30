@@ -60,7 +60,7 @@ public sealed class ScreenFaceMirrorViewModelTests
 
         Assert.NotNull(sentInput);
         Assert.Equal(0.15, sentInput!.MirrorPosition.XRatio, precision: 6);
-        Assert.Equal(0.75, sentInput.MirrorPosition.YRatio, precision: 6);
+        Assert.Equal(0.25, sentInput.MirrorPosition.YRatio, precision: 6);
     }
 
     [Fact]

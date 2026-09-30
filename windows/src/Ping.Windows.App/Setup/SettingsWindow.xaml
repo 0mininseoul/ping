@@ -52,6 +52,12 @@
                         OffContent="{Binding QuickSendOffContent}"
                         OnContent="{Binding QuickSendOnContent}" />
                     <ToggleSwitch
+                        x:Name="AutoPlayIncomingToggle"
+                        Header="받은 영상 자동 재생"
+                        IsOn="{Binding AutoPlayIncoming, Mode=TwoWay}"
+                        OffContent="알림을 눌러 재생"
+                        OnContent="새로 도착한 영상 바로 재생" />
+                    <ToggleSwitch
                         Header="Start Ping with Windows"
                         IsEnabled="{Binding CanToggleStartup}"
                         IsOn="{Binding IsStartupEnabled, Mode=TwoWay}"

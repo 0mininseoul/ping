@@ -9,6 +9,26 @@ namespace Ping.Windows.App.Tests;
 public sealed class HistorySnapshotTests
 {
     [Fact]
+    public async Task SameRoomUnreadMetadataDoesNotDiscardActiveTimelineRefresh()
+    {
+        var rpc = new SnapshotRpc();
+        var viewModel = Create(rpc);
+        await viewModel.LoadAsync("a");
+        var previousRow = Assert.Single(viewModel.Timeline);
+        rpc.PauseA = true;
+        var refresh = new HistoryAutoRefreshCoordinator(TimeSpan.FromHours(1), viewModel.LoadSelectedRoomAsync);
+        var active = refresh.RefreshOnceAsync();
+        await rpc.AEntered.Task.WaitAsync(TimeSpan.FromSeconds(3));
+        viewModel.ApplyRoomMetadata(viewModel.Rooms.Select(room => room with { UnreadCount = 9 }).ToArray());
+        await refresh.RefreshOnceAsync();
+        rpc.AReleased.TrySetResult();
+        await active;
+        Assert.NotSame(previousRow, Assert.Single(viewModel.Timeline));
+        Assert.Equal("a", viewModel.SelectedRoom!.Id);
+        Assert.Equal(9, viewModel.SelectedRoom.UnreadCount);
+        Assert.Equal(3, rpc.ChatLoads);
+    }
+    [Fact]
     public async Task LateRoomListCannotRestorePreviousRoomOrDiscardNewReply()
     {
         var rpc = new SnapshotRpc();
@@ -143,9 +163,11 @@ public sealed class HistorySnapshotTests
         public TaskCompletionSource AEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource AReleased { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public List<string> ReadRooms { get; } = [];
+        public int ChatLoads;
 
         public async Task<IReadOnlyList<T>> RpcArrayAsync<T>(string function, object? body = null, CancellationToken cancellationToken = default)
         {
+            if (function == "ping_room_chat_messages") Interlocked.Increment(ref ChatLoads);
             if (Fail) throw new HttpRequestException("offline");
             if (PauseRooms && function == "ping_my_rooms")
             {

@@ -91,6 +91,18 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
+    public bool AutoPlayIncoming
+    {
+        get => settings.AutoPlayIncoming;
+        set
+        {
+            if (settings.AutoPlayIncoming == value) return;
+            settings = settings with { AutoPlayIncoming = value };
+            saveSettings(settings);
+            OnPropertyChanged();
+        }
+    }
+
     public string Nickname
     {
         get => nickname;
@@ -466,6 +478,7 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
     public void ApplySettings(ScreenFaceQuickSendSettings updatedSettings)
     {
         settings = updatedSettings;
+        OnPropertyChanged(nameof(AutoPlayIncoming));
         OnPropertyChanged(nameof(IsQuickSendEnabled));
         OnPropertyChanged(nameof(SaveSentCopy));
         OnPropertyChanged(nameof(SaveReceivedCopy));

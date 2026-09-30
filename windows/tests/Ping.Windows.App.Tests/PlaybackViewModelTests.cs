@@ -7,6 +7,19 @@ namespace Ping.Windows.App.Tests;
 public sealed class PlaybackViewModelTests
 {
     [Fact]
+    public async Task SlowSeenAcknowledgementDoesNotDelayEndedControls()
+    {
+        var acknowledgement = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var viewModel = new PlaybackViewModel(Message(CaptureMode.FaceOnly, 1), "clip.mp4", _ => acknowledgement.Task);
+        var ended = false;
+        viewModel.PlaybackEnded += (_, _) => ended = true;
+        var handling = viewModel.HandlePlaybackEndedAsync();
+        Assert.True(ended);
+        Assert.True(viewModel.IsAwaitingDismissal);
+        acknowledgement.TrySetResult();
+        await handling;
+    }
+    [Fact]
     public async Task PlaybackEnded_MarksSeenOnceAndWaitsForDismissal()
     {
         var markSeenCount = 0;

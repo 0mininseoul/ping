@@ -41,7 +41,7 @@ public sealed class FaceMirrorViewModelTests
         Assert.Equal(CaptureMode.FaceOnly, input.CaptureMode);
         Assert.Equal(1.0, input.AspectRatio);
         Assert.Equal(0.25, input.MirrorPosition.XRatio, precision: 6);
-        Assert.Equal(0.25, input.MirrorPosition.YRatio, precision: 6);
+        Assert.Equal(0.75, input.MirrorPosition.YRatio, precision: 6);
         Assert.True(model.IsCloseRequested);
         Assert.True(closeRequested);
     }
@@ -67,7 +67,7 @@ public sealed class FaceMirrorViewModelTests
 
         Assert.NotNull(sentInput);
         Assert.Equal(0.8, sentInput!.MirrorPosition.XRatio, precision: 6);
-        Assert.Equal(0.2, sentInput.MirrorPosition.YRatio, precision: 6);
+        Assert.Equal(0.8, sentInput.MirrorPosition.YRatio, precision: 6);
     }
 
     [Fact]

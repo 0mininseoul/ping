@@ -12,6 +12,8 @@ using Ping.Windows.App.Tray;
 using Ping.Windows.Core.Backend;
 using Ping.Windows.Core.LocalState;
 using Ping.Windows.Core.Models;
+using Ping.Windows.Core.Incoming;
+using Ping.Windows.Core.Realtime;
 
 namespace Ping.Windows.App.Bootstrap;
 
@@ -31,8 +33,18 @@ public sealed class AppCoordinator : IDisposable
     private readonly ReactionService reactionService;
     private readonly CleanupService cleanupService;
     private readonly LocalArchive localArchive;
-    private readonly IncomingMessagePoller incomingPoller;
     private readonly IncomingChatPoller incomingChatPoller;
+    private readonly IncomingObserver incomingObserver;
+    private readonly RealtimeSupervisor realtime;
+    private readonly IncomingVideoDelivery videoDelivery;
+    private readonly IncomingDeliveryLedger chatDelivery = new();
+    private readonly HashSet<string> yieldedChatIds = new(StringComparer.Ordinal);
+    private readonly PlaybackPreparationQueue playbackPreparation;
+    private readonly CancellationTokenSource lifetime = new();
+    private readonly DateTimeOffset appStartedAt = DateTimeOffset.UtcNow;
+    private readonly StartupIdentityGate startupIdentity = new();
+    private bool realtimeWasConnected;
+    private RealtimeConnectionState previousRealtimeState;
     private readonly NotificationController notificationController;
     private readonly IScreenFaceCaptureEngine screenFaceCaptureEngine;
     private readonly QuickSendController quickSendController;
@@ -42,7 +54,7 @@ public sealed class AppCoordinator : IDisposable
     private readonly ConnectionSupervisor connectionSupervisor;
     private ConnectionLifecycleAdapter? connectionLifecycle;
     private IReadOnlyCollection<Room> rooms = [];
-    private string? currentUid;
+    private volatile string? currentUid;
     private string currentNickname = Environment.UserName;
     private string? remoteDefaultRoomId;
     private ScreenFaceQuickSendSettings quickSendSettings;
@@ -54,10 +66,8 @@ public sealed class AppCoordinator : IDisposable
     private RoomManagerWindow? roomManagerWindow;
     private HistoryWindow? historyWindow;
     private SettingsWindow? settingsWindow;
-    private readonly List<PlaybackWindow> playbackWindows = [];
+    private readonly Dictionary<(string Uid, string Id), PlaybackWindow> playbackWindows = new();
     private CancellationTokenSource? quickSendCancellation;
-    private CancellationTokenSource? incomingPollingCancellation;
-    private CancellationTokenSource? incomingChatPollingCancellation;
     private bool disposed;
 
     public AppCoordinator(MainWindow mainWindow)
@@ -90,11 +100,18 @@ public sealed class AppCoordinator : IDisposable
         reactionService = new ReactionService(this.supabaseClient);
         cleanupService = new CleanupService(this.supabaseClient);
         localArchive = new LocalArchive(LocalArchive.DefaultRootDirectory());
-        incomingPoller = new IncomingMessagePoller(messageService, onError: HandleIncomingConnectionError);
         incomingChatPoller = new IncomingChatPoller(chatService, roomService, () => currentUid, onError: HandleIncomingConnectionError);
         connectionSupervisor = new ConnectionSupervisor(ConnectAndLoadRoomsAsync);
         connectionSupervisor.StateChanged += HandleConnectionStateChanged;
         notificationController = new NotificationController(OpenMessageFromNotificationAsync, OpenChatFromNotificationAsync);
+        realtime = new RealtimeSupervisor(this.supabaseClient.GetRealtimeCredentialsAsync,
+            (_, _) => { incomingObserver!.Signal(); return Task.CompletedTask; });
+        incomingObserver = new IncomingObserver(ReconcileIncomingAsync,
+            () => TimeSpan.FromSeconds(realtime.State == RealtimeConnectionState.Connected ? 30 : 10), HandleIncomingConnectionError);
+        realtime.StateChanged += HandleRealtimeStateChanged;
+        realtime.RecoveryRequired += HandleIncomingConnectionError;
+        playbackPreparation = new PlaybackPreparationQueue(DownloadVideoForPlaybackAsync, PresentPreparedPlaybackAsync,
+            error => { HandleIncomingConnectionError(error); Debug.WriteLine("Ping playback preparation failed."); });
         screenFaceCaptureEngine = new NativeCaptureEngine();
         permissionProbe = new PermissionProbe(
             hotkeyBindingsProvider: preferencesStore.Load,
@@ -102,6 +119,8 @@ public sealed class AppCoordinator : IDisposable
         quickSendSettingsStore = new ScreenFaceQuickSendSettingsStore();
         mirrorPlacementStore = new MirrorPlacementStore();
         quickSendSettings = quickSendSettingsStore.Load();
+        videoDelivery = new IncomingVideoDelivery(appStartedAt, () => quickSendSettings.AutoPlayIncoming,
+            ShowIncomingNotificationAsync, EnqueueAutomaticPlaybackAsync, messageService.MarkNotifiedAsync, HandleIncomingConnectionError);
         quickSendController = new QuickSendController(
             screenFaceCaptureEngine,
             SendVideoAndRememberRoomAsync,
@@ -226,6 +245,7 @@ public sealed class AppCoordinator : IDisposable
         }
 
         disposed = true;
+        lifetime.Cancel();
         connectionLifecycle?.Dispose();
         connectionSupervisor.StateChanged -= HandleConnectionStateChanged;
         _ = DisposeConnectionAsync();
@@ -235,8 +255,7 @@ public sealed class AppCoordinator : IDisposable
         mainWindow.OpenRoomsRequested -= HandleOpenRoomsRequested;
         mainWindow.NewPingRequested -= HandleNewPingRequested;
         mainWindow.OpenSettingsRequested -= HandleOpenSettingsRequested;
-        StopIncomingPolling();
-        StopIncomingChatPolling();
+        foreach (var window in playbackWindows.Values.ToArray()) window.Close();
         notificationController.Dispose();
         hotkeys.Dispose();
         quickSendCancellation?.Cancel();
@@ -247,6 +266,10 @@ public sealed class AppCoordinator : IDisposable
     private async Task DisposeConnectionAsync()
     {
         await connectionSupervisor.StopAsync();
+        await incomingObserver.DisposeAsync();
+        await realtime.DisposeAsync();
+        await playbackPreparation.DisposeAsync();
+        lifetime.Dispose();
         supabaseClient.Dispose();
     }
 
@@ -372,7 +395,8 @@ public sealed class AppCoordinator : IDisposable
             messageService,
             preferredRoomId,
             preferredChatId,
-            loadOnStart: currentUid is not null);
+            loadOnStart: currentUid is not null,
+            playVideoAsync: (message, token) => RequestPlaybackAsync(message, IncomingArrivalSource.HistoryReplay, token));
         mainWindow.AttachMessenger(historyWindow);
         historyWindow.Activate();
     }
@@ -831,115 +855,116 @@ public sealed class AppCoordinator : IDisposable
         RefreshDefaultRoomLabel();
     }
 
-    private void StartIncomingPolling()
+    private void HandleRealtimeStateChanged(RealtimeConnectionState state)
     {
-        if (incomingPollingCancellation is not null) return;
-        var cancellation = new CancellationTokenSource();
-        incomingPollingCancellation = cancellation;
-
-        _ = Task.Run(async () =>
+        if (disposed) return;
+        if (state == RealtimeConnectionState.FallbackPolling && previousRealtimeState == RealtimeConnectionState.Connected)
+            incomingObserver.Signal(IncomingArrivalSource.ReconnectCatchUp);
+        previousRealtimeState = state;
+        if (state == RealtimeConnectionState.Connected)
         {
+            incomingObserver.Signal(realtimeWasConnected ? IncomingArrivalSource.ReconnectCatchUp : IncomingArrivalSource.StartupCatchUp);
+            realtimeWasConnected = true;
+        }
+    }
+
+    private async Task ReconcileIncomingAsync(IncomingArrivalSource source, CancellationToken token)
+    {
+        using var reconciliation = CancellationTokenSource.CreateLinkedTokenSource(token, lifetime.Token);
+        token = reconciliation.Token;
+        var uid = currentUid;
+        if (uid is null || disposed) return;
+        var refreshedRooms = await roomService.MyRoomsAsync(token);
+        await realtime.UpdateAsync(uid, refreshedRooms.Where(room => room.Id is not null && room.MemberUids.Contains(uid)).Select(room => room.Id!).ToArray(), cancellationToken: token);
+        var messages = await messageService.IncomingAsync(token);
+        foreach (var message in messages)
+        {
+            token.ThrowIfCancellationRequested();
+            if (currentUid != uid || disposed) return;
+            try { await videoDelivery.DeliverAsync(uid, message, source, token); }
+            catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
+            catch (SupabaseSessionExpiredException) { throw; }
+            catch (SupabaseSessionReadException) { throw; }
+            catch (Exception error) { HandleIncomingConnectionError(error); }
+        }
+        await videoDelivery.RetryAcknowledgementsAsync(uid, token);
+        foreach (var notification in await incomingChatPoller.LoadForDeliveryAsync(yieldedChatIds, token))
+        {
+            token.ThrowIfCancellationRequested();
+            if (currentUid != uid || disposed) return;
+            if (notification.Message.Id is not { Length: > 0 } id) continue;
+            using var reservation = chatDelivery.TryReserve(uid, IncomingItemKind.Chat, id);
+            if (reservation is null) continue;
             try
             {
-                await incomingPoller.RunAsync(HandleIncomingMessageAsync, cancellation.Token);
-            }
-            catch (OperationCanceledException)
-            {
-            }
-            finally
-            {
+                NotificationShowResult result = NotificationShowResult.Unavailable;
                 await RunOnUiThreadAsync(() =>
                 {
-                    if (ReferenceEquals(incomingPollingCancellation, cancellation)) incomingPollingCancellation = null;
-                    cancellation.Dispose();
+                    if (!disposed && currentUid == uid && !token.IsCancellationRequested)
+                        result = notificationController.ShowIncomingChat(notification);
                 });
+                if (result == NotificationShowResult.Unavailable) continue;
+                reservation.Commit();
+                yieldedChatIds.Add(id);
+                if (yieldedChatIds.Count > 512) yieldedChatIds.Clear();
             }
-        }, cancellation.Token);
-    }
-
-    private void StartIncomingChatPolling()
-    {
-        if (incomingChatPollingCancellation is not null) return;
-        var cancellation = new CancellationTokenSource();
-        incomingChatPollingCancellation = cancellation;
-
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                await incomingChatPoller.RunAsync(HandleIncomingChatAsync, cancellation.Token);
-            }
-            catch (OperationCanceledException)
-            {
-            }
-            finally
-            {
-                await RunOnUiThreadAsync(() =>
-                {
-                    if (ReferenceEquals(incomingChatPollingCancellation, cancellation)) incomingChatPollingCancellation = null;
-                    cancellation.Dispose();
-                });
-            }
-        }, cancellation.Token);
-    }
-
-    private void StopIncomingPolling()
-    {
-        incomingPollingCancellation?.Cancel();
-        incomingPollingCancellation = null;
-    }
-
-    private void StopIncomingChatPolling()
-    {
-        incomingChatPollingCancellation?.Cancel();
-        incomingChatPollingCancellation = null;
-    }
-
-    private async Task HandleIncomingMessageAsync(VideoMessage message, CancellationToken cancellationToken)
-    {
-        if (message.Id is { } messageId)
-        {
-            await messageService.MarkNotifiedAsync(messageId, cancellationToken);
+            catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
+            catch (Exception error) { HandleIncomingConnectionError(error); }
         }
-
-        var notificationResult = notificationController.ShowIncoming(message);
-        if (notificationResult == NotificationShowResult.Duplicate)
+        Task refresh = Task.CompletedTask;
+        await RunOnUiThreadAsync(() =>
         {
-            return;
-        }
-
-        await RefreshOpenHistoryRoomAsync(message.RoomId, cancellationToken);
-    }
-
-    private async Task HandleIncomingChatAsync(IncomingChatNotification notification, CancellationToken cancellationToken)
-    {
-        await RefreshOpenHistoryRoomAsync(notification.Message.RoomId, cancellationToken);
-        if (notificationController.ShowIncomingChat(notification) == NotificationShowResult.Unavailable)
-        {
-            throw new InvalidOperationException("Incoming chat notification is unavailable.");
-        }
-    }
-
-    private Task RefreshOpenHistoryRoomAsync(string? roomId, CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(roomId) || historyWindow is null)
-        {
-            return Task.CompletedTask;
-        }
-
-        return RunOnUiThreadAsync(() =>
-        {
-            if (historyWindow is not { } window || !window.IsViewingRoom(roomId))
-            {
-                return;
-            }
-
-            _ = window.RefreshNowAsync(cancellationToken);
+            if (disposed || currentUid != uid || token.IsCancellationRequested) return;
+            rooms = refreshedRooms;
+            RefreshDefaultRoomLabel();
+            if (historyWindow is { } history) refresh = history.ApplyIncomingRoomsAsync(refreshedRooms, token);
         });
+        await refresh;
     }
 
+    private async Task<IncomingNotificationResult> ShowIncomingNotificationAsync(VideoMessage message, CancellationToken token)
+    {
+        var result = NotificationShowResult.Unavailable;
+        await RunOnUiThreadAsync(() =>
+        {
+            if (!disposed && currentUid == message.ReceiverUid && !token.IsCancellationRequested)
+                result = notificationController.ShowIncoming(message);
+        });
+        return result switch
+        {
+            NotificationShowResult.Shown => IncomingNotificationResult.Shown,
+            NotificationShowResult.Duplicate => IncomingNotificationResult.Duplicate,
+            _ => IncomingNotificationResult.Unavailable
+        };
+    }
+
+    private Task EnqueueAutomaticPlaybackAsync(VideoMessage message, IncomingArrivalSource source, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        if (!disposed && currentUid is { } uid && uid == message.ReceiverUid)
+            playbackPreparation.Enqueue(uid, message, source);
+        return Task.CompletedTask;
+    }
+
+    private async Task RequestPlaybackAsync(VideoMessage message, IncomingArrivalSource source, CancellationToken token)
+    {
+        if (disposed) return;
+        var uid = currentUid ?? await startupIdentity.WaitAsync(token);
+        if (disposed || currentUid != uid) return;
+        await playbackPreparation.RequestAsync(uid, message, source, token);
+    }
+
+    private Task PresentPreparedPlaybackAsync(string uid, VideoMessage message, string path, IncomingArrivalSource source, CancellationToken token) =>
+        RunOnUiThreadAsync(() =>
+        {
+            if (disposed || token.IsCancellationRequested || currentUid != uid) return;
+            var decision = IncomingArrivalPolicy.Decide(message, uid, source, appStartedAt, DateTimeOffset.UtcNow, quickSendSettings.AutoPlayIncoming);
+            if (decision.ShouldOpenPlayback) ShowPlayback(uid, message, path, source);
+        });
     private async Task OpenMessageFromNotificationAsync(string messageId, CancellationToken cancellationToken)
     {
+        using var activation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, lifetime.Token);
+        cancellationToken = activation.Token;
         try
         {
             var message = await messageService.GetAsync(messageId, cancellationToken);
@@ -948,8 +973,7 @@ public sealed class AppCoordinator : IDisposable
                 return;
             }
 
-            var localVideoPath = await DownloadVideoForPlaybackAsync(message, cancellationToken);
-            await RunOnUiThreadAsync(() => ShowPlayback(message, localVideoPath));
+            await RequestPlaybackAsync(message, IncomingArrivalSource.NotificationClick, cancellationToken);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -963,16 +987,39 @@ public sealed class AppCoordinator : IDisposable
         }
     }
 
-    private void ShowPlayback(VideoMessage message, string localVideoPath)
+    private void ShowPlayback(string uid, VideoMessage message, string localVideoPath, IncomingArrivalSource source)
     {
+        if (message.Id is null) return;
+        var key = (uid, message.Id);
+        if (playbackWindows.TryGetValue(key, out var existing))
+        {
+            if (source is IncomingArrivalSource.NotificationClick or IncomingArrivalSource.HistoryReplay) existing.Activate();
+            return;
+        }
         var viewModel = new PlaybackViewModel(
             message,
             localVideoPath,
             token => message.Id is null ? Task.CompletedTask : messageService.MarkSeenAsync(message.Id, token));
-        var window = new PlaybackWindow(viewModel);
-        playbackWindows.Add(window);
-        window.Closed += (_, _) => playbackWindows.Remove(window);
+        var window = new PlaybackWindow(viewModel, mainWindow, historyReplay: source == IncomingArrivalSource.HistoryReplay);
+        window.IsReplyGroupMember = message.IsAutoReply && source == IncomingArrivalSource.Live;
+        playbackWindows[key] = window;
+        window.Closed += (_, _) => { playbackWindows.Remove(key); RelayoutReplyGroup(window); };
         window.Activate();
+        RelayoutReplyGroup(window);
+    }
+
+    private void RelayoutReplyGroup(PlaybackWindow anchor)
+    {
+        if (!anchor.IsReplyGroupMember) return;
+        var message = anchor.ViewModel.Message;
+        var group = playbackWindows.Values.Where(window => window.IsReplyGroupMember
+            && window.ViewModel.Message.RoomId == message.RoomId
+            && Math.Abs(window.ViewModel.Message.MirrorPosition.XRatio - message.MirrorPosition.XRatio) < .01
+            && Math.Abs(window.ViewModel.Message.MirrorPosition.YRatio - message.MirrorPosition.YRatio) < .01).ToArray();
+        var sizes = group.Select(window => PlaybackLayout.Single(window.ViewModel.Message.CaptureMode, window.ViewModel.Message.AspectRatio,
+            message.MirrorPosition, anchor.WorkAreaDips, false)).ToArray();
+        var layout = PlaybackLayout.Group(sizes, message.MirrorPosition, anchor.WorkAreaDips);
+        for (var index = 0; index < group.Length; index++) group[index].ApplyPlacement(layout[index]);
     }
 
     private async Task OpenChatFromNotificationAsync(
@@ -1133,14 +1180,27 @@ public sealed class AppCoordinator : IDisposable
 
     private async Task ConnectAndLoadRoomsAsync(CancellationToken cancellationToken)
     {
+        startupIdentity.PrepareRetry();
         var uid = await supabaseClient.BootstrapAsync(cancellationToken);
         var profile = await userService.GetAsync(uid, cancellationToken);
         var refreshedRooms = await roomService.MyRoomsAsync(cancellationToken);
+        if (currentUid is { } previousUid && previousUid != uid)
+        {
+            await incomingObserver.StopAsync();
+            await realtime.StopAsync();
+            yieldedChatIds.Clear();
+            realtimeWasConnected = false;
+            await RunOnUiThreadAsync(() =>
+            {
+                foreach (var window in playbackWindows.Values.ToArray()) window.Close();
+            });
+        }
         cancellationToken.ThrowIfCancellationRequested();
         await RunOnUiThreadAsync(() =>
         {
             if (disposed || cancellationToken.IsCancellationRequested) return;
             currentUid = uid;
+            startupIdentity.SetReady(uid);
             if (!string.IsNullOrWhiteSpace(profile?.Nickname))
             {
                 currentNickname = profile.Nickname;
@@ -1162,11 +1222,14 @@ public sealed class AppCoordinator : IDisposable
                 && room.MemberUids.Count >= 2);
 
             mainWindow.SetHotkeyStatus(HotkeyStatusText.RoomSummary(preferencesStore.Load(), sendableCount));
-            StartIncomingPolling();
-            StartIncomingChatPolling();
+            if (incomingObserver.IsRunning) incomingObserver.Signal(IncomingArrivalSource.ReconnectCatchUp);
+            else incomingObserver.Start();
 
             if (historyWindow is not null) _ = historyWindow.ReloadRoomsAsync();
         });
+        await realtime.UpdateAsync(uid, refreshedRooms.Where(room => room.Id is not null && room.MemberUids.Contains(uid)).Select(room => room.Id!).ToArray(),
+            forceReconnect: realtime.State is RealtimeConnectionState.RecoveryRequired or RealtimeConnectionState.ConfigurationRequired,
+            cancellationToken: cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         await RunCleanupAsync(cancellationToken);
     }
@@ -1184,8 +1247,9 @@ public sealed class AppCoordinator : IDisposable
             if (disposed || state == ConnectionState.Stopped) return;
             if (state is ConnectionState.SessionRejected or ConnectionState.ConfigurationRequired)
             {
-                StopIncomingPolling();
-                StopIncomingChatPolling();
+                startupIdentity.Fail(error ?? new InvalidOperationException("Ping account startup failed."));
+                _ = incomingObserver.StopAsync();
+                _ = realtime.StopAsync();
             }
             var status = state switch
             {

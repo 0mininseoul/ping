@@ -377,7 +377,7 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
                 new SendVideoInput(
                     targetSelector.SelectedRooms,
                     path,
-                    mirrorPosition,
+                    MirrorCoordinates.ToServicePosition(mirrorPosition),
                     context.SenderUid,
                     context.SenderNickname,
                     CaptureMode.FaceOnly,

@@ -125,14 +125,23 @@ internal static class UiSmokeRunner
             window.ReportStatus(null);
 
             Step("Creating real secondary settings window.");
-            var settings = new SettingsWindow(new SettingsWindowViewModel("민", HotkeyBinding.Defaults(), ScreenFaceQuickSendSettings.Default,
-                _ => { }, () => { }, new FixtureStartup(), archiveRootPath: OutputDirectory,
-                ensureArchiveFolders: () => { }, deleteExpiredArchiveFiles: () => { }, openArchiveFolder: _ => Task.FromResult(false)));
+            ScreenFaceQuickSendSettings? savedSettings = null;
+            var settingsVm = new SettingsWindowViewModel("민", HotkeyBinding.Defaults(), ScreenFaceQuickSendSettings.Default,
+                value => savedSettings = value, () => { }, new FixtureStartup(), archiveRootPath: OutputDirectory,
+                ensureArchiveFolders: () => { }, deleteExpiredArchiveFiles: () => { }, openArchiveFolder: _ => Task.FromResult(false));
+            var settings = new SettingsWindow(settingsVm);
             settings.Activate();
             await Task.Delay(250);
+            var autoPlayToggle = Descendants(settings.Content).OfType<ToggleSwitch>().Single(toggle => toggle.Header?.ToString() == "받은 영상 자동 재생");
+            Check(autoPlayToggle.IsOn, "real autoplay control defaults on");
+            autoPlayToggle.IsOn = false;
+            await Task.Delay(50);
+            Check(savedSettings is { AutoPlayIncoming: false } && !settingsVm.AutoPlayIncoming, "real autoplay binding persists off");
             await RenderAsync((FrameworkElement)settings.Content, "settings.png");
             settings.Close();
             Check(true, "real settings window created, rendered and closed without crash");
+            Step("Verifying owned native playback with a synthetic clip.");
+            await PlaybackSmoke.RunAsync(window, OutputDirectory!, Check, RenderAsync);
 
             var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
             window.Close();

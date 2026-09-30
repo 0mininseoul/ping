@@ -78,7 +78,7 @@ public sealed class QuickSendStateTests
         Assert.Equal(CaptureMode.ScreenFace, sent!.CaptureMode);
         Assert.Equal(controller.CaptureEngine.Result.AspectRatio, sent.AspectRatio);
         Assert.Equal(0.2, sent.MirrorPosition.XRatio, precision: 6);
-        Assert.Equal(0.8, sent.MirrorPosition.YRatio, precision: 6);
+        Assert.Equal(0.2, sent.MirrorPosition.YRatio, precision: 6);
     }
 
     [Fact]

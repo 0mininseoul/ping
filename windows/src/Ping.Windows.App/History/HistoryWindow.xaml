@@ -109,9 +109,9 @@
                                                         </MenuFlyout>
                                                     </StackPanel.ContextFlyout>
                                                     <Button Click="PlayVideoItemButton_Click" Background="Transparent" BorderThickness="0" Padding="0" AutomationProperties.Name="영상 재생">
-                                                        <Grid Width="200" Height="128">
+                                                        <Grid Width="{Binding Video.ThumbnailWidth}" Height="{Binding Video.ThumbnailHeight}" Loaded="VideoThumbnail_Loaded" SizeChanged="VideoThumbnail_SizeChanged">
                                                             <Border Background="{ThemeResource PingSurfaceBrush}" CornerRadius="16"><FontIcon Glyph="&#xE714;" Foreground="{ThemeResource PingAccentBrush}" FontSize="28" /></Border>
-                                                            <Image Source="{Binding Video.ThumbnailSource}" Stretch="Uniform" Visibility="{Binding Video.ThumbnailVisibility}" />
+                                                            <Image Source="{Binding Video.ThumbnailSource}" Stretch="UniformToFill" Visibility="{Binding Video.ThumbnailVisibility}" />
                                                         </Grid>
                                                     </Button>
                                                     <Grid ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>

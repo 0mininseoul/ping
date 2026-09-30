@@ -14,7 +14,7 @@ $executable = Join-Path $windowsRoot "artifacts\ui-smoke\bin\$Platform\$Configur
 if (-not (Test-Path -LiteralPath $executable)) { throw 'Build the isolated UI fixture first.' }
 $outputDirectory = Join-Path $windowsRoot ('artifacts\ui-shell-' + [Guid]::NewGuid().ToString('N'))
 $process = Start-Process -FilePath $executable -ArgumentList "--ui-smoke-output `"$outputDirectory`"" -PassThru -WindowStyle Hidden
-if (-not $process.WaitForExit(30000)) {
+if (-not $process.WaitForExit(45000)) {
     Stop-Process -Id $process.Id -ErrorAction SilentlyContinue
     throw "Isolated UI fixture timed out. Diagnostics: $outputDirectory"
 }

@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Ping.Windows.App.Playback;
+using Ping.Windows.App.UI;
 using Ping.Windows.Core.Backend;
 using Ping.Windows.Core.Models;
 using Windows.System;
@@ -33,6 +34,7 @@ public sealed partial class HistoryWindow : UserControl
     private readonly UiTaskDispatcher uiDispatcher;
     private readonly Microsoft.UI.Dispatching.DispatcherQueueTimer removalPermissionTimer;
     private readonly List<PlaybackWindow> playbackWindows = [];
+    private readonly Func<VideoMessage, CancellationToken, Task>? playVideoAsync;
     private string? initialRoomId;
     private string? initialChatId;
     private bool isApplyingSelection;
@@ -49,9 +51,11 @@ public sealed partial class HistoryWindow : UserControl
         string? initialRoomId = null,
         string? initialChatId = null,
         bool loadOnStart = true,
-        TimeSpan? refreshInterval = null)
+        TimeSpan? refreshInterval = null,
+        Func<VideoMessage, CancellationToken, Task>? playVideoAsync = null)
     {
         this.owner = owner;
+        this.playVideoAsync = playVideoAsync;
         backendReady = loadOnStart;
         loadOnFirstLoaded = loadOnStart;
         this.viewModel = viewModel;
@@ -225,6 +229,15 @@ public sealed partial class HistoryWindow : UserControl
         {
             ApplySelectionFromViewModel();
         }
+    }
+
+    public async Task ApplyIncomingRoomsAsync(IReadOnlyList<Room> rooms, CancellationToken token)
+    {
+        if (!backendReady || token.IsCancellationRequested) return;
+        isApplyingSelection = true;
+        try { viewModel.ApplyRoomMetadata(rooms); ApplySelectionFromViewModel(); }
+        finally { isApplyingSelection = false; }
+        if (IsWindowVisible(WindowNative.GetWindowHandle(owner))) await RefreshNowAsync(token);
     }
 
     public bool IsViewingRoom(string roomId) =>
@@ -435,6 +448,11 @@ public sealed partial class HistoryWindow : UserControl
     {
         await RunAsync(async () =>
         {
+            if (playVideoAsync is not null)
+            {
+                await playVideoAsync(video, CancellationToken.None);
+                return;
+            }
             var localPath = await downloadVideoAsync(video, CancellationToken.None);
             var playback = new PlaybackWindow(new PlaybackViewModel(
                 video,
@@ -444,6 +462,15 @@ public sealed partial class HistoryWindow : UserControl
             playbackWindows.Add(playback);
             playback.Activate();
         });
+    }
+
+    private void VideoThumbnail_Loaded(object sender, RoutedEventArgs args) => ClipVideoThumbnail(sender);
+    private void VideoThumbnail_SizeChanged(object sender, SizeChangedEventArgs args) => ClipVideoThumbnail(sender);
+    private static void ClipVideoThumbnail(object sender)
+    {
+        if (sender is not FrameworkElement element || element.DataContext is not TimelineHistoryItem { Video: { } video }) return;
+        RoundedCompositionClip.Apply(element, element.ActualWidth, element.ActualHeight,
+            video.CaptureMode == CaptureMode.FaceOnly ? element.ActualWidth / 2 : 16);
     }
 
     private static VideoHistoryItem? VideoItem(object sender) =>

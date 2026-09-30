@@ -162,6 +162,10 @@ public sealed class IncomingChatPoller
         CancellationToken cancellationToken = default) =>
         await PollOnceAsync(yieldedChatIds, markYielded: true, cancellationToken).ConfigureAwait(false);
 
+    public Task<IReadOnlyList<IncomingChatNotification>> LoadForDeliveryAsync(
+        ISet<string> yieldedChatIds, CancellationToken cancellationToken = default) =>
+        PollOnceAsync(yieldedChatIds, markYielded: false, cancellationToken);
+
     private async Task<IReadOnlyList<IncomingChatNotification>> PollOnceAsync(
         ISet<string> yieldedChatIds,
         bool markYielded,
