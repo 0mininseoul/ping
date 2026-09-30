@@ -28,6 +28,10 @@
     <ClCompile Include="CompositionTests.cpp" />
     <ClCompile Include="FakeCaptureSources.cpp" />
     <ClCompile Include="EncoderTests.cpp" />
+    <ClCompile Include="RecordingStreamTests.cpp" />
+    <ClCompile Include="PixelViewTests.cpp" />
+    <ClCompile Include="..\..\src\Ping.Windows.NativeCapture\src\CapturePixelView.cpp" />
+    <ClCompile Include="..\..\src\Ping.Windows.NativeCapture\src\RecordingStream.cpp" />
     <ClCompile Include="..\..\src\Ping.Windows.NativeCapture\src\ScreenFaceCompositor.cpp" />
     <ClCompile Include="..\..\src\Ping.Windows.NativeCapture\src\CaptureComposition.cpp" />
     <ClCompile Include="..\..\src\Ping.Windows.NativeCapture\src\PingCaptureEngine.cpp" />

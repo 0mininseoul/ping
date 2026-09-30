@@ -1,4 +1,5 @@
 #include "PingCaptureEngine.h"
+#include "RecordingStream.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -16,7 +17,8 @@ namespace
     constexpr int FramesPerSecond = 30;
     constexpr LONGLONG OneSecond = 10'000'000;
 
-    struct MediaFoundationScope { ~MediaFoundationScope() { MFShutdown(); } };
+    struct MediaFoundationScope { bool Started = false; ~MediaFoundationScope() { if (Started) MFShutdown(); } };
+    struct ApartmentScope { bool Initialized = false; ~ApartmentScope() { if (Initialized) CoUninitialize(); } };
 
     HRESULT SetMediaTypeUInt32(IMFMediaType* mediaType, REFGUID key, UINT32 value)
     {
@@ -62,44 +64,90 @@ namespace
 
 namespace Ping::Windows::NativeCapture
 {
-    int WriteScreenFaceMp4(
+    namespace
+    {
+        struct ProviderScope
+        {
+            IRecordingFrameProvider& Provider;
+            ~ProviderScope() { Provider.Stop(); }
+        };
+        struct OutputScope
+        {
+            wchar_t const* Path;
+            bool Touched = false, Keep = false;
+            ~OutputScope() { if (Touched && !Keep) DeleteFileW(Path); }
+        };
+        class VectorProvider final : public IRecordingFrameProvider
+        {
+        public:
+            VectorProvider(std::vector<MonitorCaptureResult> const& screens, std::vector<CameraFrameResult> const& cameras,
+                AudioCaptureResult const& audio, int durationMs) : screens_(screens), cameras_(cameras), audio_(audio),
+                count_(std::max(1, (durationMs * FramesPerSecond + 999) / 1000)) {}
+            int ReadFrame(LONGLONG time, LONGLONG duration, RecordingFramePacket& packet, HANDLE) override
+            {
+                if (screens_.empty() || cameras_.empty() || audio_.SamplesPerSecond != 48'000 || audio_.Channels != 1
+                    || audio_.BitsPerSample != 16) return PingCaptureCaptureFailure;
+                auto screen = std::min(screens_.size() - 1, index_ * screens_.size() / count_);
+                auto camera = std::min(cameras_.size() - 1, index_ * cameras_.size() / count_);
+                ++index_;
+                auto first = static_cast<size_t>(time * 48'000 / OneSecond) * 2;
+                auto end = static_cast<size_t>((time + duration) * 48'000 / OneSecond) * 2;
+                if (end > audio_.PcmBytes.size() || first >= end) return PingCaptureNoMicrophone;
+                packet.Screen = std::shared_ptr<MonitorCaptureResult const>(&screens_[screen], [](auto*) {});
+                packet.Camera = std::shared_ptr<CameraFrameResult const>(&cameras_[camera], [](auto*) {});
+                packet.Audio.assign(audio_.PcmBytes.begin() + static_cast<std::ptrdiff_t>(first),
+                    audio_.PcmBytes.begin() + static_cast<std::ptrdiff_t>(end));
+                return PingCaptureSuccess;
+            }
+            void Stop() noexcept override {}
+        private:
+            std::vector<MonitorCaptureResult> const& screens_;
+            std::vector<CameraFrameResult> const& cameras_;
+            AudioCaptureResult const& audio_;
+            size_t index_ = 0;
+            int count_;
+        };
+    }
+
+    static int WriteStreamCore(
         const wchar_t* outputPath,
         OutputLayout const& layout,
-        std::vector<MonitorCaptureResult> const& screenFrames,
-        std::vector<CameraFrameResult> const& cameraFrames,
-        AudioCaptureResult const& audio,
-        int durationMs, CaptureViewport viewport, HANDLE cancellationEvent)
+        IRecordingFrameProvider& provider,
+        int durationMs, CaptureViewport viewport, HANDLE cancellationEvent, bool& outputTouched,
+        ApartmentScope& apartment, MediaFoundationScope& foundation)
     {
         if (outputPath == nullptr
             || outputPath[0] == L'\0'
-            || layout.Width <= 0
-            || layout.Height <= 0
-            || durationMs <= 0
-            || screenFrames.empty()
-            || cameraFrames.empty()
-            || audio.PcmBytes.empty())
+            || layout.Width < 2 || layout.Width > 1920 || layout.Width % 2 != 0
+            || layout.Height < 2 || layout.Height > 1920 || layout.Height % 2 != 0
+            || durationMs <= 0 || durationMs > 30'000)
         {
             return PingCaptureEncoderFailure;
         }
 
         if (cancellationEvent && WaitForSingleObject(cancellationEvent, 0) == WAIT_OBJECT_0) return PingCaptureCancelled;
+        auto apartmentResult = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+        if (FAILED(apartmentResult) && apartmentResult != RPC_E_CHANGED_MODE) return PingCaptureEncoderFailure;
+        apartment.Initialized = SUCCEEDED(apartmentResult);
         HRESULT hr = MFStartup(MF_VERSION, MFSTARTUP_LITE);
         if (FAILED(hr))
         {
             return PingCaptureEncoderFailure;
         }
-        MediaFoundationScope foundationScope;
+        foundation.Started = true;
+        const AudioCaptureResult audio{48'000, 1, 16, {}};
 
         ComPtr<IMFAttributes> writerAttributes;
         hr = MFCreateAttributes(&writerAttributes, 1);
         if (SUCCEEDED(hr))
         {
-            writerAttributes->SetUINT32(MF_SINK_WRITER_DISABLE_THROTTLING, TRUE);
+            hr = writerAttributes->SetUINT32(MF_SINK_WRITER_DISABLE_THROTTLING, FALSE);
         }
 
         ComPtr<IMFSinkWriter> sinkWriter;
         if (SUCCEEDED(hr))
         {
+            outputTouched = true;
             hr = MFCreateSinkWriterFromURL(outputPath, nullptr, writerAttributes.Get(), &sinkWriter);
         }
 
@@ -151,46 +199,34 @@ namespace Ping::Windows::NativeCapture
         if (SUCCEEDED(hr)) hr = sinkWriter->BeginWriting();
 
         auto frameCount = std::max(1, static_cast<int>((static_cast<long long>(durationMs) * FramesPerSecond + 999) / 1000));
-        auto frameDuration = OneSecond / FramesPerSecond;
-        auto bytesPerSecond = static_cast<size_t>(audio.SamplesPerSecond) * audio.Channels * audio.BitsPerSample / 8;
-
-        bool cancelled = false;
+        const auto totalDuration = static_cast<LONGLONG>(durationMs) * 10'000;
+        int sourceResult = PingCaptureSuccess;
         for (int frameIndex = 0; SUCCEEDED(hr) && frameIndex < frameCount; ++frameIndex)
         {
             if (cancellationEvent && WaitForSingleObject(cancellationEvent, 0) == WAIT_OBJECT_0)
-            { cancelled = true; break; }
-            LONGLONG sampleTime = static_cast<LONGLONG>(frameIndex) * frameDuration;
-            auto screenIndex = std::min(
-                screenFrames.size() - 1,
-                static_cast<size_t>((static_cast<long long>(frameIndex) * screenFrames.size()) / frameCount));
-            auto cameraIndex = std::min(
-                cameraFrames.size() - 1,
-                static_cast<size_t>((static_cast<long long>(frameIndex) * cameraFrames.size()) / frameCount));
+            { sourceResult = PingCaptureCancelled; break; }
+            LONGLONG sampleTime = static_cast<LONGLONG>(frameIndex) * OneSecond / FramesPerSecond;
+            auto frameEnd = std::min(totalDuration, static_cast<LONGLONG>(frameIndex + 1) * OneSecond / FramesPerSecond);
+            auto frameDuration = frameEnd - sampleTime;
+            RecordingFramePacket packet;
+            sourceResult = provider.ReadFrame(sampleTime, frameDuration, packet, cancellationEvent);
+            if (sourceResult != PingCaptureSuccess) break;
+            if (cancellationEvent && WaitForSingleObject(cancellationEvent, 0) == WAIT_OBJECT_0)
+            { sourceResult = PingCaptureCancelled; break; }
+            auto requiredAudio = static_cast<size_t>((frameEnd * 48'000 / OneSecond) - (sampleTime * 48'000 / OneSecond)) * 2;
+            if (!packet.Screen || !packet.Camera || packet.Audio.size() != requiredAudio)
+            { sourceResult = PingCaptureCaptureFailure; break; }
             std::vector<std::uint8_t> videoFrame;
-            if (ComposeScreenFaceFrame(layout, screenFrames[screenIndex], cameraFrames[cameraIndex], viewport, videoFrame) != PingCaptureSuccess)
+            if (ComposeScreenFaceFrame(layout, *packet.Screen, *packet.Camera, viewport, videoFrame) != PingCaptureSuccess)
             { hr = E_FAIL; break; }
             hr = WriteSample(sinkWriter.Get(), videoStreamIndex, videoFrame, sampleTime, frameDuration);
             if (SUCCEEDED(hr))
             {
-                auto audioOffset = std::min(
-                    audio.PcmBytes.size(),
-                    static_cast<size_t>((static_cast<long long>(frameIndex) * bytesPerSecond) / FramesPerSecond));
-                auto audioLength = std::min(
-                    audio.PcmBytes.size() - audioOffset,
-                    bytesPerSecond / FramesPerSecond);
-                std::vector<std::uint8_t> audioBytes(
-                    audio.PcmBytes.begin() + static_cast<std::ptrdiff_t>(audioOffset),
-                    audio.PcmBytes.begin() + static_cast<std::ptrdiff_t>(audioOffset + audioLength));
-                if (audioBytes.empty())
-                {
-                    audioBytes.resize(bytesPerSecond / FramesPerSecond);
-                }
-
-                hr = WriteSample(sinkWriter.Get(), audioStreamIndex, audioBytes, sampleTime, frameDuration);
+                hr = WriteSample(sinkWriter.Get(), audioStreamIndex, packet.Audio, sampleTime, frameDuration);
             }
         }
 
-        if (sinkWriter && !cancelled)
+        if (sinkWriter && SUCCEEDED(hr) && sourceResult == PingCaptureSuccess)
         {
             HRESULT finalizeResult = sinkWriter->Finalize();
             if (SUCCEEDED(hr))
@@ -198,6 +234,34 @@ namespace Ping::Windows::NativeCapture
                 hr = finalizeResult;
             }
         }
-        return cancelled ? PingCaptureCancelled : SUCCEEDED(hr) ? PingCaptureSuccess : PingCaptureEncoderFailure;
+        if (cancellationEvent && WaitForSingleObject(cancellationEvent, 0) == WAIT_OBJECT_0) return PingCaptureCancelled;
+        return sourceResult != PingCaptureSuccess ? sourceResult : SUCCEEDED(hr) ? PingCaptureSuccess : PingCaptureEncoderFailure;
+    }
+
+    int WriteScreenFaceMp4Stream(const wchar_t* outputPath, OutputLayout const& layout,
+        IRecordingFrameProvider& provider, int durationMs, CaptureViewport viewport, HANDLE cancellationEvent)
+    {
+        OutputScope output{outputPath};
+        ApartmentScope apartment;
+        MediaFoundationScope foundation;
+        // Source Stop may release COM objects and wait for Media Foundation callbacks.
+        ProviderScope source{provider};
+        try
+        {
+            auto result = WriteStreamCore(outputPath, layout, provider, durationMs, viewport, cancellationEvent, output.Touched,
+                apartment, foundation);
+            output.Keep = result == PingCaptureSuccess;
+            return result;
+        }
+        catch (...) { return PingCaptureCaptureFailure; }
+    }
+
+    int WriteScreenFaceMp4(const wchar_t* outputPath, OutputLayout const& layout,
+        std::vector<MonitorCaptureResult> const& screenFrames, std::vector<CameraFrameResult> const& cameraFrames,
+        AudioCaptureResult const& audio, int durationMs, CaptureViewport viewport, HANDLE cancellationEvent)
+    {
+        if (durationMs <= 0 || durationMs > 30'000) return PingCaptureEncoderFailure;
+        VectorProvider provider{screenFrames, cameraFrames, audio, durationMs};
+        return WriteScreenFaceMp4Stream(outputPath, layout, provider, durationMs, viewport, cancellationEvent);
     }
 }

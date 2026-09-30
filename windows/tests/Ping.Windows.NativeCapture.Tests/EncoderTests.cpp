@@ -77,6 +77,80 @@ namespace
     }
 }
 
+void VerifyStreamingClip(wchar_t const* path, void (*check)(bool, char const*))
+{
+    check(SUCCEEDED(CoInitializeEx(nullptr, COINIT_MULTITHREADED)), "stream verifier owns COM apartment");
+    ComScope com;
+    check(SUCCEEDED(MFStartup(MF_VERSION, MFSTARTUP_LITE)), "stream verifier owns Media Foundation lifetime");
+    MfScope mf;
+    ComPtr<IMFAttributes> attributes;
+    MFCreateAttributes(&attributes, 1);
+    attributes->SetUINT32(MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING, TRUE);
+    ComPtr<IMFSourceReader> reader;
+    check(SUCCEEDED(MFCreateSourceReaderFromURL(path, attributes.Get(), &reader)), "incremental MP4 opens for timeline verification");
+    ComPtr<IMFMediaType> type;
+    MFCreateMediaType(&type); type->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video); type->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_RGB32);
+    check(SUCCEEDED(reader->SetCurrentMediaType(VideoStream, nullptr, type.Get())), "timeline video decodes to RGB32");
+    bool earlyVideo = false, lateVideo = false;
+    for (int attempt = 0; attempt < 100; ++attempt)
+    {
+        ComPtr<IMFSample> sample;
+        DWORD flags = 0, stream = 0; LONGLONG time = 0;
+        auto hr = reader->ReadSample(VideoStream, 0, &stream, &flags, &time, &sample);
+        if (FAILED(hr) || (flags & MF_SOURCE_READERF_ENDOFSTREAM)) break;
+        if (!sample || (time < 2'000'000) || (earlyVideo && time < 25'000'000)) continue;
+        ComPtr<IMFMediaBuffer> buffer; sample->ConvertToContiguousBuffer(&buffer);
+        BYTE* data = nullptr; DWORD length = 0;
+        if (!buffer || FAILED(buffer->Lock(&data, nullptr, &length))) break;
+        int actual = length >= 4 ? data[0] : -1;
+        buffer->Unlock();
+        if (!earlyVideo) earlyVideo = actual >= 0 && actual <= 15;
+        else { lateVideo = actual >= 70 && actual <= 89; break; }
+    }
+    check(earlyVideo && lateVideo, "encoded early and late frames preserve changing source time");
+
+    reader.Reset();
+    check(SUCCEEDED(MFCreateSourceReaderFromURL(path, nullptr, &reader)), "stream audio opens independently");
+    type.Reset(); MFCreateMediaType(&type);
+    type->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Audio); type->SetGUID(MF_MT_SUBTYPE, MFAudioFormat_PCM);
+    type->SetUINT32(MF_MT_AUDIO_SAMPLES_PER_SECOND, 48'000); type->SetUINT32(MF_MT_AUDIO_NUM_CHANNELS, 1);
+    type->SetUINT32(MF_MT_AUDIO_BITS_PER_SAMPLE, 16);
+    check(SUCCEEDED(reader->SetCurrentMediaType(AudioStream, nullptr, type.Get())), "stream AAC decodes to mono PCM");
+    double earlySquares = 0, lateSquares = 0;
+    size_t earlyCount = 0, lateCount = 0;
+    LONGLONG previous = -1;
+    bool monotonic = true;
+    for (int attempt = 0; attempt < 200; ++attempt)
+    {
+        ComPtr<IMFSample> sample;
+        DWORD flags = 0, stream = 0; LONGLONG time = 0;
+        auto hr = reader->ReadSample(AudioStream, 0, &stream, &flags, &time, &sample);
+        if (FAILED(hr)) { monotonic = false; break; }
+        if (flags & MF_SOURCE_READERF_ENDOFSTREAM) break;
+        if (!sample) continue;
+        if (time < previous) monotonic = false;
+        previous = time;
+        if ((time < 2'000'000 || time > 8'000'000) && (time < 22'000'000 || time > 28'000'000)) continue;
+        ComPtr<IMFMediaBuffer> buffer; sample->ConvertToContiguousBuffer(&buffer);
+        BYTE* data = nullptr; DWORD length = 0;
+        if (!buffer || FAILED(buffer->Lock(&data, nullptr, &length))) { monotonic = false; break; }
+        for (DWORD i = 0; i + 1 < length; i += 2)
+        {
+            std::int16_t value = 0; std::memcpy(&value, data + i, 2);
+            if (time < 10'000'000) { earlySquares += static_cast<double>(value) * value; ++earlyCount; }
+            else { lateSquares += static_cast<double>(value) * value; ++lateCount; }
+        }
+        buffer->Unlock();
+    }
+    check(monotonic && earlyCount > 10'000 && lateCount > 10'000 && previous >= 29'000'000,
+        "decoded audio clock is monotonic and reaches final video second");
+    auto earlyRms = earlyCount ? std::sqrt(earlySquares / earlyCount) : 0;
+    auto lateRms = lateCount ? std::sqrt(lateSquares / lateCount) : 0;
+    std::cout << "Decoded PCM RMS early=" << earlyRms << ", late=" << lateRms << '\n';
+    check(earlyRms > 900 && earlyRms < 2000 && lateRms > 5'000 && lateRms > earlyRms * 3,
+        "encoded early and late audio preserve source timing and amplitude");
+}
+
 void EncoderChecks(wchar_t const* directory, void (*check)(bool, char const*))
 {
     check(SUCCEEDED(CoInitializeEx(nullptr, COINIT_MULTITHREADED)), "fixture initializes owned COM apartment");

@@ -1,6 +1,8 @@
 #include "PingCaptureEngine.h"
+#include "CapturePixelView.h"
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <utility>
 
 namespace
@@ -43,26 +45,15 @@ namespace Ping::Windows::NativeCapture
     {
         if (&source == &output) return PingCaptureCaptureFailure;
         output = {};
-        if (!ValidPixels(source.SourceSize, source.RowPitch, source.BgraPixels) || !ValidOutput(outputSize))
+        if (!ValidPixels(source.SourceSize, source.RowPitch, source.BgraPixels) || !ValidOutput(outputSize)
+            || source.RowPitch > static_cast<std::uint32_t>(std::numeric_limits<std::int32_t>::max()))
             return PingCaptureCaptureFailure;
         auto crop = ComputeCaptureCrop(source.SourceSize, viewport);
-        output.SourceSize = outputSize;
-        output.RowPitch = static_cast<std::uint32_t>(outputSize.Width) * 4;
-        output.Device = source.Device;
-        output.BgraPixels.resize(static_cast<size_t>(output.RowPitch) * outputSize.Height);
-        for (int y = 0; y < outputSize.Height; ++y)
-        {
-            int sourceY = crop.Y + static_cast<int>(static_cast<long long>(y) * crop.Height / outputSize.Height);
-            for (int x = 0; x < outputSize.Width; ++x)
-            {
-                int sourceX = crop.X + static_cast<int>(static_cast<long long>(x) * crop.Width / outputSize.Width);
-                auto from = source.BgraPixels.data() + static_cast<size_t>(sourceY) * source.RowPitch + sourceX * 4;
-                auto to = output.BgraPixels.data() + static_cast<size_t>(y) * output.RowPitch + x * 4;
-                std::copy_n(from, 3, to);
-                to[3] = 0xff;
-            }
-        }
-        return PingCaptureSuccess;
+        CapturePixelView view{source.BgraPixels.data(), source.BgraPixels.size(), 0,
+            static_cast<std::int32_t>(source.RowPitch), source.SourceSize};
+        auto result = ResizeCapturePixels(view, crop, outputSize, output.BgraPixels, output.RowPitch);
+        if (result == PingCaptureSuccess) { output.SourceSize = outputSize; output.Device = source.Device; }
+        return result;
     }
 
     int ComposeScreenFaceFrame(OutputLayout const& layout, MonitorCaptureResult const& screen,
