@@ -1,6 +1,6 @@
 # Windows 순차 녹화 압축 기반 검증
 
-작성일2026-09-30. 캡처 플랜 Task3의 중간 구현 기록이다. 실제 장치 수집 경로 전체의 메모리 제한이나 Task3 완료를 뜻하지 않는다.
+작성일2026-09-30. 커밋 `6fec6b3` 시점의 캡처 플랜 Task3 중간 구현 기록이다. 아래의 최신 프레임 1개·compatibility provider 설명은 이 커밋의 상태다. 이후 실제 녹화 진입점 연결과 프레임 이력 변경은 [live source 검증 기록](2026-09-30-capture-live-sources-verification.ko.md)을 참고한다. 실제 장치 수집 경로 전체의 메모리 제한이나 Task3 완료를 뜻하지 않는다.
 
 ## 구현과 적용 범위
 
@@ -14,7 +14,7 @@
 
 `CapturePixelView`는 실제 바이트 범위·첫 행 위치·signed stride를 검사한 뒤 선택 영역을 직접 작은 packed top-down BGRA로 만든다. 음수 행 간격·행 패딩·범위 밖 crop·잘린 버퍼·입출력 alias·과도한 출력 크기를 검사했다. 정상 검정 픽셀도 허용한다. 기존 합성과 미리보기 crop은 이 함수를 사용한다.
 
-**현재 product 녹화 진입점은 여전히 전체 세션 vectors를 수집하고 compatibility provider를 거쳐 압축한다.** 새 bounded feed는 synthetic provider에서 검증됐다. 실제 WGC/MF producer와 공통 녹화 시작 시각, callback drain, 장치 선택, 취소를 연결해야 실제 수집 메모리 제한이 완성된다. 기존 WGC의 검정 화면 추정 및 실제 카메라 stride 수집 경로도 그 통합에서 교체한다.
+**이 커밋 시점의 product 녹화 진입점은 전체 세션 vectors를 수집하고 compatibility provider를 거쳐 압축했다.** 새 bounded feed는 synthetic provider에서 검증됐다. 실제 WGC/MF producer와 공통 녹화 시작 시각, callback drain, 장치 선택, 취소 연결은 후속 단계의 범위다.
 
 ## 검증
 

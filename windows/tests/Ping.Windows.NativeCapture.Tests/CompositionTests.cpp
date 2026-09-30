@@ -11,6 +11,9 @@ extern std::atomic<int> FixtureSourceStarts;
 void EncoderChecks(wchar_t const* directory, void (*check)(bool, char const*));
 void RecordingStreamChecks(wchar_t const* directory, void (*check)(bool, char const*));
 void PixelViewChecks(void (*check)(bool, char const*));
+void LiveRecordingChecks(void (*check)(bool, char const*));
+void LiveEntryChecks(wchar_t const* directory, void (*check)(bool, char const*));
+void MicrophonePacketChecks(void (*check)(bool, char const*));
 
 namespace
 {
@@ -147,6 +150,9 @@ int wmain(int argc, wchar_t* argv[])
         EncoderChecks(argv[1], Check);
         RecordingStreamChecks(argv[1], Check);
         PixelViewChecks(Check);
+        LiveRecordingChecks(Check);
+        LiveEntryChecks(argv[1], Check);
+        MicrophonePacketChecks(Check);
         std::cout << "PASS: " << checks << " native synthetic composition checks. No device capture.\n";
         return 0;
     }

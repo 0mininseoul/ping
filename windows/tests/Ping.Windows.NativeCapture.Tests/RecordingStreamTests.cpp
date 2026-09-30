@@ -117,8 +117,8 @@ void RecordingStreamChecks(wchar_t const* directory, void (*check)(bool, char co
         buffer.PublishScreen(Screen(static_cast<std::uint8_t>(i)), i * 333'333LL);
         peakBufferBytes = std::max(peakBufferBytes, buffer.RetainedBytes());
     }
-    check(held->BgraPixels.front() == 40 && peakBufferBytes <= 540 * 304 * 4 + 98 * 98 * 4 + 48'000,
-        "slow consumer keeps immutable snapshot while feed retains one latest frame");
+    check(held->BgraPixels.front() == 40 && peakBufferBytes <= 8 * (540 * 304 * 4 + 98 * 98 * 4) + 48'000,
+        "slow consumer keeps immutable snapshot while feed retains bounded frame history");
     packet = {}; held.reset();
     check(first.expired(), "replaced frame releases after last consumer reference");
     auto wrong = Screen(); wrong->SourceSize.Width = 541;
@@ -143,6 +143,24 @@ void RecordingStreamChecks(wchar_t const* directory, void (*check)(bool, char co
     future.PublishAudio(0, std::vector<std::uint8_t>(3'200));
     check(future.ReadFrame(0, 333'333, packet, nullptr) == PingCaptureCaptureFailure,
         "future source frame cannot be relabeled with earlier video timestamp");
+    BoundedRecordingBuffer queued{Layout()};
+    queued.PublishScreen(Screen(20), 0); queued.PublishCamera(Camera(), 0);
+    queued.PublishScreen(Screen(80), 900'000); queued.PublishCamera(Camera(), 900'000);
+    queued.PublishAudio(0, std::vector<std::uint8_t>(9'600));
+    check(queued.ReadFrame(0, 333'333, packet, nullptr) == PingCaptureSuccess && packet.Screen->BgraPixels[0] == 20,
+        "batched audio selects video for requested interval instead of future latest frame");
+    BoundedRecordingBuffer unchanged{Layout()};
+    unchanged.PublishScreen(Screen(30), 0);
+    for (int i = 0; i < 10; ++i)
+    {
+        unchanged.PublishCamera(Camera(), i * 333'333LL);
+        auto begin = static_cast<std::uint64_t>(i * 333'333LL) * 48'000 / 10'000'000;
+        auto end = static_cast<std::uint64_t>((i + 1) * 333'333LL) * 48'000 / 10'000'000;
+        unchanged.PublishAudio(begin, std::vector<std::uint8_t>(static_cast<size_t>(end - begin) * 2));
+        if (unchanged.ReadFrame(i * 333'333LL, 333'333, packet, nullptr) != PingCaptureSuccess) break;
+    }
+    check(packet.Screen && packet.Screen->BgraPixels[0] == 30 && unchanged.RetainedBytes() > 0,
+        "unchanged desktop remains valid while camera and audio continue");
     BoundedRecordingBuffer stale{Layout()};
     stale.PublishScreen(Screen(), 0); stale.PublishCamera(Camera(), 0);
     stale.PublishAudio(0, std::vector<std::uint8_t>(32'000));

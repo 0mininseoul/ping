@@ -6,12 +6,23 @@ namespace
 {
     constexpr size_t AudioCapacity = 48'000; // 500ms of48kHz mono16-bit PCM.
     constexpr LONGLONG OneSecond = 10'000'000;
+    constexpr size_t FrameHistoryLimit = 8;
     bool Cancelled(HANDLE event) { return event && WaitForSingleObject(event, 0) == WAIT_OBJECT_0; }
     bool ValidPixels(Ping::Windows::NativeCapture::CaptureSize size, std::uint32_t pitch, size_t bytes,
         int expectedWidth, int expectedHeight)
     {
         return size.Width == expectedWidth && size.Height == expectedHeight && size.Width > 0 && size.Height > 0
             && pitch == static_cast<std::uint32_t>(size.Width) * 4 && bytes == static_cast<size_t>(pitch) * size.Height;
+    }
+    template<class T> bool SelectFrame(std::deque<std::pair<std::shared_ptr<T const>, LONGLONG>>& frames,
+        LONGLONG time, LONGLONG end, bool allowUnchanged, std::shared_ptr<T const>& selected)
+    {
+        size_t count = 0;
+        while (count < frames.size() && frames[count].second <= end) ++count;
+        if (count == 0 || (!allowUnchanged && frames[count - 1].second < time - OneSecond / 5)) return false;
+        selected = frames[count - 1].first;
+        while (--count > 0) frames.pop_front();
+        return true;
     }
 }
 
@@ -27,7 +38,7 @@ namespace Ping::Windows::NativeCapture
     int BoundedRecordingBuffer::FailLocked(int error) noexcept
     {
         if (error_ == PingCaptureSuccess) error_ = error == PingCaptureSuccess ? PingCaptureCaptureFailure : error;
-        screen_.reset(); camera_.reset();
+        screens_.clear(); cameras_.clear();
         std::vector<std::uint8_t>().swap(audio_); audioSize_ = 0;
         changed_.notify_all();
         return error_;
@@ -41,7 +52,9 @@ namespace Ping::Windows::NativeCapture
             || !ValidPixels(frame->SourceSize, frame->RowPitch, frame->BgraPixels.size(), layout_.Width, layout_.Height)
             || frame->BgraPixels.capacity() > frame->BgraPixels.size())
             return FailLocked(PingCaptureCaptureFailure);
-        screen_ = std::move(frame); screenTime_ = timestamp;
+        if (!screens_.empty() && timestamp == screenTime_) screens_.pop_back();
+        screens_.emplace_back(std::move(frame), timestamp); screenTime_ = timestamp;
+        if (screens_.size() > FrameHistoryLimit) screens_.pop_front();
         changed_.notify_all(); return PingCaptureSuccess;
     }
 
@@ -53,7 +66,9 @@ namespace Ping::Windows::NativeCapture
             || !ValidPixels(frame->SourceSize, frame->RowPitch, frame->BgraPixels.size(), layout_.FaceDiameter, layout_.FaceDiameter)
             || frame->BgraPixels.capacity() > frame->BgraPixels.size())
             return FailLocked(PingCaptureNoCamera);
-        camera_ = std::move(frame); cameraTime_ = timestamp;
+        if (!cameras_.empty() && timestamp == cameraTime_) cameras_.pop_back();
+        cameras_.emplace_back(std::move(frame), timestamp); cameraTime_ = timestamp;
+        if (cameras_.size() > FrameHistoryLimit) cameras_.pop_front();
         changed_.notify_all(); return PingCaptureSuccess;
     }
 
@@ -85,15 +100,17 @@ namespace Ping::Windows::NativeCapture
         {
             if (Cancelled(cancellationEvent)) return FailLocked(PingCaptureCancelled);
             if (error_ != PingCaptureSuccess) return error_;
-            if (screen_ && camera_ && audioSize_ >= bytes) break;
+            if (!screens_.empty() && !cameras_.empty() && audioSize_ >= bytes) break;
             if (std::chrono::steady_clock::now() >= deadline) return FailLocked(PingCaptureCaptureFailure);
             changed_.wait_until(lock, std::min(deadline, std::chrono::steady_clock::now() + std::chrono::milliseconds(10)));
         }
         // Do not substitute frames from a different time when a producer/encoder falls behind.
-        if (screenTime_ > time + duration || cameraTime_ > time + duration
-            || screenTime_ < time - OneSecond / 5 || cameraTime_ < time - OneSecond / 5)
+        if (!SelectFrame(screens_, time, time + duration, true, packet.Screen)
+            || !SelectFrame(cameras_, time, time + duration, false, packet.Camera))
+        {
+            packet = {};
             return FailLocked(PingCaptureCaptureFailure);
-        packet.Screen = screen_; packet.Camera = camera_;
+        }
         packet.Audio.resize(bytes);
         for (size_t i = 0; i < bytes; ++i) packet.Audio[i] = audio_[(audioHead_ + i) % AudioCapacity];
         audioHead_ = (audioHead_ + bytes) % AudioCapacity; audioSize_ -= bytes; consumedSamples_ = end;
@@ -105,6 +122,9 @@ namespace Ping::Windows::NativeCapture
     size_t BoundedRecordingBuffer::RetainedBytes() const noexcept
     {
         std::lock_guard guard(mutex_);
-        return (screen_ ? screen_->BgraPixels.capacity() : 0) + (camera_ ? camera_->BgraPixels.capacity() : 0) + audio_.capacity();
+        size_t bytes = audio_.capacity();
+        for (auto const& frame : screens_) bytes += frame.first->BgraPixels.capacity();
+        for (auto const& frame : cameras_) bytes += frame.first->BgraPixels.capacity();
+        return bytes;
     }
 }

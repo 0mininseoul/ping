@@ -71,6 +71,10 @@
   <ItemGroup>
     <ClInclude Include="include\PingCaptureEngine.h" />
     <ClInclude Include="include\RecordingStream.h" />
+    <ClInclude Include="include\LiveRecording.h" />
+    <ClInclude Include="include\NativeRecordingSources.h" />
+    <ClInclude Include="include\CaptureCallbackGate.h" />
+    <ClInclude Include="include\MicrophonePacketReader.h" />
     <ClInclude Include="include\CapturePixelView.h" />
   </ItemGroup>
   <ItemGroup>
@@ -78,6 +82,12 @@
     <ClCompile Include="src\MonitorCapture.cpp" />
     <ClCompile Include="src\Mp4SinkWriter.cpp" />
     <ClCompile Include="src\RecordingStream.cpp" />
+    <ClCompile Include="src\LiveRecording.cpp" />
+    <ClCompile Include="src\NativeRecordingSources.cpp" />
+    <ClCompile Include="src\ScreenRecordingSource.cpp" />
+    <ClCompile Include="src\CameraRecordingSource.cpp" />
+    <ClCompile Include="src\AudioRecordingSource.cpp" />
+    <ClCompile Include="src\MicrophonePacketReader.cpp" />
     <ClCompile Include="src\CapturePixelView.cpp" />
     <ClCompile Include="src\PingCaptureEngine.cpp" />
     <ClCompile Include="src\ScreenFaceCompositor.cpp" />

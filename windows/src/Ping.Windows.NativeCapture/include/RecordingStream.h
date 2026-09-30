@@ -1,6 +1,7 @@
 #pragma once
 #include "PingCaptureEngine.h"
 #include <condition_variable>
+#include <deque>
 #include <memory>
 #include <mutex>
 
@@ -42,8 +43,8 @@ namespace Ping::Windows::NativeCapture
         OutputLayout layout_;
         mutable std::mutex mutex_;
         std::condition_variable changed_;
-        std::shared_ptr<MonitorCaptureResult const> screen_;
-        std::shared_ptr<CameraFrameResult const> camera_;
+        std::deque<std::pair<std::shared_ptr<MonitorCaptureResult const>, LONGLONG>> screens_;
+        std::deque<std::pair<std::shared_ptr<CameraFrameResult const>, LONGLONG>> cameras_;
         LONGLONG screenTime_ = -1, cameraTime_ = -1;
         std::vector<std::uint8_t> audio_;
         size_t audioHead_ = 0, audioSize_ = 0;

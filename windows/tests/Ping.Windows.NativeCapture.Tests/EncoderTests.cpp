@@ -199,6 +199,9 @@ void EncoderChecks(wchar_t const* directory, void (*check)(bool, char const*))
     UINT32 width = 0, height = 0;
     MFGetAttributeSize(video.Get(), MF_MT_FRAME_SIZE, &width, &height);
     check(width == 540 && height == 304, "encoded frame dimensions match Mac message budget");
+    UINT32 frameRate = 0, frameRateDenominator = 0;
+    check(SUCCEEDED(MFGetAttributeRatio(video.Get(), MF_MT_FRAME_RATE, &frameRate, &frameRateDenominator))
+        && frameRate == 30 && frameRateDenominator == 1, "actual encoded video preserves30fps output contract");
     reader->GetNativeMediaType(AudioStream, 0, &sound);
     check(sound && SUCCEEDED(sound->GetGUID(MF_MT_SUBTYPE, &subtype)) && subtype == MFAudioFormat_AAC,
         "encoded clip contains AAC microphone-format track");

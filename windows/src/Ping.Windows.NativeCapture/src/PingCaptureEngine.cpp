@@ -1,15 +1,13 @@
 #include "PingCaptureEngine.h"
+#include "LiveRecording.h"
 
 #include <cmath>
-#include <future>
 #include <limits>
 
 using namespace Ping::Windows::NativeCapture;
 
 namespace
 {
-    constexpr int CaptureFramesPerSecond = 30;
-
     bool IsValidDuration(int durationMs)
     {
         return durationMs > 0 && durationMs <= 30'000;
@@ -66,62 +64,17 @@ try
 
     if (cancellationEvent && WaitForSingleObject(cancellationEvent, 0) == WAIT_OBJECT_0) return PingCaptureCancelled;
 
-    std::vector<MonitorCaptureResult> monitorFrames;
-    std::vector<CameraFrameResult> cameraFrames;
-    AudioCaptureResult audio{};
-
-    auto screenCapture = std::async(std::launch::async, [&]
-    {
-        return CaptureMonitorFrames(targetMonitorIndex, durationMs, CaptureFramesPerSecond, monitorFrames);
-    });
-    auto cameraCapture = std::async(std::launch::async, [&]
-    {
-        return CaptureCameraFrames(durationMs, CaptureFramesPerSecond, cameraFrames);
-    });
-    auto audioCapture = std::async(std::launch::async, [&]
-    {
-        return CaptureMicrophonePcm(durationMs, audio);
-    });
-
-    int screenResult = PingCaptureCaptureFailure;
-    int cameraResult = PingCaptureNoCamera;
-    int audioResult = PingCaptureNoMicrophone;
-    try
-    {
-        screenResult = screenCapture.get();
-        cameraResult = cameraCapture.get();
-        audioResult = audioCapture.get();
-    }
-    catch (...)
-    {
-        return PingCaptureCaptureFailure;
-    }
-
-    if (cancellationEvent && WaitForSingleObject(cancellationEvent, 0) == WAIT_OBJECT_0) return PingCaptureCancelled;
-    if (screenResult != PingCaptureSuccess)
-    {
-        return NormalizeCaptureFailure(screenResult);
-    }
-
-    if (cameraResult != PingCaptureSuccess)
-    {
-        return cameraResult;
-    }
-
-    if (audioResult != PingCaptureSuccess)
-    {
-        return audioResult;
-    }
-
-    if (monitorFrames.empty() || cameraFrames.empty()) return PingCaptureCaptureFailure;
-    OutputLayout layout = CreateScreenFaceLayout(monitorFrames.front().SourceSize, faceDiameterRatio, 540);
+    OutputLayout layout{};
+    std::unique_ptr<IRecordingFrameProvider> provider;
+    auto sourceResult = CreateLiveRecordingProvider(targetMonitorIndex, faceDiameterRatio, {zoom, centerX, centerY}, durationMs, layout, provider);
+    if (sourceResult != PingCaptureSuccess || !provider) return NormalizeCaptureFailure(sourceResult);
     if (outAspectRatio != nullptr)
     {
         *outAspectRatio = SafeAspectRatio(layout);
     }
 
-    int writerResult = WriteScreenFaceMp4(outputPath, layout, monitorFrames, cameraFrames, audio, durationMs,
-        {zoom, centerX, centerY}, cancellationEvent);
+    // Producers already apply the frozen viewport before publishing bounded CPU frames.
+    int writerResult = WriteScreenFaceMp4Stream(outputPath, layout, *provider, durationMs, {}, cancellationEvent);
     if (writerResult != PingCaptureSuccess)
     {
         DeleteFileW(outputPath);

@@ -22,21 +22,6 @@ public sealed class NativeCaptureEngineTests
     }
 
     [Fact]
-    public void NativeCaptureEngine_CapturesThirtyFramesPerSecond()
-    {
-        var source = File.ReadAllText(Path.Combine(
-            RepoRoot(),
-            "windows",
-            "src",
-            "Ping.Windows.NativeCapture",
-            "src",
-            "PingCaptureEngine.cpp"));
-
-        Assert.Contains("CaptureFramesPerSecond = 30", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("CaptureFramesPerSecond = 15", source, StringComparison.Ordinal);
-    }
-
-    [Fact]
     public void NativeCaptureProject_DisablesWindowsMinMaxMacrosAndSerializesPdbWrites()
     {
         var project = File.ReadAllText(Path.Combine(
