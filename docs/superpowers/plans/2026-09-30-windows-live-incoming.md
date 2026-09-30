@@ -33,8 +33,8 @@
 
 ## Task 4 — Review and verification
 
-- [ ] Independent review; correct verified important findings with regression checks. Verify normal Release/native/MSIX and fixture exclusion. Record what was tested and hardware/real backend limits.
-- [ ] Commit verification report, continue to automatic reply/capture, account/device/settings and final installer milestones. Never equate simulated delivery or unsigned MSIX with real Mac interoperability or EXE install success.
+- [x] Independent review; correct verified important findings with regression checks. Verify normal Release/native/MSIX and fixture exclusion. Record what was tested and hardware/real backend limits.
+- [x] Commit verification report, continue to automatic reply/capture, account/device/settings and final installer milestones. Never equate simulated delivery or unsigned MSIX with real Mac interoperability or EXE install success.
 
 ## Authorization and limits
 
