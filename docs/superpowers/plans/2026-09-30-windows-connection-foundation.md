@@ -29,49 +29,49 @@
 **Files:** Create `windows/src/Ping.Windows.Core/Backend/SupabaseRequestException.cs`, `SupabaseSessionStore.cs`; modify `SupabaseClient.cs`; tests `windows/tests/Ping.Windows.Core.Tests/SessionRecoveryTests.cs`, existing `BackendContractTests.cs`.
 **Interfaces:** `SupabaseRequestException : HttpRequestException` exposes `ErrorCode`, `RetryAfter`, `IsSessionRejected`; `SupabaseSessionStore(string path).LoadAsync(CancellationToken)` / `SaveAsync(SupabaseSession, CancellationToken)`; `SupabaseSessionReadException` preserves the underlying reason.
 
-- [ ] Install local .NET 10, run both existing test projects; prepare Windows SDK 26100+ without changing app target. Record baseline and any native build prerequisites.
-- [ ] Add failing tests: 408/429/500/503 and transport failure preserve identity and remain retryable; explicit `refresh_token_not_found` / `refresh_token_already_used` rejects; cancellation propagates; damaged/null/missing-field JSON never signs up; original saved file survives failed/canceled writes; a successful second write creates a valid previous backup.
-- [ ] Run `dotnet test windows/tests/Ping.Windows.Core.Tests --filter SessionRecoveryTests`; verify behavioral failures.
-- [ ] Implement structured response classification, validate session data, atomic temp write/replace, safe backup behavior; keep expired exception only for explicit permanent denial. Change the old corrupt-session fallback test to assert preservation.
-- [ ] Run complete Core tests. Commit `fix(windows-auth): preserve sessions across transient failures`.
+- [x] Install local .NET 10, run both existing test projects; prepare Windows SDK 26100+ without changing app target. Record baseline and any native build prerequisites.
+- [x] Add failing tests: 408/429/500/503 and transport failure preserve identity and remain retryable; explicit `refresh_token_not_found` / `refresh_token_already_used` rejects; cancellation propagates; damaged/null/missing-field JSON never signs up; original saved file survives failed/canceled writes; a successful second write creates a valid previous backup.
+- [x] Run `dotnet test windows/tests/Ping.Windows.Core.Tests --filter SessionRecoveryTests`; verify behavioral failures.
+- [x] Implement structured response classification, validate session data, atomic temp write/replace, safe backup behavior; keep expired exception only for explicit permanent denial. Change the old corrupt-session fallback test to assert preservation.
+- [x] Run complete Core tests. Commit `fix(windows-auth): preserve sessions across transient failures`.
 
 ## Task 2: Connection supervisor and Windows lifecycle adapter
 
 **Files:** Create Core `Backend/ConnectionSupervisor.cs`, App `Bootstrap/ConnectionLifecycleAdapter.cs`; modify `Bootstrap/AppCoordinator.cs`; test Core `ConnectionSupervisorTests.cs`.
 **Interfaces:** `ConnectionSupervisor(Func<CancellationToken, Task> connectAsync, ... injected delay/jitter).Start()`, `RequestReconnect()`, `StopAsync()`, `StateChanged`; states `Connecting`, `Connected`, `Retrying`, `SessionRejected`, `ConfigurationRequired`, `Stopped`. Adapter owns network/power handlers.
 
-- [ ] Write behavioral tests for offline→success, delay progression/cap/Retry-After, immediate wake, permanent rejection stop, disposal cancel, many triggers→one bootstrap.
-- [ ] Run focused tests and observe expected failures.
-- [ ] Implement supervised bootstrap, retained room/profile state, network/resume wake signals. Avoid restarting existing incoming loops when already running. Marshal UI changes through DispatcherQueue.
-- [ ] Run complete Core/App tests and compile App where available. Commit `fix(windows): recover connections without replacing identity`.
+- [x] Write behavioral tests for offline→success, delay progression/cap/Retry-After, immediate wake, permanent rejection stop, disposal cancel, many triggers→one bootstrap.
+- [x] Run focused tests and observe expected failures.
+- [x] Implement supervised bootstrap, retained room/profile state, network/resume wake signals. Avoid restarting existing incoming loops when already running. Marshal UI changes through DispatcherQueue.
+- [x] Run complete Core/App tests and compile App where available. Commit `fix(windows): recover connections without replacing identity`.
 
 ## Task 3: Transactional history snapshots and visible-room read policy
 
 **Files:** Modify App `History/HistoryViewModel.cs`, `HistoryWindow.xaml.cs`, `Bootstrap/AppCoordinator.cs`; tests `HistoryViewModelTests.cs`, new `RoomVisibilityPolicyTests.cs` if policy is extracted.
 **Interfaces:** Inject `Func<string, bool> canMarkRoomRead` into HistoryViewModel (default safe policy) and expose `MarkVisibleRoomReadAsync(CancellationToken)`; load generation checks guard snapshot apply. Window visibility provider observes actual activation and HWND foreground.
 
-- [ ] Add failures for old timeline preserved on RPC failure, deferred A response after B selection, selected row/reply retained, hidden/background no read RPC, foreground read exactly for selected room.
-- [ ] Run focused History tests; confirm failures.
-- [ ] Fetch video/chat concurrently into local snapshot, apply only current room generation; optional attachment failures do not discard text. Share visible/foreground checks for read and notification cleanup.
-- [ ] Run full App tests plus build. Commit `fix(windows-history): preserve conversations and foreground read state`.
+- [x] Add failures for old timeline preserved on RPC failure, deferred A response after B selection, selected row/reply retained, hidden/background no read RPC, foreground read exactly for selected room.
+- [x] Run focused History tests; confirm failures.
+- [x] Fetch video/chat concurrently into local snapshot, apply only current room generation; optional attachment failures do not discard text. Share visible/foreground checks for read and notification cleanup.
+- [x] Run full App tests plus build. Commit `fix(windows-history): preserve conversations and foreground read state`.
 
 ## Task 4: Current message model and deletion permissions
 
 **Files:** Core `Models/VideoMessage.cs`, new `Models/MessageRemovalPolicy.cs`, `Backend/MessageService.cs`; App `History/HistoryRows.cs`, `HistoryViewModel.cs`, `HistoryWindow.xaml`; tests Core/App removal tests and affected backend fixtures.
 **Interfaces:** decode `is_auto_reply`; `MessageRemovalPolicy` returns none/delete/hide given sender, receiver, timestamp, current UID and injected time. `MessageService.RemoveAsync(string, CancellationToken)` interprets RPC missing/deleted/hidden.
 
-- [ ] Test auto reply payload, exact five-minute boundary, future/missing timestamps fail closed, sender/receiver/third party, server rejection retains rows.
-- [ ] Observe failing focused tests, implement UI permissions and server result handling, refresh expiry while room is open.
-- [ ] Run complete Core/App suites. Commit `fix(windows): align message permissions with current backend`.
+- [x] Test auto reply payload, exact five-minute boundary, future/missing timestamps fail closed, sender/receiver/third party, server rejection retains rows.
+- [x] Observe failing focused tests, implement UI permissions and server result handling, refresh expiry while room is open.
+- [x] Run complete Core/App suites. Commit `fix(windows): align message permissions with current backend`.
 
 ## Task 5: Build and verify foundation
 
 **Files:** Update this plan progress, `docs/windows/2026-09-30-foundation-verification.ko.md`; build support scripts only if an actual portability defect is found.
 
-- [ ] Run full tests, `git diff --check`, x64 managed/native App build with required SDK. Record exact commands and results.
+- [x] Run full tests, `git diff --check`, x64 managed/native App build with required SDK. Record exact commands and results.
 - [ ] Run packaged foundation smoke when signing/config is available; never describe portable tests as packaged runtime verification.
-- [ ] Dispatch one independent whole-branch review as required by executing-plans; resolve material findings with failing tests first.
-- [ ] Record remaining hardware/signing/SDK limitations and subsequent parity tasks. Commit `docs(windows): record connection foundation verification`.
+- [x] Dispatch one independent whole-branch review as required by executing-plans; resolve material findings with failing tests first.
+- [x] Record remaining hardware/signing/SDK limitations and subsequent parity tasks. Commit `docs(windows): record connection foundation verification`.
 
 ## Remaining program
 
