@@ -60,6 +60,6 @@ Files: App `Capture/FaceRecorder.cs`, `OwnedScreenFaceCaptureEngine.cs`, `AutoRe
 
 ## Task4 — Review and verification
 
-- [ ] One fresh whole-milestone reviewer, fix verified important findings with RED/GREEN regression checks.
-- [ ] Normal x64 Release/MSIX and diagnostic exclusion, fixture results; document real camera/power/backend/Mac/ARM64 limits separately. Commit `docs(windows): verify automatic face reply milestone`.
-- [ ] Continue capture viewport/account/device/settings/EXE and real-device QA under the existing full goal; do not call this full product completion.
+- [x] One fresh whole-milestone reviewer, fix verified important findings with RED/GREEN regression checks.
+- [x] Normal x64 Release/MSIX and diagnostic exclusion, fixture results; document real camera/power/backend/Mac/ARM64 limits separately. Commit `docs(windows): verify automatic face reply milestone`.
+- [x] Continue capture viewport/account/device/settings/EXE and real-device QA under the existing full goal; do not call this full product completion.
