@@ -53,6 +53,7 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         this.canMarkRoomRead = canMarkRoomRead ?? (_ => false);
         this.nowProvider = nowProvider ?? (() => DateTimeOffset.UtcNow);
         composer.Changed += NotifyComposerChanged;
+        Timeline.CollectionChanged += (_, _) => OnPropertyChanged(nameof(TimelineVisibility));
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -138,9 +139,9 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
     }
 
 #if WINDOWS
-    public Visibility TimelineVisibility => timelineRoomId == SelectedRoom?.Id ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility TimelineVisibility => SelectedRoom?.Id is not null && timelineRoomId == SelectedRoom.Id && Timeline.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
 #else
-    public bool TimelineVisibility => timelineRoomId == SelectedRoom?.Id;
+    public bool TimelineVisibility => SelectedRoom?.Id is not null && timelineRoomId == SelectedRoom.Id && Timeline.Count > 0;
 #endif
 
     public string ReplyPreviewText => ReplyTarget?.DisplayText ?? string.Empty;

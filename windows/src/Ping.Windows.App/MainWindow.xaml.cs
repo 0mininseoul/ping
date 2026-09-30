@@ -1,6 +1,7 @@
+using System.Runtime.InteropServices;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Media;
+using Ping.Windows.App.History;
 
 namespace Ping.Windows.App;
 
@@ -8,112 +9,52 @@ public sealed partial class MainWindow : Window
 {
     private AppWindow? appWindow;
     private bool allowClose;
-    private bool isUpdatingSettingsControls;
-
-    public MainWindow()
-    {
-        InitializeComponent();
-    }
-
-    public Brush? IdleBorderBrush => Root.Resources["PingIdleBrush"] as Brush;
-
-    public Brush? WarningBorderBrush => Root.Resources["PingWarningBrush"] as Brush;
-
-    public event EventHandler<bool>? QuickSendToggleChanged;
-
+    private HistoryWindow? messenger;
+    public MainWindow() => InitializeComponent();
     public event EventHandler? BlockedRetryRequested;
-
     public event EventHandler? OpenRoomsRequested;
-
-    public event EventHandler? OpenHistoryRequested;
-
     public event EventHandler? NewPingRequested;
-
+    public event EventHandler? ScreenPingRequested;
     public event EventHandler? OpenSettingsRequested;
+
+    public void AttachMessenger(HistoryWindow view)
+    {
+        if (messenger is not null) throw new InvalidOperationException("Ping already owns a messenger.");
+        messenger = view;
+        MessengerHost.Content = view;
+        view.RoomsRequested += (_, _) => OpenRoomsRequested?.Invoke(this, EventArgs.Empty);
+        view.FacePingRequested += (_, _) => NewPingRequested?.Invoke(this, EventArgs.Empty);
+        view.ScreenPingRequested += (_, _) => ScreenPingRequested?.Invoke(this, EventArgs.Empty);
+        view.SettingsRequested += (_, _) => OpenSettingsRequested?.Invoke(this, EventArgs.Empty);
+        view.RetryRequested += (_, _) => BlockedRetryRequested?.Invoke(this, EventArgs.Empty);
+    }
 
     public void InitializeTrayWindowBehavior()
     {
         var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
-        var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hwnd);
-        appWindow = AppWindow.GetFromWindowId(windowId);
+        appWindow = AppWindow.GetFromWindowId(Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hwnd));
         var iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Ping.ico");
-        if (File.Exists(iconPath))
+        if (File.Exists(iconPath)) appWindow.SetIcon(iconPath);
+        var scale = GetDpiForWindow(hwnd) / 96.0;
+        if (appWindow.Presenter is OverlappedPresenter presenter)
         {
-            appWindow.SetIcon(iconPath);
+            presenter.PreferredMinimumWidth = (int)(760 * scale);
+            presenter.PreferredMinimumHeight = (int)(540 * scale);
         }
-
+        appWindow.Resize(new((int)(1060 * scale), (int)(720 * scale)));
         appWindow.Closing += HandleAppWindowClosing;
     }
 
-    public void ShowShell()
-    {
-        appWindow?.Show(true);
-        Activate();
-    }
-
-    public void ConfigureQuickSendSettings(bool isEnabled, string defaultRoomLabel)
-    {
-        isUpdatingSettingsControls = true;
-        try
-        {
-            QuickSendToggle.IsOn = isEnabled;
-            QuickSendDefaultRoom.Text = defaultRoomLabel;
-        }
-        finally
-        {
-            isUpdatingSettingsControls = false;
-        }
-    }
-
-    public void CloseForQuit()
-    {
-        allowClose = true;
-        Close();
-    }
-
+    public void ShowShell() { appWindow?.Show(true); Activate(); }
+    public void CloseForQuit() { allowClose = true; Close(); }
+    public void ReportStatus(string? message, bool canRetry = false) => messenger?.ReportConnectionStatus(message, canRetry);
+    public void SetHotkeyStatus(string message) => messenger?.SetHotkeyStatus(message);
+    public void ConfigureQuickSendSettings(bool isEnabled, string defaultRoomLabel) => messenger?.SetDefaultRoom(defaultRoomLabel);
     private void HandleAppWindowClosing(AppWindow sender, AppWindowClosingEventArgs args)
     {
-        if (allowClose)
-        {
-            return;
-        }
-
+        if (allowClose) return;
         args.Cancel = true;
         sender.Hide();
     }
-
-    private void HandleQuickSendToggleToggled(object sender, RoutedEventArgs args)
-    {
-        if (isUpdatingSettingsControls)
-        {
-            return;
-        }
-
-        QuickSendToggleChanged?.Invoke(this, QuickSendToggle.IsOn);
-    }
-
-    private void HandleBlockedRetryClicked(object sender, RoutedEventArgs args)
-    {
-        BlockedRetryRequested?.Invoke(this, EventArgs.Empty);
-    }
-
-    private void HandleOpenRoomsClicked(object sender, RoutedEventArgs args)
-    {
-        OpenRoomsRequested?.Invoke(this, EventArgs.Empty);
-    }
-
-    private void HandleOpenHistoryClicked(object sender, RoutedEventArgs args)
-    {
-        OpenHistoryRequested?.Invoke(this, EventArgs.Empty);
-    }
-
-    private void HandleNewPingClicked(object sender, RoutedEventArgs args)
-    {
-        NewPingRequested?.Invoke(this, EventArgs.Empty);
-    }
-
-    private void HandleOpenSettingsClicked(object sender, RoutedEventArgs args)
-    {
-        OpenSettingsRequested?.Invoke(this, EventArgs.Empty);
-    }
+    [DllImport("user32.dll")] private static extern uint GetDpiForWindow(IntPtr hwnd);
 }

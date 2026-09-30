@@ -12,10 +12,19 @@ using WinRT.Interop;
 
 namespace Ping.Windows.App.History;
 
-public sealed partial class HistoryWindow : Window
+public sealed partial class HistoryWindow : UserControl
 {
     private const int VirtualKeyShift = 0x10;
     private readonly HistoryViewModel viewModel;
+    private readonly Window owner;
+    private bool backendReady;
+    private bool isComposing;
+    private bool ignoreCurrentEnter;
+    public event EventHandler? RoomsRequested;
+    public event EventHandler? FacePingRequested;
+    public event EventHandler? ScreenPingRequested;
+    public event EventHandler? SettingsRequested;
+    public event EventHandler? RetryRequested;
     private readonly Func<VideoMessage, CancellationToken, Task<string>> downloadVideoAsync;
     private readonly Func<VideoMessage, CancellationToken, Task> saveVideoAsync;
     private readonly MessageService messageService;
@@ -23,20 +32,23 @@ public sealed partial class HistoryWindow : Window
     private readonly UiTaskDispatcher uiDispatcher;
     private readonly Microsoft.UI.Dispatching.DispatcherQueueTimer removalPermissionTimer;
     private readonly List<PlaybackWindow> playbackWindows = [];
-    private readonly string? initialRoomId;
-    private readonly string? initialChatId;
-    private string? selectedChatImagePath;
+    private string? initialRoomId;
+    private string? initialChatId;
     private bool isApplyingSelection;
     private string? lastScrolledRoomId;
 
     public HistoryWindow(
+        Window owner,
         HistoryViewModel viewModel,
         Func<VideoMessage, CancellationToken, Task<string>> downloadVideoAsync,
         Func<VideoMessage, CancellationToken, Task> saveVideoAsync,
         MessageService messageService,
         string? initialRoomId = null,
-        string? initialChatId = null)
+        string? initialChatId = null,
+        bool loadOnStart = true)
     {
+        this.owner = owner;
+        backendReady = loadOnStart;
         this.viewModel = viewModel;
         this.downloadVideoAsync = downloadVideoAsync;
         this.saveVideoAsync = saveVideoAsync;
@@ -46,20 +58,25 @@ public sealed partial class HistoryWindow : Window
         InitializeComponent();
         uiDispatcher = new UiTaskDispatcher(() => DispatcherQueue.HasThreadAccess, action => DispatcherQueue.TryEnqueue(() => action()));
         Root.DataContext = viewModel;
+        viewModel.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName is nameof(HistoryViewModel.SelectedRoom) or nameof(HistoryViewModel.DraftImagePath)) UpdateEmptyState();
+        };
+        viewModel.Timeline.CollectionChanged += (_, _) => UpdateEmptyState();
         removalPermissionTimer = DispatcherQueue.CreateTimer();
         removalPermissionTimer.Interval = TimeSpan.FromSeconds(1);
         removalPermissionTimer.Tick += (_, _) => viewModel.RefreshRemovalPermissions();
         removalPermissionTimer.Start();
         autoRefresh = new HistoryAutoRefreshCoordinator(
             TimeSpan.FromSeconds(30),
-            token => RunAsync(() => viewModel.LoadSelectedRoomAsync(token)));
+            token => !backendReady || !IsWindowVisible(WindowNative.GetWindowHandle(owner)) ? Task.CompletedTask : RunAsync(() => viewModel.LoadSelectedRoomAsync(token)));
         Root.Loaded += HandleLoaded;
-        Closed += async (_, _) =>
+        owner.Closed += async (_, _) =>
         {
             removalPermissionTimer.Stop();
             await autoRefresh.StopAsync();
         };
-        Activated += async (_, args) =>
+        owner.Activated += async (_, args) =>
         {
             if (args.WindowActivationState != WindowActivationState.Deactivated)
                 await RunAsync(() => viewModel.MarkVisibleRoomReadAsync());
@@ -68,9 +85,21 @@ public sealed partial class HistoryWindow : Window
 
     private async void HandleLoaded(object sender, RoutedEventArgs args)
     {
-        var loaded = !string.IsNullOrWhiteSpace(initialRoomId) && !string.IsNullOrWhiteSpace(initialChatId)
-            ? await RunAsync(() => viewModel.FocusChatAsync(initialRoomId, initialChatId))
-            : await RunAsync(() => viewModel.LoadAsync(initialRoomId));
+        UpdateEmptyState();
+        if (!backendReady) return;
+        await ReloadRoomsAsync();
+    }
+
+    public async Task ReloadRoomsAsync()
+    {
+        backendReady = true;
+        var roomId = initialRoomId;
+        var chatId = initialChatId;
+        initialRoomId = null;
+        initialChatId = null;
+        var loaded = !string.IsNullOrWhiteSpace(roomId) && !string.IsNullOrWhiteSpace(chatId)
+            ? await RunAsync(() => viewModel.FocusChatAsync(roomId, chatId))
+            : await RunAsync(() => viewModel.LoadAsync(roomId));
         if (loaded)
         {
             ApplySelectionFromViewModel();
@@ -80,6 +109,7 @@ public sealed partial class HistoryWindow : Window
 
     public async Task FocusRoomAsync(string roomId)
     {
+        if (!backendReady) { initialRoomId = roomId; initialChatId = null; return; }
         if (await RunAsync(() => viewModel.SelectRoomAsync(roomId)))
         {
             ApplySelectionFromViewModel();
@@ -88,6 +118,7 @@ public sealed partial class HistoryWindow : Window
 
     public async Task FocusChatAsync(string roomId, string chatId)
     {
+        if (!backendReady) { initialRoomId = roomId; initialChatId = chatId; return; }
         if (await RunAsync(() => viewModel.FocusChatAsync(roomId, chatId)))
         {
             ApplySelectionFromViewModel();
@@ -96,7 +127,7 @@ public sealed partial class HistoryWindow : Window
 
     private async void RoomsList_SelectionChanged(object sender, SelectionChangedEventArgs args)
     {
-        if (isApplyingSelection)
+        if (isApplyingSelection || args.AddedItems.Count == 0)
         {
             return;
         }
@@ -110,7 +141,7 @@ public sealed partial class HistoryWindow : Window
 
     private void VideosList_SelectionChanged(object sender, SelectionChangedEventArgs args)
     {
-        if (isApplyingSelection)
+        if (isApplyingSelection || args.AddedItems.Count == 0)
         {
             return;
         }
@@ -173,8 +204,8 @@ public sealed partial class HistoryWindow : Window
 
     public bool IsViewingRoom(string roomId) =>
         string.Equals(viewModel.SelectedRoom?.Id, roomId, StringComparison.Ordinal)
-        && IsWindowVisible(WindowNative.GetWindowHandle(this))
-        && GetForegroundWindow() == WindowNative.GetWindowHandle(this);
+        && IsWindowVisible(WindowNative.GetWindowHandle(owner))
+        && GetForegroundWindow() == WindowNative.GetWindowHandle(owner);
 
     [DllImport("user32.dll")]
     private static extern IntPtr GetForegroundWindow();
@@ -183,7 +214,39 @@ public sealed partial class HistoryWindow : Window
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool IsWindowVisible(IntPtr hwnd);
 
-    public void ReportConnectionStatus(string? status) => viewModel.ReportConnectionStatus(status);
+    public void Activate() => (owner as MainWindow)?.ShowShell();
+    public void ReportConnectionStatus(string? status, bool canRetry = false)
+    {
+        ConnectionText.Text = status ?? "";
+        ConnectionBanner.Visibility = string.IsNullOrWhiteSpace(status) ? Visibility.Collapsed : Visibility.Visible;
+        RetryButton.Visibility = canRetry ? Visibility.Visible : Visibility.Collapsed;
+    }
+    public void SetHotkeyStatus(string message) => ToolTipService.SetToolTip(HotkeyHint, message);
+    public void SetDefaultRoom(string name) => DefaultRoomText.Text = name;
+    private void OpenRooms_Click(object sender, RoutedEventArgs args) => RoomsRequested?.Invoke(this, EventArgs.Empty);
+    private void FacePing_Click(object sender, RoutedEventArgs args) => FacePingRequested?.Invoke(this, EventArgs.Empty);
+    private void ScreenPing_Click(object sender, RoutedEventArgs args) => ScreenPingRequested?.Invoke(this, EventArgs.Empty);
+    private void OpenSettings_Click(object sender, RoutedEventArgs args) => SettingsRequested?.Invoke(this, EventArgs.Empty);
+    private void Retry_Click(object sender, RoutedEventArgs args) => RetryRequested?.Invoke(this, EventArgs.Empty);
+    private void UpdateEmptyState()
+    {
+        var noRoom = viewModel.SelectedRoom is null;
+        EmptyTitle.Text = noRoom ? "대화를 시작하세요" : "아직 메시지가 없어요";
+        EmptyDetail.Text = noRoom ? "방을 만들거나 참여한 뒤 메시지와 3초 영상을 주고받으세요." : "아래에서 첫 메시지를 보내거나 얼굴 핑으로 인사를 건네보세요.";
+        EmptyRoomButton.Visibility = noRoom ? Visibility.Visible : Visibility.Collapsed;
+        EmptyState.Visibility = noRoom || viewModel.Timeline.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        AttachmentPreview.Visibility = viewModel.DraftImagePath is null ? Visibility.Collapsed : Visibility.Visible;
+    }
+    private void ChatCompositionStarted(TextBox sender, TextCompositionStartedEventArgs args) => isComposing = true;
+    private void ChatCompositionEnded(TextBox sender, TextCompositionEndedEventArgs args)
+    {
+        ignoreCurrentEnter = (GetKeyState(0x0D) & 0x8000) != 0;
+        isComposing = false;
+    }
+    private void ChatBox_KeyUp(object sender, KeyRoutedEventArgs args)
+    {
+        if (args.Key == VirtualKey.Enter) ignoreCurrentEnter = false;
+    }
 
     private async void SendChatButton_Click(object sender, RoutedEventArgs args)
     {
@@ -192,7 +255,7 @@ public sealed partial class HistoryWindow : Window
 
     private async void ChatBox_KeyDown(object sender, KeyRoutedEventArgs args)
     {
-        if (args.Key != global::Windows.System.VirtualKey.Enter || IsShiftDown())
+        if (args.Key != global::Windows.System.VirtualKey.Enter || !ComposerKeyPolicy.ShouldSubmitEnter(isComposing || ignoreCurrentEnter, IsShiftDown()))
         {
             return;
         }
@@ -257,7 +320,7 @@ public sealed partial class HistoryWindow : Window
     private async void AttachImageButton_Click(object sender, RoutedEventArgs args)
     {
         var picker = new FileOpenPicker();
-        var hwnd = WindowNative.GetWindowHandle(this);
+        var hwnd = WindowNative.GetWindowHandle(owner);
         InitializeWithWindow.Initialize(picker, hwnd);
         foreach (var extension in new[] { ".jpg", ".jpeg", ".png", ".heic", ".heif", ".gif", ".webp" })
         {
@@ -270,8 +333,7 @@ public sealed partial class HistoryWindow : Window
             return;
         }
 
-        selectedChatImagePath = file.Path;
-        SelectedImageText.Text = file.Name;
+        viewModel.DraftImagePath = file.Path;
     }
 
     private void ClearImageButton_Click(object sender, RoutedEventArgs args)
@@ -294,17 +356,12 @@ public sealed partial class HistoryWindow : Window
 
     private void ClearSelectedImage()
     {
-        selectedChatImagePath = null;
-        SelectedImageText.Text = string.Empty;
+        viewModel.DraftImagePath = null;
     }
 
     private async Task SendChatFromComposerAsync()
     {
-        if (await RunAsync(() => viewModel.SendChatAsync(ChatBox.Text, selectedChatImagePath)))
-        {
-            ChatBox.Text = string.Empty;
-            ClearSelectedImage();
-        }
+        await RunAsync(async () => { await viewModel.SendFromComposerAsync(); });
     }
 
     private void ApplySelectionFromViewModel()
@@ -371,6 +428,44 @@ public sealed partial class HistoryWindow : Window
             _ => null
         };
 
+    private void MessageMenu_Opening(object sender, object args)
+    {
+        if (sender is not MenuFlyout menu) return;
+        AssignMenuContext(menu.Items, menu.Target?.DataContext);
+    }
+    private static void AssignMenuContext(IEnumerable<MenuFlyoutItemBase> items, object? context)
+    {
+        foreach (var item in items)
+        {
+            item.DataContext = context;
+            if (item is MenuFlyoutSubItem sub) AssignMenuContext(sub.Items, context);
+        }
+    }
+    private async void ContextReaction_Click(object sender, RoutedEventArgs args)
+    {
+        if (sender is not MenuFlyoutItem { Tag: string emoji } item) return;
+        var video = VideoItem(item);
+        var chat = ChatItem(item);
+        await RunAsync(() => viewModel.ToggleReactionAsync(video is not null ? ReactionTargetKind.Video : ReactionTargetKind.Chat,
+            video?.Message.Id ?? chat?.Message.Id, emoji));
+    }
+    private void CopyChat_Click(object sender, RoutedEventArgs args)
+    {
+        if (ChatItem(sender) is not { } item) return;
+        var data = new global::Windows.ApplicationModel.DataTransfer.DataPackage();
+        data.SetText(item.Body);
+        global::Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(data);
+    }
+    private async void Timeline_KeyDown(object sender, KeyRoutedEventArgs args)
+    {
+        if (args.Key == VirtualKey.Enter && viewModel.SelectedVideo is { } video)
+        {
+            args.Handled = true;
+            await PlayVideoAsync(video.Message);
+        }
+        else if (args.Key == VirtualKey.Escape) ChatBox.Focus(FocusState.Keyboard);
+    }
+
     private static bool IsWithinButton(object? source)
     {
         var current = source as DependencyObject;
@@ -399,6 +494,7 @@ public sealed partial class HistoryWindow : Window
         catch (Exception ex)
         {
             viewModel.ReportError(ex);
+            ReportConnectionStatus(ex.Message, canRetry: true);
             return false;
         }
     }

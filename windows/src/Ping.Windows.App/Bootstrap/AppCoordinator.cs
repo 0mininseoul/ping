@@ -109,10 +109,9 @@ public sealed class AppCoordinator : IDisposable
             () => quickSendSettings.Preferences,
             archive: localArchive);
         this.tray = tray ?? new TrayIconController(ExecuteTrayCommand);
-        mainWindow.QuickSendToggleChanged += HandleQuickSendToggleChanged;
+        mainWindow.ScreenPingRequested += HandleScreenPingRequested;
         mainWindow.BlockedRetryRequested += HandleBlockedRetryRequested;
         mainWindow.OpenRoomsRequested += HandleOpenRoomsRequested;
-        mainWindow.OpenHistoryRequested += HandleOpenHistoryRequested;
         mainWindow.NewPingRequested += HandleNewPingRequested;
         mainWindow.OpenSettingsRequested += HandleOpenSettingsRequested;
     }
@@ -120,6 +119,8 @@ public sealed class AppCoordinator : IDisposable
     public void Start()
     {
         ObjectDisposedException.ThrowIf(disposed, this);
+
+        OpenHistoryWindow();
 
         hotkeys.HotkeyPressed += HandleHotkeyPressed;
         lastHotkeyRegistrations = RegisterSavedHotkeys();
@@ -229,10 +230,9 @@ public sealed class AppCoordinator : IDisposable
         connectionSupervisor.StateChanged -= HandleConnectionStateChanged;
         _ = DisposeConnectionAsync();
         hotkeys.HotkeyPressed -= HandleHotkeyPressed;
-        mainWindow.QuickSendToggleChanged -= HandleQuickSendToggleChanged;
+        mainWindow.ScreenPingRequested -= HandleScreenPingRequested;
         mainWindow.BlockedRetryRequested -= HandleBlockedRetryRequested;
         mainWindow.OpenRoomsRequested -= HandleOpenRoomsRequested;
-        mainWindow.OpenHistoryRequested -= HandleOpenHistoryRequested;
         mainWindow.NewPingRequested -= HandleNewPingRequested;
         mainWindow.OpenSettingsRequested -= HandleOpenSettingsRequested;
         StopIncomingPolling();
@@ -296,72 +296,16 @@ public sealed class AppCoordinator : IDisposable
         Execute(command);
     }
 
-    private void ShowHomeShell()
-    {
-        mainWindow.ShellTitle.Text = "Ping";
-        mainWindow.StateBadge.Text = "Ready";
-        mainWindow.StateTitle.Text = "Ping is running";
-        mainWindow.StateDetail.Text = "Close this window to keep Ping in the tray. Use the tray menu or hotkeys to send a ping.";
-        mainWindow.StateBorder.BorderBrush = mainWindow.IdleBorderBrush;
-        mainWindow.HistoryPanel.Visibility = Visibility.Visible;
-        mainWindow.BlockedPanel.Visibility = Visibility.Collapsed;
-        mainWindow.SettingsPanel.Visibility = Visibility.Collapsed;
-        mainWindow.ShowShell();
-    }
+    private void ShowHomeShell() => OpenHistoryWindow();
 
-    private void ShowHistory(string detail)
-    {
-        mainWindow.ShellTitle.Text = "Ping";
-        mainWindow.StateBadge.Text = "History";
-        mainWindow.StateTitle.Text = "Rooms and recent pings";
-        mainWindow.StateDetail.Text = detail;
-        mainWindow.StateBorder.BorderBrush = mainWindow.IdleBorderBrush;
-        mainWindow.HistoryPanel.Visibility = Visibility.Visible;
-        mainWindow.BlockedPanel.Visibility = Visibility.Collapsed;
-        mainWindow.SettingsPanel.Visibility = Visibility.Collapsed;
-        mainWindow.ShowShell();
-    }
+    private void ShowHistory(string detail) => OpenHistoryWindow();
 
     private void ShowBlockedState(string title, string detail, string reason, bool canRetry = false)
     {
-        mainWindow.ShellTitle.Text = title;
-        mainWindow.StateBadge.Text = "Blocked";
-        mainWindow.StateTitle.Text = title;
-        mainWindow.StateDetail.Text = detail;
-        mainWindow.BlockedReason.Text = reason;
-        mainWindow.BlockedRetryButton.Visibility = canRetry ? Visibility.Visible : Visibility.Collapsed;
-        mainWindow.StateBorder.BorderBrush = mainWindow.WarningBorderBrush;
-        mainWindow.HistoryPanel.Visibility = Visibility.Collapsed;
-        mainWindow.BlockedPanel.Visibility = Visibility.Visible;
-        mainWindow.SettingsPanel.Visibility = Visibility.Collapsed;
-        mainWindow.ShowShell();
+        mainWindow.ReportStatus($"{title}: {reason}", canRetry);
     }
 
-    private void ShowSettings()
-    {
-        var uid = currentUid;
-        var sendableRooms = uid is null ? Array.Empty<Room>() : SendableRoomsFor(uid);
-        var defaultRoom = ResolvePreferredDefaultRoom(sendableRooms);
-
-        mainWindow.ShellTitle.Text = "Settings";
-        mainWindow.StateBadge.Text = "Settings";
-        mainWindow.StateTitle.Text = "Windows quick send";
-        mainWindow.StateDetail.Text = QuickSendSettingsDetail(preferencesStore.Load());
-        mainWindow.StateBorder.BorderBrush = mainWindow.IdleBorderBrush;
-        mainWindow.HistoryPanel.Visibility = Visibility.Collapsed;
-        mainWindow.BlockedPanel.Visibility = Visibility.Collapsed;
-        mainWindow.SettingsPanel.Visibility = Visibility.Visible;
-        mainWindow.ConfigureQuickSendSettings(
-            quickSendSettings.Preferences.IsEnabled,
-            defaultRoom?.Name ?? "No sendable default room");
-        mainWindow.ShowShell();
-
-        // Keep Settings inside the stable main shell for now. The separate WinUI
-        // SettingsWindow has caused Microsoft.UI.Xaml.dll crashes in packaged
-        // builds on user machines, so opening it from the primary Settings button
-        // is intentionally disabled until that window is rebuilt and covered by
-        // a packaged UI smoke test.
-    }
+    private void ShowSettings() => OpenSettingsWindow();
 
     private void OpenRoomManagerWindow()
     {
@@ -414,6 +358,7 @@ public sealed class AppCoordinator : IDisposable
         }
 
         historyWindow = new HistoryWindow(
+            mainWindow,
             new HistoryViewModel(
                 roomService,
                 messageService,
@@ -426,8 +371,9 @@ public sealed class AppCoordinator : IDisposable
             SaveHistoryVideoAsync,
             messageService,
             preferredRoomId,
-            preferredChatId);
-        historyWindow.Closed += (_, _) => historyWindow = null;
+            preferredChatId,
+            loadOnStart: currentUid is not null);
+        mainWindow.AttachMessenger(historyWindow);
         historyWindow.Activate();
     }
 
@@ -508,6 +454,8 @@ public sealed class AppCoordinator : IDisposable
         Execute(HotkeyCommand.FacePing);
     }
 
+    private void HandleScreenPingRequested(object? sender, EventArgs args) => Execute(HotkeyCommand.ScreenFacePing);
+
     private void HandleOpenSettingsRequested(object? sender, EventArgs args)
     {
         ShowSettings();
@@ -538,11 +486,11 @@ public sealed class AppCoordinator : IDisposable
 
         if (failures.Length == 0)
         {
-            mainWindow.HotkeyState.Text = HotkeyStatusText.Summary(preferencesStore.Load());
+            mainWindow.SetHotkeyStatus(HotkeyStatusText.Summary(preferencesStore.Load()));
             return;
         }
 
-        mainWindow.HotkeyState.Text = string.Join(Environment.NewLine, failures);
+        mainWindow.SetHotkeyStatus(string.Join(Environment.NewLine, failures));
     }
 
     private HotkeyRegistrationResult ApplyHotkeySetting(HotkeyCommand command, HotkeyBinding binding)
@@ -550,7 +498,7 @@ public sealed class AppCoordinator : IDisposable
         var result = hotkeys.Register(command, binding);
         if (result.Status != HotkeyRegistrationStatus.Success)
         {
-            mainWindow.HotkeyState.Text = $"{binding}: {result.Message}";
+            mainWindow.SetHotkeyStatus($"{binding}: {result.Message}");
             return result;
         }
 
@@ -559,11 +507,7 @@ public sealed class AppCoordinator : IDisposable
         bindings[command] = binding;
         preferencesStore.Save(bindings);
         UpdateHotkeyRegistrationResult(result);
-        mainWindow.HotkeyState.Text = HotkeyStatusText.Summary(bindings);
-        if (command == HotkeyCommand.QuickScreenFacePing && mainWindow.SettingsPanel.Visibility == Visibility.Visible)
-        {
-            mainWindow.StateDetail.Text = QuickSendSettingsDetail(bindings);
-        }
+        mainWindow.SetHotkeyStatus(HotkeyStatusText.Summary(bindings));
 
         return result;
     }
@@ -1210,25 +1154,12 @@ public sealed class AppCoordinator : IDisposable
                 room.Id is not null
                 && room.MemberUids.Contains(uid)
                 && room.MemberUids.Count >= 2);
-            if (mainWindow.HistoryPanel.Visibility == Visibility.Visible)
-            {
-                mainWindow.StateDetail.Text = sendableCount == 0
-                    ? "Connected. Create or join a room to start sending."
-                    : $"Connected. {sendableCount} sendable room(s) available.";
-            }
 
-            mainWindow.HotkeyState.Text = HotkeyStatusText.RoomSummary(preferencesStore.Load(), sendableCount);
+            mainWindow.SetHotkeyStatus(HotkeyStatusText.RoomSummary(preferencesStore.Load(), sendableCount));
             StartIncomingPolling();
             StartIncomingChatPolling();
 
-            // 차단 화면에서 '다시 시도'로 재연결에 성공한 경우, 차단 상태를 벗어나
-            // 연결된 화면을 보여준다.
-            if (mainWindow.BlockedPanel.Visibility == Visibility.Visible)
-            {
-                ShowHistory(sendableCount == 0
-                    ? "연결됨. 방을 만들거나 참여하면 전송할 수 있어요."
-                    : $"연결됨. 전송 가능한 방 {sendableCount}개.");
-            }
+            if (historyWindow is not null) _ = historyWindow.ReloadRoomsAsync();
         });
         cancellationToken.ThrowIfCancellationRequested();
         await RunCleanupAsync(cancellationToken);
@@ -1258,8 +1189,9 @@ public sealed class AppCoordinator : IDisposable
                 ConnectionState.SessionRejected => "기존 계정을 보존했습니다. 계정 연결 복구가 필요합니다.",
                 _ => "연결 설정을 확인해 주세요."
             };
-            mainWindow.HotkeyState.Text = status;
-            historyWindow?.ReportConnectionStatus(state == ConnectionState.Connected ? null : status);
+            mainWindow.SetHotkeyStatus(status);
+            mainWindow.ReportStatus(state == ConnectionState.Connected ? null : status,
+                canRetry: state is ConnectionState.Retrying or ConnectionState.SessionRejected or ConnectionState.ConfigurationRequired);
             if (state is ConnectionState.SessionRejected or ConnectionState.ConfigurationRequired || currentUid is null)
             {
                 ShowBlockedState("연결", status, error?.Message ?? status, canRetry: true);
@@ -1269,8 +1201,7 @@ public sealed class AppCoordinator : IDisposable
 
     private void HandleBlockedRetryRequested(object? sender, EventArgs args)
     {
-        mainWindow.BlockedRetryButton.Visibility = Visibility.Collapsed;
-        mainWindow.StateDetail.Text = "다시 연결하는 중...";
+        mainWindow.ReportStatus("다시 연결하는 중…");
         connectionSupervisor.RetryNow();
     }
 

@@ -47,7 +47,7 @@ public sealed class AppCoordinatorSourceTests
             "windows",
             "src",
             "Ping.Windows.App",
-            "MainWindow.xaml"));
+            "History", "HistoryWindow.xaml"));
         var code = File.ReadAllText(Path.Combine(
             root,
             "windows",
@@ -62,14 +62,11 @@ public sealed class AppCoordinatorSourceTests
             "Bootstrap",
             "AppCoordinator.cs"));
 
-        Assert.Contains("Content=\"Create / Join room\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Click=\"HandleOpenRoomsClicked\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Content=\"History\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Click=\"HandleOpenHistoryClicked\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Content=\"New face ping\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Click=\"HandleNewPingClicked\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Content=\"Settings\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("Click=\"HandleOpenSettingsClicked\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Click=\"OpenRooms_Click\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Click=\"FacePing_Click\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Click=\"ScreenPing_Click\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Click=\"OpenSettings_Click\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("MessengerHost.Content = view;", code, StringComparison.Ordinal);
         Assert.Contains("public event EventHandler? OpenRoomsRequested;", code, StringComparison.Ordinal);
         Assert.Contains("OpenRoomsRequested += HandleOpenRoomsRequested", coordinator, StringComparison.Ordinal);
         Assert.Contains("OpenRoomManagerWindow();", coordinator, StringComparison.Ordinal);
@@ -106,7 +103,7 @@ public sealed class AppCoordinatorSourceTests
     }
 
     [Fact]
-    public void MainSettingsButtonDoesNotOpenCrashySecondarySettingsWindow()
+    public void MainSettingsUsesOwnedSettingsWindowRatherThanReplacingConversation()
     {
         var source = File.ReadAllText(Path.Combine(
             RepoRoot(),
@@ -122,8 +119,8 @@ public sealed class AppCoordinatorSourceTests
         Assert.True(nextMethodStart > showSettingsStart);
         var showSettingsBody = source[showSettingsStart..nextMethodStart];
 
-        Assert.DoesNotContain("OpenSettingsWindow();", showSettingsBody, StringComparison.Ordinal);
-        Assert.Contains("mainWindow.SettingsPanel.Visibility = Visibility.Visible;", showSettingsBody, StringComparison.Ordinal);
+        Assert.Contains("OpenSettingsWindow();", showSettingsBody, StringComparison.Ordinal);
+        Assert.DoesNotContain("SettingsPanel", showSettingsBody, StringComparison.Ordinal);
     }
 
     [Fact]
