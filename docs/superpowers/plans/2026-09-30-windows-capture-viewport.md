@@ -12,8 +12,8 @@
 
 Files: Core `Capture/ScreenCaptureViewport.cs`, `CaptureMirrorLayout.cs`, corresponding tests.
 
-- [ ] RED tests: zoom1..4, stable nonfinite inputs, edge-center inset, full/zoomed crop, negative monitor origins, pointer outside capture display, reset and fractional wheel; face200 and screen long-side480 geometry, portrait/ultrawide,100/150/200% scale, small work-area clamp.
-- [ ] Immutable viewport and validated layout contracts. Full Core/App suites GREEN. Commit `feat(windows-capture): define viewport and mirror geometry`.
+- [x] RED tests: zoom1..4, stable nonfinite inputs, edge-center inset, full/zoomed crop, negative monitor origins, pointer outside capture display, reset and fractional wheel; face200 and screen long-side480 geometry, portrait/ultrawide,100/150/200% scale, small work-area clamp.
+- [x] Immutable viewport and validated layout contracts. Full Core/App suites GREEN. Commit `feat(windows-capture): define viewport and mirror geometry`.
 
 ## Task2 — Native crop, composition and ABI
 
