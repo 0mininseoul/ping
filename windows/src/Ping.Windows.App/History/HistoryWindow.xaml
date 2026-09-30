@@ -92,6 +92,7 @@
                 CornerRadius="12">
                 <ListView
                     x:Name="VideosList"
+                    Visibility="{Binding TimelineVisibility}"
                     ItemsSource="{Binding Timeline}"
                     DoubleTapped="VideosList_DoubleTapped"
                     SelectionChanged="VideosList_SelectionChanged">

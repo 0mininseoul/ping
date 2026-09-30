@@ -19,6 +19,10 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
     private readonly IChatMediaStorageService storageService;
     private readonly ILinkPreviewService linkPreviewService;
     private readonly Func<string?> currentUidProvider;
+    private readonly Func<string, bool> canMarkRoomRead;
+    private int loadGeneration;
+    private int roomListGeneration;
+    private string? timelineRoomId;
     private static readonly string[] QuickReactions = ["❤️", "👍", "👎", "😂", "‼️", "❓"];
     private Room? selectedRoom;
     private VideoHistoryItem? selectedVideo;
@@ -33,7 +37,8 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         ReactionService reactionService,
         IChatMediaStorageService storageService,
         Func<string?> currentUidProvider,
-        ILinkPreviewService? linkPreviewService = null)
+        ILinkPreviewService? linkPreviewService = null,
+        Func<string, bool>? canMarkRoomRead = null)
     {
         this.roomService = roomService;
         this.messageService = messageService;
@@ -42,6 +47,7 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         this.storageService = storageService;
         this.currentUidProvider = currentUidProvider;
         this.linkPreviewService = linkPreviewService ?? new LinkPreviewService();
+        this.canMarkRoomRead = canMarkRoomRead ?? (_ => false);
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -66,9 +72,13 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
                 return;
             }
 
+            var changedRoom = selectedRoom?.Id != value?.Id;
             selectedRoom = value;
+            Interlocked.Increment(ref loadGeneration);
+            if (changedRoom) ReplyTarget = null;
             OnPropertyChanged();
             OnPropertyChanged(nameof(SelectedRoomName));
+            OnPropertyChanged(nameof(TimelineVisibility));
         }
     }
 
@@ -112,6 +122,12 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
 
     public string SelectedRoomName => SelectedRoom?.Name ?? "No room selected";
 
+#if WINDOWS
+    public Visibility TimelineVisibility => timelineRoomId == SelectedRoom?.Id ? Visibility.Visible : Visibility.Collapsed;
+#else
+    public bool TimelineVisibility => timelineRoomId == SelectedRoom?.Id;
+#endif
+
     public string ReplyPreviewText => ReplyTarget?.DisplayText ?? string.Empty;
 
 #if WINDOWS
@@ -137,15 +153,19 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
 
     public async Task LoadAsync(string? preferredRoomId = null, CancellationToken cancellationToken = default)
     {
+        var generation = Interlocked.Increment(ref roomListGeneration);
+        var previousSelectedId = SelectedRoom?.Id;
+        var refreshedRooms = await roomService.MyRoomsAsync(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (generation != roomListGeneration) return;
         Rooms.Clear();
-        foreach (var room in await roomService.MyRoomsAsync(cancellationToken))
+        foreach (var room in refreshedRooms)
         {
             Rooms.Add(room);
         }
 
-        SelectedRoom = preferredRoomId is null
-            ? Rooms.FirstOrDefault()
-            : Rooms.FirstOrDefault(room => string.Equals(room.Id, preferredRoomId, StringComparison.Ordinal)) ?? Rooms.FirstOrDefault();
+        var targetId = preferredRoomId ?? previousSelectedId;
+        SelectedRoom = Rooms.FirstOrDefault(room => string.Equals(room.Id, targetId, StringComparison.Ordinal)) ?? Rooms.FirstOrDefault();
         await LoadSelectedRoomAsync(cancellationToken);
     }
 
@@ -182,22 +202,20 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
 
     public async Task LoadSelectedRoomAsync(CancellationToken cancellationToken = default)
     {
+        var generation = Interlocked.Increment(ref loadGeneration);
         var previousSelectedSortKind = SelectedTimelineItem?.SortKind;
         var previousSelectedSortId = SelectedTimelineItem?.SortId;
-        SelectedTimelineItem = null;
-        SelectedVideo = null;
-        Videos.Clear();
-        Chats.Clear();
-        Timeline.Clear();
-        Reactions.Clear();
         if (SelectedRoom?.Id is not { } roomId)
         {
             StatusMessage = "No room selected.";
             return;
         }
 
-        var videos = await messageService.RoomMessagesAsync(roomId, cancellationToken: cancellationToken);
-        var chats = await chatService.RoomChatMessagesAsync(roomId, cancellationToken: cancellationToken);
+        var videosTask = messageService.RoomMessagesAsync(roomId, cancellationToken: cancellationToken);
+        var chatsTask = chatService.RoomChatMessagesAsync(roomId, cancellationToken: cancellationToken);
+        await Task.WhenAll(videosTask, chatsTask);
+        var videos = await videosTask;
+        var chats = await chatsTask;
 
         var reactions = await reactionService.ReactionsAsync(
             chats.Where(chat => chat.Id is not null).Select(chat => chat.Id!).ToArray(),
@@ -211,6 +229,14 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         var videoById = videos
             .Where(video => video.Id is not null)
             .ToDictionary(video => video.Id!, StringComparer.Ordinal);
+
+        cancellationToken.ThrowIfCancellationRequested();
+        if (generation != loadGeneration || SelectedRoom?.Id != roomId) return;
+        SelectedTimelineItem = null;
+        SelectedVideo = null;
+        Videos.Clear();
+        Chats.Clear();
+        Reactions.Clear();
 
         foreach (var video in videos)
         {
@@ -235,13 +261,14 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         }
 
         RebuildTimeline();
+        timelineRoomId = roomId;
+        OnPropertyChanged(nameof(TimelineVisibility));
         RestoreSelectedTimelineItem(previousSelectedSortKind, previousSelectedSortId);
-        await LoadChatImagesAsync(cancellationToken);
-        await LoadLinkPreviewsAsync(cancellationToken);
-        if (await MarkSelectedRoomReadAsync(roomId, cancellationToken))
-        {
-            ClearSelectedRoomUnreadBadge(roomId);
-        }
+        var snapshotChats = Chats.ToArray();
+        await LoadChatImagesAsync(snapshotChats, cancellationToken);
+        await LoadLinkPreviewsAsync(snapshotChats, cancellationToken);
+        if (generation != loadGeneration || SelectedRoom?.Id != roomId) return;
+        await MarkVisibleRoomReadAsync(cancellationToken);
         StatusMessage = $"{Videos.Count} videos, {Chats.Count} chats, {Reactions.Count} reactions.";
     }
 
@@ -444,9 +471,9 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
 
     public void ReportConnectionStatus(string? status) => StatusMessage = status ?? string.Empty;
 
-    private async Task LoadChatImagesAsync(CancellationToken cancellationToken)
+    private async Task LoadChatImagesAsync(IReadOnlyList<ChatHistoryItem> chats, CancellationToken cancellationToken)
     {
-        foreach (var row in Chats.Where(row => row.HasImageAttachment))
+        foreach (var row in chats.Where(row => row.HasImageAttachment))
         {
             try
             {
@@ -463,13 +490,26 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         }
     }
 
-    private async Task LoadLinkPreviewsAsync(CancellationToken cancellationToken)
+    private async Task LoadLinkPreviewsAsync(IReadOnlyList<ChatHistoryItem> chats, CancellationToken cancellationToken)
     {
-        foreach (var row in Chats.Where(row => row.LinkPreviewUrl is not null))
+        foreach (var row in chats.Where(row => row.LinkPreviewUrl is not null))
         {
-            var metadata = await linkPreviewService.MetadataAsync(row.LinkPreviewUrl!, cancellationToken);
-            row.SetLinkPreview(metadata);
+            try
+            {
+                var metadata = await linkPreviewService.MetadataAsync(row.LinkPreviewUrl!, cancellationToken);
+                row.SetLinkPreview(metadata);
+            }
+            catch (Exception ex) when (ex is HttpRequestException or IOException or InvalidOperationException) { }
         }
+    }
+
+    public async Task MarkVisibleRoomReadAsync(CancellationToken cancellationToken = default)
+    {
+        var roomId = SelectedRoom?.Id;
+        if (roomId is null || timelineRoomId != roomId || !canMarkRoomRead(roomId)) return;
+        if (await MarkSelectedRoomReadAsync(roomId, cancellationToken)
+            && SelectedRoom?.Id == roomId && canMarkRoomRead(roomId))
+            ClearSelectedRoomUnreadBadge(roomId);
     }
 
     private async Task<bool> MarkSelectedRoomReadAsync(string roomId, CancellationToken cancellationToken)

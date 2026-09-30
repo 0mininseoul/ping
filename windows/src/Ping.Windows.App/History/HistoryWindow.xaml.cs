@@ -48,6 +48,11 @@ public sealed partial class HistoryWindow : Window
             token => RunAsync(() => viewModel.LoadSelectedRoomAsync(token)));
         Root.Loaded += HandleLoaded;
         Closed += async (_, _) => await autoRefresh.StopAsync();
+        Activated += async (_, args) =>
+        {
+            if (args.WindowActivationState != WindowActivationState.Deactivated)
+                await RunAsync(() => viewModel.MarkVisibleRoomReadAsync());
+        };
     }
 
     private async void HandleLoaded(object sender, RoutedEventArgs args)
@@ -156,7 +161,16 @@ public sealed partial class HistoryWindow : Window
     }
 
     public bool IsViewingRoom(string roomId) =>
-        string.Equals(viewModel.SelectedRoom?.Id, roomId, StringComparison.Ordinal);
+        string.Equals(viewModel.SelectedRoom?.Id, roomId, StringComparison.Ordinal)
+        && IsWindowVisible(WindowNative.GetWindowHandle(this))
+        && GetForegroundWindow() == WindowNative.GetWindowHandle(this);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool IsWindowVisible(IntPtr hwnd);
 
     public void ReportConnectionStatus(string? status) => viewModel.ReportConnectionStatus(status);
 

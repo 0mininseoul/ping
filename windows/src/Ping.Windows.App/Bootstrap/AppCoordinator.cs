@@ -420,7 +420,8 @@ public sealed class AppCoordinator : IDisposable
                 chatService,
                 reactionService,
                 storageService,
-                () => currentUid),
+                () => currentUid,
+                canMarkRoomRead: roomId => historyWindow?.IsViewingRoom(roomId) == true),
             DownloadVideoForPlaybackAsync,
             SaveHistoryVideoAsync,
             messageService,
@@ -1023,14 +1024,8 @@ public sealed class AppCoordinator : IDisposable
         string roomId,
         CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         await RunOnUiThreadAsync(() => OpenHistoryWindow(roomId, chatId));
-        try
-        {
-            await chatService.MarkRoomReadAsync(roomId, cancellationToken);
-        }
-        catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException)
-        {
-        }
     }
 
     private async Task<string> DownloadVideoForPlaybackAsync(

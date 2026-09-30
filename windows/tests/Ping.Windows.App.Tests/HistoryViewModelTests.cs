@@ -327,7 +327,8 @@ public sealed class HistoryViewModelTests
             new ChatMessageService(rpc),
             new ReactionService(rpc),
             storage ?? new RecordingChatMediaStorage(),
-            currentUidProvider ?? (() => "receiver"));
+            currentUidProvider ?? (() => "receiver"),
+            canMarkRoomRead: _ => true);
 
     private static VideoMessage VideoMessage(string id, string roomId, DateTimeOffset createdAt) =>
         new()
