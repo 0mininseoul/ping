@@ -14,129 +14,13 @@ using Microsoft::WRL::ComPtr;
 namespace
 {
     constexpr int FramesPerSecond = 30;
-    constexpr int AudioSamplesPerSecond = 48'000;
-    constexpr int AudioChannels = 1;
-    constexpr int AudioBitsPerSample = 16;
     constexpr LONGLONG OneSecond = 10'000'000;
+
+    struct MediaFoundationScope { ~MediaFoundationScope() { MFShutdown(); } };
 
     HRESULT SetMediaTypeUInt32(IMFMediaType* mediaType, REFGUID key, UINT32 value)
     {
         return mediaType->SetUINT32(key, value);
-    }
-
-    std::uint8_t const* PixelAt(
-        std::vector<std::uint8_t> const& pixels,
-        std::uint32_t rowPitch,
-        int x,
-        int y)
-    {
-        return pixels.data() + static_cast<size_t>(y) * rowPitch + static_cast<size_t>(x) * 4;
-    }
-
-    void CopyPixel(std::uint8_t* destination, std::uint8_t const* source)
-    {
-        destination[0] = source[0];
-        destination[1] = source[1];
-        destination[2] = source[2];
-        destination[3] = 0xff;
-    }
-
-    void FillPixel(std::uint8_t* destination, std::uint8_t b, std::uint8_t g, std::uint8_t r)
-    {
-        destination[0] = b;
-        destination[1] = g;
-        destination[2] = r;
-        destination[3] = 0xff;
-    }
-
-    std::vector<std::uint8_t> ComposeFrame(
-        Ping::Windows::NativeCapture::OutputLayout const& layout,
-        Ping::Windows::NativeCapture::MonitorCaptureResult const& screenFrame,
-        Ping::Windows::NativeCapture::CameraFrameResult const& cameraFrame)
-    {
-        std::vector<std::uint8_t> frame(static_cast<size_t>(layout.Width) * static_cast<size_t>(layout.Height) * 4);
-
-        for (int y = 0; y < layout.Height; ++y)
-        {
-            int sourceY = std::clamp(
-                static_cast<int>((static_cast<long long>(y) * screenFrame.SourceSize.Height) / layout.Height),
-                0,
-                std::max(0, screenFrame.SourceSize.Height - 1));
-            for (int x = 0; x < layout.Width; ++x)
-            {
-                int sourceX = std::clamp(
-                    static_cast<int>((static_cast<long long>(x) * screenFrame.SourceSize.Width) / layout.Width),
-                    0,
-                    std::max(0, screenFrame.SourceSize.Width - 1));
-                auto* destination = frame.data() + (static_cast<size_t>(y) * layout.Width + x) * 4;
-                if (!screenFrame.BgraPixels.empty())
-                {
-                    CopyPixel(destination, PixelAt(screenFrame.BgraPixels, screenFrame.RowPitch, sourceX, sourceY));
-                }
-                else
-                {
-                    FillPixel(destination, 0x1f, 0x21, 0x25);
-                }
-            }
-        }
-
-        int radius = layout.FaceDiameter / 2;
-        int centerX = layout.FaceX + radius;
-        int centerY = layout.FaceY + radius;
-        int innerRadiusSquared = std::max(0, radius - 2) * std::max(0, radius - 2);
-        int outerRadiusSquared = radius * radius;
-
-        for (int y = 0; y < layout.FaceDiameter; ++y)
-        {
-            int destinationY = layout.FaceY + y;
-            if (destinationY < 0 || destinationY >= layout.Height)
-            {
-                continue;
-            }
-
-            for (int x = 0; x < layout.FaceDiameter; ++x)
-            {
-                int destinationX = layout.FaceX + x;
-                if (destinationX < 0 || destinationX >= layout.Width)
-                {
-                    continue;
-                }
-
-                int dx = destinationX - centerX;
-                int dy = destinationY - centerY;
-                int distanceSquared = dx * dx + dy * dy;
-                if (distanceSquared > outerRadiusSquared)
-                {
-                    continue;
-                }
-
-                auto* destination = frame.data() + (static_cast<size_t>(destinationY) * layout.Width + destinationX) * 4;
-                if (distanceSquared > innerRadiusSquared)
-                {
-                    FillPixel(destination, 0xff, 0xff, 0xff);
-                    continue;
-                }
-
-                if (!cameraFrame.BgraPixels.empty())
-                {
-                    int cameraX = std::clamp(
-                        static_cast<int>((static_cast<long long>(x) * cameraFrame.SourceSize.Width) / layout.FaceDiameter),
-                        0,
-                        std::max(0, cameraFrame.SourceSize.Width - 1));
-                    int cameraY = std::clamp(
-                        static_cast<int>((static_cast<long long>(y) * cameraFrame.SourceSize.Height) / layout.FaceDiameter),
-                        0,
-                        std::max(0, cameraFrame.SourceSize.Height - 1));
-                    CopyPixel(destination, PixelAt(cameraFrame.BgraPixels, cameraFrame.RowPitch, cameraX, cameraY));
-                }
-                else
-                {
-                    FillPixel(destination, 0x30, 0x30, 0x30);
-                }
-            }
-        }
-
-        return frame;
     }
 
     HRESULT WriteSample(
@@ -184,7 +68,7 @@ namespace Ping::Windows::NativeCapture
         std::vector<MonitorCaptureResult> const& screenFrames,
         std::vector<CameraFrameResult> const& cameraFrames,
         AudioCaptureResult const& audio,
-        int durationMs)
+        int durationMs, CaptureViewport viewport, HANDLE cancellationEvent)
     {
         if (outputPath == nullptr
             || outputPath[0] == L'\0'
@@ -198,11 +82,13 @@ namespace Ping::Windows::NativeCapture
             return PingCaptureEncoderFailure;
         }
 
+        if (cancellationEvent && WaitForSingleObject(cancellationEvent, 0) == WAIT_OBJECT_0) return PingCaptureCancelled;
         HRESULT hr = MFStartup(MF_VERSION, MFSTARTUP_LITE);
         if (FAILED(hr))
         {
             return PingCaptureEncoderFailure;
         }
+        MediaFoundationScope foundationScope;
 
         ComPtr<IMFAttributes> writerAttributes;
         hr = MFCreateAttributes(&writerAttributes, 1);
@@ -222,7 +108,7 @@ namespace Ping::Windows::NativeCapture
         if (SUCCEEDED(hr)) hr = MFCreateMediaType(&videoOutputType);
         if (SUCCEEDED(hr)) hr = videoOutputType->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video);
         if (SUCCEEDED(hr)) hr = videoOutputType->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_H264);
-        if (SUCCEEDED(hr)) hr = SetMediaTypeUInt32(videoOutputType.Get(), MF_MT_AVG_BITRATE, 2'000'000);
+        if (SUCCEEDED(hr)) hr = SetMediaTypeUInt32(videoOutputType.Get(), MF_MT_AVG_BITRATE, 1'200'000);
         if (SUCCEEDED(hr)) hr = MFSetAttributeSize(videoOutputType.Get(), MF_MT_FRAME_SIZE, layout.Width, layout.Height);
         if (SUCCEEDED(hr)) hr = MFSetAttributeRatio(videoOutputType.Get(), MF_MT_FRAME_RATE, FramesPerSecond, 1);
         if (SUCCEEDED(hr)) hr = MFSetAttributeRatio(videoOutputType.Get(), MF_MT_PIXEL_ASPECT_RATIO, 1, 1);
@@ -234,6 +120,8 @@ namespace Ping::Windows::NativeCapture
         if (SUCCEEDED(hr)) hr = videoInputType->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video);
         if (SUCCEEDED(hr)) hr = videoInputType->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_ARGB32);
         if (SUCCEEDED(hr)) hr = MFSetAttributeSize(videoInputType.Get(), MF_MT_FRAME_SIZE, layout.Width, layout.Height);
+        // Owned BGRA frames are top-down; the default RGB interpretation can invert the encoded image.
+        if (SUCCEEDED(hr)) hr = videoInputType->SetUINT32(MF_MT_DEFAULT_STRIDE, static_cast<UINT32>(layout.Width) * 4);
         if (SUCCEEDED(hr)) hr = MFSetAttributeRatio(videoInputType.Get(), MF_MT_FRAME_RATE, FramesPerSecond, 1);
         if (SUCCEEDED(hr)) hr = MFSetAttributeRatio(videoInputType.Get(), MF_MT_PIXEL_ASPECT_RATIO, 1, 1);
         if (SUCCEEDED(hr)) hr = videoInputType->SetUINT32(MF_MT_INTERLACE_MODE, MFVideoInterlace_Progressive);
@@ -247,6 +135,7 @@ namespace Ping::Windows::NativeCapture
         if (SUCCEEDED(hr)) hr = SetMediaTypeUInt32(audioOutputType.Get(), MF_MT_AUDIO_NUM_CHANNELS, audio.Channels);
         if (SUCCEEDED(hr)) hr = SetMediaTypeUInt32(audioOutputType.Get(), MF_MT_AUDIO_SAMPLES_PER_SECOND, audio.SamplesPerSecond);
         if (SUCCEEDED(hr)) hr = SetMediaTypeUInt32(audioOutputType.Get(), MF_MT_AUDIO_BITS_PER_SAMPLE, audio.BitsPerSample);
+        if (SUCCEEDED(hr)) hr = SetMediaTypeUInt32(audioOutputType.Get(), MF_MT_AUDIO_AVG_BYTES_PER_SECOND, 8'000);
         if (SUCCEEDED(hr)) hr = SetMediaTypeUInt32(audioOutputType.Get(), MF_MT_AUDIO_AVG_BYTES_PER_SECOND, 12'000);
         if (SUCCEEDED(hr)) hr = sinkWriter->AddStream(audioOutputType.Get(), &audioStreamIndex);
 
@@ -266,8 +155,11 @@ namespace Ping::Windows::NativeCapture
         auto frameDuration = OneSecond / FramesPerSecond;
         auto bytesPerSecond = static_cast<size_t>(audio.SamplesPerSecond) * audio.Channels * audio.BitsPerSample / 8;
 
+        bool cancelled = false;
         for (int frameIndex = 0; SUCCEEDED(hr) && frameIndex < frameCount; ++frameIndex)
         {
+            if (cancellationEvent && WaitForSingleObject(cancellationEvent, 0) == WAIT_OBJECT_0)
+            { cancelled = true; break; }
             LONGLONG sampleTime = static_cast<LONGLONG>(frameIndex) * frameDuration;
             auto screenIndex = std::min(
                 screenFrames.size() - 1,
@@ -275,7 +167,9 @@ namespace Ping::Windows::NativeCapture
             auto cameraIndex = std::min(
                 cameraFrames.size() - 1,
                 static_cast<size_t>((static_cast<long long>(frameIndex) * cameraFrames.size()) / frameCount));
-            auto videoFrame = ComposeFrame(layout, screenFrames[screenIndex], cameraFrames[cameraIndex]);
+            std::vector<std::uint8_t> videoFrame;
+            if (ComposeScreenFaceFrame(layout, screenFrames[screenIndex], cameraFrames[cameraIndex], viewport, videoFrame) != PingCaptureSuccess)
+            { hr = E_FAIL; break; }
             hr = WriteSample(sinkWriter.Get(), videoStreamIndex, videoFrame, sampleTime, frameDuration);
             if (SUCCEEDED(hr))
             {
@@ -297,7 +191,7 @@ namespace Ping::Windows::NativeCapture
             }
         }
 
-        if (sinkWriter)
+        if (sinkWriter && !cancelled)
         {
             HRESULT finalizeResult = sinkWriter->Finalize();
             if (SUCCEEDED(hr))
@@ -305,8 +199,6 @@ namespace Ping::Windows::NativeCapture
                 hr = finalizeResult;
             }
         }
-        MFShutdown();
-
-        return SUCCEEDED(hr) ? PingCaptureSuccess : PingCaptureEncoderFailure;
+        return cancelled ? PingCaptureCancelled : SUCCEEDED(hr) ? PingCaptureSuccess : PingCaptureEncoderFailure;
     }
 }

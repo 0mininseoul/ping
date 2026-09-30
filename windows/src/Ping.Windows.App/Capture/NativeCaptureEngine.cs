@@ -1,4 +1,4 @@
-using System.Runtime.InteropServices;
+using Ping.Windows.Core.Capture;
 
 namespace Ping.Windows.App.Capture;
 
@@ -12,7 +12,8 @@ public enum PingCaptureErrorCode
     EncoderFailure = 5,
     CaptureFailure = 6,
     ProtectedContent = 7,
-    NoMicrophone = 8
+    NoMicrophone = 8,
+    Cancelled = 9
 }
 
 public sealed record ScreenFaceCaptureResult(
@@ -40,22 +41,31 @@ public interface IScreenFaceCaptureEngine
         CancellationToken cancellationToken);
 
     Task<ScreenCaptureSelfTestResult> SelfTestAsync();
+
+    Task<ScreenFaceCaptureResult> RecordAsync(TimeSpan duration, int monitorIndex, ScreenCaptureViewport viewport,
+        CancellationToken cancellationToken) => throw new NotSupportedException("Capture engine does not support viewport recording.");
+    Task<ScreenFacePreviewResult> CapturePreviewAsync(int monitorIndex, ScreenCaptureViewport viewport,
+        CancellationToken cancellationToken) => throw new NotSupportedException("Capture engine does not support viewport preview.");
 }
 
-public sealed class NativeCaptureEngine : IScreenFaceCaptureEngine
+public sealed class NativeCaptureEngine(INativeScreenCaptureApi? nativeApi = null) : IScreenFaceCaptureEngine
 {
-    private const string NativeLibraryName = "Ping.Windows.NativeCapture.dll";
+    private readonly INativeScreenCaptureApi api = nativeApi ?? new NativeScreenCaptureApi();
     private const double FaceDiameterRatio = 0.32;
     private static readonly string TemporaryDirectory = Path.Combine(Path.GetTempPath(), "Ping");
 
-    public async Task<ScreenFaceCaptureResult> RecordAsync(
+    public Task<ScreenFaceCaptureResult> RecordAsync(
         TimeSpan duration,
         int monitorIndex,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken) => RecordAsync(duration, monitorIndex, new ScreenCaptureViewport(), cancellationToken);
+
+    public async Task<ScreenFaceCaptureResult> RecordAsync(TimeSpan duration, int monitorIndex,
+        ScreenCaptureViewport viewport, CancellationToken cancellationToken)
     {
-        if (duration <= TimeSpan.Zero)
+        ArgumentNullException.ThrowIfNull(viewport);
+        if (duration <= TimeSpan.Zero || duration > TimeSpan.FromSeconds(30))
         {
-            throw new ArgumentOutOfRangeException(nameof(duration), duration, "Recording duration must be positive.");
+            throw new ArgumentOutOfRangeException(nameof(duration), duration, "Recording duration must be positive and at most30seconds.");
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -63,32 +73,40 @@ public sealed class NativeCaptureEngine : IScreenFaceCaptureEngine
         var outputPath = Path.Combine(
             TemporaryDirectory,
             $"screen-face-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss-fff}-{Guid.NewGuid():N}.mp4");
+        using var nativeCancellation = new EventWaitHandle(false, EventResetMode.ManualReset);
+        using var cancellationRegistration = cancellationToken.Register(() => nativeCancellation.Set());
 
         double aspectRatio = 1;
         int result;
         try
         {
             result = await Task.Run(
-                () => PingCapture_RecordScreenFaceMp4(
+                () => api.Record(
                     outputPath,
                     checked((int)Math.Round(duration.TotalMilliseconds)),
                     monitorIndex,
                     FaceDiameterRatio,
+                    viewport,
+                    nativeCancellation.SafeWaitHandle,
                     out aspectRatio),
                 cancellationToken).ConfigureAwait(false);
         }
         catch (DllNotFoundException exception)
         {
+            TryDelete(outputPath);
             throw new PlatformNotSupportedException("Native screen capture DLL was not found.", exception);
         }
         catch (EntryPointNotFoundException exception)
         {
+            TryDelete(outputPath);
             throw new PlatformNotSupportedException("Native screen capture entry point is unavailable.", exception);
         }
         catch (BadImageFormatException exception)
         {
+            TryDelete(outputPath);
             throw new PlatformNotSupportedException("Native screen capture DLL architecture does not match this process.", exception);
         }
+        catch { TryDelete(outputPath); throw; }
 
         ThrowIfCanceledAndDeleteOutput(cancellationToken, outputPath);
 
@@ -111,7 +129,7 @@ public sealed class NativeCaptureEngine : IScreenFaceCaptureEngine
     {
         try
         {
-            return Task.FromResult(ToSelfTestResult(PingCapture_SelfTestScreenCapture()));
+            return Task.FromResult(ToSelfTestResult(api.SelfTest()));
         }
         catch (DllNotFoundException exception)
         {
@@ -136,36 +154,46 @@ public sealed class NativeCaptureEngine : IScreenFaceCaptureEngine
         }
     }
 
-    public async Task<ScreenFacePreviewResult> CapturePreviewAsync(
+    public Task<ScreenFacePreviewResult> CapturePreviewAsync(
         int monitorIndex,
+        CancellationToken cancellationToken) => CapturePreviewAsync(monitorIndex, new ScreenCaptureViewport(), cancellationToken);
+
+    public async Task<ScreenFacePreviewResult> CapturePreviewAsync(int monitorIndex, ScreenCaptureViewport viewport,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(viewport);
         cancellationToken.ThrowIfCancellationRequested();
         Directory.CreateDirectory(TemporaryDirectory);
         var outputPath = Path.Combine(
             TemporaryDirectory,
             $"screen-preview-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss-fff}-{Guid.NewGuid():N}.bmp");
+        using var nativeCancellation = new EventWaitHandle(false, EventResetMode.ManualReset);
+        using var cancellationRegistration = cancellationToken.Register(() => nativeCancellation.Set());
 
         double aspectRatio = 1;
         int result;
         try
         {
             result = await Task.Run(
-                () => PingCapture_WriteScreenPreviewBmp(outputPath, monitorIndex, out aspectRatio),
+                () => api.Preview(outputPath, monitorIndex, viewport, nativeCancellation.SafeWaitHandle, out aspectRatio),
                 cancellationToken).ConfigureAwait(false);
         }
         catch (DllNotFoundException exception)
         {
+            TryDelete(outputPath);
             throw new PlatformNotSupportedException("Native screen capture DLL was not found.", exception);
         }
         catch (EntryPointNotFoundException exception)
         {
+            TryDelete(outputPath);
             throw new PlatformNotSupportedException("Native screen preview entry point is unavailable.", exception);
         }
         catch (BadImageFormatException exception)
         {
+            TryDelete(outputPath);
             throw new PlatformNotSupportedException("Native screen capture DLL architecture does not match this process.", exception);
         }
+        catch { TryDelete(outputPath); throw; }
 
         ThrowIfCanceledAndDeleteOutput(cancellationToken, outputPath);
         if (result != (int)PingCaptureErrorCode.Success)
@@ -200,6 +228,7 @@ public sealed class NativeCaptureEngine : IScreenFaceCaptureEngine
                 PingCaptureErrorCode.CaptureFailure => "Screen capture failed.",
                 PingCaptureErrorCode.ProtectedContent => "Screen capture returned protected content.",
                 PingCaptureErrorCode.NoMicrophone => "No microphone was available.",
+                PingCaptureErrorCode.Cancelled => "Capture was cancelled.",
                 _ => "Screen capture failed with an unknown error."
             });
     }
@@ -218,6 +247,7 @@ public sealed class NativeCaptureEngine : IScreenFaceCaptureEngine
             PingCaptureErrorCode.CaptureFailure => new IOException(message),
             PingCaptureErrorCode.ProtectedContent => new IOException(message),
             PingCaptureErrorCode.NoMicrophone => new InvalidOperationException(message),
+            PingCaptureErrorCode.Cancelled => new OperationCanceledException(message),
             PingCaptureErrorCode.Success => new InvalidOperationException("Native capture success is not an exception."),
             _ => new IOException(message)
         };
@@ -266,23 +296,4 @@ public sealed class NativeCaptureEngine : IScreenFaceCaptureEngine
         cancellationToken.ThrowIfCancellationRequested();
     }
 
-    [DllImport(NativeLibraryName, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Unicode, ExactSpelling = true)]
-    [DefaultDllImportSearchPaths(DllImportSearchPath.ApplicationDirectory)]
-    private static extern int PingCapture_RecordScreenFaceMp4(
-        string outputPath,
-        int durationMs,
-        int targetMonitorIndex,
-        double faceDiameterRatio,
-        out double outAspectRatio);
-
-    [DllImport(NativeLibraryName, CallingConvention = CallingConvention.Winapi, ExactSpelling = true)]
-    [DefaultDllImportSearchPaths(DllImportSearchPath.ApplicationDirectory)]
-    private static extern int PingCapture_SelfTestScreenCapture();
-
-    [DllImport(NativeLibraryName, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Unicode, ExactSpelling = true)]
-    [DefaultDllImportSearchPaths(DllImportSearchPath.ApplicationDirectory)]
-    private static extern int PingCapture_WriteScreenPreviewBmp(
-        string outputPath,
-        int targetMonitorIndex,
-        out double outAspectRatio);
 }

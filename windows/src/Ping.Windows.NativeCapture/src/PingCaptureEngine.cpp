@@ -45,6 +45,15 @@ int PingCapture_RecordScreenFaceMp4(
     double faceDiameterRatio,
     double* outAspectRatio)
 {
+    return PingCapture_RecordScreenFaceMp4V2(outputPath, durationMs, targetMonitorIndex, faceDiameterRatio,
+        1, .5, .5, nullptr, outAspectRatio);
+}
+
+extern "C" __declspec(dllexport)
+int PingCapture_RecordScreenFaceMp4V2(const wchar_t* outputPath, int durationMs, int targetMonitorIndex,
+    double faceDiameterRatio, double zoom, double centerX, double centerY, HANDLE cancellationEvent, double* outAspectRatio)
+try
+{
     if (outAspectRatio != nullptr)
     {
         *outAspectRatio = 1.0;
@@ -54,6 +63,8 @@ int PingCapture_RecordScreenFaceMp4(
     {
         return PingCaptureEncoderFailure;
     }
+
+    if (cancellationEvent && WaitForSingleObject(cancellationEvent, 0) == WAIT_OBJECT_0) return PingCaptureCancelled;
 
     std::vector<MonitorCaptureResult> monitorFrames;
     std::vector<CameraFrameResult> cameraFrames;
@@ -86,6 +97,7 @@ int PingCapture_RecordScreenFaceMp4(
         return PingCaptureCaptureFailure;
     }
 
+    if (cancellationEvent && WaitForSingleObject(cancellationEvent, 0) == WAIT_OBJECT_0) return PingCaptureCancelled;
     if (screenResult != PingCaptureSuccess)
     {
         return NormalizeCaptureFailure(screenResult);
@@ -101,13 +113,15 @@ int PingCapture_RecordScreenFaceMp4(
         return audioResult;
     }
 
-    OutputLayout layout = CreateScreenFaceLayout(monitorFrames.front().SourceSize, faceDiameterRatio);
+    if (monitorFrames.empty() || cameraFrames.empty()) return PingCaptureCaptureFailure;
+    OutputLayout layout = CreateScreenFaceLayout(monitorFrames.front().SourceSize, faceDiameterRatio, 540);
     if (outAspectRatio != nullptr)
     {
         *outAspectRatio = SafeAspectRatio(layout);
     }
 
-    int writerResult = WriteScreenFaceMp4(outputPath, layout, monitorFrames, cameraFrames, audio, durationMs);
+    int writerResult = WriteScreenFaceMp4(outputPath, layout, monitorFrames, cameraFrames, audio, durationMs,
+        {zoom, centerX, centerY}, cancellationEvent);
     if (writerResult != PingCaptureSuccess)
     {
         DeleteFileW(outputPath);
@@ -115,6 +129,11 @@ int PingCapture_RecordScreenFaceMp4(
     }
 
     return PingCaptureSuccess;
+}
+catch (...)
+{
+    if (outputPath) DeleteFileW(outputPath);
+    return PingCaptureCaptureFailure;
 }
 
 extern "C" __declspec(dllexport)
@@ -130,6 +149,14 @@ int PingCapture_WriteScreenPreviewBmp(
     int targetMonitorIndex,
     double* outAspectRatio)
 {
+    return PingCapture_WriteScreenPreviewBmpV2(outputPath, targetMonitorIndex, 1, .5, .5, nullptr, outAspectRatio);
+}
+
+extern "C" __declspec(dllexport)
+int PingCapture_WriteScreenPreviewBmpV2(const wchar_t* outputPath, int targetMonitorIndex,
+    double zoom, double centerX, double centerY, HANDLE cancellationEvent, double* outAspectRatio)
+try
+{
     if (outAspectRatio != nullptr)
     {
         *outAspectRatio = 1.0;
@@ -140,12 +167,21 @@ int PingCapture_WriteScreenPreviewBmp(
         return PingCaptureCaptureFailure;
     }
 
+    if (cancellationEvent && WaitForSingleObject(cancellationEvent, 0) == WAIT_OBJECT_0) return PingCaptureCancelled;
+
     MonitorCaptureResult monitorResult{};
     int captureResult = CaptureOneMonitorFrame(targetMonitorIndex, monitorResult);
     if (captureResult != PingCaptureSuccess)
     {
         return NormalizeCaptureFailure(captureResult);
     }
+
+    if (cancellationEvent && WaitForSingleObject(cancellationEvent, 0) == WAIT_OBJECT_0) return PingCaptureCancelled;
+    auto layout = CreateScreenFaceLayout(monitorResult.SourceSize, .32);
+    MonitorCaptureResult cropped{};
+    int cropResult = CropScreenFrame(monitorResult, {zoom, centerX, centerY}, {layout.Width, layout.Height}, cropped);
+    if (cropResult != PingCaptureSuccess) return cropResult;
+    monitorResult = std::move(cropped);
 
     if (monitorResult.SourceSize.Width <= 0
         || monitorResult.SourceSize.Height <= 0
@@ -207,6 +243,11 @@ int PingCapture_WriteScreenPreviewBmp(
     }
 
     return PingCaptureSuccess;
+}
+catch (...)
+{
+    if (outputPath) DeleteFileW(outputPath);
+    return PingCaptureCaptureFailure;
 }
 
 extern "C" __declspec(dllexport)
