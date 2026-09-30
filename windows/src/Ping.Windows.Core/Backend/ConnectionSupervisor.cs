@@ -14,6 +14,7 @@ public sealed class ConnectionSupervisor : IAsyncDisposable
     private readonly object sync = new();
     private CancellationTokenSource? cancellation;
     private Task? loop;
+    private Exception? reportedFailure;
     private volatile ConnectionState state = ConnectionState.Stopped;
 
     public ConnectionSupervisor(Func<CancellationToken, Task> connectAsync,
@@ -44,6 +45,14 @@ public sealed class ConnectionSupervisor : IAsyncDisposable
     }
 
     public void RetryNow() => Signal();
+
+    public void ReportFailure(Exception error)
+    {
+        if (state is ConnectionState.SessionRejected or ConnectionState.ConfigurationRequired or ConnectionState.Stopped) return;
+        if (error is SupabaseSessionExpiredException or SupabaseSessionReadException)
+            Interlocked.CompareExchange(ref reportedFailure, error, null);
+        Signal();
+    }
 
     private void Signal()
     {
@@ -87,6 +96,7 @@ public sealed class ConnectionSupervisor : IAsyncDisposable
                 ChangeState(ConnectionState.Connecting);
                 try
                 {
+                    if (Interlocked.Exchange(ref reportedFailure, null) is { } failure) throw failure;
                     await connectAsync(token).ConfigureAwait(false);
                     attempt = 0;
                     ChangeState(ConnectionState.Connected);
@@ -136,6 +146,7 @@ public sealed class ConnectionSupervisor : IAsyncDisposable
 
     private static bool IsTransient(Exception error) => error switch
     {
+        FileNotFoundException or DirectoryNotFoundException => false,
         HttpRequestException { StatusCode: null } => true,
         HttpRequestException { StatusCode: HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests } => true,
         HttpRequestException { StatusCode: { } status } => (int)status >= 500,

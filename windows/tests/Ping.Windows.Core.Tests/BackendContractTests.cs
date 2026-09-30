@@ -764,6 +764,25 @@ public sealed class BackendContractTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => service.RemoveAsync("message-id"));
     }
 
+    [Theory]
+    [InlineData("deleted", true)]
+    [InlineData("hidden", false)]
+    [InlineData("missing", false)]
+    public async Task OnlySenderDeletionCleansUploadedStorage(string result, bool removesStorage)
+    {
+        var rpc = new RecordingRpcClient { Value = result };
+        var storage = new StubStorageService("unused");
+        var service = new MessageService(rpc, storage);
+        var message = new VideoMessage
+        {
+            Id = "message", RoomId = "room", SenderUid = "sender", ReceiverUid = "receiver", SenderNickname = "Sender",
+            VideoId = "video", VideoUrl = "sender/video.mp4", DurationMs = 3000, MirrorPosition = new(0.5, 0.5),
+            Status = MessageStatus.Uploaded, ExpiresAt = DateTimeOffset.UtcNow.AddDays(1)
+        };
+        await service.RemoveAsync(message);
+        Assert.Equal(removesStorage ? new[] { message.VideoUrl } : Array.Empty<string>(), storage.DeletedVideoPaths);
+    }
+
     private sealed class RecordingRpcClient : ISupabaseRpcClient
     {
         public List<(string Function, object Body)> Calls { get; } = [];

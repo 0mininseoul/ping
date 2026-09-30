@@ -20,6 +20,7 @@ public sealed partial class HistoryWindow : Window
     private readonly Func<VideoMessage, CancellationToken, Task> saveVideoAsync;
     private readonly MessageService messageService;
     private readonly HistoryAutoRefreshCoordinator autoRefresh;
+    private readonly UiTaskDispatcher uiDispatcher;
     private readonly Microsoft.UI.Dispatching.DispatcherQueueTimer removalPermissionTimer;
     private readonly List<PlaybackWindow> playbackWindows = [];
     private readonly string? initialRoomId;
@@ -43,6 +44,7 @@ public sealed partial class HistoryWindow : Window
         this.initialRoomId = initialRoomId;
         this.initialChatId = initialChatId;
         InitializeComponent();
+        uiDispatcher = new UiTaskDispatcher(() => DispatcherQueue.HasThreadAccess, action => DispatcherQueue.TryEnqueue(() => action()));
         Root.DataContext = viewModel;
         removalPermissionTimer = DispatcherQueue.CreateTimer();
         removalPermissionTimer.Interval = TimeSpan.FromSeconds(1);
@@ -385,7 +387,9 @@ public sealed partial class HistoryWindow : Window
         return false;
     }
 
-    private async Task<bool> RunAsync(Func<Task> work)
+    private Task<bool> RunAsync(Func<Task> work) => uiDispatcher.RunAsync(() => RunOnUiAsync(work));
+
+    private async Task<bool> RunOnUiAsync(Func<Task> work)
     {
         try
         {

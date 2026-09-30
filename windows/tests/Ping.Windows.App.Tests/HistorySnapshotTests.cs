@@ -9,6 +9,24 @@ namespace Ping.Windows.App.Tests;
 public sealed class HistorySnapshotTests
 {
     [Fact]
+    public async Task LateRoomListCannotRestorePreviousRoomOrDiscardNewReply()
+    {
+        var rpc = new SnapshotRpc();
+        var viewModel = Create(rpc);
+        await viewModel.LoadAsync("a");
+        rpc.PauseRooms = true;
+        var oldLoad = viewModel.LoadAsync();
+        await rpc.RoomsEntered.Task.WaitAsync(TimeSpan.FromSeconds(3));
+        await viewModel.SelectRoomAsync("b");
+        viewModel.BeginReplyToChat(viewModel.Chats.Single());
+        var reply = viewModel.ReplyTarget;
+        rpc.RoomsReleased.SetResult();
+        await oldLoad;
+        Assert.Equal("b", viewModel.SelectedRoom!.Id);
+        Assert.Same(reply, viewModel.ReplyTarget);
+    }
+
+    [Fact]
     public async Task FailedRefreshKeepsTimelineSelectionAndReply()
     {
         var rpc = new SnapshotRpc();
@@ -119,6 +137,9 @@ public sealed class HistorySnapshotTests
     {
         public bool Fail { get; set; }
         public bool PauseA { get; set; }
+        public bool PauseRooms { get; set; }
+        public TaskCompletionSource RoomsEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource RoomsReleased { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource AEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource AReleased { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public List<string> ReadRooms { get; } = [];
@@ -126,6 +147,11 @@ public sealed class HistorySnapshotTests
         public async Task<IReadOnlyList<T>> RpcArrayAsync<T>(string function, object? body = null, CancellationToken cancellationToken = default)
         {
             if (Fail) throw new HttpRequestException("offline");
+            if (PauseRooms && function == "ping_my_rooms")
+            {
+                RoomsEntered.TrySetResult();
+                await RoomsReleased.Task.WaitAsync(cancellationToken);
+            }
             var roomId = body is null ? null : JsonSerializer.SerializeToElement(body, JsonOptions.Supabase)
                 .TryGetProperty("room_uuid", out var id) ? id.GetString() : null;
             if (PauseA && roomId == "a" && function == "ping_room_messages")

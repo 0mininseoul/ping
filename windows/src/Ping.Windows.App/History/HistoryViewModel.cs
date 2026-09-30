@@ -24,6 +24,7 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
     private int loadGeneration;
     private int roomListGeneration;
     private string? timelineRoomId;
+    private int selectionRevision;
     private static readonly string[] QuickReactions = ["❤️", "👍", "👎", "😂", "‼️", "❓"];
     private Room? selectedRoom;
     private VideoHistoryItem? selectedVideo;
@@ -76,6 +77,7 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
             }
 
             var changedRoom = selectedRoom?.Id != value?.Id;
+            if (changedRoom) selectionRevision++;
             selectedRoom = value;
             Interlocked.Increment(ref loadGeneration);
             if (changedRoom) ReplyTarget = null;
@@ -158,6 +160,7 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
     {
         var generation = Interlocked.Increment(ref roomListGeneration);
         var previousSelectedId = SelectedRoom?.Id;
+        var requestedSelectionRevision = selectionRevision;
         var refreshedRooms = await roomService.MyRoomsAsync(cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         if (generation != roomListGeneration) return;
@@ -167,7 +170,7 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
             Rooms.Add(room);
         }
 
-        var targetId = preferredRoomId ?? previousSelectedId;
+        var targetId = selectionRevision != requestedSelectionRevision ? SelectedRoom?.Id : preferredRoomId ?? previousSelectedId;
         SelectedRoom = Rooms.FirstOrDefault(room => string.Equals(room.Id, targetId, StringComparison.Ordinal)) ?? Rooms.FirstOrDefault();
         await LoadSelectedRoomAsync(cancellationToken);
     }
@@ -425,7 +428,7 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         {
             return;
         }
-        var result = await messageService.RemoveAsync(item.Message.Id, cancellationToken);
+        var result = await messageService.RemoveAsync(item.Message, cancellationToken);
         var removedRows = Videos.Where(row => row.Message.Id == item.Message.Id
             || (result == MessageRemovalResult.Deleted && row.Message.SenderUid == item.Message.SenderUid && row.Message.VideoUrl == item.Message.VideoUrl)).ToArray();
         foreach (var row in removedRows)

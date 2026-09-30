@@ -63,13 +63,14 @@ public sealed class IncomingMessagePoller
                     yieldedIds.Add(id);
                 }
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
                 throw;
             }
             catch (Exception ex)
             {
                 onError?.Invoke(ex);
+                if (ex is SupabaseSessionExpiredException or SupabaseSessionReadException) return;
             }
 
             await delayAsync(interval, cancellationToken).ConfigureAwait(false);
@@ -142,13 +143,14 @@ public sealed class IncomingChatPoller
                     }
                 }
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
                 throw;
             }
             catch (Exception ex)
             {
                 onError?.Invoke(ex);
+                if (ex is SupabaseSessionExpiredException or SupabaseSessionReadException) return;
             }
 
             await delayAsync(interval, cancellationToken).ConfigureAwait(false);

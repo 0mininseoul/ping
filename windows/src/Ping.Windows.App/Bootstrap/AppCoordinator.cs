@@ -900,7 +900,11 @@ public sealed class AppCoordinator : IDisposable
             }
             finally
             {
-                cancellation.Dispose();
+                await RunOnUiThreadAsync(() =>
+                {
+                    if (ReferenceEquals(incomingPollingCancellation, cancellation)) incomingPollingCancellation = null;
+                    cancellation.Dispose();
+                });
             }
         }, cancellation.Token);
     }
@@ -922,7 +926,11 @@ public sealed class AppCoordinator : IDisposable
             }
             finally
             {
-                cancellation.Dispose();
+                await RunOnUiThreadAsync(() =>
+                {
+                    if (ReferenceEquals(incomingChatPollingCancellation, cancellation)) incomingChatPollingCancellation = null;
+                    cancellation.Dispose();
+                });
             }
         }, cancellation.Token);
     }
@@ -1228,8 +1236,8 @@ public sealed class AppCoordinator : IDisposable
 
     private void HandleIncomingConnectionError(Exception error)
     {
-        if (error is HttpRequestException or TimeoutException)
-            connectionSupervisor.RequestReconnect();
+        if (error is HttpRequestException or TimeoutException or OperationCanceledException or SupabaseSessionExpiredException or SupabaseSessionReadException)
+            connectionSupervisor.ReportFailure(error);
     }
 
     private void HandleConnectionStateChanged(ConnectionState state, Exception? error)
@@ -1237,6 +1245,11 @@ public sealed class AppCoordinator : IDisposable
         _ = RunOnUiThreadAsync(() =>
         {
             if (disposed || state == ConnectionState.Stopped) return;
+            if (state is ConnectionState.SessionRejected or ConnectionState.ConfigurationRequired)
+            {
+                StopIncomingPolling();
+                StopIncomingChatPolling();
+            }
             var status = state switch
             {
                 ConnectionState.Connecting => "연결하는 중…",
@@ -1267,11 +1280,13 @@ public sealed class AppCoordinator : IDisposable
         {
             await cleanupService.RunAsync(cancellationToken);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch (Exception ex)
         {
             Debug.WriteLine($"Ping cleanup failed: {ex}");
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
         if (!quickSendSettings.Preferences.AutoDeleteAfter30Days)
         {
             return;

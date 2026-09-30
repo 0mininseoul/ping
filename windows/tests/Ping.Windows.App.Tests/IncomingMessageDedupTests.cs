@@ -8,6 +8,52 @@ namespace Ping.Windows.App.Tests;
 public sealed class IncomingMessageDedupTests
 {
     [Fact]
+    public async Task RequestTimeoutDoesNotKillIncomingChatLoop()
+    {
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+        var rpc = new RecordingChatRpcClient { FirstFailure = new TaskCanceledException("HTTP timeout") };
+        var errors = new List<Exception>();
+        var delivered = false;
+        var poller = new IncomingChatPoller(new ChatMessageService(rpc), new RoomService(rpc), () => "receiver",
+            delayAsync: (_, _) => Task.CompletedTask, onError: errors.Add);
+        await poller.RunAsync((_, _) => { delivered = true; cancellation.Cancel(); return Task.CompletedTask; }, cancellation.Token);
+        Assert.True(delivered);
+        Assert.Single(errors);
+    }
+
+    [Fact]
+    public async Task ExplicitSessionRejectionStopsIncomingRequests()
+    {
+        var calls = 0;
+        var errors = new List<Exception>();
+        var poller = new IncomingMessagePoller(_ =>
+        {
+            calls++;
+            return Task.FromException<IReadOnlyList<VideoMessage>>(new SupabaseSessionExpiredException("revoked", new HttpRequestException()));
+        }, delayAsync: (_, _) => throw new InvalidOperationException("Must wait for manual recovery"), onError: errors.Add);
+        await poller.RunAsync((_, _) => Task.CompletedTask);
+        Assert.Equal(1, calls);
+        Assert.Single(errors);
+    }
+
+    [Fact]
+    public async Task RequestTimeoutDoesNotKillIncomingVideoLoop()
+    {
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+        var calls = 0;
+        var errors = new List<Exception>();
+        var delivered = false;
+        var poller = new IncomingMessagePoller(_ => ++calls == 1
+            ? Task.FromException<IReadOnlyList<VideoMessage>>(new TaskCanceledException("HTTP timeout"))
+            : Task.FromResult<IReadOnlyList<VideoMessage>>([Message("after-timeout", DateTimeOffset.UtcNow)]),
+            delayAsync: (_, _) => Task.CompletedTask, onError: errors.Add);
+        await poller.RunAsync((_, _) => { delivered = true; cancellation.Cancel(); return Task.CompletedTask; }, cancellation.Token);
+        Assert.True(delivered);
+        Assert.Single(errors);
+        Assert.Equal(2, calls);
+    }
+
+    [Fact]
     public async Task PollOnce_UsesPerStreamYieldedIds()
     {
         var message = Message("message-1", DateTimeOffset.UtcNow);
@@ -442,8 +488,14 @@ public sealed class IncomingMessageDedupTests
 
     private sealed class RecordingChatRpcClient : ISupabaseRpcClient
     {
+        public Exception? FirstFailure { get; set; }
         public Task<IReadOnlyList<T>> RpcArrayAsync<T>(string function, object? body = null, CancellationToken cancellationToken = default)
         {
+            if (FirstFailure is { } failure)
+            {
+                FirstFailure = null;
+                return Task.FromException<IReadOnlyList<T>>(failure);
+            }
             object result = function switch
             {
                 "ping_unread_chat_counts" => new[]

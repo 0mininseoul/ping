@@ -148,6 +148,34 @@ public sealed class ConnectionSupervisorTests
         Assert.Equal(ConnectionState.Stopped, supervisor.State);
     }
 
+    [Fact]
+    public async Task MissingConfigurationStopsAutomaticRetries()
+    {
+        await using var supervisor = new ConnectionSupervisor(_ => throw new FileNotFoundException("config"));
+        var states = Observe(supervisor);
+        supervisor.Start();
+        await ReadUntilAsync(states, ConnectionState.ConfigurationRequired);
+        Assert.Equal(ConnectionState.ConfigurationRequired, supervisor.State);
+    }
+
+    [Fact]
+    public async Task IncomingSessionRejectionStopsConnectedSupervisorUntilManualRetry()
+    {
+        var calls = 0;
+        await using var supervisor = new ConnectionSupervisor(_ => { calls++; return Task.CompletedTask; });
+        var states = Observe(supervisor);
+        supervisor.Start();
+        await ReadUntilAsync(states, ConnectionState.Connected);
+        supervisor.ReportFailure(new SupabaseSessionExpiredException("revoked", new HttpRequestException()));
+        await ReadUntilAsync(states, ConnectionState.SessionRejected);
+        Assert.Equal(1, calls);
+        supervisor.RequestReconnect();
+        Assert.Equal(ConnectionState.SessionRejected, supervisor.State);
+        supervisor.RetryNow();
+        await ReadUntilAsync(states, ConnectionState.Connected);
+        Assert.Equal(2, calls);
+    }
+
     private static Channel<ConnectionState> Observe(ConnectionSupervisor supervisor)
     {
         var channel = Channel.CreateUnbounded<ConnectionState>();

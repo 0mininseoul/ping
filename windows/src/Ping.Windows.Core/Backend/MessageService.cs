@@ -59,6 +59,14 @@ public sealed class MessageService(ISupabaseRpcClient client, IStorageService st
         };
     }
 
+    public async Task<MessageRemovalResult> RemoveAsync(VideoMessage message, CancellationToken cancellationToken = default)
+    {
+        var result = await RemoveAsync(message.Id ?? throw new ArgumentException("Message has no ID.", nameof(message)), cancellationToken).ConfigureAwait(false);
+        if (result == MessageRemovalResult.Deleted)
+            await DeleteUploadedVideoQuietlyAsync(message.VideoUrl).ConfigureAwait(false);
+        return result;
+    }
+
     public Task DeleteMessageAsync(string messageId, CancellationToken cancellationToken = default) =>
         client.RpcVoidAsync(
             "ping_delete_message",
