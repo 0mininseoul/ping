@@ -14,7 +14,7 @@ public sealed class AutoFaceReplyCoordinator : IAsyncDisposable
     private readonly DateTimeOffset appStartedAt;
     private readonly Func<AutoReplyIdentity?> identity;
     private readonly Func<bool> authorized;
-    private readonly Func<TimeSpan, CancellationToken, Task<string>> record;
+    private readonly Func<CameraLease, TimeSpan, CancellationToken, Task<string>> record;
     private readonly Func<VideoMessage, CancellationToken, Task<IAsyncDisposable>> indicator;
     private readonly Func<AutoReplyVideoInput, Func<bool>, CancellationToken, Task<bool>> send;
     private readonly Action<string> deleteTemporaryClip;
@@ -28,7 +28,7 @@ public sealed class AutoFaceReplyCoordinator : IAsyncDisposable
     private int disposed;
 
     public AutoFaceReplyCoordinator(CameraOwnership camera, CaptureActivityState activity, DateTimeOffset appStartedAt,
-        Func<AutoReplyIdentity?> identity, Func<bool> authorized, Func<TimeSpan, CancellationToken, Task<string>> record,
+        Func<AutoReplyIdentity?> identity, Func<bool> authorized, Func<CameraLease, TimeSpan, CancellationToken, Task<string>> record,
         Func<VideoMessage, CancellationToken, Task<IAsyncDisposable>> indicator,
         Func<AutoReplyVideoInput, Func<bool>, CancellationToken, Task<bool>> send, Action<string> deleteTemporaryClip,
         Func<DateTimeOffset>? clock = null, Action<Exception>? onError = null)
@@ -92,7 +92,7 @@ public sealed class AutoFaceReplyCoordinator : IAsyncDisposable
             if (!CanContinue()) return;
             visibleIndicator = await indicator(message, token).ConfigureAwait(false);
             if (!CanContinue()) return;
-            clip = await record(AutoFaceReplyPolicy.ClipDuration, token).ConfigureAwait(false);
+            clip = await record(lease, AutoFaceReplyPolicy.ClipDuration, token).ConfigureAwait(false);
             if (!CanContinue()) return;
             await send(new(message, clip, account.Uid, account.Nickname, account.AllowsLocalSave), CanContinue, token).ConfigureAwait(false);
         }

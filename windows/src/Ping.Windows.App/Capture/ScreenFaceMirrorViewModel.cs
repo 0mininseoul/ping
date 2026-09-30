@@ -41,6 +41,8 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
     private readonly LocalArchive? archive;
     private readonly MirrorTargetSelector targetSelector;
     private CancellationTokenSource? operationCancellation;
+    private TaskCompletionSource? operationFinished;
+    public Task WaitForOperationAsync() => operationFinished?.Task ?? Task.CompletedTask;
     private MirrorState state = MirrorState.Idle;
     private string statusMessage = "Press Enter to record.";
     private string recordingCountdownText = "3";
@@ -340,6 +342,7 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
 
         operationCancellation?.Dispose();
         operationCancellation = new CancellationTokenSource();
+        operationFinished = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var cancellationToken = operationCancellation.Token;
         string? recordedPath = null;
         CancellationTokenSource? countdownCancellation = null;
@@ -378,6 +381,7 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
             {
                 TryDeleteTemporaryRecording(recordedPath);
             }
+            operationFinished.TrySetResult();
         }
     }
 
@@ -401,6 +405,7 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
 
         operationCancellation?.Dispose();
         operationCancellation = new CancellationTokenSource();
+        operationFinished = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var cancellationToken = operationCancellation.Token;
         var sent = false;
 
@@ -442,6 +447,7 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
             {
                 TryDeleteTemporaryRecording(path);
             }
+            operationFinished.TrySetResult();
         }
     }
 
@@ -629,7 +635,10 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
 public sealed partial class ScreenFaceMirrorWindow : Window
 {
     private readonly ScreenFaceMirrorViewModel viewModel;
-    private readonly FaceRecorder previewRecorder = new();
+    private FaceRecorder? previewRecorder;
+    private readonly Ping.Windows.Core.Capture.CameraLease cameraLease;
+    private readonly CancellationTokenSource windowLifetime = new();
+    public Task CameraShutdown { get; private set; } = Task.CompletedTask;
     private CancellationTokenSource? previewLoopCancellation;
     private Task? previewLoopTask;
     private MediaPlayer? reviewPlayer;
@@ -637,9 +646,10 @@ public sealed partial class ScreenFaceMirrorWindow : Window
     private IntPtr windowHandle;
     private bool shouldCloseAfterFade;
 
-    public ScreenFaceMirrorWindow(ScreenFaceMirrorViewModel viewModel)
+    public ScreenFaceMirrorWindow(ScreenFaceMirrorViewModel viewModel, Ping.Windows.Core.Capture.CameraLease cameraLease)
     {
         this.viewModel = viewModel;
+        this.cameraLease = cameraLease;
         InitializeComponent();
         Root.DataContext = viewModel;
         Root.Loaded += HandleLoaded;
@@ -880,6 +890,7 @@ public sealed partial class ScreenFaceMirrorWindow : Window
 
     private async Task StartPreviewAsync()
     {
+        if (windowLifetime.IsCancellationRequested) return;
         if (viewModel.State == MirrorState.Reviewing || viewModel.HasReviewedClip)
         {
             return;
@@ -890,13 +901,15 @@ public sealed partial class ScreenFaceMirrorWindow : Window
             await StopPreviewAsync();
         }
 
-        previewLoopCancellation = new CancellationTokenSource();
+        previewLoopCancellation = CancellationTokenSource.CreateLinkedTokenSource(windowLifetime.Token);
         var token = previewLoopCancellation.Token;
 
         previewLoopTask = viewModel.RunPreviewLoopAsync(token);
         try
         {
+            previewRecorder = new FaceRecorder(cameraLease);
             await previewRecorder.StartPreviewAsync(FacePreviewElement, token);
+            if (token.IsCancellationRequested) return;
             FacePreviewPlaceholder.Visibility = Visibility.Collapsed;
         }
         catch (OperationCanceledException)
@@ -930,27 +943,41 @@ public sealed partial class ScreenFaceMirrorWindow : Window
             {
                 await previewTask;
             }
-            catch (OperationCanceledException)
+            catch (Exception)
             {
+                System.Diagnostics.Debug.WriteLine("Ping preview loop stopped after failure.");
             }
         }
 
         cancellation?.Dispose();
         try
         {
-            await previewRecorder.StopPreviewAsync(FacePreviewElement);
+            var recorder = previewRecorder;
+            previewRecorder = null;
+            if (recorder is not null) await recorder.StopPreviewAsync(FacePreviewElement);
         }
         catch (Exception)
         {
         }
     }
 
-    private async void HandleClosed(object sender, WindowEventArgs args)
+    private void HandleClosed(object sender, WindowEventArgs args)
     {
+        windowLifetime.Cancel();
         viewModel.HandleWindowClosed();
         StopReviewPlayback();
-        await StopPreviewAsync();
-        viewModel.DisposePreview();
+        CameraShutdown = ShutdownCameraAsync();
+    }
+
+    private async Task ShutdownCameraAsync()
+    {
+        try
+        {
+            try { await StopPreviewAsync(); }
+            finally { await viewModel.WaitForOperationAsync(); }
+            viewModel.DisposePreview();
+        }
+        finally { cameraLease.Dispose(); windowLifetime.Dispose(); }
     }
 
     private void UpdateReviewPlayback()

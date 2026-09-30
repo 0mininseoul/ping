@@ -3,6 +3,7 @@ using System.Text.Json;
 using Ping.Windows.App.Hotkeys;
 using Ping.Windows.App.Setup;
 using Ping.Windows.Core.Backend;
+using Ping.Windows.Core.Capture;
 
 namespace Ping.Windows.App.Onboarding;
 
@@ -33,6 +34,7 @@ public sealed class PermissionProbe
     private readonly Func<IReadOnlyDictionary<HotkeyCommand, HotkeyBinding>> hotkeyBindingsProvider;
     private readonly Func<IReadOnlyList<HotkeyRegistrationResult>>? activeHotkeyRegistrationsProvider;
     private readonly Func<WindowsSupportStatus> windowsStatusProvider;
+    private readonly CameraOwnership cameraOwnership;
 
     public PermissionProbe(
         string? supabaseConfigPath = null,
@@ -42,7 +44,8 @@ public sealed class PermissionProbe
         IElevationProbe? elevationProbe = null,
         Func<IReadOnlyDictionary<HotkeyCommand, HotkeyBinding>>? hotkeyBindingsProvider = null,
         Func<IReadOnlyList<HotkeyRegistrationResult>>? activeHotkeyRegistrationsProvider = null,
-        Func<WindowsSupportStatus>? windowsStatusProvider = null)
+        Func<WindowsSupportStatus>? windowsStatusProvider = null,
+        CameraOwnership? cameraOwnership = null)
     {
         this.supabaseConfigPath = supabaseConfigPath ?? SupabaseConfigLocator.Resolve();
         this.screenCaptureSelfTest = screenCaptureSelfTest ?? new NativeScreenCaptureSelfTest();
@@ -52,6 +55,7 @@ public sealed class PermissionProbe
         this.hotkeyBindingsProvider = hotkeyBindingsProvider ?? HotkeyBinding.Defaults;
         this.activeHotkeyRegistrationsProvider = activeHotkeyRegistrationsProvider;
         this.windowsStatusProvider = windowsStatusProvider ?? WindowsVersionProbe.CurrentStatus;
+        this.cameraOwnership = cameraOwnership ?? new();
     }
 
     public async Task<OnboardingEnvironmentState> ProbeAsync(CancellationToken cancellationToken = default)
@@ -114,11 +118,13 @@ public sealed class PermissionProbe
 
         try
         {
+            using var lease = await cameraOwnership.AcquireManualAsync(cancellationToken);
+            if (lease is null) return OnboardingProbeState.Unchecked("촬영 중입니다. 촬영이 끝난 뒤 권한을 다시 확인해 주세요.");
             using var capture = new global::Windows.Media.Capture.MediaCapture();
-            await capture.InitializeAsync(new global::Windows.Media.Capture.MediaCaptureInitializationSettings
+            await Capture.CaptureWinRtOperation.WaitAsync(capture.InitializeAsync(new global::Windows.Media.Capture.MediaCaptureInitializationSettings
             {
                 StreamingCaptureMode = global::Windows.Media.Capture.StreamingCaptureMode.Video
-            });
+            }), cancellationToken);
             return OnboardingProbeState.Available("Camera is ready.");
         }
         catch (UnauthorizedAccessException ex)
@@ -153,11 +159,13 @@ public sealed class PermissionProbe
 
         try
         {
+            using var lease = await cameraOwnership.AcquireManualAsync(cancellationToken);
+            if (lease is null) return OnboardingProbeState.Unchecked("촬영 중입니다. 촬영이 끝난 뒤 권한을 다시 확인해 주세요.");
             using var capture = new global::Windows.Media.Capture.MediaCapture();
-            await capture.InitializeAsync(new global::Windows.Media.Capture.MediaCaptureInitializationSettings
+            await Capture.CaptureWinRtOperation.WaitAsync(capture.InitializeAsync(new global::Windows.Media.Capture.MediaCaptureInitializationSettings
             {
                 StreamingCaptureMode = global::Windows.Media.Capture.StreamingCaptureMode.Audio
-            });
+            }), cancellationToken);
             return OnboardingProbeState.Available("Microphone is ready.");
         }
         catch (UnauthorizedAccessException ex)

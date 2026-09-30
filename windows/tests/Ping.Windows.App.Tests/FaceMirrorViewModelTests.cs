@@ -9,6 +9,22 @@ namespace Ping.Windows.App.Tests;
 public sealed class FaceMirrorViewModelTests
 {
     [Fact]
+    public async Task CloseWaitsForUnderlyingRecordingCleanupBeforeCameraCanBeReleased()
+    {
+        var recorder = new BlockingFaceRecorder();
+        var model = new FaceMirrorViewModel(FaceMirrorContextFor(false), recorder, (_, _) => Task.CompletedTask);
+        var recording = model.HandleEnterAsync();
+        await recorder.RecordStarted.Task;
+        model.HandleWindowClosed();
+        var cleanup = model.WaitForOperationAsync();
+        Assert.False(cleanup.IsCompleted);
+        recorder.Complete();
+        await recording;
+        await cleanup;
+        Assert.False(model.HasReviewedClip);
+    }
+
+    [Fact]
     public async Task Enter_FromIdle_RecordsAndSendsFaceOnlyMessageThenRequestsClose()
     {
         SendVideoInput? sentInput = null;

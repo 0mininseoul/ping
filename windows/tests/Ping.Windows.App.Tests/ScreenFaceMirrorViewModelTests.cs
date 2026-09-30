@@ -9,6 +9,22 @@ namespace Ping.Windows.App.Tests;
 public sealed class ScreenFaceMirrorViewModelTests
 {
     [Fact]
+    public async Task CloseWaitsForNativeRecordingBeforeReleasingCamera()
+    {
+        var engine = new BlockingScreenFaceCaptureEngine();
+        var model = new ScreenFaceMirrorViewModel(MultiRoomContext(), engine, (_, _) => Task.CompletedTask);
+        var record = model.HandleEnterAsync();
+        await engine.RecordStarted.Task;
+        model.HandleWindowClosed();
+        var cleanup = model.WaitForOperationAsync();
+        Assert.False(cleanup.IsCompleted);
+        engine.Complete();
+        await record;
+        await cleanup;
+        Assert.False(model.HasReviewedClip);
+    }
+
+    [Fact]
     public async Task TargetShortcuts_SelectSingleRoomBeforeSendingScreenFaceMessage()
     {
         SendVideoInput? sentInput = null;

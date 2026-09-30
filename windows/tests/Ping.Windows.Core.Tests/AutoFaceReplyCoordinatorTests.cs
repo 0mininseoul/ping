@@ -238,7 +238,7 @@ public sealed class AutoFaceReplyCoordinatorTests
         public Fixture()
         {
             Coordinator = new(Camera, Activity, AutoFaceReplyPolicyTests.Started, () => Identity, () => true,
-                async (duration, token) => { Duration = duration; ++Recordings; return await Record(duration, token); },
+                async (lease, duration, token) => { Assert.Equal(CameraPurpose.AutomaticReply, lease.Purpose); Duration = duration; ++Recordings; return await Record(duration, token); },
                 (message, token) => { BeforeIndicator?.Invoke(); return Task.FromResult<IAsyncDisposable>(new Indicator(this)); },
                 async (input, guard, token) => { ++Sends; Input = input; return await Send(input, guard, token); },
                 path => Deleted.Add(path), () => Now, error => Errors.Add(error));

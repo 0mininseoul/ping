@@ -14,6 +14,7 @@ using Ping.Windows.Core.LocalState;
 using Ping.Windows.Core.Models;
 using Ping.Windows.Core.Incoming;
 using Ping.Windows.Core.Realtime;
+using Ping.Windows.Core.Capture;
 
 namespace Ping.Windows.App.Bootstrap;
 
@@ -47,6 +48,11 @@ public sealed class AppCoordinator : IDisposable
     private RealtimeConnectionState previousRealtimeState;
     private readonly NotificationController notificationController;
     private readonly IScreenFaceCaptureEngine screenFaceCaptureEngine;
+    private readonly CameraOwnership camera = new();
+    private readonly CaptureActivityState captureActivity = new(initiallyBlocked: true);
+    private readonly AutoFaceReplyCoordinator autoFaceReply;
+    private CaptureActivityAdapter? captureActivityAdapter;
+    private readonly List<Task> cameraShutdowns = [];
     private readonly QuickSendController quickSendController;
     private readonly PermissionProbe permissionProbe;
     private readonly ScreenFaceQuickSendSettingsStore quickSendSettingsStore;
@@ -68,6 +74,8 @@ public sealed class AppCoordinator : IDisposable
     private SettingsWindow? settingsWindow;
     private readonly Dictionary<(string Uid, string Id), PlaybackWindow> playbackWindows = new();
     private CancellationTokenSource? quickSendCancellation;
+    private TaskCompletionSource? quickSendFinished;
+    private Task shutdown = Task.CompletedTask;
     private bool disposed;
 
     public AppCoordinator(MainWindow mainWindow)
@@ -112,13 +120,19 @@ public sealed class AppCoordinator : IDisposable
         realtime.RecoveryRequired += HandleIncomingConnectionError;
         playbackPreparation = new PlaybackPreparationQueue(DownloadVideoForPlaybackAsync, PresentPreparedPlaybackAsync,
             error => { HandleIncomingConnectionError(error); Debug.WriteLine("Ping playback preparation failed."); });
-        screenFaceCaptureEngine = new NativeCaptureEngine();
+        screenFaceCaptureEngine = new OwnedScreenFaceCaptureEngine(camera, new NativeCaptureEngine());
         permissionProbe = new PermissionProbe(
             hotkeyBindingsProvider: preferencesStore.Load,
-            activeHotkeyRegistrationsProvider: () => lastHotkeyRegistrations);
+            activeHotkeyRegistrationsProvider: () => lastHotkeyRegistrations,
+            cameraOwnership: camera);
         quickSendSettingsStore = new ScreenFaceQuickSendSettingsStore();
         mirrorPlacementStore = new MirrorPlacementStore();
         quickSendSettings = quickSendSettingsStore.Load();
+        autoFaceReply = new(camera, captureActivity, appStartedAt,
+            () => !disposed && currentUid is { } uid && connectionSupervisor.State is not (ConnectionState.SessionRejected or ConnectionState.ConfigurationRequired)
+                ? new(uid, CurrentNickname, quickSendSettings.Preferences.AllowsLocalSave) : null,
+            HasAutomaticCaptureAccess, RecordAutomaticReplyAsync, ShowAutoReplyIndicatorAsync,
+            messageService.SendAutoReplyAsync, path => File.Delete(path), onError: _ => Debug.WriteLine("Ping automatic face reply failed."));
         videoDelivery = new IncomingVideoDelivery(appStartedAt, () => quickSendSettings.AutoPlayIncoming,
             ShowIncomingNotificationAsync, EnqueueAutomaticPlaybackAsync, messageService.MarkNotifiedAsync, HandleIncomingConnectionError);
         quickSendController = new QuickSendController(
@@ -148,6 +162,7 @@ public sealed class AppCoordinator : IDisposable
         ShowRegistrationState(lastHotkeyRegistrations);
         MaybeOpenOnboardingAtStartup(lastHotkeyRegistrations);
         connectionLifecycle = new ConnectionLifecycleAdapter(connectionSupervisor);
+        captureActivityAdapter = new(mainWindow, captureActivity);
         connectionSupervisor.Start();
     }
 
@@ -199,6 +214,7 @@ public sealed class AppCoordinator : IDisposable
         }
         catch (Exception ex)
         {
+            if (disposed) return;
             Debug.WriteLine($"Ping {title} command failed: {ex}");
             ShowBlockedState(
                 title,
@@ -246,9 +262,13 @@ public sealed class AppCoordinator : IDisposable
 
         disposed = true;
         lifetime.Cancel();
+        captureActivityAdapter?.Dispose();
+        camera.InterruptAutomatic();
+        faceMirrorWindow?.Close();
+        screenFaceMirrorWindow?.Close();
         connectionLifecycle?.Dispose();
         connectionSupervisor.StateChanged -= HandleConnectionStateChanged;
-        _ = DisposeConnectionAsync();
+        shutdown = DisposeConnectionAsync();
         hotkeys.HotkeyPressed -= HandleHotkeyPressed;
         mainWindow.ScreenPingRequested -= HandleScreenPingRequested;
         mainWindow.BlockedRetryRequested -= HandleBlockedRetryRequested;
@@ -269,6 +289,9 @@ public sealed class AppCoordinator : IDisposable
         await incomingObserver.DisposeAsync();
         await realtime.DisposeAsync();
         await playbackPreparation.DisposeAsync();
+        await autoFaceReply.DisposeAsync();
+        if (quickSendFinished is { } quick) await quick.Task;
+        await Task.WhenAll(cameraShutdowns.ToArray());
         lifetime.Dispose();
         supabaseClient.Dispose();
     }
@@ -305,13 +328,20 @@ public sealed class AppCoordinator : IDisposable
                 ShowSettings();
                 break;
             case TrayCommand.Quit:
-                Dispose();
-                mainWindow.CloseForQuit();
-                Application.Current.Exit();
+                _ = QuitAsync();
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(command), command, "Unknown tray command.");
         }
+    }
+
+    private async Task QuitAsync()
+    {
+        Dispose();
+        try { await shutdown; }
+        catch { Debug.WriteLine("Ping shutdown cleanup failed."); }
+        mainWindow.CloseForQuit();
+        Application.Current.Exit();
     }
 
     private void HandleHotkeyPressed(object? sender, HotkeyCommand command)
@@ -550,6 +580,42 @@ public sealed class AppCoordinator : IDisposable
     private static string QuickSendSettingsDetail(IReadOnlyDictionary<HotkeyCommand, HotkeyBinding> bindings) =>
         $"Configure screen+face quick send for {HotkeyStatusText.BindingLabel(bindings, HotkeyCommand.QuickScreenFacePing)}.";
 
+    private static bool HasAutomaticCaptureAccess()
+    {
+        try
+        {
+            return new[] { "Webcam", "Microphone" }.All(name =>
+                global::Windows.Security.Authorization.AppCapabilityAccess.AppCapability.Create(name).CheckAccess()
+                    == global::Windows.Security.Authorization.AppCapabilityAccess.AppCapabilityAccessStatus.Allowed);
+        }
+        catch (Exception error) when (error is System.Runtime.InteropServices.COMException or UnauthorizedAccessException) { return false; }
+    }
+
+    private async Task<string> RecordAutomaticReplyAsync(CameraLease lease, TimeSpan duration, CancellationToken token)
+    {
+        await using var recorder = new FaceRecorder(lease);
+        Task<FaceRecordingResult>? recording = null;
+        await RunOnUiThreadAsync(() =>
+        {
+            token.ThrowIfCancellationRequested();
+            recording = recorder.RecordAsync(duration, token);
+        });
+        return (await (recording ?? throw new OperationCanceledException(token))).FilePath;
+    }
+
+    private async Task<IAsyncDisposable> ShowAutoReplyIndicatorAsync(VideoMessage message, CancellationToken token)
+    {
+        AutoReplyIndicatorWindow? indicator = null;
+        await RunOnUiThreadAsync(() =>
+        {
+            token.ThrowIfCancellationRequested();
+            if (disposed) throw new OperationCanceledException(token);
+            indicator = new(message.SenderNickname);
+            indicator.Present();
+        });
+        return indicator ?? throw new OperationCanceledException(token);
+    }
+
     private async Task ShowFaceMirrorAsync()
     {
         var uid = currentUid;
@@ -584,15 +650,18 @@ public sealed class AppCoordinator : IDisposable
             SaveSentCopy: quickSendSettings.Preferences.SaveSentCopy,
             InitialPosition: mirrorPlacementStore.Load(CaptureMode.FaceOnly),
             SaveMirrorPosition: position => mirrorPlacementStore.Save(CaptureMode.FaceOnly, position));
-        var viewModel = new FaceMirrorViewModel(
-            context,
-            new FaceRecorder(),
-            SendVideoAndRememberRoomAsync,
-            localArchive);
-
-        faceMirrorWindow = new FaceMirrorWindow(viewModel);
-        faceMirrorWindow.Closed += (_, _) => faceMirrorWindow = null;
-        faceMirrorWindow.Activate();
+        var lease = await camera.AcquireManualAsync(lifetime.Token)
+            ?? throw new InvalidOperationException("다른 촬영이 카메라를 사용 중입니다. 촬영창을 닫고 다시 시도해 주세요.");
+        try
+        {
+            if (disposed || currentUid != uid) throw new OperationCanceledException(lifetime.Token);
+            var viewModel = new FaceMirrorViewModel(context, new FaceRecorder(lease), SendVideoAndRememberRoomAsync, localArchive);
+            var window = new FaceMirrorWindow(viewModel, lease);
+            faceMirrorWindow = window;
+            window.Closed += (_, _) => { cameraShutdowns.Add(window.CameraShutdown); faceMirrorWindow = null; };
+            window.Activate();
+        }
+        catch { lease.Dispose(); throw; }
     }
 
     private async Task ShowScreenFaceMirrorAsync()
@@ -620,7 +689,7 @@ public sealed class AppCoordinator : IDisposable
         // screen capture state inside the mirror. Blocking preflight before the
         // window opens makes the Windows command feel broken when permission or
         // device checks stall.
-        ShowScreenFaceMirror(new ScreenFaceMirrorContext(
+        await ShowScreenFaceMirrorAsync(new ScreenFaceMirrorContext(
             Rooms: sendableRooms,
             SenderUid: uid,
             SenderNickname: CurrentNickname,
@@ -683,7 +752,7 @@ public sealed class AppCoordinator : IDisposable
         return CapturePreflight.FirstFailure(mode, windowsStatus, camera, microphone, screenCapture);
     }
 
-    private void ShowScreenFaceMirror(ScreenFaceMirrorContext context)
+    private async Task ShowScreenFaceMirrorAsync(ScreenFaceMirrorContext context)
     {
         if (screenFaceMirrorWindow is not null)
         {
@@ -698,15 +767,19 @@ public sealed class AppCoordinator : IDisposable
                 ?? (position => mirrorPlacementStore.Save(CaptureMode.ScreenFace, position))
         };
 
-        var viewModel = new ScreenFaceMirrorViewModel(
-            context,
-            screenFaceCaptureEngine,
-            SendVideoAndRememberRoomAsync,
-            localArchive);
-
-        screenFaceMirrorWindow = new ScreenFaceMirrorWindow(viewModel);
-        screenFaceMirrorWindow.Closed += (_, _) => screenFaceMirrorWindow = null;
-        screenFaceMirrorWindow.Activate();
+        var lease = await camera.AcquireManualAsync(lifetime.Token)
+            ?? throw new InvalidOperationException("다른 촬영이 카메라를 사용 중입니다. 촬영창을 닫고 다시 시도해 주세요.");
+        try
+        {
+            if (disposed || currentUid != context.SenderUid) throw new OperationCanceledException(lifetime.Token);
+            var engine = new OwnedScreenFaceCaptureEngine(camera, new NativeCaptureEngine(), lease);
+            var viewModel = new ScreenFaceMirrorViewModel(context, engine, SendVideoAndRememberRoomAsync, localArchive);
+            var window = new ScreenFaceMirrorWindow(viewModel, lease);
+            screenFaceMirrorWindow = window;
+            window.Closed += (_, _) => { cameraShutdowns.Add(window.CameraShutdown); screenFaceMirrorWindow = null; };
+            window.Activate();
+        }
+        catch { lease.Dispose(); throw; }
     }
 
     private async Task RunQuickScreenFacePingAsync()
@@ -729,6 +802,7 @@ public sealed class AppCoordinator : IDisposable
 
         var cancellation = new CancellationTokenSource();
         quickSendCancellation = cancellation;
+        quickSendFinished = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         try
         {
@@ -763,6 +837,7 @@ public sealed class AppCoordinator : IDisposable
             }
 
             cancellation.Dispose();
+            quickSendFinished.TrySetResult();
         }
     }
 
@@ -881,6 +956,7 @@ public sealed class AppCoordinator : IDisposable
         {
             token.ThrowIfCancellationRequested();
             if (currentUid != uid || disposed) return;
+            autoFaceReply.HandleIncoming(message, source);
             try { await videoDelivery.DeliverAsync(uid, message, source, token); }
             catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
             catch (SupabaseSessionExpiredException) { throw; }
@@ -1187,13 +1263,20 @@ public sealed class AppCoordinator : IDisposable
         if (currentUid is { } previousUid && previousUid != uid)
         {
             await incomingObserver.StopAsync();
+            camera.InterruptAutomatic();
+            await autoFaceReply.WaitForIdleAsync();
             await realtime.StopAsync();
             yieldedChatIds.Clear();
             realtimeWasConnected = false;
             await RunOnUiThreadAsync(() =>
             {
+                faceMirrorWindow?.Close();
+                screenFaceMirrorWindow?.Close();
+                quickSendCancellation?.Cancel();
                 foreach (var window in playbackWindows.Values.ToArray()) window.Close();
             });
+            if (quickSendFinished is { } quick) await quick.Task;
+            await Task.WhenAll(cameraShutdowns.ToArray());
         }
         cancellationToken.ThrowIfCancellationRequested();
         await RunOnUiThreadAsync(() =>
@@ -1247,6 +1330,7 @@ public sealed class AppCoordinator : IDisposable
             if (disposed || state == ConnectionState.Stopped) return;
             if (state is ConnectionState.SessionRejected or ConnectionState.ConfigurationRequired)
             {
+                camera.InterruptAutomatic();
                 startupIdentity.Fail(error ?? new InvalidOperationException("Ping account startup failed."));
                 _ = incomingObserver.StopAsync();
                 _ = realtime.StopAsync();
@@ -1330,7 +1414,7 @@ public sealed class AppCoordinator : IDisposable
 
         public void OpenScreenFaceMirror(ScreenFaceMirrorContext context)
         {
-            owner.ShowScreenFaceMirror(context);
+            _ = owner.RunUiCommandAsync(() => owner.ShowScreenFaceMirrorAsync(context), "Screen+Face Ping");
         }
 
         public void ShowRoomBlocked(string message)

@@ -43,7 +43,7 @@ Interfaces: `AutoFaceReplyPolicy.Decide(VideoMessage,string,IncomingArrivalSourc
 
 Files: create Core `Capture/AutoFaceReplyCoordinator.cs`, `CaptureActivityState.cs`; tests corresponding files.
 
-Interfaces: coordinator injects clock/current identity/capability, record callback `(TimeSpan,CancellationToken)->Task<string>`, indicator `(VideoMessage,CancellationToken)->Task<IAsyncDisposable>`, send callback `(AutoReplyVideoInput,Func<bool>,CancellationToken)->Task<bool>`, temporary-file cleanup callback. `HandleIncoming` starts only an eligible nonqueued attempt and returns typed decision; `StopAsync` cancels/awaits owned work. State tracks display/suspend with monotonic interruption generation.
+Interfaces: coordinator injects clock/current identity/capability, record callback `(CameraLease,TimeSpan,CancellationToken)->Task<string>`, indicator `(VideoMessage,CancellationToken)->Task<IAsyncDisposable>`, send callback `(AutoReplyVideoInput,Func<bool>,CancellationToken)->Task<bool>`, temporary-file cleanup callback. `HandleIncoming` starts only an eligible nonqueued attempt and returns typed decision; `StopAsync` cancels/awaits owned work. State tracks display/suspend with monotonic interruption generation.
 
 - [x] RED tests for3second record→original sender, duplicate/racing arrivals, busy skip without deferred capture, startup/reconnect/history exclusions, sleep during initialization/record/upload, old identity, stale post-record and failed capture cleanup.
 - [x] Implement owned pipeline, independent from playback/download and notification success. Reserve eligible IDs per account before asynchronous work, including failed/interrupted attempts. Check before record and before create, always dispose indicator/lease and delete temporary clip.
@@ -53,10 +53,10 @@ Interfaces: coordinator injects clock/current identity/capability, record callba
 
 Files: App `Capture/FaceRecorder.cs`, `OwnedScreenFaceCaptureEngine.cs`, `AutoReplyIndicatorWindow.cs`, `CaptureActivityAdapter.cs`; update both mirror windows, PermissionProbe, AppCoordinator; diagnostics fixture and App tests.
 
-- [ ] Integrate shared camera ownership with manual preview/record, native record and capability probes. Cancel/await camera initialization/record before release; release preview for native screen-face recording then restart on review. User requests interrupt automatic capture without stealing another manual lease.
-- [ ] Map power/display state and locked session to CaptureActivityState; stop attempts on account change/permanent recovery/quit. Check existing allowed camera/microphone capability without triggering auto permission prompts.
-- [ ] Show232x56DIP indicator,20DIP work-area margin, red recording state and sender; `AppWindow.Show(false)` and native noactivate/toolwindow style, no camera preview. Dismiss on every outcome. Wire live arrivals independently of auto-play preference and retain capture/reply dedupe.
-- [ ] Behavioral fake adapters and actual owned WinUI indicator fixture: geometry/current scale, nonactivation native styles, text, cleanup. Full suites/native/Release GREEN. Commit `feat(windows-auto-reply): integrate capture lifetime and recording indicator`.
+- [x] Integrate shared camera ownership with manual preview/record, native record and capability probes. Cancel/await camera initialization/record before release; release preview for native screen-face recording then restart on redo/idle. User requests interrupt automatic capture without stealing another manual lease.
+- [x] Map power/display state and locked session to CaptureActivityState; stop attempts on account change/permanent recovery/quit. Check existing allowed camera/microphone capability without triggering auto permission prompts.
+- [x] Show232x56DIP indicator,20DIP work-area margin, red recording state and sender; `AppWindow.Show(false)` and native noactivate/toolwindow style, no camera preview. Dismiss on every outcome. Wire live arrivals independently of auto-play preference and retain capture/reply dedupe.
+- [x] Behavioral fake adapters and actual owned WinUI indicator fixture: geometry/current scale, nonactivation native styles, text, cleanup. Full suites/native/Release GREEN. Commit `feat(windows-auto-reply): integrate capture lifetime and recording indicator`.
 
 ## Task4 — Review and verification
 

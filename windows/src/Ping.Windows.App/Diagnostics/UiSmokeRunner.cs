@@ -142,6 +142,7 @@ internal static class UiSmokeRunner
             Check(true, "real settings window created, rendered and closed without crash");
             Step("Verifying owned native playback with a synthetic clip.");
             await PlaybackSmoke.RunAsync(window, OutputDirectory!, Check, RenderAsync);
+            await AutoReplySmoke.RunAsync(window, Check, RenderAsync);
 
             var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
             window.Close();

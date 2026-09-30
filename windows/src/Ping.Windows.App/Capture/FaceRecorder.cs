@@ -1,4 +1,4 @@
-#if WINDOWS
+using Ping.Windows.Core.Capture;
 using Windows.Media.Capture;
 using Windows.Media.Capture.Frames;
 using Windows.Media.Core;
@@ -6,196 +6,108 @@ using Windows.Media.MediaProperties;
 using Windows.Media.Playback;
 using Windows.Storage;
 using Microsoft.UI.Xaml.Controls;
-#endif
 
 namespace Ping.Windows.App.Capture;
 
-public sealed class FaceRecorder : IFaceRecorder
+public sealed class FaceRecorder : IFaceRecorder, IAsyncDisposable
 {
     private static readonly string TemporaryDirectory = Path.Combine(Path.GetTempPath(), "Ping");
-    private MediaCapture? previewCapture;
+    private readonly CameraDeviceSession<MediaCapture> session;
     private MediaPlayer? previewPlayer;
-    private bool isPreviewCaptureInitialized;
 
-    public async Task<FaceRecordingResult> RecordAsync(
-        TimeSpan duration,
-        CancellationToken cancellationToken = default)
+    public FaceRecorder(CameraLease lease)
     {
-        if (duration <= TimeSpan.Zero)
+        session = new(lease, InitializeAsync, capture =>
         {
-            throw new ArgumentOutOfRangeException(nameof(duration), duration, "Recording duration must be positive.");
-        }
+            try { previewPlayer?.Dispose(); }
+            finally { previewPlayer = null; capture.Dispose(); }
+            return ValueTask.CompletedTask;
+        });
+    }
 
-#if WINDOWS
-        Directory.CreateDirectory(TemporaryDirectory);
-        var file = await CreateOutputFileAsync(cancellationToken).ConfigureAwait(false);
-        var filePath = file.Path;
-        var capture = isPreviewCaptureInitialized ? previewCapture : null;
-        var ownsCapture = capture is null;
-        LowLagMediaRecording? recording = null;
-
+    private static async Task<MediaCapture> InitializeAsync(CancellationToken token)
+    {
+        var capture = new MediaCapture();
         try
         {
-            if (capture is null)
+            await CaptureWinRtOperation.WaitAsync(capture.InitializeAsync(new MediaCaptureInitializationSettings
             {
-                capture = new MediaCapture();
-                await capture.InitializeAsync(new MediaCaptureInitializationSettings
-                {
-                    StreamingCaptureMode = StreamingCaptureMode.AudioAndVideo
-                });
-            }
+                StreamingCaptureMode = StreamingCaptureMode.AudioAndVideo
+            }), token);
+            return capture;
+        }
+        catch { capture.Dispose(); throw; }
+    }
 
+    public Task<FaceRecordingResult> RecordAsync(TimeSpan duration, CancellationToken cancellationToken = default)
+    {
+        if (duration <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(duration));
+        return session.UseAsync((capture, token) => RecordCoreAsync(capture, duration, token), cancellationToken);
+    }
+
+    private static async Task<FaceRecordingResult> RecordCoreAsync(MediaCapture capture, TimeSpan duration, CancellationToken token)
+    {
+        Directory.CreateDirectory(TemporaryDirectory);
+        var folder = await CaptureWinRtOperation.WaitAsync(StorageFolder.GetFolderFromPathAsync(TemporaryDirectory), token);
+        token.ThrowIfCancellationRequested();
+        var file = await CaptureWinRtOperation.WaitAsync(folder.CreateFileAsync($"face-{Guid.NewGuid():N}.mp4", CreationCollisionOption.FailIfExists), token);
+        LowLagMediaRecording? recording = null;
+        var finished = false;
+        try
+        {
+            token.ThrowIfCancellationRequested();
             var profile = MediaEncodingProfile.CreateMp4(VideoEncodingQuality.HD720p);
             profile.Video.Subtype = MediaEncodingSubtypes.H264;
             profile.Audio.Subtype = MediaEncodingSubtypes.Aac;
-
-            recording = await capture.PrepareLowLagRecordToStorageFileAsync(profile, file);
-            await recording.StartAsync();
-            await Task.Delay(duration, cancellationToken).ConfigureAwait(false);
+            recording = await CaptureWinRtOperation.WaitAsync(capture.PrepareLowLagRecordToStorageFileAsync(profile, file), token);
+            token.ThrowIfCancellationRequested();
+            await CaptureWinRtOperation.WaitAsync(recording.StartAsync(), token);
+            await Task.Delay(duration, token);
             await recording.StopAsync();
             await recording.FinishAsync();
-
-            return new FaceRecordingResult(filePath, duration);
+            finished = true;
+            token.ThrowIfCancellationRequested();
+            return new(file.Path, duration);
         }
         catch
         {
-            if (recording is not null)
+            if (recording is not null && !finished)
             {
-                try
-                {
-                    await recording.StopAsync();
-                }
-                catch (Exception)
-                {
-                }
-
-                try
-                {
-                    await recording.FinishAsync();
-                }
-                catch (Exception)
-                {
-                }
+                try { await recording.StopAsync(); } catch { }
+                try { await recording.FinishAsync(); } catch { }
             }
-
-            TryDelete(filePath);
+            TryDelete(file.Path);
             throw;
         }
-        finally
-        {
-            if (ownsCapture)
-            {
-                capture?.Dispose();
-            }
-        }
-#else
-        _ = cancellationToken;
-        await Task.CompletedTask.ConfigureAwait(false);
-        throw new PlatformNotSupportedException("Face recording requires Windows MediaCapture on a Windows target framework.");
-#endif
     }
 
-#if WINDOWS
-    public async Task StartPreviewAsync(MediaPlayerElement preview, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(preview);
-        cancellationToken.ThrowIfCancellationRequested();
-        var capture = previewCapture ?? new MediaCapture();
-        previewCapture = capture;
-        try
+    public Task StartPreviewAsync(MediaPlayerElement preview, CancellationToken cancellationToken = default) =>
+        session.UseAsync((capture, token) =>
         {
-            if (!isPreviewCaptureInitialized)
-            {
-                await capture.InitializeAsync(new MediaCaptureInitializationSettings
-                {
-                    StreamingCaptureMode = StreamingCaptureMode.AudioAndVideo
-                });
-                isPreviewCaptureInitialized = true;
-            }
-        }
-        catch
-        {
-            previewCapture?.Dispose();
-            previewCapture = null;
-            isPreviewCaptureInitialized = false;
-            throw;
-        }
-
-        var frameSource = capture.FrameSources
-            .FirstOrDefault(source =>
-                source.Value.Info.MediaStreamType == MediaStreamType.VideoPreview
-                && source.Value.Info.SourceKind == MediaFrameSourceKind.Color)
-            .Value
-            ?? capture.FrameSources
-                .FirstOrDefault(source =>
-                    source.Value.Info.MediaStreamType == MediaStreamType.VideoRecord
-                    && source.Value.Info.SourceKind == MediaFrameSourceKind.Color)
-                .Value;
-        if (frameSource is null)
-        {
-            throw new InvalidOperationException("No camera preview stream is available.");
-        }
-
-        previewPlayer?.Dispose();
-        previewPlayer = new MediaPlayer
-        {
-            RealTimePlayback = true,
-            AutoPlay = false,
-            Source = MediaSource.CreateFromMediaFrameSource(frameSource)
-        };
-        preview.SetMediaPlayer(previewPlayer);
-        previewPlayer.Play();
-    }
-
-    public Task StopPreviewAsync(MediaPlayerElement preview)
-    {
-        try
-        {
-            previewPlayer?.Pause();
-        }
-        catch (Exception)
-        {
-        }
-        finally
-        {
-            preview.SetMediaPlayer(null);
+            token.ThrowIfCancellationRequested();
+            var source = capture.FrameSources.Values.FirstOrDefault(frame => frame.Info.SourceKind == MediaFrameSourceKind.Color
+                && frame.Info.MediaStreamType == MediaStreamType.VideoPreview)
+                ?? capture.FrameSources.Values.FirstOrDefault(frame => frame.Info.SourceKind == MediaFrameSourceKind.Color
+                    && frame.Info.MediaStreamType == MediaStreamType.VideoRecord)
+                ?? throw new InvalidOperationException("카메라 미리보기를 사용할 수 없습니다.");
             previewPlayer?.Dispose();
-            previewPlayer = null;
-            previewCapture?.Dispose();
-            previewCapture = null;
-            isPreviewCaptureInitialized = false;
-        }
+            previewPlayer = new() { RealTimePlayback = true, Source = MediaSource.CreateFromMediaFrameSource(source) };
+            preview.SetMediaPlayer(previewPlayer);
+            previewPlayer.Play();
+            return Task.FromResult(true);
+        }, cancellationToken);
 
-        return Task.CompletedTask;
-    }
-#endif
-
-#if WINDOWS
-    private static async Task<StorageFile> CreateOutputFileAsync(CancellationToken cancellationToken)
+    public async Task StopPreviewAsync(MediaPlayerElement preview)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        var folder = await StorageFolder.GetFolderFromPathAsync(TemporaryDirectory);
-        cancellationToken.ThrowIfCancellationRequested();
-        return await folder.CreateFileAsync(
-            $"face-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss-fff}-{Guid.NewGuid():N}.mp4",
-            CreationCollisionOption.FailIfExists);
+        try { preview.SetMediaPlayer(null); }
+        finally { await session.DisposeAsync(); }
     }
-#endif
 
-    private static void TryDelete(string filePath)
+    public ValueTask DisposeAsync() => session.DisposeAsync();
+
+    private static void TryDelete(string path)
     {
-        try
-        {
-            if (File.Exists(filePath))
-            {
-                File.Delete(filePath);
-            }
-        }
-        catch (IOException)
-        {
-        }
-        catch (UnauthorizedAccessException)
-        {
-        }
+        try { File.Delete(path); }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException) { }
     }
 }

@@ -65,6 +65,8 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
     private readonly LocalArchive? archive;
     private readonly MirrorTargetSelector targetSelector;
     private CancellationTokenSource? operationCancellation;
+    private TaskCompletionSource? operationFinished;
+    public Task WaitForOperationAsync() => operationFinished?.Task ?? Task.CompletedTask;
     private MirrorState state = MirrorState.Idle;
     private string statusMessage = "Press Enter to record.";
     private string recordingCountdownText = "3";
@@ -304,6 +306,7 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
 
         operationCancellation?.Dispose();
         operationCancellation = new CancellationTokenSource();
+        operationFinished = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var cancellationToken = operationCancellation.Token;
         string? recordedPath = null;
         CancellationTokenSource? countdownCancellation = null;
@@ -342,6 +345,7 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
             {
                 TryDeleteTemporaryRecording(recordedPath);
             }
+            operationFinished.TrySetResult();
         }
     }
 
@@ -365,6 +369,7 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
 
         operationCancellation?.Dispose();
         operationCancellation = new CancellationTokenSource();
+        operationFinished = new(TaskCreationOptions.RunContinuationsAsynchronously);
         var cancellationToken = operationCancellation.Token;
         var sent = false;
 
@@ -406,6 +411,7 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
             {
                 TryDeleteTemporaryRecording(path);
             }
+            operationFinished.TrySetResult();
         }
     }
 
@@ -574,13 +580,17 @@ public sealed partial class FaceMirrorWindow : Window
 {
     private readonly FaceMirrorViewModel viewModel;
     private readonly FaceRecorder? previewRecorder;
+    private readonly Ping.Windows.Core.Capture.CameraLease cameraLease;
+    private readonly CancellationTokenSource windowLifetime = new();
+    public Task CameraShutdown { get; private set; } = Task.CompletedTask;
     private MediaPlayer? reviewPlayer;
     private AppWindow? appWindow;
     private bool shouldCloseAfterFade;
 
-    public FaceMirrorWindow(FaceMirrorViewModel viewModel)
+    public FaceMirrorWindow(FaceMirrorViewModel viewModel, Ping.Windows.Core.Capture.CameraLease cameraLease)
     {
         this.viewModel = viewModel;
+        this.cameraLease = cameraLease;
         previewRecorder = viewModel.Recorder as FaceRecorder;
         InitializeComponent();
         Root.DataContext = viewModel;
@@ -739,6 +749,7 @@ public sealed partial class FaceMirrorWindow : Window
 
     private async void HandleLoaded(object sender, RoutedEventArgs args)
     {
+        if (windowLifetime.IsCancellationRequested) return;
         Root.Focus(FocusState.Programmatic);
         ApplyRoundedMediaClips();
         UpdatePositionFromWindow();
@@ -749,7 +760,8 @@ public sealed partial class FaceMirrorWindow : Window
 
         try
         {
-            await previewRecorder.StartPreviewAsync(PreviewElement);
+            await previewRecorder.StartPreviewAsync(PreviewElement, windowLifetime.Token);
+            if (windowLifetime.IsCancellationRequested) return;
             PreviewPlaceholder.Visibility = Visibility.Collapsed;
             UpdateReviewPlayback();
         }
@@ -811,14 +823,22 @@ public sealed partial class FaceMirrorWindow : Window
         return Math.Max(min, Math.Min(max, value));
     }
 
-    private async void HandleClosed(object sender, WindowEventArgs args)
+    private void HandleClosed(object sender, WindowEventArgs args)
     {
+        windowLifetime.Cancel();
         viewModel.HandleWindowClosed();
         StopReviewPlayback();
-        if (previewRecorder is not null)
+        CameraShutdown = ShutdownCameraAsync();
+    }
+
+    private async Task ShutdownCameraAsync()
+    {
+        try
         {
-            await previewRecorder.StopPreviewAsync(PreviewElement);
+            try { if (previewRecorder is not null) await previewRecorder.StopPreviewAsync(PreviewElement); }
+            finally { await viewModel.WaitForOperationAsync(); }
         }
+        finally { cameraLease.Dispose(); windowLifetime.Dispose(); }
     }
 
     private void UpdateReviewPlayback()
