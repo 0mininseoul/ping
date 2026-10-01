@@ -6,6 +6,7 @@ using Ping.Windows.App.Bootstrap;
 using Ping.Windows.App.Notifications;
 using Ping.Windows.App.Setup;
 using Ping.Windows.Core.Backend;
+using Ping.Windows.Core.Updates;
 
 namespace Ping.Windows.App;
 
@@ -17,6 +18,34 @@ public partial class App : Application
     private AppCoordinator? coordinator;
     private readonly SemaphoreSlim accountTransition = new(1, 1);
     private SupabaseClient? pendingAccountCreation;
+
+    internal async Task ApplyPreparedUpdateAsync(PreparedWindowsUpdate update)
+    {
+        await accountTransition.WaitAsync();
+        try
+        {
+            if (coordinator is null || window is null) throw new InvalidOperationException("Ping is not ready.");
+            try
+            {
+                await coordinator.ShutdownForAccountChangeAsync();
+                coordinator = null;
+                WindowsUpdateController.StartInstaller(update);
+                window.CloseForQuit();
+                Exit();
+            }
+            catch
+            {
+                if (coordinator is null || coordinator.IsDisposed)
+                {
+                    window.DetachMessenger();
+                    coordinator = new AppCoordinator(window); coordinator.Start(); coordinator.OpenSettingsWindow(SettingsSection.Info);
+                    coordinator.ReportUpdateFailure();
+                }
+                throw;
+            }
+        }
+        finally { accountTransition.Release(); }
+    }
 
     internal Task<IReadOnlyList<StoredAccountSummary>> GetAccountsAsync(CancellationToken token) =>
         coordinator?.GetAccountsAsync(token) ?? throw new InvalidOperationException("Account transition is in progress.");

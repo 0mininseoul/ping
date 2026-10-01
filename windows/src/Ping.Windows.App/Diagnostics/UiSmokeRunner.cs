@@ -133,6 +133,11 @@ internal static class UiSmokeRunner
             var fixtureDevices = new CaptureDeviceCatalog([new("fixture-camera", "Fixture camera")], [new(fixtureMicrophone, "Fixture microphone")]);
             IReadOnlyList<StoredAccountSummary> fixtureAccounts = [new("me", "민", DateTimeOffset.UtcNow, true), new("second", "둘째", DateTimeOffset.UtcNow, false)];
             var accountChanges = 0;
+            var updateCheckFails = true; var updateInstalls = 0;
+            var fixtureUpdates = new UpdateSettingsViewModel("0.3.46.0", _ => updateCheckFails ? throw new IOException("fixture-only")
+                : Task.FromResult<Ping.Windows.Core.Updates.WindowsUpdateCandidate?>(new(new(0, 3, 80, 0), "x64",
+                    new("https://0minping.vercel.app/downloads/windows/Ping-Windows-v0.3.80-x64.msix"))),
+                (_, _, _) => { updateInstalls++; return Task.CompletedTask; });
             var settingsVm = new SettingsWindowViewModel("민", HotkeyBinding.Defaults(), ScreenFaceQuickSendSettings.Default,
                 value => { savedSettings = value; UI.PingAppearance.Apply(value.AppearanceMode); }, () => { }, new FixtureStartup(), archiveRootPath: OutputDirectory,
                 ensureArchiveFolders: () => { }, deleteExpiredArchiveFiles: () => { }, openArchiveFolder: _ => Task.FromResult(false),
@@ -148,7 +153,7 @@ internal static class UiSmokeRunner
                         fixtureAccounts = fixtureAccounts.Select(row => row with { IsActive = false }).Append(new("created", "새 계정", DateTimeOffset.UtcNow, true)).ToArray();
                     else fixtureAccounts = fixtureAccounts.Where(row => row.UserId != change.UserId).ToArray();
                     return Task.CompletedTask;
-                });
+                }, updates: fixtureUpdates);
             var settings = new SettingsWindow(settingsVm);
             settings.Activate();
             Check(UI.WindowCaptureExclusion.IsApplied(settings), "settings declares exclusion from OS screen capture");
@@ -186,6 +191,29 @@ internal static class UiSmokeRunner
             await UntilAsync(() => accountChanges == 3 && accountCombo.Items.Count == 2 && !settingsVm.Accounts.IsBusy);
             Check(fixtureAccounts.All(row => row.UserId != "created"), "confirmed deletion invokes selected identity removal");
             await RenderAsync(settingsRoot, "settings-accounts.png");
+            var infoTabs = (TabView)settingsRoot.FindName("SettingsTabs");
+            infoTabs.SelectedIndex = (int)SettingsSection.Info;
+            await UntilAsync(() => (settingsRoot.FindName("CheckUpdateButton") as Button)?.IsLoaded == true);
+            var updateCheck = (Button)settingsRoot.FindName("CheckUpdateButton");
+            var updateInstall = (Button)settingsRoot.FindName("InstallUpdateButton");
+            await UntilAsync(() => updateCheck.IsLoaded);
+            Check(((TextBlock)settingsRoot.FindName("InstalledVersionText")).Text == "0.3.46.0", "info tab binds current Windows package version");
+            ((IInvokeProvider)new ButtonAutomationPeer(updateCheck).GetPattern(PatternInterface.Invoke)).Invoke();
+            await UntilAsync(() => !fixtureUpdates.IsBusy && fixtureUpdates.Status.Contains("다시"));
+            Check(!updateInstall.IsEnabled && updateCheck.IsEnabled, "failed update check exposes retry and prevents installation");
+            updateCheckFails = false;
+            ((IInvokeProvider)new ButtonAutomationPeer(updateCheck).GetPattern(PatternInterface.Invoke)).Invoke();
+            await UntilAsync(() => updateInstall.IsEnabled);
+            ((IInvokeProvider)new ButtonAutomationPeer(updateInstall).GetPattern(PatternInterface.Invoke)).Invoke();
+            await InvokeDialogButtonAsync(settingsRoot.XamlRoot, "취소");
+            Check(updateInstalls == 0, "update confirmation cancellation never invokes installation");
+            ((IInvokeProvider)new ButtonAutomationPeer(updateInstall).GetPattern(PatternInterface.Invoke)).Invoke();
+            await InvokeDialogButtonAsync(settingsRoot.XamlRoot, "설치");
+            await UntilAsync(() => updateInstalls == 1 && !fixtureUpdates.IsBusy);
+            Check(true, "confirmed update invokes fixture installer without actual package registration");
+            await RenderAsync(settingsRoot, "settings-updates.png");
+            infoTabs.SelectedIndex = (int)SettingsSection.General;
+            await UntilAsync(() => (settingsRoot.FindName("GeneralScroll") as ScrollViewer)?.IsLoaded == true);
             Check(Descendants(settingsRoot).OfType<TabViewItem>().All(tab => !tab.IsClosable), "settings sections cannot be accidentally closed");
             Check(settingsRoot.ActualWidth >= 400 && settingsRoot.ActualHeight >= 300, "settings client geometry provides usable layout");
             var generalScroll = (ScrollViewer)settingsRoot.FindName("GeneralScroll");

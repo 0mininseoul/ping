@@ -273,6 +273,16 @@
                         Foreground="{ThemeResource PingTextBrush}"
                         Text="Ping Windows" />
                     <TextBlock Foreground="{ThemeResource PingMutedBrush}" Text="Windows 11 24H2+" />
+                    <StackPanel DataContext="{Binding Updates}" Spacing="10">
+                        <TextBlock x:Name="InstalledVersionText" Text="{Binding CurrentVersion}" Foreground="{ThemeResource PingTextBrush}" />
+                        <TextBlock Text="{Binding Status}" TextWrapping="WrapWholeWords" Foreground="{ThemeResource PingMutedBrush}" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button x:Name="CheckUpdateButton" Content="업데이트 확인" Click="CheckUpdateButton_Click" IsEnabled="{Binding CanCheck}" />
+                            <Button x:Name="InstallUpdateButton" Content="업데이트 설치" Click="InstallUpdateButton_Click" IsEnabled="{Binding CanInstall}" />
+                            <Button x:Name="CancelUpdateButton" Content="취소" Click="CancelUpdateButton_Click" IsEnabled="{Binding CanCancel}" />
+                        </StackPanel>
+                        <ProgressRing IsActive="{Binding IsBusy}" Width="24" Height="24" HorizontalAlignment="Left" />
+                    </StackPanel>
                     <HyperlinkButton Content="릴리즈 및 설치 안내" NavigateUri="https://github.com/0mininseoul/ping/releases" />
                 </StackPanel>
                 </ScrollViewer>

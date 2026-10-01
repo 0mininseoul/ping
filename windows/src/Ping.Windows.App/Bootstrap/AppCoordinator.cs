@@ -80,6 +80,7 @@ public sealed class AppCoordinator : IDisposable
     private volatile bool changingAccount;
     internal bool IsDisposed => disposed;
     internal void ReportAccountTransitionFailure() => settingsWindow?.ReportAccountTransitionFailure();
+    internal void ReportUpdateFailure() => settingsWindow?.ReportUpdateFailure();
     internal Task<IReadOnlyList<StoredAccountSummary>> GetAccountsAsync(CancellationToken token) => supabaseClient.GetAccountsAsync(token);
 
     internal async Task ShutdownForAccountChangeAsync()

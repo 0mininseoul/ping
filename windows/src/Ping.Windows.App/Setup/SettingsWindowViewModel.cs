@@ -69,7 +69,8 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
         Func<CancellationToken, Task<CaptureDeviceCatalog>>? deviceCatalog = null,
         Func<CancellationToken, Task<PairingQrImage>>? pairingGenerator = null, Func<string?>? pairingUid = null,
         Func<CancellationToken, Task<IReadOnlyList<StoredAccountSummary>>>? loadAccounts = null,
-        Func<AccountChange, CancellationToken, Task>? changeAccount = null)
+        Func<AccountChange, CancellationToken, Task>? changeAccount = null,
+        UpdateSettingsViewModel? updates = null)
     {
         this.nickname = NormalizeNickname(nickname);
         nicknameDraft = this.nickname;
@@ -86,6 +87,11 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
         Pairing = new(pairingGenerator ?? (_ => throw new InvalidOperationException("Pairing session is unavailable.")), pairingUid ?? (() => null));
         Accounts = new(loadAccounts ?? (_ => Task.FromResult<IReadOnlyList<StoredAccountSummary>>([])),
             changeAccount ?? ((_, _) => throw new InvalidOperationException("Account management is unavailable.")));
+#if WINDOWS
+        Updates = updates ?? WindowsUpdateController.CreateViewModel();
+#else
+        Updates = updates ?? new("로컬 개발 빌드", _ => throw new InvalidOperationException(), (_, _, _) => Task.CompletedTask);
+#endif
         this.openRooms = openRooms;
         this.ensureArchiveFolders = ensureArchiveFolders ?? (() => new LocalArchive(ArchiveRootPath).EnsureFolders());
         this.deleteExpiredArchiveFiles = deleteExpiredArchiveFiles ?? (() => _ = new LocalArchive(ArchiveRootPath).DeleteExpiredFiles());
@@ -107,6 +113,7 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
     public DeviceSettingsViewModel Devices { get; }
     public DevicePairingViewModel Pairing { get; }
     public AccountSettingsViewModel Accounts { get; }
+    public UpdateSettingsViewModel Updates { get; }
 
     public bool AutoPlayIncoming
     {
@@ -633,7 +640,7 @@ public sealed partial class SettingsWindow : Window
         Ping.Windows.App.UI.WindowCaptureExclusion.Apply(this);
         Root.DataContext = viewModel;
         pairing = new(viewModel.Pairing, PairingImage);
-        Closed += (_, _) => { pairing.Dispose(); deviceLifetime.Cancel(); deviceLifetime.Dispose(); };
+        Closed += (_, _) => { pairing.Dispose(); viewModel.Updates.Dispose(); deviceLifetime.Cancel(); deviceLifetime.Dispose(); };
         Root.Loaded += (_, _) => { RefreshDevicesIfVisible(); _ = viewModel.Accounts.RefreshAsync(deviceLifetime.Token); };
         Ping.Windows.App.UI.SettingsWindowGeometry.Fit(this);
         _ = viewModel.RefreshStartupAsync();
@@ -671,6 +678,20 @@ public sealed partial class SettingsWindow : Window
     }
     public void ClearDevicePairing() => pairing.Clear();
     internal void ReportAccountTransitionFailure() => viewModel.Accounts.ReportTransitionFailure();
+    internal void ReportUpdateFailure() => viewModel.Updates.ReportFailure();
+    private async void CheckUpdateButton_Click(object sender, RoutedEventArgs args) => await viewModel.Updates.CheckAsync();
+    private void CancelUpdateButton_Click(object sender, RoutedEventArgs args) => viewModel.Updates.Cancel();
+    private async void InstallUpdateButton_Click(object sender, RoutedEventArgs args)
+    {
+        if (!viewModel.Updates.CanInstall) return;
+        var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
+        {
+            XamlRoot = Root.XamlRoot, Title = "업데이트를 설치할까요?",
+            Content = "패키지를 내려받아 확인한 후 진행 중인 촬영과 송수신을 종료하고 Ping을 다시 시작합니다. 계정·룸·설정은 유지됩니다.",
+            PrimaryButtonText = "설치", CloseButtonText = "취소", DefaultButton = Microsoft.UI.Xaml.Controls.ContentDialogButton.Close
+        };
+        if (await dialog.ShowAsync() == Microsoft.UI.Xaml.Controls.ContentDialogResult.Primary) await viewModel.Updates.InstallAsync();
+    }
     private async void RefreshPairingButton_Click(object sender, RoutedEventArgs args) => await viewModel.Pairing.OpenAsync();
 
     private async void RefreshDeviceListButton_Click(object sender, RoutedEventArgs args)
