@@ -16,6 +16,7 @@ void LiveEntryChecks(wchar_t const* directory, void (*check)(bool, char const*))
 void MicrophonePacketChecks(void (*check)(bool, char const*));
 void ScreenSnapshotChecks(wchar_t const* directory, void (*check)(bool, char const*));
 void CameraSampleChecks(void (*check)(bool, char const*));
+void CameraReaderChecks(wchar_t const* directory, void (*check)(bool, char const*));
 
 namespace
 {
@@ -157,6 +158,7 @@ int wmain(int argc, wchar_t* argv[])
         MicrophonePacketChecks(Check);
         ScreenSnapshotChecks(argv[1], Check);
         CameraSampleChecks(Check);
+        CameraReaderChecks(argv[1], Check);
         std::cout << "PASS: " << checks << " native synthetic composition checks. No device capture.\n";
         return 0;
     }

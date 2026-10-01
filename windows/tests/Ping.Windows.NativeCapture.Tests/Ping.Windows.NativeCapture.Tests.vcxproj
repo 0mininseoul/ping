@@ -35,6 +35,8 @@
     <ClCompile Include="MicrophonePacketTests.cpp" />
     <ClCompile Include="ScreenSnapshotTests.cpp" />
     <ClCompile Include="CameraSampleTests.cpp" />
+    <ClCompile Include="CameraReaderTests.cpp" />
+    <ClCompile Include="..\..\src\Ping.Windows.NativeCapture\src\CameraReaderSession.cpp" />
     <ClCompile Include="..\..\src\Ping.Windows.NativeCapture\src\CameraSampleNormalizer.cpp" />
     <ClCompile Include="..\..\src\Ping.Windows.NativeCapture\src\MicrophonePacketReader.cpp" />
     <ClCompile Include="..\..\src\Ping.Windows.NativeCapture\src\LiveRecording.cpp" />
