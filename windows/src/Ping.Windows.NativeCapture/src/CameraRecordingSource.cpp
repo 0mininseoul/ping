@@ -1,6 +1,6 @@
 #include "NativeRecordingSources.h"
 #include "CaptureCallbackGate.h"
-#include "CapturePixelView.h"
+#include "CameraSampleNormalizer.h"
 #include <mfapi.h>
 #include <mfidl.h>
 #include <mfreadwrite.h>
@@ -24,69 +24,18 @@ namespace Ping::Windows::NativeCapture
             std::shared_ptr<RecordingSourceState> Pipeline;
             ComPtr<IMFSourceReader> Reader;
             HANDLE Flushed = CreateEventW(nullptr, TRUE, FALSE, nullptr);
-            std::optional<LONGLONG> SampleOffset;
+            CameraSampleState Samples;
             ~CameraCallbackState() { if (Flushed) CloseHandle(Flushed); }
-        };
-        struct LockedBuffer
-        {
-            ComPtr<IMFMediaBuffer> Buffer;
-            ComPtr<IMF2DBuffer2> TwoD;
-            bool Locked = false;
-            ~LockedBuffer() { if (Locked) { if (TwoD) TwoD->Unlock2D(); else Buffer->Unlock(); } }
         };
         int ReadCameraPixels(std::shared_ptr<CameraCallbackState> const& state, IMFSample* sample, LONGLONG timestamp)
         {
             ComPtr<IMFMediaType> type;
-            HRESULT hr = state->Reader->GetCurrentMediaType(MF_SOURCE_READER_FIRST_VIDEO_STREAM, &type);
-            UINT32 width = 0, height = 0;
-            if (SUCCEEDED(hr)) hr = MFGetAttributeSize(type.Get(), MF_MT_FRAME_SIZE, &width, &height);
-            if (FAILED(hr) || width == 0 || height == 0 || width > 32768 || height > 32768) return PingCaptureNoCamera;
-            GUID subtype{};
-            if (FAILED(type->GetGUID(MF_MT_SUBTYPE, &subtype)) || subtype != MFVideoFormat_RGB32) return PingCaptureNoCamera;
-            LockedBuffer owned;
-            hr = sample->ConvertToContiguousBuffer(&owned.Buffer);
-            if (FAILED(hr)) return PingCaptureNoCamera;
-            BYTE* begin = nullptr; BYTE* scanline = nullptr; DWORD length = 0; LONG stride = 0;
-            if (SUCCEEDED(owned.Buffer.As(&owned.TwoD)))
-            {
-                hr = owned.TwoD->Lock2DSize(MF2DBuffer_LockFlags_Read, &scanline, &stride, &begin, &length);
-                if (FAILED(hr)) return PingCaptureNoCamera;
-            }
-            else
-            {
-                hr = owned.Buffer->Lock(&begin, nullptr, &length);
-                if (FAILED(hr)) return PingCaptureNoCamera;
-                UINT32 rawStride = 0;
-                if (SUCCEEDED(type->GetUINT32(MF_MT_DEFAULT_STRIDE, &rawStride))) stride = static_cast<LONG>(rawStride);
-                else hr = MFGetStrideForBitmapInfoHeader(MFVideoFormat_RGB32.Data1, width, &stride);
-                scanline = begin;
-                if (SUCCEEDED(hr) && stride < 0)
-                {
-                    auto offset = static_cast<std::uint64_t>(-static_cast<std::int64_t>(stride)) * (height - 1);
-                    if (offset >= length) hr = E_FAIL;
-                    else scanline += static_cast<size_t>(offset);
-                }
-            }
-            owned.Locked = true;
-            if (FAILED(hr) || !begin || !scanline || reinterpret_cast<std::uintptr_t>(scanline) < reinterpret_cast<std::uintptr_t>(begin))
-                return PingCaptureNoCamera;
-            auto offset = reinterpret_cast<std::uintptr_t>(scanline) - reinterpret_cast<std::uintptr_t>(begin);
-            CapturePixelView view{begin, length, offset, stride, {static_cast<int>(width), static_cast<int>(height)}};
-            auto side = static_cast<int>(std::min(width, height));
-            auto output = std::make_unique<CameraFrameResult>();
-            output->SourceSize = {state->Pipeline->Layout.FaceDiameter, state->Pipeline->Layout.FaceDiameter};
-            auto result = ResizeCapturePixels(view, {(static_cast<int>(width) - side) / 2, (static_cast<int>(height) - side) / 2, side, side},
-                output->SourceSize, output->BgraPixels, output->RowPitch);
-            if (result != PingCaptureSuccess) return PingCaptureNoCamera;
-            UINT64 qpc = 0;
-            if (SUCCEEDED(sample->GetUINT64(MFSampleExtension_DeviceTimestamp, &qpc)) && qpc <= INT64_MAX)
-                timestamp = static_cast<LONGLONG>(qpc);
-            else
-            {
-                if (!state->SampleOffset) state->SampleOffset = CaptureClockNow() - timestamp;
-                timestamp += *state->SampleOffset;
-            }
-            return state->Pipeline->SubmitCamera(std::move(output), timestamp);
+            if (FAILED(state->Reader->GetCurrentMediaType(MF_SOURCE_READER_FIRST_VIDEO_STREAM, &type))) return PingCaptureNoCamera;
+            std::unique_ptr<CameraFrameResult> frame;
+            LONGLONG qpc = 0;
+            auto result = NormalizeCameraSample(type.Get(), sample, state->Pipeline->Layout.FaceDiameter, timestamp,
+                CaptureClockNow(), state->Samples, frame, qpc);
+            return result == PingCaptureSuccess ? state->Pipeline->SubmitCamera(std::move(frame), qpc) : result;
         }
         class CameraCallback final : public Microsoft::WRL::RuntimeClass<Microsoft::WRL::RuntimeClassFlags<Microsoft::WRL::ClassicCom>, IMFSourceReaderCallback>
         {

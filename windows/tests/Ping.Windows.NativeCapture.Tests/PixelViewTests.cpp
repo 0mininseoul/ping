@@ -43,4 +43,16 @@ void PixelViewChecks(void (*check)(bool, char const*))
     view = {black.data(), black.size(), 0, 16, {4, 3}};
     check(ResizeCapturePixels(view, {0, 0, 4, 3}, {4, 3}, output, pitch) == PingCaptureSuccess && output[0] == 0,
         "valid black input remains valid media");
+    view = {source.data(), source.size(), 40, -20, {4, 3}};
+    check(ResizeCapturePixels(view, {0, 0, 4, 3}, {3, 4}, output, pitch, 90) == PingCaptureSuccess
+        && output[0] == 3 && output[1] == 0 && output[44] == 0 && output[45] == 2,
+        "counterclockwise90 rotates rectangular signedstride source without intermediate allocation");
+    check(ResizeCapturePixels(view, {0, 0, 4, 3}, {4, 3}, output, pitch, 180) == PingCaptureSuccess
+        && output[0] == 3 && output[1] == 2 && output[44] == 0 && output[45] == 0,
+        "counterclockwise180 preserves opposite rectangular source corners");
+    check(ResizeCapturePixels(view, {0, 0, 4, 3}, {3, 4}, output, pitch, 270) == PingCaptureSuccess
+        && output[0] == 0 && output[1] == 2 && output[44] == 3 && output[45] == 0,
+        "counterclockwise270 preserves rotated rectangular source corners");
+    check(ResizeCapturePixels(view, {0, 0, 4, 3}, {3, 4}, output, pitch, 45) == PingCaptureCaptureFailure,
+        "unsupported pixel rotation is rejected before row reads");
 }

@@ -77,6 +77,7 @@
     <ClInclude Include="include\MicrophonePacketReader.h" />
     <ClInclude Include="include\CapturePixelView.h" />
     <ClInclude Include="include\ScreenFrameContract.h" />
+    <ClInclude Include="include\CameraSampleNormalizer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Mp4SinkWriter.cpp" />
@@ -85,6 +86,7 @@
     <ClCompile Include="src\NativeRecordingSources.cpp" />
     <ClCompile Include="src\ScreenRecordingSource.cpp" />
     <ClCompile Include="src\CameraRecordingSource.cpp" />
+    <ClCompile Include="src\CameraSampleNormalizer.cpp" />
     <ClCompile Include="src\AudioRecordingSource.cpp" />
     <ClCompile Include="src\MicrophonePacketReader.cpp" />
     <ClCompile Include="src\CapturePixelView.cpp" />

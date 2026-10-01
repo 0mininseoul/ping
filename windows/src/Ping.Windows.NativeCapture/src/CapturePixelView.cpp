@@ -5,10 +5,11 @@
 namespace Ping::Windows::NativeCapture
 {
     int ResizeCapturePixels(CapturePixelView const& source, CaptureCrop crop, CaptureSize outputSize,
-        std::vector<std::uint8_t>& pixels, std::uint32_t& outputPitch)
+        std::vector<std::uint8_t>& pixels, std::uint32_t& outputPitch, int rotation)
     {
         auto size = source.SourceSize;
-        if (!source.Data || size.Width <= 0 || size.Height <= 0 || size.Width > 32768 || size.Height > 32768
+        if ((rotation != 0 && rotation != 90 && rotation != 180 && rotation != 270)
+            || !source.Data || size.Width <= 0 || size.Height <= 0 || size.Width > 32768 || size.Height > 32768
             || outputSize.Width <= 0 || outputSize.Height <= 0 || outputSize.Width > 1920 || outputSize.Height > 1920
             || crop.X < 0 || crop.Y < 0 || crop.Width <= 0 || crop.Height <= 0 || crop.Width > size.Width || crop.Height > size.Height
             || crop.X > size.Width - crop.Width || crop.Y > size.Height - crop.Height
@@ -35,13 +36,20 @@ namespace Ping::Windows::NativeCapture
 
         outputPitch = static_cast<std::uint32_t>(outputSize.Width) * 4;
         pixels.resize(static_cast<size_t>(outputPitch) * outputSize.Height);
+        auto rotatedWidth = rotation == 90 || rotation == 270 ? crop.Height : crop.Width;
+        auto rotatedHeight = rotation == 90 || rotation == 270 ? crop.Width : crop.Height;
         for (int y = 0; y < outputSize.Height; ++y)
         {
-            auto sourceY = crop.Y + static_cast<int>(static_cast<std::int64_t>(y) * crop.Height / outputSize.Height);
-            auto row = source.Data + static_cast<std::ptrdiff_t>(first + static_cast<std::int64_t>(sourceY) * stride);
+            auto rotatedY = static_cast<int>(static_cast<std::int64_t>(y) * rotatedHeight / outputSize.Height);
             for (int x = 0; x < outputSize.Width; ++x)
             {
-                auto sourceX = crop.X + static_cast<int>(static_cast<std::int64_t>(x) * crop.Width / outputSize.Width);
+                auto rotatedX = static_cast<int>(static_cast<std::int64_t>(x) * rotatedWidth / outputSize.Width);
+                int sourceX = rotatedX, sourceY = rotatedY;
+                if (rotation == 90) { sourceX = crop.Width - 1 - rotatedY; sourceY = rotatedX; }
+                else if (rotation == 180) { sourceX = crop.Width - 1 - rotatedX; sourceY = crop.Height - 1 - rotatedY; }
+                else if (rotation == 270) { sourceX = rotatedY; sourceY = crop.Height - 1 - rotatedX; }
+                sourceX += crop.X; sourceY += crop.Y;
+                auto row = source.Data + static_cast<std::ptrdiff_t>(first + static_cast<std::int64_t>(sourceY) * stride);
                 auto input = row + static_cast<size_t>(sourceX) * 4;
                 auto output = pixels.data() + static_cast<size_t>(y) * outputPitch + x * 4;
                 output[0] = input[0]; output[1] = input[1]; output[2] = input[2]; output[3] = 255;

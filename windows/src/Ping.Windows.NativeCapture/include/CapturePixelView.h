@@ -13,5 +13,5 @@ namespace Ping::Windows::NativeCapture
     };
 
     int ResizeCapturePixels(CapturePixelView const& source, CaptureCrop crop, CaptureSize outputSize,
-        std::vector<std::uint8_t>& pixels, std::uint32_t& outputPitch);
+        std::vector<std::uint8_t>& pixels, std::uint32_t& outputPitch, int counterClockwiseRotation = 0);
 }
