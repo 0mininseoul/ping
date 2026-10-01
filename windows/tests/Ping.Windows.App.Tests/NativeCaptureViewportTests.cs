@@ -48,6 +48,25 @@ public sealed class NativeCaptureViewportTests
         Assert.False(File.Exists(api.Path));
     }
     [Fact]
+    public async Task SelectedMicrophonePassesEndpointIdentityWithoutUsingWinRtInterfaceId()
+    {
+        var api = new Api();
+        var microphone = new CaptureMicrophoneDevice(@"\\?\interface#fixture", "{endpoint-fixture}");
+        var result = await new NativeCaptureEngine(api).RecordAsync(TimeSpan.FromSeconds(3), 0, new(), "camera", microphone, default);
+        try { Assert.Equal(microphone.EndpointId, api.SelectedMicrophone); Assert.Equal("camera", api.SelectedCamera); }
+        finally { File.Delete(result.FilePath); }
+    }
+
+    [Fact]
+    public async Task UnsupportedSelectedDevicesApiDoesNotFallBackToDefaultMicrophone()
+    {
+        var api = new Api { RejectSelectedDevices = true };
+        await Assert.ThrowsAsync<NotSupportedException>(() => new NativeCaptureEngine(api)
+            .RecordAsync(TimeSpan.FromSeconds(3), 0, new(), "camera", new("interface", "endpoint"), default));
+        Assert.Null(api.Handle);
+        Assert.False(File.Exists(api.Path));
+    }
+    [Fact]
     public async Task RecordingForwardsImmutableViewportAndNativeParameters()
     {
         var api = new Api();
@@ -112,7 +131,8 @@ public sealed class NativeCaptureViewportTests
         var api = new Api { WaitForCancellation = true };
         using var cancellation = new CancellationTokenSource();
         var viewport = new ScreenCaptureViewport(2);
-        var owned = new OwnedScreenFaceCaptureEngine(camera, new NativeCaptureEngine(api), selectCamera: _ => Task.FromResult("fixture-camera"));
+        var owned = new OwnedScreenFaceCaptureEngine(camera, new NativeCaptureEngine(api), selectCamera: _ => Task.FromResult("fixture-camera"),
+            selectMicrophone: _ => Task.FromResult(new CaptureMicrophoneDevice("fixture-interface", "fixture-endpoint")));
         var operation = owned.RecordAsync(TimeSpan.FromSeconds(3), 0, viewport, cancellation.Token);
         await api.Started.Task.WaitAsync(TimeSpan.FromSeconds(3));
         cancellation.Cancel();
@@ -121,6 +141,7 @@ public sealed class NativeCaptureViewportTests
             await api.Cancelled.Task.WaitAsync(TimeSpan.FromSeconds(3));
             Assert.True(camera.IsBusy);
             Assert.Same(viewport, api.Viewport);
+            Assert.Equal("fixture-endpoint", api.SelectedMicrophone);
         }
         finally { api.Finish.Set(); }
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => operation);
@@ -131,6 +152,8 @@ public sealed class NativeCaptureViewportTests
     {
         public ScreenCaptureViewport? Viewport;
         public string? SelectedCamera;
+        public string? SelectedMicrophone;
+        public bool RejectSelectedDevices;
         public bool RejectSelectedCamera;
         public bool BlockSelfTest;
         public SafeWaitHandle? Handle;
@@ -156,6 +179,13 @@ public sealed class NativeCaptureViewportTests
         }
         public int Preview(string path, int monitor, ScreenCaptureViewport viewport, SafeWaitHandle cancellationEvent, out double aspect)
             => Execute(path, monitor, viewport, cancellationEvent, out aspect);
+        public int Record(string path, int duration, int monitor, double faceRatio, ScreenCaptureViewport viewport,
+            string cameraDeviceId, string microphoneEndpointId, SafeWaitHandle cancellationEvent, out double aspect)
+        {
+            SelectedCamera = cameraDeviceId; SelectedMicrophone = microphoneEndpointId;
+            if (RejectSelectedDevices) throw new NotSupportedException("fixture V4 unavailable");
+            return Record(path, duration, monitor, faceRatio, viewport, cancellationEvent, out aspect);
+        }
         public int SelfTest()
         {
             if (BlockSelfTest)

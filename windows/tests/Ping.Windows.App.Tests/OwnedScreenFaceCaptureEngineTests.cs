@@ -120,4 +120,64 @@ public sealed class OwnedScreenFaceCaptureEngineTests
         public Task<ScreenFacePreviewResult> CapturePreviewAsync(int monitor, CancellationToken token) => throw new NotSupportedException();
         public Task<ScreenCaptureSelfTestResult> SelfTestAsync() => throw new NotSupportedException();
     }
+
+    [Fact]
+    public async Task RecordingUsesBothDevicesAlreadySelectedForPreview()
+    {
+        var camera = new CameraOwnership();
+        using var lease = camera.TryAcquire(CameraPurpose.Manual)!;
+        await lease.CameraSelection.GetAsync(_ => Task.FromResult("preview-camera"));
+        var microphone = new CaptureMicrophoneDevice("preview-microphone-interface", "preview-microphone-endpoint");
+        await lease.MicrophoneSelection.GetAsync(_ => Task.FromResult(microphone));
+        var native = new DeviceBoundEngine();
+        await new OwnedScreenFaceCaptureEngine(camera, native, lease,
+            _ => throw new Exception("must reuse camera"), _ => throw new Exception("must reuse microphone"))
+            .RecordAsync(TimeSpan.FromSeconds(3), 0, default);
+        Assert.Equal("preview-camera", native.Camera);
+        Assert.Same(microphone, native.Microphone);
+        Assert.True(camera.IsBusy);
+    }
+
+    [Fact]
+    public async Task CancelDuringMicrophoneSelectionWaitsAndNeverStartsNativeFallback()
+    {
+        var camera = new CameraOwnership();
+        var native = new DeviceBoundEngine();
+        var ready = new TaskCompletionSource<CaptureMicrophoneDevice>(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var cancellation = new CancellationTokenSource();
+        var recording = new OwnedScreenFaceCaptureEngine(camera, native,
+            selectCamera: _ => Task.FromResult("camera"), selectMicrophone: _ => ready.Task)
+            .RecordAsync(TimeSpan.FromSeconds(3), 0, cancellation.Token);
+        cancellation.Cancel();
+        Assert.False(recording.IsCompleted);
+        Assert.True(camera.IsBusy);
+        ready.SetResult(new("interface", "endpoint"));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => recording);
+        Assert.Null(native.Camera);
+        Assert.False(camera.IsBusy);
+    }
+
+    [Fact]
+    public async Task MissingMicrophoneFailsWithoutStartingAnUnselectedNativeRecording()
+    {
+        var camera = new CameraOwnership();
+        var native = new DeviceBoundEngine();
+        await Assert.ThrowsAsync<InvalidOperationException>(() => new OwnedScreenFaceCaptureEngine(camera, native,
+            selectCamera: _ => Task.FromResult("camera"), selectMicrophone: _ => throw new InvalidOperationException("unplugged"))
+            .RecordAsync(TimeSpan.FromSeconds(3), 0, default));
+        Assert.Null(native.Camera);
+        Assert.False(camera.IsBusy);
+    }
+
+    private sealed class DeviceBoundEngine : IScreenFaceCaptureEngine, IDeviceBoundScreenCaptureEngine
+    {
+        public string? Camera;
+        public CaptureMicrophoneDevice? Microphone;
+        public Task<ScreenFaceCaptureResult> RecordAsync(TimeSpan duration, int monitor, ScreenCaptureViewport viewport,
+            string cameraDeviceId, CaptureMicrophoneDevice microphone, CancellationToken token)
+        { Camera = cameraDeviceId; Microphone = microphone; return Task.FromResult(new ScreenFaceCaptureResult("fixture.mp4", 1)); }
+        public Task<ScreenFaceCaptureResult> RecordAsync(TimeSpan duration, int monitor, CancellationToken token) => throw new Exception("unselected recording");
+        public Task<ScreenFacePreviewResult> CapturePreviewAsync(int monitor, CancellationToken token) => throw new NotSupportedException();
+        public Task<ScreenCaptureSelfTestResult> SelfTestAsync() => throw new NotSupportedException();
+    }
 }

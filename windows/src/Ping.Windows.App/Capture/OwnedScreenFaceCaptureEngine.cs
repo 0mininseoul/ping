@@ -3,7 +3,8 @@ using Ping.Windows.Core.Capture;
 namespace Ping.Windows.App.Capture;
 
 public sealed class OwnedScreenFaceCaptureEngine(CameraOwnership camera, IScreenFaceCaptureEngine engine, CameraLease? borrowed = null,
-    Func<CancellationToken, Task<string>>? selectCamera = null)
+    Func<CancellationToken, Task<string>>? selectCamera = null,
+    Func<CancellationToken, Task<CaptureMicrophoneDevice>>? selectMicrophone = null)
     : IScreenFaceCaptureEngine
 {
     public async Task<ScreenFaceCaptureResult> RecordAsync(TimeSpan duration, int monitorIndex, CancellationToken token)
@@ -19,6 +20,12 @@ public sealed class OwnedScreenFaceCaptureEngine(CameraOwnership camera, IScreen
         var active = borrowed ?? lease ?? throw new InvalidOperationException("카메라가 다른 촬영에서 사용 중입니다.");
         using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(token, active.Token);
         cancellation.Token.ThrowIfCancellationRequested();
+        if (engine is IDeviceBoundScreenCaptureEngine devices)
+        {
+            var deviceId = await active.CameraSelection.GetAsync(selectCamera ?? SelectDefaultCameraAsync, cancellation.Token);
+            var microphone = await active.MicrophoneSelection.GetAsync(selectMicrophone ?? SelectDefaultMicrophoneAsync, cancellation.Token);
+            return await devices.RecordAsync(duration, monitor, viewport, deviceId, microphone, cancellation.Token);
+        }
         if (engine is ICameraBoundScreenCaptureEngine selected)
         {
             var deviceId = await active.CameraSelection.GetAsync(selectCamera ?? SelectDefaultCameraAsync, cancellation.Token);
@@ -38,6 +45,15 @@ public sealed class OwnedScreenFaceCaptureEngine(CameraOwnership camera, IScreen
         return CaptureCameraResolver.ResolveAsync(token);
 #else
         throw new PlatformNotSupportedException("A camera resolver is required outside Windows.");
+#endif
+    }
+
+    private static Task<CaptureMicrophoneDevice> SelectDefaultMicrophoneAsync(CancellationToken token)
+    {
+#if WINDOWS
+        return CaptureMicrophoneResolver.ResolveAsync(token);
+#else
+        throw new PlatformNotSupportedException("A microphone resolver is required outside Windows.");
 #endif
     }
 }

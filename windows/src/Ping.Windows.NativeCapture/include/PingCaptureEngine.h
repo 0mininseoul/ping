@@ -43,6 +43,14 @@ int PingCapture_RecordScreenFaceMp4V3(const wchar_t* outputPath, int durationMs,
     HANDLE cancellationEvent, double* outAspectRatio);
 
 extern "C" __declspec(dllexport)
+int PingCapture_GetDefaultMicrophoneIdentity(wchar_t* endpointId, int endpointCapacity, wchar_t* instanceId, int instanceCapacity);
+
+extern "C" __declspec(dllexport)
+int PingCapture_RecordScreenFaceMp4V4(const wchar_t* outputPath, int durationMs, int targetMonitorIndex,
+    double faceDiameterRatio, double zoom, double centerX, double centerY, const wchar_t* cameraDeviceId,
+    const wchar_t* microphoneEndpointId, HANDLE cancellationEvent, double* outAspectRatio);
+
+extern "C" __declspec(dllexport)
 int PingCapture_WriteScreenPreviewBmpV2(const wchar_t* outputPath, int targetMonitorIndex,
     double zoom, double centerX, double centerY, HANDLE cancellationEvent, double* outAspectRatio);
 

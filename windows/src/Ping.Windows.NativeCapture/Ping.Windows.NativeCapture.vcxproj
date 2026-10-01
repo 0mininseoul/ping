@@ -75,6 +75,7 @@
     <ClInclude Include="include\NativeRecordingSources.h" />
     <ClInclude Include="include\CaptureCallbackGate.h" />
     <ClInclude Include="include\MicrophonePacketReader.h" />
+    <ClInclude Include="include\MicrophoneIdentity.h" />
     <ClInclude Include="include\CapturePixelView.h" />
     <ClInclude Include="include\ScreenFrameContract.h" />
     <ClInclude Include="include\CameraSampleNormalizer.h" />
@@ -91,6 +92,7 @@
     <ClCompile Include="src\CameraReaderSession.cpp" />
     <ClCompile Include="src\AudioRecordingSource.cpp" />
     <ClCompile Include="src\MicrophonePacketReader.cpp" />
+    <ClCompile Include="src\MicrophoneIdentity.cpp" />
     <ClCompile Include="src\CapturePixelView.cpp" />
     <ClCompile Include="src\PingCaptureEngine.cpp" />
     <ClCompile Include="src\ScreenFaceCompositor.cpp" />

@@ -1,5 +1,6 @@
 #include "PingCaptureEngine.h"
 #include "LiveRecording.h"
+#include "MicrophoneIdentity.h"
 #include <chrono>
 #include <cstring>
 #include <cmath>
@@ -11,10 +12,15 @@ std::atomic<LONGLONG> FixtureAudioDrift{0};
 HANDLE FixtureDrainRelease = nullptr;
 Ping::Windows::NativeCapture::CaptureViewport FixtureViewport{};
 std::wstring FixtureCameraDevice;
+std::wstring FixtureMicrophoneDevice;
+Microsoft::WRL::ComPtr<IMMDevice> FixtureMicrophoneEndpoint;
+HRESULT FixtureMicrophoneResult = HRESULT_FROM_WIN32(ERROR_NOT_FOUND);
 int FixturePreviewMode = 0;
 Ping::Windows::NativeCapture::CaptureViewport FixturePreviewViewport{};
 namespace Ping::Windows::NativeCapture
 {
+    HRESULT GetDefaultMicrophoneEndpoint(IMMDevice** endpoint)
+    { if (FAILED(FixtureMicrophoneResult)) return FixtureMicrophoneResult; return FixtureMicrophoneEndpoint.CopyTo(endpoint); }
     int CaptureOneMonitorFrame(int, MonitorCaptureResult&) { ++FixtureSourceStarts; return PingCaptureNoMonitor; }
     int CaptureMonitorPreviewFrame(int, CaptureViewport viewport, HANDLE, MonitorCaptureResult& result)
     {
@@ -102,12 +108,14 @@ namespace Ping::Windows::NativeCapture
     }
 
     int CreateLiveRecordingProvider(int, double faceRatio, CaptureViewport viewport, int durationMs,
-        OutputLayout& layout, std::unique_ptr<IRecordingFrameProvider>& provider, std::wstring const& cameraDeviceId)
+        OutputLayout& layout, std::unique_ptr<IRecordingFrameProvider>& provider, std::wstring const& cameraDeviceId,
+        std::wstring const& microphoneEndpointId)
     {
         auto mode = FixtureLiveMode.load();
         if (!mode) return PingCaptureNoMonitor;
         FixtureViewport = viewport;
         FixtureCameraDevice = cameraDeviceId;
+        FixtureMicrophoneDevice = microphoneEndpointId;
         layout = CreateScreenFaceLayout({960, 540}, faceRatio, 540);
         auto state = std::make_shared<RecordingSourceState>(layout, durationMs);
         std::vector<std::unique_ptr<IRecordingSource>> sources;

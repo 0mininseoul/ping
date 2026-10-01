@@ -10,6 +10,7 @@ extern HANDLE FixtureDrainRelease;
 extern std::atomic<LONGLONG> FixtureAudioDrift;
 extern CaptureViewport FixtureViewport;
 extern std::wstring FixtureCameraDevice;
+extern std::wstring FixtureMicrophoneDevice;
 
 void LiveEntryChecks(wchar_t const* directory, void (*check)(bool, char const*))
 {
@@ -57,5 +58,16 @@ void LiveEntryChecks(wchar_t const* directory, void (*check)(bool, char const*))
     check(PingCapture_RecordScreenFaceMp4V3(path.c_str(), 1000, 0, .32, 1, .5, .5, nullptr, nullptr, &aspect) == PingCaptureNoCamera
         && PingCapture_RecordScreenFaceMp4V3(path.c_str(), 1000, 0, .32, 1, .5, .5, L"", nullptr, &aspect) == PingCaptureNoCamera
         && FixtureLiveStarted == starts, "V3 missing camera identity does not start a default camera");
+    path = std::wstring(directory) + L"\\live-selected-devices.mp4";
+    result = PingCapture_RecordScreenFaceMp4V4(path.c_str(), 1000, 0, .32, 2, .6, .4,
+        L"camera-opaque-fixture", L"{microphone-endpoint-fixture}", nullptr, &aspect);
+    check(result == PingCaptureSuccess && FixtureCameraDevice == L"camera-opaque-fixture"
+        && FixtureMicrophoneDevice == L"{microphone-endpoint-fixture}",
+        "V4 recording forwards exact camera and microphone endpoint identities through owned producers to MP4 writer");
+    starts = FixtureLiveStarted.load();
+    check(PingCapture_RecordScreenFaceMp4V4(path.c_str(), 1000, 0, .32, 1, .5, .5, L"camera", nullptr, nullptr, &aspect) == PingCaptureNoMicrophone
+        && PingCapture_RecordScreenFaceMp4V4(path.c_str(), 1000, 0, .32, 1, .5, .5, L"camera", L"", nullptr, &aspect) == PingCaptureNoMicrophone
+        && PingCapture_RecordScreenFaceMp4V4(path.c_str(), 1000, 0, .32, 1, .5, .5, nullptr, L"mic", nullptr, &aspect) == PingCaptureNoCamera
+        && FixtureLiveStarted == starts, "V4 missing selected device cannot activate any default source");
     FixtureLiveMode = 0;
 }

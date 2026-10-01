@@ -10,7 +10,7 @@ namespace
 {
     int RecordScreenFace(const wchar_t* outputPath, int durationMs, int targetMonitorIndex,
         double faceDiameterRatio, double zoom, double centerX, double centerY, const wchar_t* cameraDeviceId,
-        HANDLE cancellationEvent, double* outAspectRatio);
+        const wchar_t* microphoneEndpointId, HANDLE cancellationEvent, double* outAspectRatio);
     bool IsValidDuration(int durationMs)
     {
         return durationMs > 0 && durationMs <= 30'000;
@@ -55,7 +55,7 @@ int PingCapture_RecordScreenFaceMp4V2(const wchar_t* outputPath, int durationMs,
     double faceDiameterRatio, double zoom, double centerX, double centerY, HANDLE cancellationEvent, double* outAspectRatio)
 {
     return RecordScreenFace(outputPath, durationMs, targetMonitorIndex, faceDiameterRatio, zoom, centerX, centerY,
-        nullptr, cancellationEvent, outAspectRatio);
+        nullptr, nullptr, cancellationEvent, outAspectRatio);
 }
 
 extern "C" __declspec(dllexport)
@@ -69,14 +69,26 @@ int PingCapture_RecordScreenFaceMp4V3(const wchar_t* outputPath, int durationMs,
         return PingCaptureNoCamera;
     }
     return RecordScreenFace(outputPath, durationMs, targetMonitorIndex, faceDiameterRatio, zoom, centerX, centerY,
-        cameraDeviceId, cancellationEvent, outAspectRatio);
+        cameraDeviceId, nullptr, cancellationEvent, outAspectRatio);
+}
+
+extern "C" __declspec(dllexport)
+int PingCapture_RecordScreenFaceMp4V4(const wchar_t* outputPath, int durationMs, int targetMonitorIndex,
+    double faceDiameterRatio, double zoom, double centerX, double centerY, const wchar_t* cameraDeviceId,
+    const wchar_t* microphoneEndpointId, HANDLE cancellationEvent, double* outAspectRatio)
+{
+    if (outAspectRatio) *outAspectRatio = 1;
+    if (!cameraDeviceId || !cameraDeviceId[0]) return PingCaptureNoCamera;
+    if (!microphoneEndpointId || !microphoneEndpointId[0]) return PingCaptureNoMicrophone;
+    return RecordScreenFace(outputPath, durationMs, targetMonitorIndex, faceDiameterRatio, zoom, centerX, centerY,
+        cameraDeviceId, microphoneEndpointId, cancellationEvent, outAspectRatio);
 }
 
 namespace
 {
 int RecordScreenFace(const wchar_t* outputPath, int durationMs, int targetMonitorIndex,
     double faceDiameterRatio, double zoom, double centerX, double centerY, const wchar_t* cameraDeviceId,
-    HANDLE cancellationEvent, double* outAspectRatio)
+    const wchar_t* microphoneEndpointId, HANDLE cancellationEvent, double* outAspectRatio)
 try
 {
     if (outAspectRatio != nullptr)
@@ -94,7 +106,7 @@ try
     OutputLayout layout{};
     std::unique_ptr<IRecordingFrameProvider> provider;
     auto sourceResult = CreateLiveRecordingProvider(targetMonitorIndex, faceDiameterRatio, {zoom, centerX, centerY}, durationMs,
-        layout, provider, cameraDeviceId ? cameraDeviceId : L"");
+        layout, provider, cameraDeviceId ? cameraDeviceId : L"", microphoneEndpointId ? microphoneEndpointId : L"");
     if (sourceResult != PingCaptureSuccess || !provider) return NormalizeCaptureFailure(sourceResult);
     if (outAspectRatio != nullptr)
     {

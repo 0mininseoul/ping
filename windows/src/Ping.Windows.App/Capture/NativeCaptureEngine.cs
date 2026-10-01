@@ -54,7 +54,13 @@ public interface ICameraBoundScreenCaptureEngine
         string cameraDeviceId, CancellationToken token);
 }
 
-public sealed class NativeCaptureEngine(INativeScreenCaptureApi? nativeApi = null) : IScreenFaceCaptureEngine, ICameraBoundScreenCaptureEngine
+public interface IDeviceBoundScreenCaptureEngine
+{
+    Task<ScreenFaceCaptureResult> RecordAsync(TimeSpan duration, int monitorIndex, ScreenCaptureViewport viewport,
+        string cameraDeviceId, CaptureMicrophoneDevice microphone, CancellationToken token);
+}
+
+public sealed class NativeCaptureEngine(INativeScreenCaptureApi? nativeApi = null) : IScreenFaceCaptureEngine, ICameraBoundScreenCaptureEngine, IDeviceBoundScreenCaptureEngine
 {
     private readonly INativeScreenCaptureApi api = nativeApi ?? new NativeScreenCaptureApi();
     private const double FaceDiameterRatio = 0.32;
@@ -67,18 +73,27 @@ public sealed class NativeCaptureEngine(INativeScreenCaptureApi? nativeApi = nul
 
     public Task<ScreenFaceCaptureResult> RecordAsync(TimeSpan duration, int monitorIndex,
         ScreenCaptureViewport viewport, CancellationToken cancellationToken)
-        => RecordCoreAsync(duration, monitorIndex, viewport, null, cancellationToken);
+        => RecordCoreAsync(duration, monitorIndex, viewport, null, null, cancellationToken);
 
     public Task<ScreenFaceCaptureResult> RecordAsync(TimeSpan duration, int monitorIndex, ScreenCaptureViewport viewport,
         string cameraDeviceId, CancellationToken token)
     {
         if (string.IsNullOrWhiteSpace(cameraDeviceId) || cameraDeviceId.Contains('\0'))
             throw new ArgumentException("A selected camera identity is required.", nameof(cameraDeviceId));
-        return RecordCoreAsync(duration, monitorIndex, viewport, cameraDeviceId, token);
+        return RecordCoreAsync(duration, monitorIndex, viewport, cameraDeviceId, null, token);
+    }
+
+    public Task<ScreenFaceCaptureResult> RecordAsync(TimeSpan duration, int monitorIndex, ScreenCaptureViewport viewport,
+        string cameraDeviceId, CaptureMicrophoneDevice microphone, CancellationToken token)
+    {
+        if (string.IsNullOrWhiteSpace(cameraDeviceId) || cameraDeviceId.Contains('\0'))
+            throw new ArgumentException("A selected camera identity is required.", nameof(cameraDeviceId));
+        ArgumentNullException.ThrowIfNull(microphone);
+        return RecordCoreAsync(duration, monitorIndex, viewport, cameraDeviceId, microphone, token);
     }
 
     private async Task<ScreenFaceCaptureResult> RecordCoreAsync(TimeSpan duration, int monitorIndex,
-        ScreenCaptureViewport viewport, string? cameraDeviceId, CancellationToken cancellationToken)
+        ScreenCaptureViewport viewport, string? cameraDeviceId, CaptureMicrophoneDevice? microphone, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(viewport);
         if (duration <= TimeSpan.Zero || duration > TimeSpan.FromSeconds(30))
@@ -99,7 +114,9 @@ public sealed class NativeCaptureEngine(INativeScreenCaptureApi? nativeApi = nul
         try
         {
             result = await Task.Run(
-                () => cameraDeviceId is null ? api.Record(
+                () => microphone is not null ? api.Record(outputPath, checked((int)Math.Round(duration.TotalMilliseconds)),
+                    monitorIndex, FaceDiameterRatio, viewport, cameraDeviceId!, microphone.EndpointId,
+                    nativeCancellation.SafeWaitHandle, out aspectRatio) : cameraDeviceId is null ? api.Record(
                     outputPath,
                     checked((int)Math.Round(duration.TotalMilliseconds)),
                     monitorIndex,

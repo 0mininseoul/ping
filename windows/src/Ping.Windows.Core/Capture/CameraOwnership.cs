@@ -73,11 +73,13 @@ public sealed class CameraLease : IDisposable
         Purpose = purpose;
         Token = cancellation.Token;
         CameraSelection = new(Token);
+        MicrophoneSelection = new(Token, _ => { });
     }
 
     public CameraPurpose Purpose { get; }
     public CancellationToken Token { get; }
     public CaptureCameraSelection CameraSelection { get; }
+    public CaptureDeviceSelection<CaptureMicrophoneDevice> MicrophoneSelection { get; }
     internal Task Released => released.Task;
 
     internal void Interrupt()

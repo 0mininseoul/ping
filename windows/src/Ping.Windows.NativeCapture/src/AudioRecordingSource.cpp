@@ -1,5 +1,6 @@
 #include "NativeRecordingSources.h"
 #include "MicrophonePacketReader.h"
+#include "MicrophoneIdentity.h"
 #include <audioclient.h>
 #include <mmdeviceapi.h>
 #include <cstring>
@@ -9,6 +10,14 @@ using Microsoft::WRL::ComPtr;
 
 namespace Ping::Windows::NativeCapture
 {
+    HRESULT GetDefaultMicrophoneEndpoint(IMMDevice** endpoint)
+    {
+        if (!endpoint) return E_POINTER;
+        *endpoint = nullptr;
+        ComPtr<IMMDeviceEnumerator> enumerator;
+        auto hr = CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_ALL, IID_PPV_ARGS(&enumerator));
+        return FAILED(hr) ? hr : enumerator->GetDefaultAudioEndpoint(eCapture, eCommunications, endpoint);
+    }
     namespace
     {
         struct Apartment

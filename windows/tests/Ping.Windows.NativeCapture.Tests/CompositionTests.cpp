@@ -14,6 +14,7 @@ void PixelViewChecks(void (*check)(bool, char const*));
 void LiveRecordingChecks(void (*check)(bool, char const*));
 void LiveEntryChecks(wchar_t const* directory, void (*check)(bool, char const*));
 void MicrophonePacketChecks(void (*check)(bool, char const*));
+void MicrophoneIdentityChecks(void (*check)(bool, char const*));
 void ScreenSnapshotChecks(wchar_t const* directory, void (*check)(bool, char const*));
 void CameraSampleChecks(void (*check)(bool, char const*));
 void CameraReaderChecks(wchar_t const* directory, void (*check)(bool, char const*));
@@ -156,6 +157,7 @@ int wmain(int argc, wchar_t* argv[])
         LiveRecordingChecks(Check);
         LiveEntryChecks(argv[1], Check);
         MicrophonePacketChecks(Check);
+        MicrophoneIdentityChecks(Check);
         ScreenSnapshotChecks(argv[1], Check);
         CameraSampleChecks(Check);
         CameraReaderChecks(argv[1], Check);
