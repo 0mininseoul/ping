@@ -47,11 +47,17 @@ internal static class AutoReplySmoke
             check(adapter.IsSessionMonitoringReady && adapter.IsDisplayMonitoringReady,
                 "real display power and session lock subscriptions register successfully");
             var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(owner);
+            // This synthetic transition must not depend on the host's display or desktop state.
+            activity.SetDisplayAwake(true);
+            activity.SetSuspended(false);
+            activity.SetLocked(false);
+            check(!activity.IsBlocked, "owned fixture starts its lock transition with capture allowed");
             var generation = activity.Generation;
             SendMessage(hwnd, 0x02b1, new IntPtr(7), IntPtr.Zero);
-            check(activity.IsBlocked, "owned fixture lock notification blocks automatic capture");
+            check(activity.IsBlocked && activity.Generation > generation, "owned fixture lock notification blocks automatic capture");
+            var lockedGeneration = activity.Generation;
             SendMessage(hwnd, 0x02b1, new IntPtr(8), IntPtr.Zero);
-            check(activity.Generation > generation, "owned fixture unlock never erases in-flight interruption");
+            check(activity.Generation == lockedGeneration, "owned fixture unlock never erases in-flight interruption");
         }
         check(activity.IsBlocked, "power adapter disposal blocks capture and removes native registrations");
     }
