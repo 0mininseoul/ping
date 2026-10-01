@@ -77,6 +77,22 @@ public sealed class AppCoordinator : IDisposable
     private TaskCompletionSource? quickSendFinished;
     private Task shutdown = Task.CompletedTask;
     private bool disposed;
+    private volatile bool changingAccount;
+    internal bool IsDisposed => disposed;
+    internal void ReportAccountTransitionFailure() => settingsWindow?.ReportAccountTransitionFailure();
+    internal Task<IReadOnlyList<StoredAccountSummary>> GetAccountsAsync(CancellationToken token) => supabaseClient.GetAccountsAsync(token);
+
+    internal async Task ShutdownForAccountChangeAsync()
+    {
+        changingAccount = true;
+        camera.InterruptAutomatic();
+        settingsWindow?.ClearDevicePairing();
+        try { await supabaseClient.RetireAsync(); }
+        catch { changingAccount = false; throw; }
+        Dispose();
+        await shutdown;
+        mainWindow.DetachMessenger();
+    }
 
     public AppCoordinator(MainWindow mainWindow)
         : this(
@@ -132,7 +148,7 @@ public sealed class AppCoordinator : IDisposable
             activeHotkeyRegistrationsProvider: () => lastHotkeyRegistrations,
             cameraOwnership: camera);
         autoFaceReply = new(camera, captureActivity, appStartedAt,
-            () => !disposed && currentUid is { } uid && connectionSupervisor.State is not (ConnectionState.SessionRejected or ConnectionState.ConfigurationRequired)
+            () => !disposed && !changingAccount && currentUid is { } uid && connectionSupervisor.State is not (ConnectionState.SessionRejected or ConnectionState.ConfigurationRequired)
                 ? new(uid, CurrentNickname, quickSendSettings.Preferences.AllowsLocalSave) : null,
             HasAutomaticCaptureAccess, RecordAutomaticReplyAsync, ShowAutoReplyIndicatorAsync,
             messageService.SendAutoReplyAsync, path => File.Delete(path), onError: _ => Debug.WriteLine("Ping automatic face reply failed."));
@@ -189,6 +205,7 @@ public sealed class AppCoordinator : IDisposable
     public void Execute(HotkeyCommand command)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
+        if (changingAccount) return;
 
         switch (command)
         {
@@ -269,6 +286,9 @@ public sealed class AppCoordinator : IDisposable
         camera.InterruptAutomatic();
         faceMirrorWindow?.Close();
         screenFaceMirrorWindow?.Close();
+        settingsWindow?.Close();
+        roomManagerWindow?.Close();
+        onboardingWindow?.Close();
         connectionLifecycle?.Dispose();
         connectionSupervisor.StateChanged -= HandleConnectionStateChanged;
         shutdown = DisposeConnectionAsync();
@@ -288,6 +308,7 @@ public sealed class AppCoordinator : IDisposable
 
     private async Task DisposeConnectionAsync()
     {
+        if (historyWindow is not null) await historyWindow.DetachAsync();
         await connectionSupervisor.StopAsync();
         await incomingObserver.DisposeAsync();
         await realtime.DisposeAsync();
@@ -365,6 +386,7 @@ public sealed class AppCoordinator : IDisposable
 
     private void OpenRoomManagerWindow()
     {
+        if (disposed || changingAccount) return;
         if (roomManagerWindow is not null)
         {
             roomManagerWindow.RefreshProfileNickname(CurrentNickname);
@@ -384,7 +406,7 @@ public sealed class AppCoordinator : IDisposable
         {
             viewModel.RoomsChanged -= HandleRoomManagerRoomsChanged;
             roomManagerWindow = null;
-            connectionSupervisor.RequestReconnect();
+            if (!disposed) connectionSupervisor.RequestReconnect();
         };
         roomManagerWindow.Activate();
     }
@@ -396,6 +418,7 @@ public sealed class AppCoordinator : IDisposable
 
     private void OpenHistoryWindow(string? preferredRoomId = null, string? preferredChatId = null)
     {
+        if (disposed || changingAccount) return;
         if (historyWindow is not null)
         {
             historyWindow.Activate();
@@ -434,8 +457,9 @@ public sealed class AppCoordinator : IDisposable
         historyWindow.Activate();
     }
 
-    private void OpenSettingsWindow(SettingsSection section = SettingsSection.General)
+    internal void OpenSettingsWindow(SettingsSection section = SettingsSection.General)
     {
+        if (disposed || changingAccount) return;
         if (settingsWindow is not null)
         {
             settingsWindow.RefreshSettings(quickSendSettings);
@@ -462,7 +486,9 @@ public sealed class AppCoordinator : IDisposable
             {
                 if (currentUid is null) throw new InvalidOperationException("Ping session is not ready.");
                 return PairingQrRenderer.Render(await this.supabaseClient.ExportDeviceHandoffAsync(token));
-            }, pairingUid: () => currentUid));
+            }, pairingUid: () => currentUid,
+            loadAccounts: token => ((App)Application.Current).GetAccountsAsync(token),
+            changeAccount: (change, token) => ((App)Application.Current).ChangeAccountAsync(change, token)));
         settingsWindow.Closed += (_, _) => settingsWindow = null;
         settingsWindow.Activate();
     }
@@ -1268,6 +1294,7 @@ public sealed class AppCoordinator : IDisposable
         startupIdentity.PrepareRetry();
         var uid = await supabaseClient.BootstrapAsync(cancellationToken);
         var profile = await userService.GetAsync(uid, cancellationToken);
+        if (!string.IsNullOrWhiteSpace(profile?.Nickname)) await supabaseClient.UpdateAccountNicknameAsync(profile.Nickname, cancellationToken);
         var refreshedRooms = await roomService.MyRoomsAsync(cancellationToken);
         if (currentUid is { } previousUid && previousUid != uid)
         {
@@ -1351,10 +1378,12 @@ public sealed class AppCoordinator : IDisposable
                 ConnectionState.Connecting => "연결하는 중…",
                 ConnectionState.Connected => "연결됨",
                 ConnectionState.Retrying => "연결이 끊겼습니다. 자동으로 다시 연결합니다.",
+                ConnectionState.SessionRejected when error is SupabaseAccountRequiredException => "저장된 계정이 없습니다. 설정에서 새 계정을 추가해 주세요.",
                 ConnectionState.SessionRejected => "기존 계정을 보존했습니다. 계정 연결 복구가 필요합니다.",
                 _ => "연결 설정을 확인해 주세요."
             };
             mainWindow.SetHotkeyStatus(status);
+            if (error is SupabaseAccountRequiredException) OpenSettingsWindow();
             mainWindow.ReportStatus(state == ConnectionState.Connected ? null : status,
                 canRetry: state is ConnectionState.Retrying or ConnectionState.SessionRejected or ConnectionState.ConfigurationRequired);
             if (state is ConnectionState.SessionRejected or ConnectionState.ConfigurationRequired || currentUid is null)
@@ -1405,6 +1434,7 @@ public sealed class AppCoordinator : IDisposable
         currentNickname = string.IsNullOrWhiteSpace(profile?.Nickname)
             ? nickname
             : profile.Nickname;
+        await supabaseClient.UpdateAccountNicknameAsync(CurrentNickname, cancellationToken);
         roomManagerWindow?.RefreshProfileNickname(CurrentNickname);
         return CurrentNickname;
     }

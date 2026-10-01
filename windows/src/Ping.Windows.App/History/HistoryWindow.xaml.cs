@@ -19,6 +19,7 @@ public sealed partial class HistoryWindow : UserControl
     private readonly HistoryViewModel viewModel;
     private readonly Window owner;
     private bool backendReady;
+    private bool detached;
     private readonly bool loadOnFirstLoaded;
     private bool isComposing;
     private bool ignoreCurrentEnter;
@@ -99,17 +100,26 @@ public sealed partial class HistoryWindow : UserControl
                 await viewModel.LoadSelectedRoomAsync(token);
             }));
         Root.Loaded += HandleLoaded;
-        owner.Closed += async (_, args) =>
-        {
-            if (args.Handled) return;
-            removalPermissionTimer.Stop();
-            await autoRefresh.StopAsync();
-        };
-        owner.Activated += async (_, args) =>
-        {
-            if (backendReady && args.WindowActivationState != WindowActivationState.Deactivated)
-                await RefreshNowAsync();
-        };
+        owner.Closed += HandleOwnerClosed;
+        owner.Activated += HandleOwnerActivated;
+    }
+
+    private async void HandleOwnerClosed(object sender, WindowEventArgs args)
+    {
+        if (!args.Handled) await DetachAsync();
+    }
+    private async void HandleOwnerActivated(object sender, WindowActivatedEventArgs args)
+    {
+        if (!detached && backendReady && args.WindowActivationState != WindowActivationState.Deactivated) await RefreshNowAsync();
+    }
+    public async Task DetachAsync()
+    {
+        detached = true; backendReady = false; IsEnabled = false;
+        owner.Closed -= HandleOwnerClosed; owner.Activated -= HandleOwnerActivated;
+        Root.Loaded -= HandleLoaded;
+        removalPermissionTimer.Stop();
+        foreach (var window in playbackWindows.ToArray()) window.Close();
+        await autoRefresh.StopAsync();
     }
 
     private async void HandleLoaded(object sender, RoutedEventArgs args)
@@ -558,6 +568,7 @@ public sealed partial class HistoryWindow : UserControl
 
     private async Task<bool> RunOnUiAsync(Func<Task> work)
     {
+        if (detached) return false;
         try
         {
             var roomId = viewModel.SelectedRoom?.Id;
@@ -566,6 +577,7 @@ public sealed partial class HistoryWindow : UserControl
             var offset = scroll?.VerticalOffset;
             var followNewest = scroll is not null && scroll.ScrollableHeight - scroll.VerticalOffset <= 2;
             await work();
+            if (detached) return false;
             if (offset is not null && viewModel.SelectedRoom?.Id == roomId
                 && !ReferenceEquals(previousLast, viewModel.Timeline.LastOrDefault()))
             {
@@ -577,6 +589,7 @@ public sealed partial class HistoryWindow : UserControl
         }
         catch (Exception ex)
         {
+            if (detached) return false;
             viewModel.ReportError(ex);
             ReportConnectionStatus(ex.Message, canRetry: true);
             return false;

@@ -35,6 +35,7 @@
     <Compile Include="..\..\src\Ping.Windows.App\Capture\NativeMicrophoneCatalogReader.cs" Link="Capture\NativeMicrophoneCatalogReader.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Capture\CaptureDeviceCatalog.cs" Link="Capture\CaptureDeviceCatalog.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Setup\DeviceSettingsViewModel.cs" Link="Setup\DeviceSettingsViewModel.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Setup\AccountSettingsViewModel.cs" Link="Setup\AccountSettingsViewModel.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Setup\DevicePairingViewModel.cs" Link="Setup\DevicePairingViewModel.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Setup\PairingQrRenderer.cs" Link="Setup\PairingQrRenderer.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Capture\OwnedScreenFaceCaptureEngine.cs" Link="Capture\OwnedScreenFaceCaptureEngine.cs" />

@@ -131,11 +131,24 @@ internal static class UiSmokeRunner
             ScreenFaceQuickSendSettings? savedSettings = null;
             var fixtureMicrophone = new Ping.Windows.Core.Capture.CaptureMicrophoneDevice("fixture-winrt-mic", "fixture-endpoint-mic");
             var fixtureDevices = new CaptureDeviceCatalog([new("fixture-camera", "Fixture camera")], [new(fixtureMicrophone, "Fixture microphone")]);
+            IReadOnlyList<StoredAccountSummary> fixtureAccounts = [new("me", "민", DateTimeOffset.UtcNow, true), new("second", "둘째", DateTimeOffset.UtcNow, false)];
+            var accountChanges = 0;
             var settingsVm = new SettingsWindowViewModel("민", HotkeyBinding.Defaults(), ScreenFaceQuickSendSettings.Default,
                 value => { savedSettings = value; UI.PingAppearance.Apply(value.AppearanceMode); }, () => { }, new FixtureStartup(), archiveRootPath: OutputDirectory,
                 ensureArchiveFolders: () => { }, deleteExpiredArchiveFiles: () => { }, openArchiveFolder: _ => Task.FromResult(false),
                 deviceCatalog: _ => Task.FromResult(fixtureDevices),
-                pairingGenerator: token => DevicePairingSmoke.CreateAsync(OutputDirectory!, token), pairingUid: () => "me");
+                pairingGenerator: token => DevicePairingSmoke.CreateAsync(OutputDirectory!, token), pairingUid: () => "me",
+                loadAccounts: _ => Task.FromResult(fixtureAccounts),
+                changeAccount: (change, _) =>
+                {
+                    accountChanges++;
+                    if (change.Kind == AccountChangeKind.Switch)
+                        fixtureAccounts = fixtureAccounts.Select(row => row with { IsActive = row.UserId == change.UserId }).ToArray();
+                    else if (change.Kind == AccountChangeKind.Create)
+                        fixtureAccounts = fixtureAccounts.Select(row => row with { IsActive = false }).Append(new("created", "새 계정", DateTimeOffset.UtcNow, true)).ToArray();
+                    else fixtureAccounts = fixtureAccounts.Where(row => row.UserId != change.UserId).ToArray();
+                    return Task.CompletedTask;
+                });
             var settings = new SettingsWindow(settingsVm);
             settings.Activate();
             Check(UI.WindowCaptureExclusion.IsApplied(settings), "settings declares exclusion from OS screen capture");
@@ -146,6 +159,33 @@ internal static class UiSmokeRunner
             await Task.Delay(50);
             Check(savedSettings is { AutoPlayIncoming: false } && !settingsVm.AutoPlayIncoming, "real autoplay binding persists off");
             var settingsRoot = (Grid)settings.Content;
+            var accountCombo = (ComboBox)settingsRoot.FindName("AccountsComboBox");
+            var switchAccount = (Button)settingsRoot.FindName("SwitchAccountButton");
+            await UntilAsync(() => accountCombo.IsLoaded && accountCombo.Items.Count == 2 && !settingsVm.Accounts.IsBusy);
+            Check(!switchAccount.IsEnabled && ((AccountSettingRow)accountCombo.SelectedItem).UserId == "me", "actual account list selects active identity and disables redundant switch");
+            accountCombo.SelectedIndex = 1;
+            await Task.Delay(60);
+            Check(switchAccount.IsEnabled && settingsVm.Accounts.SelectedAccount?.UserId == "second", "account selection binding enables explicit switch");
+            ((IInvokeProvider)new ButtonAutomationPeer(switchAccount).GetPattern(PatternInterface.Invoke)).Invoke();
+            await UntilAsync(() => accountChanges == 1 && !settingsVm.Accounts.IsBusy);
+            Check(settingsVm.Accounts.Accounts.Single(row => row.IsActive).UserId == "second", "real switch handler changes selected fixture identity");
+            var createAccount = (Button)settingsRoot.FindName("CreateAccountButton");
+            ((IInvokeProvider)new ButtonAutomationPeer(createAccount).GetPattern(PatternInterface.Invoke)).Invoke();
+            await InvokeDialogButtonAsync(settingsRoot.XamlRoot, "취소");
+            Check(accountChanges == 1 && fixtureAccounts.Count == 2, "cancelling new-account confirmation preserves existing identities");
+            ((IInvokeProvider)new ButtonAutomationPeer(createAccount).GetPattern(PatternInterface.Invoke)).Invoke();
+            await InvokeDialogButtonAsync(settingsRoot.XamlRoot, "추가");
+            await UntilAsync(() => accountChanges == 2 && accountCombo.Items.Count == 3 && !settingsVm.Accounts.IsBusy);
+            Check(settingsVm.Accounts.Accounts.Single(row => row.IsActive).UserId == "created", "confirmed new-account handler adds fixture identity");
+            var removeAccount = (Button)settingsRoot.FindName("RemoveAccountButton");
+            ((IInvokeProvider)new ButtonAutomationPeer(removeAccount).GetPattern(PatternInterface.Invoke)).Invoke();
+            await InvokeDialogButtonAsync(settingsRoot.XamlRoot, "취소");
+            Check(accountChanges == 2 && fixtureAccounts.Count == 3, "cancelling local account deletion preserves identity");
+            ((IInvokeProvider)new ButtonAutomationPeer(removeAccount).GetPattern(PatternInterface.Invoke)).Invoke();
+            await InvokeDialogButtonAsync(settingsRoot.XamlRoot, "삭제");
+            await UntilAsync(() => accountChanges == 3 && accountCombo.Items.Count == 2 && !settingsVm.Accounts.IsBusy);
+            Check(fixtureAccounts.All(row => row.UserId != "created"), "confirmed deletion invokes selected identity removal");
+            await RenderAsync(settingsRoot, "settings-accounts.png");
             Check(Descendants(settingsRoot).OfType<TabViewItem>().All(tab => !tab.IsClosable), "settings sections cannot be accidentally closed");
             Check(settingsRoot.ActualWidth >= 400 && settingsRoot.ActualHeight >= 300, "settings client geometry provides usable layout");
             var generalScroll = (ScrollViewer)settingsRoot.FindName("GeneralScroll");
@@ -254,6 +294,16 @@ internal static class UiSmokeRunner
             Check(chatBox.ActualWidth >= 180 && sendButton.ActualWidth > 20 && roomsList.ActualWidth >= 200,
                 "minimum window size keeps room list and composer usable");
             await RenderAsync(root, "messenger-minimum.png");
+            await shell.DetachAsync();
+            window.DetachMessenger();
+            var freshVm = new HistoryViewModel(new RoomService(rpc), new MessageService(rpc, storage), new ChatMessageService(rpc),
+                new ReactionService(rpc), storage, () => "me", new FixtureLinks());
+            var freshShell = new HistoryWindow(window, freshVm, (_, _) => throw new NotSupportedException(), (_, _) => Task.CompletedTask,
+                new MessageService(rpc, storage), loadOnStart: false);
+            window.AttachMessenger(freshShell); await freshShell.ReloadRoomsAsync();
+            Check(!shell.IsEnabled && window.Content is ContentControl { Content: HistoryWindow attached } && ReferenceEquals(attached, freshShell)
+                && hwnd == WinRT.Interop.WindowNative.GetWindowHandle(window), "runtime replacement detaches old messenger and keeps the main HWND");
+            Check(((TextBox)freshShell.FindName("ChatBox")).Text == "", "runtime replacement creates a fresh composer without old drafts");
             File.WriteAllText(Path.Combine(OutputDirectory!, "result.json"), JsonSerializer.Serialize(new { Success = true, Checks, FixtureOnly = true }, new JsonSerializerOptions { WriteIndented = true }));
             Step("DONE");
         }
@@ -278,6 +328,19 @@ internal static class UiSmokeRunner
             if (DateTime.UtcNow >= deadline) throw new TimeoutException("UI fixture action did not settle.");
             await Task.Delay(25);
         }
+    }
+
+    private static async Task InvokeDialogButtonAsync(XamlRoot root, string label)
+    {
+        Button? button = null;
+        await UntilAsync(() =>
+        {
+            button = VisualTreeHelper.GetOpenPopupsForXamlRoot(root).SelectMany(popup => Descendants(popup.Child)).OfType<Button>()
+                .FirstOrDefault(candidate => candidate.Content?.ToString() == label && candidate.IsEnabled);
+            return button is not null;
+        });
+        ((IInvokeProvider)new ButtonAutomationPeer(button!).GetPattern(PatternInterface.Invoke)).Invoke();
+        await Task.Delay(150);
     }
 
     private static IEnumerable<DependencyObject> Descendants(DependencyObject root)

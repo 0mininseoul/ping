@@ -7,6 +7,7 @@ public sealed partial class SupabaseClient
 
     private async Task LoadAccountsLockedAsync(CancellationToken token)
     {
+        ThrowIfRetired();
         if (accounts is not null) return;
         accounts = await sessionStore.LoadAccountsAsync(token).ConfigureAwait(false);
         session = accounts.ActiveSession;
@@ -33,6 +34,11 @@ public sealed partial class SupabaseClient
         try
         {
             await LoadAccountsLockedAsync(cancellationToken).ConfigureAwait(false);
+            if (pendingCreatedAccount is not null)
+            {
+                accounts = await sessionStore.LoadAccountsAsync(cancellationToken).ConfigureAwait(false);
+                session = accounts.ActiveSession;
+            }
             pendingCreatedAccount ??= await SignInAnonymouslyAsync(cancellationToken).ConfigureAwait(false);
             var created = pendingCreatedAccount;
             await CommitAccountsLockedAsync(accounts!.Upsert(created, activate: true), cancellationToken).ConfigureAwait(false);

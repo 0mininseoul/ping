@@ -40,6 +40,12 @@ public sealed partial class MainWindow : Window
         view.RetryRequested += (_, _) => BlockedRetryRequested?.Invoke(this, EventArgs.Empty);
     }
 
+    public void DetachMessenger()
+    {
+        MessengerHost.Content = null;
+        messenger = null;
+    }
+
     public void InitializeTrayWindowBehavior()
     {
         var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);

@@ -39,6 +39,21 @@
                         Foreground="{ThemeResource PingMutedBrush}"
                         Text="{Binding NicknameStatus}"
                         TextWrapping="WrapWholeWords" />
+                    <Border CornerRadius="16" Padding="14" Background="{ThemeResource PingSurfaceBrush}">
+                        <StackPanel Spacing="10" DataContext="{Binding Accounts}">
+                            <ComboBox x:Name="AccountsComboBox" Header="저장 계정" DisplayMemberPath="Label"
+                                ItemsSource="{Binding Accounts}" SelectedItem="{Binding SelectedAccount, Mode=TwoWay}"
+                                HorizontalAlignment="Stretch" IsEnabled="{Binding CanCreate}" />
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button x:Name="SwitchAccountButton" Content="전환" Click="SwitchAccountButton_Click" IsEnabled="{Binding CanSwitch}" />
+                                <Button x:Name="CreateAccountButton" Content="새 계정 추가" Click="CreateAccountButton_Click" IsEnabled="{Binding CanCreate}" />
+                                <Button x:Name="RemoveAccountButton" Content="삭제" Click="RemoveAccountButton_Click" IsEnabled="{Binding CanRemove}" />
+                                <Button Content="새로 고침" Click="RefreshAccountsButton_Click" IsEnabled="{Binding CanCreate}" />
+                            </StackPanel>
+                            <TextBlock Text="{Binding Status}" Foreground="{ThemeResource PingMutedBrush}" TextWrapping="WrapWholeWords" />
+                            <ProgressRing IsActive="{Binding IsBusy}" Width="22" Height="22" HorizontalAlignment="Left" />
+                        </StackPanel>
+                    </Border>
                     <ToggleSwitch
                         Header="화면+얼굴 빠른 전송"
                         IsOn="{Binding IsQuickSendEnabled, Mode=TwoWay}"

@@ -173,6 +173,8 @@ public sealed partial class SupabaseClient : ISupabaseRpcClient, IRealtimeCreden
 
     private async Task<SupabaseSession> AuthenticatedSessionAsync(CancellationToken cancellationToken)
     {
+        ThrowIfRetired();
+        cancellationToken.ThrowIfCancellationRequested();
         if (session is { NeedsRefresh: false } && !sessionPersistencePending)
         {
             return session;
@@ -181,6 +183,7 @@ public sealed partial class SupabaseClient : ISupabaseRpcClient, IRealtimeCreden
         await authLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            ThrowIfRetired();
             if (session is { NeedsRefresh: false } && !sessionPersistencePending)
             {
                 return session;
@@ -274,6 +277,7 @@ public sealed partial class SupabaseClient : ISupabaseRpcClient, IRealtimeCreden
 
     private async Task<SupabaseConfiguration> LoadConfigurationAsync(CancellationToken cancellationToken)
     {
+        ThrowIfRetired();
         if (configuration is not null)
         {
             return configuration;
@@ -293,8 +297,12 @@ public sealed partial class SupabaseClient : ISupabaseRpcClient, IRealtimeCreden
 
     private async Task<byte[]> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
+        ObjectDisposedException.ThrowIf(retired, this);
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, requestLifetime.Token);
+        cancellationToken = linked.Token;
         using var response = await httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
         var data = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
         if (!response.IsSuccessStatusCode)
         {
             var retryAfter = response.Headers.RetryAfter?.Delta
@@ -329,7 +337,10 @@ public sealed partial class SupabaseClient : ISupabaseRpcClient, IRealtimeCreden
 
     public void Dispose()
     {
-        authLock.Dispose();
+        if (Interlocked.Exchange(ref disposeState, 1) != 0) return;
+        retired = true;
+        requestLifetime.Cancel();
+        requestLifetime.Dispose();
         if (ownsHttpClient)
         {
             httpClient.Dispose();

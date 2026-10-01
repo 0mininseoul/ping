@@ -6,6 +6,7 @@ using Ping.Windows.App.Hotkeys;
 using Ping.Windows.App.Onboarding;
 using Ping.Windows.Core.LocalState;
 using Ping.Windows.Core.Models;
+using Ping.Windows.Core.Backend;
 
 #if WINDOWS
 using Microsoft.UI.Xaml;
@@ -66,7 +67,9 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
         Func<string, Task<bool>>? openArchiveFolder = null,
         Func<string, CancellationToken, Task<string>>? saveNickname = null,
         Func<CancellationToken, Task<CaptureDeviceCatalog>>? deviceCatalog = null,
-        Func<CancellationToken, Task<PairingQrImage>>? pairingGenerator = null, Func<string?>? pairingUid = null)
+        Func<CancellationToken, Task<PairingQrImage>>? pairingGenerator = null, Func<string?>? pairingUid = null,
+        Func<CancellationToken, Task<IReadOnlyList<StoredAccountSummary>>>? loadAccounts = null,
+        Func<AccountChange, CancellationToken, Task>? changeAccount = null)
     {
         this.nickname = NormalizeNickname(nickname);
         nicknameDraft = this.nickname;
@@ -81,6 +84,8 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
             this.saveSettings(this.settings);
         }, deviceCatalog);
         Pairing = new(pairingGenerator ?? (_ => throw new InvalidOperationException("Pairing session is unavailable.")), pairingUid ?? (() => null));
+        Accounts = new(loadAccounts ?? (_ => Task.FromResult<IReadOnlyList<StoredAccountSummary>>([])),
+            changeAccount ?? ((_, _) => throw new InvalidOperationException("Account management is unavailable.")));
         this.openRooms = openRooms;
         this.ensureArchiveFolders = ensureArchiveFolders ?? (() => new LocalArchive(ArchiveRootPath).EnsureFolders());
         this.deleteExpiredArchiveFiles = deleteExpiredArchiveFiles ?? (() => _ = new LocalArchive(ArchiveRootPath).DeleteExpiredFiles());
@@ -101,6 +106,7 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
     public event PropertyChangedEventHandler? PropertyChanged;
     public DeviceSettingsViewModel Devices { get; }
     public DevicePairingViewModel Pairing { get; }
+    public AccountSettingsViewModel Accounts { get; }
 
     public bool AutoPlayIncoming
     {
@@ -628,7 +634,7 @@ public sealed partial class SettingsWindow : Window
         Root.DataContext = viewModel;
         pairing = new(viewModel.Pairing, PairingImage);
         Closed += (_, _) => { pairing.Dispose(); deviceLifetime.Cancel(); deviceLifetime.Dispose(); };
-        Root.Loaded += (_, _) => RefreshDevicesIfVisible();
+        Root.Loaded += (_, _) => { RefreshDevicesIfVisible(); _ = viewModel.Accounts.RefreshAsync(deviceLifetime.Token); };
         Ping.Windows.App.UI.SettingsWindowGeometry.Fit(this);
         _ = viewModel.RefreshStartupAsync();
     }
@@ -664,6 +670,7 @@ public sealed partial class SettingsWindow : Window
             _ = viewModel.Devices.RefreshAsync(deviceLifetime.Token);
     }
     public void ClearDevicePairing() => pairing.Clear();
+    internal void ReportAccountTransitionFailure() => viewModel.Accounts.ReportTransitionFailure();
     private async void RefreshPairingButton_Click(object sender, RoutedEventArgs args) => await viewModel.Pairing.OpenAsync();
 
     private async void RefreshDeviceListButton_Click(object sender, RoutedEventArgs args)
@@ -677,6 +684,31 @@ public sealed partial class SettingsWindow : Window
     private async void SaveNicknameButton_Click(object sender, RoutedEventArgs args)
     {
         await viewModel.SaveNicknameAsync();
+        if (!deviceLifetime.IsCancellationRequested) await viewModel.Accounts.RefreshAsync(deviceLifetime.Token);
+    }
+
+    private async void RefreshAccountsButton_Click(object sender, RoutedEventArgs args) => await viewModel.Accounts.RefreshAsync(deviceLifetime.Token);
+    private async void SwitchAccountButton_Click(object sender, RoutedEventArgs args) => await viewModel.Accounts.SwitchAsync();
+    private async void CreateAccountButton_Click(object sender, RoutedEventArgs args)
+    {
+        var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
+        {
+            XamlRoot = Root.XamlRoot, Title = "새 계정을 추가할까요?",
+            Content = "현재 계정은 이 PC에 저장됩니다. 새 계정에서는 새 룸과 친구 연결을 시작합니다.",
+            PrimaryButtonText = "추가", CloseButtonText = "취소", DefaultButton = Microsoft.UI.Xaml.Controls.ContentDialogButton.Close
+        };
+        if (await dialog.ShowAsync() == Microsoft.UI.Xaml.Controls.ContentDialogResult.Primary) await viewModel.Accounts.CreateAsync();
+    }
+    private async void RemoveAccountButton_Click(object sender, RoutedEventArgs args)
+    {
+        if (!viewModel.Accounts.CanRemove) return;
+        var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
+        {
+            XamlRoot = Root.XamlRoot, Title = "선택한 저장 계정을 삭제할까요?",
+            Content = "이 PC의 저장 계정 목록에서 삭제합니다. 익명 계정은 이메일이나 비밀번호로 복구할 수 없어요. 다른 기기에 연결해 두지 않았다면 같은 계정으로 다시 연결하기 어려울 수 있습니다. 서버 계정과 다른 기기의 데이터는 삭제하지 않습니다.",
+            PrimaryButtonText = "삭제", CloseButtonText = "취소", DefaultButton = Microsoft.UI.Xaml.Controls.ContentDialogButton.Close
+        };
+        if (await dialog.ShowAsync() == Microsoft.UI.Xaml.Controls.ContentDialogResult.Primary) await viewModel.Accounts.RemoveAsync();
     }
 
     private async void OpenArchiveFolderButton_Click(object sender, RoutedEventArgs args)
