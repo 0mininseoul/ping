@@ -9,6 +9,38 @@ namespace Ping.Windows.App.Tests;
 public sealed class ScreenFaceMirrorViewModelTests
 {
     [Fact]
+    public async Task ClosedIdleMirrorCannotRecordOrChangeRecipients()
+    {
+        var engine = new FakeScreenFaceCaptureEngine();
+        var model = new ScreenFaceMirrorViewModel(MultiRoomContext(), engine, (_, _) => Task.CompletedTask);
+        model.HandleWindowClosed();
+        Assert.False(model.CanRecord);
+        Assert.False(model.CanSelectTarget);
+        await model.HandleEnterAsync();
+        Assert.Equal(0, engine.RecordCount);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RedoReturnsToEditablePreviewWithoutStartingAnotherRecording(bool failedUpload)
+    {
+        var engine = new FakeScreenFaceCaptureEngine();
+        var model = new ScreenFaceMirrorViewModel(MultiRoomContext(), engine,
+            (_, _) => Task.FromException(new IOException("Owned upload failure.")));
+        await model.HandleEnterAsync();
+        if (failedUpload) await model.HandleEnterAsync();
+        await model.HandleRedoAsync();
+        Assert.Equal(MirrorState.Idle, model.State);
+        Assert.True(model.CanRecord);
+        Assert.Null(model.ReviewVideoUri);
+        Assert.False(model.HasReviewedClip);
+        Assert.Equal(1, engine.RecordCount);
+        await model.HandleRedoAsync();
+        Assert.Equal(1, engine.RecordCount);
+    }
+
+    [Fact]
     public void DragUpdatesSenderPositionButSavesPreferenceOnlyAfterRelease()
     {
         var saves = 0;
@@ -400,6 +432,9 @@ public sealed class ScreenFaceMirrorViewModelTests
 
     private sealed class FakeScreenFaceCaptureEngine : IScreenFaceCaptureEngine
     {
+        public Task<ScreenFaceCaptureResult> RecordAsync(TimeSpan duration, int monitor, Ping.Windows.Core.Capture.ScreenCaptureViewport viewport, CancellationToken token) => RecordAsync(duration, monitor, token);
+        public Task<ScreenFacePreviewResult> CapturePreviewAsync(int monitor, Ping.Windows.Core.Capture.ScreenCaptureViewport viewport, CancellationToken token) => CapturePreviewAsync(monitor, token);
+
         public int? LastRecordMonitorIndex { get; private set; }
 
         public int? LastPreviewMonitorIndex { get; private set; }
@@ -435,6 +470,9 @@ public sealed class ScreenFaceMirrorViewModelTests
 
     private sealed class BlockingScreenFaceCaptureEngine : IScreenFaceCaptureEngine
     {
+        public Task<ScreenFaceCaptureResult> RecordAsync(TimeSpan duration, int monitor, Ping.Windows.Core.Capture.ScreenCaptureViewport viewport, CancellationToken token) => RecordAsync(duration, monitor, token);
+        public Task<ScreenFacePreviewResult> CapturePreviewAsync(int monitor, Ping.Windows.Core.Capture.ScreenCaptureViewport viewport, CancellationToken token) => CapturePreviewAsync(monitor, token);
+
         private readonly TaskCompletionSource<ScreenFaceCaptureResult> recording = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public TaskCompletionSource RecordStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -476,6 +514,9 @@ public sealed class ScreenFaceMirrorViewModelTests
 
     private sealed class FileWritingScreenFaceCaptureEngine : IScreenFaceCaptureEngine
     {
+        public Task<ScreenFaceCaptureResult> RecordAsync(TimeSpan duration, int monitor, Ping.Windows.Core.Capture.ScreenCaptureViewport viewport, CancellationToken token) => RecordAsync(duration, monitor, token);
+        public Task<ScreenFacePreviewResult> CapturePreviewAsync(int monitor, Ping.Windows.Core.Capture.ScreenCaptureViewport viewport, CancellationToken token) => CapturePreviewAsync(monitor, token);
+
         public async Task<ScreenFaceCaptureResult> RecordAsync(
             TimeSpan duration,
             int monitorIndex,
@@ -514,6 +555,9 @@ public sealed class ScreenFaceMirrorViewModelTests
 
     private sealed class CancelingFileWritingScreenFaceCaptureEngine(Action beforeReturn) : IScreenFaceCaptureEngine
     {
+        public Task<ScreenFaceCaptureResult> RecordAsync(TimeSpan duration, int monitor, Ping.Windows.Core.Capture.ScreenCaptureViewport viewport, CancellationToken token) => RecordAsync(duration, monitor, token);
+        public Task<ScreenFacePreviewResult> CapturePreviewAsync(int monitor, Ping.Windows.Core.Capture.ScreenCaptureViewport viewport, CancellationToken token) => CapturePreviewAsync(monitor, token);
+
         public string? OutputPath { get; private set; }
 
         public async Task<ScreenFaceCaptureResult> RecordAsync(
@@ -549,6 +593,9 @@ public sealed class ScreenFaceMirrorViewModelTests
 
     private sealed class FailingAfterFirstPreviewEngine : IScreenFaceCaptureEngine
     {
+        public Task<ScreenFaceCaptureResult> RecordAsync(TimeSpan duration, int monitor, Ping.Windows.Core.Capture.ScreenCaptureViewport viewport, CancellationToken token) => RecordAsync(duration, monitor, token);
+        public Task<ScreenFacePreviewResult> CapturePreviewAsync(int monitor, Ping.Windows.Core.Capture.ScreenCaptureViewport viewport, CancellationToken token) => CapturePreviewAsync(monitor, token);
+
         private bool hasReturnedPreview;
 
         public string FirstPreviewPath { get; private set; } = string.Empty;

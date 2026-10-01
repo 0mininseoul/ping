@@ -18,6 +18,8 @@ public sealed record ScreenFaceMirrorContext(
     MirrorPosition? InitialPosition = null,
     Action<MirrorPosition>? SaveMirrorPosition = null);
 
+public sealed record ScreenMirrorCaptureSelection(int MonitorIndex, ScreenCaptureViewport Viewport);
+
 public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
 {
     private static readonly TimeSpan RecordingDuration = TimeSpan.FromSeconds(3);
@@ -43,6 +45,9 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
     private MirrorPosition mirrorPosition = new(0.5, 0.5);
     private MirrorPosition preferredMirrorPosition = new(0.5, 0.5);
     private int monitorIndex;
+    private ScreenCaptureViewport viewport = new();
+    private long captureRevision, previewRequest;
+    private bool capturePreparing;
     private bool isCloseRequested;
     private bool isFadeOutRequested;
 
@@ -95,6 +100,7 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
             OnPropertyChanged(nameof(HintOpacity));
             OnPropertyChanged(nameof(CanRecord));
             OnPropertyChanged(nameof(CanSelectTarget));
+            OnPropertyChanged(nameof(CanEditViewport));
             OnPropertyChanged(nameof(RecordingCountdownOpacity));
         }
     }
@@ -205,6 +211,27 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
     }
 
     public int MonitorIndex => monitorIndex;
+    public ScreenCaptureViewport Viewport => viewport;
+    public bool CanEditViewport => CanRecord && !IsCloseRequested && !capturePreparing;
+    public ScreenMirrorCaptureSelection CaptureSelection => new(monitorIndex, viewport);
+
+    internal void SetCapturePreparing(bool value)
+    {
+        if (capturePreparing == value) return;
+        capturePreparing = value;
+        OnPropertyChanged(nameof(CanEditViewport));
+        OnPropertyChanged(nameof(CanSelectTarget));
+    }
+
+    public bool UpdateViewport(ScreenCaptureViewport selected)
+    {
+        ArgumentNullException.ThrowIfNull(selected);
+        if (!CanEditViewport || viewport == selected) return false;
+        viewport = selected;
+        captureRevision++;
+        OnPropertyChanged(nameof(Viewport));
+        return true;
+    }
 
     public Uri? ScreenPreviewUri
     {
@@ -221,9 +248,9 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
         }
     }
 
-    public bool CanRecord => State == MirrorState.Idle || (State == MirrorState.Failed && !HasReviewedClip);
+    public bool CanRecord => !IsCloseRequested && (State == MirrorState.Idle || (State == MirrorState.Failed && !HasReviewedClip));
 
-    public bool CanSelectTarget => State is MirrorState.Idle or MirrorState.Reviewing or MirrorState.Failed;
+    public bool CanSelectTarget => !IsCloseRequested && !capturePreparing && State is (MirrorState.Idle or MirrorState.Reviewing or MirrorState.Failed);
 
     public bool HasReviewedClip => reviewedPath is not null;
 
@@ -239,6 +266,9 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
 
             isCloseRequested = value;
             OnPropertyChanged();
+            OnPropertyChanged(nameof(CanEditViewport));
+            OnPropertyChanged(nameof(CanRecord));
+            OnPropertyChanged(nameof(CanSelectTarget));
         }
     }
 
@@ -273,6 +303,7 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
         }
 
         monitorIndex = index;
+        captureRevision++;
         OnPropertyChanged(nameof(MonitorIndex));
     }
 
@@ -295,18 +326,30 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
 
     public async Task LoadPreviewAsync(CancellationToken cancellationToken = default)
     {
+        if (!CanEditViewport) return;
+        var selected = CaptureSelection;
+        var revision = captureRevision;
+        var request = ++previewRequest;
+        string? path = null;
+        bool IsCurrent() => request == previewRequest && revision == captureRevision && CanEditViewport;
         try
         {
-            var preview = await captureEngine.CapturePreviewAsync(monitorIndex, cancellationToken);
-            DisposePreview();
+            var preview = await captureEngine.CapturePreviewAsync(selected.MonitorIndex, selected.Viewport, cancellationToken);
+            path = preview.FilePath;
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!IsCurrent()) return;
+            ClearPreview();
             screenPreviewPath = preview.FilePath;
             ScreenPreviewUri = new Uri(preview.FilePath);
+            path = null;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            DisposePreview();
+            if (!IsCurrent() || cancellationToken.IsCancellationRequested) return;
+            ClearPreview();
             StatusMessage = $"Preview unavailable. Press Enter to record. {ex.Message}";
         }
+        finally { if (path is not null) TryDeleteTemporaryRecording(path); }
     }
 
     public async Task RunPreviewLoopAsync(CancellationToken cancellationToken = default)
@@ -322,8 +365,9 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
         }
     }
 
-    public async Task HandleEnterAsync()
+    public async Task HandleEnterAsync(ScreenMirrorCaptureSelection? selection = null)
     {
+        if (IsCloseRequested) return;
         if (State == MirrorState.Reviewing || (State == MirrorState.Failed && HasReviewedClip))
         {
             await UploadReviewedClipAsync();
@@ -349,13 +393,15 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
         string? recordedPath = null;
         CancellationTokenSource? countdownCancellation = null;
         Task? countdownTask = null;
+        var selected = selection ?? CaptureSelection;
 
         try
         {
+            captureRevision++;
             State = MirrorState.Recording;
             countdownCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             countdownTask = RunRecordingCountdownAsync(countdownCancellation.Token);
-            var recording = await captureEngine.RecordAsync(RecordingDuration, monitorIndex, cancellationToken);
+            var recording = await captureEngine.RecordAsync(RecordingDuration, selected.MonitorIndex, selected.Viewport, cancellationToken);
             await StopRecordingCountdownAsync(countdownCancellation, countdownTask);
             countdownCancellation = null;
             countdownTask = null;
@@ -387,15 +433,17 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
         }
     }
 
-    public async Task HandleRedoAsync()
+    public Task HandleRedoAsync()
     {
-        if (State != MirrorState.Reviewing && !(State == MirrorState.Failed && HasReviewedClip))
+        if (IsCloseRequested || State != MirrorState.Reviewing && !(State == MirrorState.Failed && HasReviewedClip))
         {
-            return;
+            return Task.CompletedTask;
         }
 
         ClearReviewedClip(deleteFile: true);
-        await HandleEnterAsync();
+        State = MirrorState.Idle;
+        StatusMessage = "화면을 조정한 뒤 Enter로 다시 녹화해요.";
+        return Task.CompletedTask;
     }
 
     private async Task UploadReviewedClipAsync()
@@ -528,6 +576,12 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
     }
 
     public void DisposePreview()
+    {
+        previewRequest++;
+        ClearPreview();
+    }
+
+    private void ClearPreview()
     {
         ScreenPreviewUri = null;
         if (screenPreviewPath is null)

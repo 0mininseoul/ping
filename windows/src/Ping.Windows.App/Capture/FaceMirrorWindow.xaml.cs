@@ -61,7 +61,7 @@ public sealed partial class FaceMirrorWindow : Window
             || args.Key == global::Windows.System.VirtualKey.Delete)
         {
             args.Handled = true;
-            await viewModel.HandleRedoAsync();
+            await HandleRedoAsync();
             return;
         }
 
@@ -71,6 +71,8 @@ public sealed partial class FaceMirrorWindow : Window
             viewModel.HandleEscape();
         }
     }
+
+    internal Task HandleRedoAsync() => viewModel.HandleRedoAsync();
 
     private bool HandleTargetKey(global::Windows.System.VirtualKey key)
     {

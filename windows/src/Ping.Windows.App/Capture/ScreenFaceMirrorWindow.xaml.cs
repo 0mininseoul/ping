@@ -67,11 +67,7 @@ public sealed partial class ScreenFaceMirrorWindow : Window
             || args.Key == global::Windows.System.VirtualKey.Delete)
         {
             args.Handled = true;
-            await viewModel.HandleRedoAsync();
-            if (!viewModel.IsCloseRequested && !viewModel.HasReviewedClip)
-            {
-                _ = StartPreviewAsync();
-            }
+            await HandleRedoAsync();
 
             return;
         }
@@ -87,12 +83,31 @@ public sealed partial class ScreenFaceMirrorWindow : Window
     {
         if (handlingEnter || windowLifetime.IsCancellationRequested) return;
         handlingEnter = true;
+        var selection = viewModel.CaptureSelection;
+        var recording = viewModel.CanRecord;
+        if (recording) viewModel.SetCapturePreparing(true);
         try
         {
-            if (viewModel.State != MirrorState.Reviewing) await StopPreviewAsync();
+            if (recording) await StopPreviewAsync();
             if (windowLifetime.IsCancellationRequested) return;
-            await viewModel.HandleEnterAsync();
+            await viewModel.HandleEnterAsync(selection);
+        }
+        finally
+        {
+            viewModel.SetCapturePreparing(false);
+            handlingEnter = false;
             if (!viewModel.IsCloseRequested && !viewModel.HasReviewedClip) _ = StartPreviewAsync();
+        }
+    }
+
+    internal async Task HandleRedoAsync()
+    {
+        if (handlingEnter || windowLifetime.IsCancellationRequested || !viewModel.HasReviewedClip) return;
+        handlingEnter = true;
+        try
+        {
+            await viewModel.HandleRedoAsync();
+            if (!viewModel.IsCloseRequested && !viewModel.HasReviewedClip) await StartPreviewAsync();
         }
         finally { handlingEnter = false; }
     }

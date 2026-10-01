@@ -38,6 +38,7 @@ internal static class CaptureLifetimeSmoke
         var deadline = DateTime.UtcNow.AddSeconds(3);
         while (preview.Stops == 0 && DateTime.UtcNow < deadline) await Task.Delay(10);
         check(preview.Stops == 1, "delayed preview owns pending native camera shutdown");
+        check(!model.CanEditViewport && !model.UpdateViewport(new(2)), "pending preview cleanup freezes viewport before recording starts");
         var secondEnter = screen.HandleEnterAsync();
         try
         {
@@ -68,6 +69,9 @@ internal static class CaptureLifetimeSmoke
     }
     private sealed class NoScreenCapture : IScreenFaceCaptureEngine
     {
+        public Task<ScreenFaceCaptureResult> RecordAsync(TimeSpan duration, int monitor, Ping.Windows.Core.Capture.ScreenCaptureViewport viewport, CancellationToken token) => RecordAsync(duration, monitor, token);
+        public Task<ScreenFacePreviewResult> CapturePreviewAsync(int monitor, Ping.Windows.Core.Capture.ScreenCaptureViewport viewport, CancellationToken token) => CapturePreviewAsync(monitor, token);
+
         public int Recordings;
         public Task<ScreenFaceCaptureResult> RecordAsync(TimeSpan duration, int monitor, CancellationToken token)
         { ++Recordings; return Task.FromException<ScreenFaceCaptureResult>(new InvalidOperationException("Fixture must not capture screen.")); }

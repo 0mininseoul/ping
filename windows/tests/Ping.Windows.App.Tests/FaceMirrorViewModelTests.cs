@@ -9,6 +9,38 @@ namespace Ping.Windows.App.Tests;
 public sealed class FaceMirrorViewModelTests
 {
     [Fact]
+    public async Task ClosedIdleMirrorCannotRecordOrChangeRecipients()
+    {
+        var recorder = new FakeFaceRecorder();
+        var model = new FaceMirrorViewModel(FaceMirrorContextFor(false), recorder, (_, _) => Task.CompletedTask);
+        model.HandleWindowClosed();
+        Assert.False(model.CanRecord);
+        Assert.False(model.CanSelectTarget);
+        await model.HandleEnterAsync();
+        Assert.Equal(0, recorder.RecordCount);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RedoReturnsToEditablePreviewWithoutStartingAnotherRecording(bool failedUpload)
+    {
+        var recorder = new FakeFaceRecorder();
+        var model = new FaceMirrorViewModel(FaceMirrorContextFor(false), recorder,
+            (_, _) => Task.FromException(new IOException("Owned upload failure.")));
+        await model.HandleEnterAsync();
+        if (failedUpload) await model.HandleEnterAsync();
+        await model.HandleRedoAsync();
+        Assert.Equal(MirrorState.Idle, model.State);
+        Assert.True(model.CanRecord);
+        Assert.Null(model.ReviewVideoUri);
+        Assert.False(model.HasReviewedClip);
+        Assert.Equal(1, recorder.RecordCount);
+        await model.HandleRedoAsync();
+        Assert.Equal(1, recorder.RecordCount);
+    }
+
+    [Fact]
     public void DragUpdatesSenderPositionButSavesPreferenceOnlyAfterRelease()
     {
         var saves = 0;

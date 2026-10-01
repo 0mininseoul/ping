@@ -17,7 +17,8 @@ internal static class CaptureMirrorReviewSmoke
         var original = Path.Combine(output, "synthetic-playback.mp4");
         var facePath = Path.Combine(output, "synthetic-face-review.mp4"); File.Copy(original, facePath);
         var camera = new CameraOwnership();
-        var faceModel = new FaceMirrorViewModel(new([room], "me", "나", "친구", false, false), new FaceClip(facePath),
+        var faceRecorder = new FaceClip(facePath);
+        var faceModel = new FaceMirrorViewModel(new([room], "me", "나", "친구", false, false), faceRecorder,
             (_, _) => Task.FromException(new IOException("Owned upload failure.")));
         var face = new FaceMirrorWindow(faceModel, camera.TryAcquire(CameraPurpose.Manual)!);
         try
@@ -34,18 +35,48 @@ internal static class CaptureMirrorReviewSmoke
             check(faceModel.State == MirrorState.Failed && review.Visibility == Visibility.Visible && review.MediaPlayer is not null,
                 "real face mirror keeps review visible after failed upload");
             check(review.MediaPlayer?.Source is not null && File.Exists(facePath), "failed face upload retains owned clip for retry");
+            await face.HandleRedoAsync();
+            check(faceModel.State == MirrorState.Idle && faceModel.CanRecord && !faceModel.HasReviewedClip,
+                "real face redo returns to editable preview without immediate recording");
+            check(faceRecorder.Recordings == 1 && review.Visibility == Visibility.Collapsed && review.MediaPlayer is null && !File.Exists(facePath),
+                "real face redo detaches player before deleting clip and preserves recording count");
+            File.Copy(original, facePath);
+            await faceModel.HandleEnterAsync();
+            check(faceRecorder.Recordings == 2 && faceModel.HasReviewedClip, "face starts another recording only after explicit Enter");
         }
         finally { face.Close(); await face.CameraShutdown; }
         check(!camera.IsBusy && !File.Exists(facePath), "real face review close disposes player and removes temporary clip");
 
         var screenPath = Path.Combine(output, "synthetic-screen-review.mp4"); File.Copy(original, screenPath);
-        var screenModel = new ScreenFaceMirrorViewModel(new([room], "me", "나", "친구", false, false), new ScreenClip(screenPath),
+        var screenEngine = new ScreenClip(screenPath);
+        var screenModel = new ScreenFaceMirrorViewModel(new([room], "me", "나", "친구", false, false), screenEngine,
             (_, _) => Task.FromException(new IOException("Owned upload failure.")));
-        var screen = new ScreenFaceMirrorWindow(screenModel, camera.TryAcquire(CameraPurpose.Manual)!, _ => new NoPreview());
+        var previewStarts = 0;
+        var initialPreview = new PendingPreview();
+        var screen = new ScreenFaceMirrorWindow(screenModel, camera.TryAcquire(CameraPurpose.Manual)!,
+            _ => { previewStarts++; return previewStarts == 1 ? initialPreview : new NoPreview(); });
         try
         {
             screen.Activate(); await Task.Delay(80);
-            await screen.HandleEnterAsync(); await Task.Delay(120);
+            await initialPreview.Started.Task.WaitAsync(TimeSpan.FromSeconds(3));
+            screenModel.UpdateViewport(new(2, .7, .3));
+            var selected = screenModel.CaptureSelection;
+            var entering = screen.HandleEnterAsync();
+            try
+            {
+                await initialPreview.Stopping.Task.WaitAsync(TimeSpan.FromSeconds(3));
+                check(initialPreview.Stops == 1 && screenEngine.Recordings == 0,
+                    "real screen recording waits for actual pending preview cleanup");
+                check(!screenModel.CanEditViewport && !screenModel.UpdateViewport(new(4)),
+                    "real screen freezes viewport throughout preparation before recording state");
+                screenModel.UpdateCaptureMonitor(selected.MonitorIndex + 7);
+                await screen.HandleEnterAsync();
+                check(screenEngine.Recordings == 0, "repeated screen Enter cannot start a second pending preparation");
+            }
+            finally { initialPreview.Finish(); }
+            await entering; await Task.Delay(120);
+            check(screenEngine.LastSelection == selected && screenEngine.Recordings == 1,
+                "actual window records frozen monitor and viewport from before preview cleanup");
             var review = (MediaPlayerElement)((FrameworkElement)screen.Content).FindName("ReviewElement");
             check(screenModel.State == MirrorState.Reviewing && review.Visibility == Visibility.Visible && review.MediaPlayer is not null,
                 "real screen mirror attaches actual review player to owned synthetic clip");
@@ -56,6 +87,16 @@ internal static class CaptureMirrorReviewSmoke
             check(screenModel.State == MirrorState.Failed && review.Visibility == Visibility.Visible && review.MediaPlayer is not null,
                 "real screen mirror keeps review visible after failed upload");
             check(review.MediaPlayer?.Source is not null && File.Exists(screenPath), "failed screen upload retains owned clip for retry");
+            var startsBeforeRedo = previewStarts;
+            await screen.HandleRedoAsync();
+            check(screenModel.State == MirrorState.Idle && screenModel.CanEditViewport && !screenModel.HasReviewedClip,
+                "real screen redo restores editable viewport without immediate recording");
+            check(screenEngine.Recordings == 1 && review.Visibility == Visibility.Collapsed && review.MediaPlayer is null && !File.Exists(screenPath),
+                "real screen redo detaches review player before deleting clip");
+            check(previewStarts == startsBeforeRedo + 1, "real screen redo starts a fresh owned preview session after old cleanup");
+            File.Copy(original, screenPath);
+            await screen.HandleEnterAsync();
+            check(screenEngine.Recordings == 2 && screenModel.HasReviewedClip, "screen starts another recording only after explicit Enter");
         }
         finally { screen.Close(); await screen.CameraShutdown; }
         check(!camera.IsBusy && !File.Exists(screenPath), "real screen review close disposes player and removes temporary clip");
@@ -86,11 +127,18 @@ internal static class CaptureMirrorReviewSmoke
     }
     private sealed class FaceClip(string path) : IFaceRecorder
     {
-        public Task<FaceRecordingResult> RecordAsync(TimeSpan duration, CancellationToken cancellationToken = default) => Task.FromResult(new FaceRecordingResult(path, duration));
+        public int Recordings;
+        public Task<FaceRecordingResult> RecordAsync(TimeSpan duration, CancellationToken cancellationToken = default) { ++Recordings; return Task.FromResult(new FaceRecordingResult(path, duration)); }
     }
     private sealed class ScreenClip(string path) : IScreenFaceCaptureEngine
     {
-        public Task<ScreenFaceCaptureResult> RecordAsync(TimeSpan duration, int monitorIndex, CancellationToken cancellationToken) => Task.FromResult(new ScreenFaceCaptureResult(path, 16d / 9));
+        public ScreenMirrorCaptureSelection? LastSelection;
+        public Task<ScreenFaceCaptureResult> RecordAsync(TimeSpan duration, int monitor, ScreenCaptureViewport viewport, CancellationToken token)
+        { LastSelection = new(monitor, viewport); return RecordAsync(duration, monitor, token); }
+        public Task<ScreenFacePreviewResult> CapturePreviewAsync(int monitor, Ping.Windows.Core.Capture.ScreenCaptureViewport viewport, CancellationToken token) => CapturePreviewAsync(monitor, token);
+
+        public int Recordings;
+        public Task<ScreenFaceCaptureResult> RecordAsync(TimeSpan duration, int monitorIndex, CancellationToken cancellationToken) { ++Recordings; return Task.FromResult(new ScreenFaceCaptureResult(path, 16d / 9)); }
         public Task<ScreenFacePreviewResult> CapturePreviewAsync(int monitorIndex, CancellationToken cancellationToken) => Task.FromException<ScreenFacePreviewResult>(new IOException("Owned fixture has no screen input."));
         public Task<ScreenCaptureSelfTestResult> SelfTestAsync() => throw new NotSupportedException();
     }
@@ -98,6 +146,16 @@ internal static class CaptureMirrorReviewSmoke
     {
         public Task StartPreviewAsync(MediaPlayerElement element, CancellationToken token = default) => Task.CompletedTask;
         public Task StopPreviewAsync(MediaPlayerElement element) => Task.CompletedTask;
+    }
+    private sealed class PendingPreview : IFacePreviewSession
+    {
+        internal TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal TaskCompletionSource Stopping { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource finished = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal int Stops;
+        public Task StartPreviewAsync(MediaPlayerElement element, CancellationToken token = default) { Started.TrySetResult(); return finished.Task; }
+        public async Task StopPreviewAsync(MediaPlayerElement element) { ++Stops; Stopping.TrySetResult(); await finished.Task; }
+        internal void Finish() => finished.TrySetResult();
     }
 }
 #endif

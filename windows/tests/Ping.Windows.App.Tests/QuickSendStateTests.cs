@@ -309,6 +309,9 @@ public sealed class QuickSendStateTests
 
     private sealed class FakeScreenFaceCaptureEngine : IScreenFaceCaptureEngine
     {
+        public Task<ScreenFaceCaptureResult> RecordAsync(TimeSpan duration, int monitor, Ping.Windows.Core.Capture.ScreenCaptureViewport viewport, CancellationToken token) => RecordAsync(duration, monitor, token);
+        public Task<ScreenFacePreviewResult> CapturePreviewAsync(int monitor, Ping.Windows.Core.Capture.ScreenCaptureViewport viewport, CancellationToken token) => CapturePreviewAsync(monitor, token);
+
         private readonly Action<CancellationToken>? beforeRecordReturns;
 
         public FakeScreenFaceCaptureEngine()

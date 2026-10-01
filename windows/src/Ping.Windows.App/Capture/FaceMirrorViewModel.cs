@@ -224,9 +224,9 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
 
     public IFaceRecorder Recorder => recorder;
 
-    public bool CanRecord => State == MirrorState.Idle || (State == MirrorState.Failed && !HasReviewedClip);
+    public bool CanRecord => !IsCloseRequested && (State == MirrorState.Idle || (State == MirrorState.Failed && !HasReviewedClip));
 
-    public bool CanSelectTarget => State is MirrorState.Idle or MirrorState.Reviewing or MirrorState.Failed;
+    public bool CanSelectTarget => !IsCloseRequested && State is (MirrorState.Idle or MirrorState.Reviewing or MirrorState.Failed);
 
     public bool HasReviewedClip => reviewedPath is not null;
 
@@ -242,6 +242,8 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
 
             isCloseRequested = value;
             OnPropertyChanged();
+            OnPropertyChanged(nameof(CanRecord));
+            OnPropertyChanged(nameof(CanSelectTarget));
         }
     }
 
@@ -287,6 +289,7 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
 
     public async Task HandleEnterAsync()
     {
+        if (IsCloseRequested) return;
         if (State == MirrorState.Reviewing || (State == MirrorState.Failed && HasReviewedClip))
         {
             await UploadReviewedClipAsync();
@@ -350,15 +353,17 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
         }
     }
 
-    public async Task HandleRedoAsync()
+    public Task HandleRedoAsync()
     {
-        if (State != MirrorState.Reviewing && !(State == MirrorState.Failed && HasReviewedClip))
+        if (IsCloseRequested || State != MirrorState.Reviewing && !(State == MirrorState.Failed && HasReviewedClip))
         {
-            return;
+            return Task.CompletedTask;
         }
 
         ClearReviewedClip(deleteFile: true);
-        await HandleEnterAsync();
+        State = MirrorState.Idle;
+        StatusMessage = "Enter로 다시 녹화해요. Esc로 닫을 수 있어요.";
+        return Task.CompletedTask;
     }
 
     private async Task UploadReviewedClipAsync()
