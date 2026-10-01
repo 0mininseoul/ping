@@ -31,7 +31,7 @@ public interface ISupabaseRpcClient
     Task RpcVoidAsync(string function, object? body = null, CancellationToken cancellationToken = default);
 }
 
-public sealed class SupabaseClient : ISupabaseRpcClient, IRealtimeCredentialsProvider, IDisposable
+public sealed partial class SupabaseClient : ISupabaseRpcClient, IRealtimeCredentialsProvider, IDisposable
 {
     private readonly HttpClient httpClient;
     private readonly bool ownsHttpClient;
@@ -39,7 +39,7 @@ public sealed class SupabaseClient : ISupabaseRpcClient, IRealtimeCredentialsPro
     private readonly SupabaseSessionStore sessionStore;
     private readonly SemaphoreSlim authLock = new(1, 1);
     private SupabaseConfiguration? configuration;
-    private SupabaseSession? session;
+    private volatile SupabaseSession? session;
     private volatile bool sessionPersistencePending;
 
     public SupabaseClient(HttpClient? httpClient = null, string? configPath = null, string? sessionPath = null)
@@ -186,10 +186,11 @@ public sealed class SupabaseClient : ISupabaseRpcClient, IRealtimeCredentialsPro
                 return session;
             }
 
-            session ??= await sessionStore.LoadAsync(cancellationToken).ConfigureAwait(false);
+            await LoadAccountsLockedAsync(cancellationToken).ConfigureAwait(false);
             SupabaseSession authenticated;
             if (session is null)
             {
+                if (accounts!.Initialized) throw new SupabaseAccountRequiredException();
                 authenticated = await SignInAnonymouslyAsync(cancellationToken).ConfigureAwait(false);
             }
             else if (session.NeedsRefresh)
@@ -197,6 +198,9 @@ public sealed class SupabaseClient : ISupabaseRpcClient, IRealtimeCredentialsPro
                 try
                 {
                     authenticated = await RefreshSessionAsync(session.RefreshToken, cancellationToken).ConfigureAwait(false);
+                    if (!string.Equals(authenticated.UserId, session.UserId, StringComparison.Ordinal))
+                        throw new SupabaseSessionExpiredException(session.UserId,
+                            new InvalidOperationException("Token refresh returned a different account."));
                 }
                 catch (SupabaseRequestException ex) when (ex.IsSessionRejected)
                 {
@@ -210,7 +214,8 @@ public sealed class SupabaseClient : ISupabaseRpcClient, IRealtimeCredentialsPro
 
             sessionPersistencePending = true;
             session = authenticated;
-            await sessionStore.SaveAsync(authenticated, cancellationToken).ConfigureAwait(false);
+            accounts = accounts!.Upsert(authenticated, activate: true);
+            await sessionStore.SaveAccountsAsync(accounts, cancellationToken).ConfigureAwait(false);
             sessionPersistencePending = false;
             return authenticated;
         }

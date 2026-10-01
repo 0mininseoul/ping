@@ -49,7 +49,7 @@ public sealed class ConnectionSupervisor : IAsyncDisposable
     public void ReportFailure(Exception error)
     {
         if (state is ConnectionState.SessionRejected or ConnectionState.ConfigurationRequired or ConnectionState.Stopped) return;
-        if (error is SupabaseSessionExpiredException or SupabaseSessionReadException)
+        if (error is SupabaseSessionExpiredException or SupabaseSessionReadException or SupabaseAccountRequiredException)
             Interlocked.CompareExchange(ref reportedFailure, error, null);
         Signal();
     }
@@ -105,7 +105,7 @@ public sealed class ConnectionSupervisor : IAsyncDisposable
                 catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
                 catch (Exception error)
                 {
-                    if (error is SupabaseSessionExpiredException or SupabaseSessionReadException)
+                    if (error is SupabaseSessionExpiredException or SupabaseSessionReadException or SupabaseAccountRequiredException)
                     {
                         ChangeState(ConnectionState.SessionRejected, error);
                         await wake.WaitAsync(token).ConfigureAwait(false);

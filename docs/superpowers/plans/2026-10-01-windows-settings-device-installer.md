@@ -25,6 +25,7 @@
 
 ## 3. 계정과 업데이트 연결
 
+- [x] Task 3A: 기존 세션 파일 이행과 저장 계정 추가·전환·로컬 제거·닉네임/갱신 보존 API. 마지막 계정 제거와 최초 실행을 구분하고 저장/인증 실패 시 기존 계정을 보존. Commit `feat(windows-account): preserve and manage saved identities`. 검증: `docs/windows/2026-10-01-saved-account-storage-verification.ko.md`. 계정 UI와 실행 중 작업 정리는 Task 3B에 남아 있다.
 - [ ] Mac 저장 계정 UX/세션 교체를 조사하고 현재 계정 유지·전환·명시적 새 계정 생성/제거를 구현한다. 전환 전에 송수신·카메라·알림 작업을 정리하고 계정별 ledger를 분리. 손상·갱신 실패에 자동 새 계정을 만들지 않는다.
 - [ ] 정보 탭에 실제 Windows 버전과 업데이트 확인/실패/재시도/설치 동의 흐름을 제공. 다운로드·서명·버전 검증 후 설치하며 기존 계정/룸/설정은 유지. 존재하는 배포 URL/인증서를 조사하고 검증되지 않은 signer/주소로 자동 교체하지 않는다.
 - [ ] owned account files/fake auth 및 update manifest/signature fixtures로 전환·실패·보존을 확인. Commit `feat(windows-account): add account management and update flow`.
