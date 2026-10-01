@@ -8,6 +8,25 @@ namespace Ping.Windows.App.Tests;
 public sealed class NativeCaptureViewportTests
 {
     [Fact]
+    public async Task SelectedCameraPassesExactIdentityToNativeApi()
+    {
+        var api = new Api();
+        var id = @"\\?\fixture#camera#{opaque-id}";
+        var result = await new NativeCaptureEngine(api).RecordAsync(TimeSpan.FromSeconds(3), 0, new(), id, default);
+        try { Assert.Equal(id, api.SelectedCamera); Assert.True(File.Exists(result.FilePath)); }
+        finally { File.Delete(result.FilePath); }
+    }
+
+    [Fact]
+    public async Task UnsupportedSelectedCameraApiDoesNotFallBackToV2()
+    {
+        var api = new Api { RejectSelectedCamera = true };
+        await Assert.ThrowsAsync<NotSupportedException>(() => new NativeCaptureEngine(api)
+            .RecordAsync(TimeSpan.FromSeconds(3), 0, new(), "selected", default));
+        Assert.Null(api.Handle);
+        Assert.False(File.Exists(api.Path));
+    }
+    [Fact]
     public async Task RecordingForwardsImmutableViewportAndNativeParameters()
     {
         var api = new Api();
@@ -72,7 +91,7 @@ public sealed class NativeCaptureViewportTests
         var api = new Api { WaitForCancellation = true };
         using var cancellation = new CancellationTokenSource();
         var viewport = new ScreenCaptureViewport(2);
-        var owned = new OwnedScreenFaceCaptureEngine(camera, new NativeCaptureEngine(api));
+        var owned = new OwnedScreenFaceCaptureEngine(camera, new NativeCaptureEngine(api), selectCamera: _ => Task.FromResult("fixture-camera"));
         var operation = owned.RecordAsync(TimeSpan.FromSeconds(3), 0, viewport, cancellation.Token);
         await api.Started.Task.WaitAsync(TimeSpan.FromSeconds(3));
         cancellation.Cancel();
@@ -90,6 +109,8 @@ public sealed class NativeCaptureViewportTests
     private sealed class Api : INativeScreenCaptureApi
     {
         public ScreenCaptureViewport? Viewport;
+        public string? SelectedCamera;
+        public bool RejectSelectedCamera;
         public SafeWaitHandle? Handle;
         public string Path = "";
         public int Duration, Monitor;
@@ -103,6 +124,13 @@ public sealed class NativeCaptureViewportTests
         {
             Duration = duration; FaceRatio = faceRatio;
             return Execute(path, monitor, viewport, cancellationEvent, out aspect);
+        }
+        public int Record(string path, int duration, int monitor, double faceRatio, ScreenCaptureViewport viewport,
+            string cameraDeviceId, SafeWaitHandle cancellationEvent, out double aspect)
+        {
+            SelectedCamera = cameraDeviceId;
+            if (RejectSelectedCamera) throw new NotSupportedException("fixture V3 unavailable");
+            return Record(path, duration, monitor, faceRatio, viewport, cancellationEvent, out aspect);
         }
         public int Preview(string path, int monitor, ScreenCaptureViewport viewport, SafeWaitHandle cancellationEvent, out double aspect)
             => Execute(path, monitor, viewport, cancellationEvent, out aspect);

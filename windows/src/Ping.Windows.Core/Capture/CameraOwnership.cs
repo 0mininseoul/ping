@@ -72,10 +72,12 @@ public sealed class CameraLease : IDisposable
         this.owner = owner;
         Purpose = purpose;
         Token = cancellation.Token;
+        CameraSelection = new(Token);
     }
 
     public CameraPurpose Purpose { get; }
     public CancellationToken Token { get; }
+    public CaptureCameraSelection CameraSelection { get; }
     internal Task Released => released.Task;
 
     internal void Interrupt()

@@ -2,21 +2,28 @@ using Ping.Windows.Core.Capture;
 
 namespace Ping.Windows.App.Capture;
 
-public sealed class OwnedScreenFaceCaptureEngine(CameraOwnership camera, IScreenFaceCaptureEngine engine, CameraLease? borrowed = null)
+public sealed class OwnedScreenFaceCaptureEngine(CameraOwnership camera, IScreenFaceCaptureEngine engine, CameraLease? borrowed = null,
+    Func<CancellationToken, Task<string>>? selectCamera = null)
     : IScreenFaceCaptureEngine
 {
     public async Task<ScreenFaceCaptureResult> RecordAsync(TimeSpan duration, int monitorIndex, CancellationToken token)
-        => await RecordOwnedAsync(active => engine.RecordAsync(duration, monitorIndex, active), token);
+        => await RecordOwnedAsync(duration, monitorIndex, new(), active => engine.RecordAsync(duration, monitorIndex, active), token);
 
     public async Task<ScreenFaceCaptureResult> RecordAsync(TimeSpan duration, int monitorIndex, ScreenCaptureViewport viewport,
-        CancellationToken token) => await RecordOwnedAsync(active => engine.RecordAsync(duration, monitorIndex, viewport, active), token);
+        CancellationToken token) => await RecordOwnedAsync(duration, monitorIndex, viewport, active => engine.RecordAsync(duration, monitorIndex, viewport, active), token);
 
-    private async Task<ScreenFaceCaptureResult> RecordOwnedAsync(Func<CancellationToken, Task<ScreenFaceCaptureResult>> record, CancellationToken token)
+    private async Task<ScreenFaceCaptureResult> RecordOwnedAsync(TimeSpan duration, int monitor, ScreenCaptureViewport viewport,
+        Func<CancellationToken, Task<ScreenFaceCaptureResult>> record, CancellationToken token)
     {
         using var lease = borrowed is null ? await camera.AcquireManualAsync(token) : null;
         var active = borrowed ?? lease ?? throw new InvalidOperationException("카메라가 다른 촬영에서 사용 중입니다.");
         using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(token, active.Token);
         cancellation.Token.ThrowIfCancellationRequested();
+        if (engine is ICameraBoundScreenCaptureEngine selected)
+        {
+            var deviceId = await active.CameraSelection.GetAsync(selectCamera ?? SelectDefaultCameraAsync, cancellation.Token);
+            return await selected.RecordAsync(duration, monitor, viewport, deviceId, cancellation.Token);
+        }
         return await record(cancellation.Token);
     }
 
@@ -24,4 +31,13 @@ public sealed class OwnedScreenFaceCaptureEngine(CameraOwnership camera, IScreen
     public Task<ScreenFacePreviewResult> CapturePreviewAsync(int monitorIndex, ScreenCaptureViewport viewport,
         CancellationToken token) => engine.CapturePreviewAsync(monitorIndex, viewport, token);
     public Task<ScreenCaptureSelfTestResult> SelfTestAsync() => engine.SelfTestAsync();
+
+    private static Task<string> SelectDefaultCameraAsync(CancellationToken token)
+    {
+#if WINDOWS
+        return CaptureCameraResolver.ResolveAsync(token);
+#else
+        throw new PlatformNotSupportedException("A camera resolver is required outside Windows.");
+#endif
+    }
 }

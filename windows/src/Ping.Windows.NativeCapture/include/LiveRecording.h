@@ -1,5 +1,6 @@
 #pragma once
 #include "RecordingStream.h"
+#include <string>
 #include <atomic>
 #include <functional>
 #include <thread>
@@ -75,5 +76,5 @@ namespace Ping::Windows::NativeCapture
     };
 
     int CreateLiveRecordingProvider(int monitor, double faceRatio, CaptureViewport viewport, int durationMs,
-        OutputLayout& layout, std::unique_ptr<IRecordingFrameProvider>& provider);
+        OutputLayout& layout, std::unique_ptr<IRecordingFrameProvider>& provider, std::wstring const& cameraDeviceId = {});
 }

@@ -17,7 +17,7 @@ public sealed class FaceRecorder : IFaceRecorder, IFacePreviewSession, IAsyncDis
 
     public FaceRecorder(CameraLease lease)
     {
-        session = new(lease, InitializeAsync, capture =>
+        session = new(lease, token => InitializeAsync(lease, token), capture =>
         {
             try { previewPlayer?.Dispose(); }
             finally { previewPlayer = null; capture.Dispose(); }
@@ -25,14 +25,16 @@ public sealed class FaceRecorder : IFaceRecorder, IFacePreviewSession, IAsyncDis
         });
     }
 
-    private static async Task<MediaCapture> InitializeAsync(CancellationToken token)
+    private static async Task<MediaCapture> InitializeAsync(CameraLease lease, CancellationToken token)
     {
+        var cameraDeviceId = await lease.CameraSelection.GetAsync(CaptureCameraResolver.ResolveAsync, token);
         var capture = new MediaCapture();
         try
         {
             await CaptureWinRtOperation.WaitAsync(capture.InitializeAsync(new MediaCaptureInitializationSettings
             {
-                StreamingCaptureMode = StreamingCaptureMode.AudioAndVideo
+                StreamingCaptureMode = StreamingCaptureMode.AudioAndVideo,
+                VideoDeviceId = cameraDeviceId
             }), token);
             return capture;
         }

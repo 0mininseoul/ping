@@ -10,6 +10,7 @@ std::atomic<int> FixtureLiveMode{0}, FixtureLiveStarted{0}, FixtureLiveDrained{0
 std::atomic<LONGLONG> FixtureAudioDrift{0};
 HANDLE FixtureDrainRelease = nullptr;
 Ping::Windows::NativeCapture::CaptureViewport FixtureViewport{};
+std::wstring FixtureCameraDevice;
 namespace Ping::Windows::NativeCapture
 {
     int CaptureOneMonitorFrame(int, MonitorCaptureResult&) { ++FixtureSourceStarts; return PingCaptureNoMonitor; }
@@ -85,11 +86,12 @@ namespace Ping::Windows::NativeCapture
     }
 
     int CreateLiveRecordingProvider(int, double faceRatio, CaptureViewport viewport, int durationMs,
-        OutputLayout& layout, std::unique_ptr<IRecordingFrameProvider>& provider)
+        OutputLayout& layout, std::unique_ptr<IRecordingFrameProvider>& provider, std::wstring const& cameraDeviceId)
     {
         auto mode = FixtureLiveMode.load();
         if (!mode) return PingCaptureNoMonitor;
         FixtureViewport = viewport;
+        FixtureCameraDevice = cameraDeviceId;
         layout = CreateScreenFaceLayout({960, 540}, faceRatio, 540);
         auto state = std::make_shared<RecordingSourceState>(layout, durationMs);
         std::vector<std::unique_ptr<IRecordingSource>> sources;

@@ -8,6 +8,9 @@ using namespace Ping::Windows::NativeCapture;
 
 namespace
 {
+    int RecordScreenFace(const wchar_t* outputPath, int durationMs, int targetMonitorIndex,
+        double faceDiameterRatio, double zoom, double centerX, double centerY, const wchar_t* cameraDeviceId,
+        HANDLE cancellationEvent, double* outAspectRatio);
     bool IsValidDuration(int durationMs)
     {
         return durationMs > 0 && durationMs <= 30'000;
@@ -50,6 +53,30 @@ int PingCapture_RecordScreenFaceMp4(
 extern "C" __declspec(dllexport)
 int PingCapture_RecordScreenFaceMp4V2(const wchar_t* outputPath, int durationMs, int targetMonitorIndex,
     double faceDiameterRatio, double zoom, double centerX, double centerY, HANDLE cancellationEvent, double* outAspectRatio)
+{
+    return RecordScreenFace(outputPath, durationMs, targetMonitorIndex, faceDiameterRatio, zoom, centerX, centerY,
+        nullptr, cancellationEvent, outAspectRatio);
+}
+
+extern "C" __declspec(dllexport)
+int PingCapture_RecordScreenFaceMp4V3(const wchar_t* outputPath, int durationMs, int targetMonitorIndex,
+    double faceDiameterRatio, double zoom, double centerX, double centerY, const wchar_t* cameraDeviceId,
+    HANDLE cancellationEvent, double* outAspectRatio)
+{
+    if (!cameraDeviceId || !cameraDeviceId[0])
+    {
+        if (outAspectRatio) *outAspectRatio = 1;
+        return PingCaptureNoCamera;
+    }
+    return RecordScreenFace(outputPath, durationMs, targetMonitorIndex, faceDiameterRatio, zoom, centerX, centerY,
+        cameraDeviceId, cancellationEvent, outAspectRatio);
+}
+
+namespace
+{
+int RecordScreenFace(const wchar_t* outputPath, int durationMs, int targetMonitorIndex,
+    double faceDiameterRatio, double zoom, double centerX, double centerY, const wchar_t* cameraDeviceId,
+    HANDLE cancellationEvent, double* outAspectRatio)
 try
 {
     if (outAspectRatio != nullptr)
@@ -66,7 +93,8 @@ try
 
     OutputLayout layout{};
     std::unique_ptr<IRecordingFrameProvider> provider;
-    auto sourceResult = CreateLiveRecordingProvider(targetMonitorIndex, faceDiameterRatio, {zoom, centerX, centerY}, durationMs, layout, provider);
+    auto sourceResult = CreateLiveRecordingProvider(targetMonitorIndex, faceDiameterRatio, {zoom, centerX, centerY}, durationMs,
+        layout, provider, cameraDeviceId ? cameraDeviceId : L"");
     if (sourceResult != PingCaptureSuccess || !provider) return NormalizeCaptureFailure(sourceResult);
     if (outAspectRatio != nullptr)
     {
@@ -87,6 +115,7 @@ catch (...)
 {
     if (outputPath) DeleteFileW(outputPath);
     return PingCaptureCaptureFailure;
+}
 }
 
 extern "C" __declspec(dllexport)

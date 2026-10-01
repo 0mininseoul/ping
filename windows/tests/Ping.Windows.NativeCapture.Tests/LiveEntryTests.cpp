@@ -9,6 +9,7 @@ extern std::atomic<int> FixtureLiveMode, FixtureLiveStarted, FixtureLiveDrained,
 extern HANDLE FixtureDrainRelease;
 extern std::atomic<LONGLONG> FixtureAudioDrift;
 extern CaptureViewport FixtureViewport;
+extern std::wstring FixtureCameraDevice;
 
 void LiveEntryChecks(wchar_t const* directory, void (*check)(bool, char const*))
 {
@@ -46,5 +47,15 @@ void LiveEntryChecks(wchar_t const* directory, void (*check)(bool, char const*))
     CloseHandle(FixtureDrainRelease); FixtureDrainRelease = nullptr; CloseHandle(cancellation);
     check(waited && result == PingCaptureCancelled && FixtureLiveDrained == 3 && GetFileAttributesW(path.c_str()) == INVALID_FILE_ATTRIBUTES,
         "product cancellation waits for actual producer drain before returning");
+    FixtureLiveMode = 1;
+    path = std::wstring(directory) + L"\\live-selected-camera.mp4";
+    result = PingCapture_RecordScreenFaceMp4V3(path.c_str(), 1000, 0, .32, 2, .6, .4,
+        L"\\\\?\\fixture#camera#{opaque-id}", nullptr, &aspect);
+    check(result == PingCaptureSuccess && FixtureCameraDevice == L"\\\\?\\fixture#camera#{opaque-id}",
+        "V3 recording forwards the exact opaque camera identity to the owned factory");
+    auto starts = FixtureLiveStarted.load();
+    check(PingCapture_RecordScreenFaceMp4V3(path.c_str(), 1000, 0, .32, 1, .5, .5, nullptr, nullptr, &aspect) == PingCaptureNoCamera
+        && PingCapture_RecordScreenFaceMp4V3(path.c_str(), 1000, 0, .32, 1, .5, .5, L"", nullptr, &aspect) == PingCaptureNoCamera
+        && FixtureLiveStarted == starts, "V3 missing camera identity does not start a default camera");
     FixtureLiveMode = 0;
 }

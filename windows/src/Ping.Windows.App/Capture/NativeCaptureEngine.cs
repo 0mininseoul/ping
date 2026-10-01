@@ -48,7 +48,13 @@ public interface IScreenFaceCaptureEngine
         CancellationToken cancellationToken) => throw new NotSupportedException("Capture engine does not support viewport preview.");
 }
 
-public sealed class NativeCaptureEngine(INativeScreenCaptureApi? nativeApi = null) : IScreenFaceCaptureEngine
+public interface ICameraBoundScreenCaptureEngine
+{
+    Task<ScreenFaceCaptureResult> RecordAsync(TimeSpan duration, int monitorIndex, ScreenCaptureViewport viewport,
+        string cameraDeviceId, CancellationToken token);
+}
+
+public sealed class NativeCaptureEngine(INativeScreenCaptureApi? nativeApi = null) : IScreenFaceCaptureEngine, ICameraBoundScreenCaptureEngine
 {
     private readonly INativeScreenCaptureApi api = nativeApi ?? new NativeScreenCaptureApi();
     private const double FaceDiameterRatio = 0.32;
@@ -59,8 +65,20 @@ public sealed class NativeCaptureEngine(INativeScreenCaptureApi? nativeApi = nul
         int monitorIndex,
         CancellationToken cancellationToken) => RecordAsync(duration, monitorIndex, new ScreenCaptureViewport(), cancellationToken);
 
-    public async Task<ScreenFaceCaptureResult> RecordAsync(TimeSpan duration, int monitorIndex,
+    public Task<ScreenFaceCaptureResult> RecordAsync(TimeSpan duration, int monitorIndex,
         ScreenCaptureViewport viewport, CancellationToken cancellationToken)
+        => RecordCoreAsync(duration, monitorIndex, viewport, null, cancellationToken);
+
+    public Task<ScreenFaceCaptureResult> RecordAsync(TimeSpan duration, int monitorIndex, ScreenCaptureViewport viewport,
+        string cameraDeviceId, CancellationToken token)
+    {
+        if (string.IsNullOrWhiteSpace(cameraDeviceId) || cameraDeviceId.Contains('\0'))
+            throw new ArgumentException("A selected camera identity is required.", nameof(cameraDeviceId));
+        return RecordCoreAsync(duration, monitorIndex, viewport, cameraDeviceId, token);
+    }
+
+    private async Task<ScreenFaceCaptureResult> RecordCoreAsync(TimeSpan duration, int monitorIndex,
+        ScreenCaptureViewport viewport, string? cameraDeviceId, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(viewport);
         if (duration <= TimeSpan.Zero || duration > TimeSpan.FromSeconds(30))
@@ -81,14 +99,15 @@ public sealed class NativeCaptureEngine(INativeScreenCaptureApi? nativeApi = nul
         try
         {
             result = await Task.Run(
-                () => api.Record(
+                () => cameraDeviceId is null ? api.Record(
                     outputPath,
                     checked((int)Math.Round(duration.TotalMilliseconds)),
                     monitorIndex,
                     FaceDiameterRatio,
                     viewport,
                     nativeCancellation.SafeWaitHandle,
-                    out aspectRatio),
+                    out aspectRatio) : api.Record(outputPath, checked((int)Math.Round(duration.TotalMilliseconds)),
+                        monitorIndex, FaceDiameterRatio, viewport, cameraDeviceId, nativeCancellation.SafeWaitHandle, out aspectRatio),
                 cancellationToken).ConfigureAwait(false);
         }
         catch (DllNotFoundException exception)

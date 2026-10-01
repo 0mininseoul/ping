@@ -38,6 +38,11 @@ int PingCapture_RecordScreenFaceMp4V2(const wchar_t* outputPath, int durationMs,
     double faceDiameterRatio, double zoom, double centerX, double centerY, HANDLE cancellationEvent, double* outAspectRatio);
 
 extern "C" __declspec(dllexport)
+int PingCapture_RecordScreenFaceMp4V3(const wchar_t* outputPath, int durationMs, int targetMonitorIndex,
+    double faceDiameterRatio, double zoom, double centerX, double centerY, const wchar_t* cameraDeviceId,
+    HANDLE cancellationEvent, double* outAspectRatio);
+
+extern "C" __declspec(dllexport)
 int PingCapture_WriteScreenPreviewBmpV2(const wchar_t* outputPath, int targetMonitorIndex,
     double zoom, double centerX, double centerY, HANDLE cancellationEvent, double* outAspectRatio);
 
