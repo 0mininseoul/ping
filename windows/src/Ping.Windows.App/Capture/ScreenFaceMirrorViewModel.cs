@@ -48,6 +48,7 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
     private ScreenCaptureViewport viewport = new();
     private long captureRevision, previewRequest;
     private bool capturePreparing;
+    private bool localViewportWheel;
     private bool isCloseRequested;
     private bool isFadeOutRequested;
 
@@ -101,6 +102,7 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
             OnPropertyChanged(nameof(CanRecord));
             OnPropertyChanged(nameof(CanSelectTarget));
             OnPropertyChanged(nameof(CanEditViewport));
+            OnPropertyChanged(nameof(ViewportGuideOpacity));
             OnPropertyChanged(nameof(RecordingCountdownOpacity));
         }
     }
@@ -213,6 +215,8 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
     public int MonitorIndex => monitorIndex;
     public ScreenCaptureViewport Viewport => viewport;
     public bool CanEditViewport => CanRecord && !IsCloseRequested && !capturePreparing;
+    public double ViewportGuideOpacity => CanEditViewport ? 1 : 0;
+    public string ViewportGuideText => $"{Viewport.Zoom.ToString("0.##", System.Globalization.CultureInfo.CurrentCulture)}× · {(localViewportWheel ? "창 위에서 Alt+휠" : "Alt+휠 확대")} · Alt+0 초기화";
     public ScreenMirrorCaptureSelection CaptureSelection => new(monitorIndex, viewport);
 
     internal void SetCapturePreparing(bool value)
@@ -220,6 +224,7 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
         if (capturePreparing == value) return;
         capturePreparing = value;
         OnPropertyChanged(nameof(CanEditViewport));
+        OnPropertyChanged(nameof(ViewportGuideOpacity));
         OnPropertyChanged(nameof(CanSelectTarget));
     }
 
@@ -230,7 +235,14 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
         viewport = selected;
         captureRevision++;
         OnPropertyChanged(nameof(Viewport));
+        OnPropertyChanged(nameof(ViewportGuideText));
         return true;
+    }
+
+    internal void UseLocalViewportWheel()
+    {
+        localViewportWheel = true;
+        OnPropertyChanged(nameof(ViewportGuideText));
     }
 
     public Uri? ScreenPreviewUri
@@ -267,6 +279,7 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
             isCloseRequested = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(CanEditViewport));
+            OnPropertyChanged(nameof(ViewportGuideOpacity));
             OnPropertyChanged(nameof(CanRecord));
             OnPropertyChanged(nameof(CanSelectTarget));
         }

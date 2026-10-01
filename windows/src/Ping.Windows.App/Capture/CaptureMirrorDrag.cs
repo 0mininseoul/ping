@@ -13,13 +13,15 @@ internal sealed class CaptureMirrorDrag : IDisposable
     private readonly CaptureMirrorNativeWindow native;
     private readonly Action finished;
     private readonly UIElement excluded;
+    private readonly bool ignoreAlt;
     private CaptureRect origin;
     private (double X, double Y) cursor;
     private Pointer? pointer;
     internal bool IsDragging => pointer is not null;
-    internal CaptureMirrorDrag(FrameworkElement root, CaptureMirrorNativeWindow native, Action finished, UIElement excluded)
+    internal CaptureMirrorDrag(FrameworkElement root, CaptureMirrorNativeWindow native, Action finished, UIElement excluded, bool ignoreAlt = false)
     {
         this.root = root; this.native = native; this.finished = finished; this.excluded = excluded;
+        this.ignoreAlt = ignoreAlt;
         root.AddHandler(UIElement.PointerPressedEvent, new PointerEventHandler(Pressed), true);
         root.PointerMoved += Moved;
         root.PointerReleased += Released;
@@ -27,7 +29,7 @@ internal sealed class CaptureMirrorDrag : IDisposable
     }
     private void Pressed(object sender, PointerRoutedEventArgs args)
     {
-        if (IsDragging || args.Pointer.PointerDeviceType != PointerDeviceType.Mouse
+        if (IsDragging || ignoreAlt && CaptureViewportInput.AltPressed || args.Pointer.PointerDeviceType != PointerDeviceType.Mouse
             || !args.GetCurrentPoint(root).Properties.IsLeftButtonPressed || IsExcluded(args.OriginalSource as DependencyObject)) return;
         origin = native.ReadClient(); cursor = CaptureMirrorNativeWindow.Cursor();
         if (root.CapturePointer(args.Pointer)) { pointer = args.Pointer; root.Focus(FocusState.Programmatic); }

@@ -25,7 +25,7 @@ internal sealed class CaptureMirrorNativeWindow
         presenter.IsMaximizable = false;
         presenter.IsMinimizable = false;
         Window.SetPresenter(presenter);
-        if (!SetWindowDisplayAffinity(Handle, 0x11)) throw new Win32Exception(Marshal.GetLastWin32Error(), "거울 창을 화면 녹화에서 제외할 수 없습니다.");
+        Ping.Windows.App.UI.WindowCaptureExclusion.Apply(window);
     }
 
     internal CaptureMirrorDisplay ReadDisplay()
@@ -78,7 +78,6 @@ internal sealed class CaptureMirrorNativeWindow
     private static void Require(bool success) { if (!success) throw new Win32Exception(Marshal.GetLastWin32Error()); }
     [StructLayout(LayoutKind.Sequential)] private struct NativeRect { public int Left, Top, Right, Bottom; }
     [StructLayout(LayoutKind.Sequential)] private struct NativePoint { public int X, Y; }
-    [DllImport("user32.dll", SetLastError = true)] private static extern bool SetWindowDisplayAffinity(IntPtr hwnd, uint affinity);
     [DllImport("user32.dll")] private static extern uint GetDpiForWindow(IntPtr hwnd);
     [DllImport("user32.dll", SetLastError = true)] private static extern bool GetClientRect(IntPtr hwnd, out NativeRect rect);
     [DllImport("user32.dll", SetLastError = true)] private static extern bool GetWindowRect(IntPtr hwnd, out NativeRect rect);

@@ -60,6 +60,7 @@ internal static class UiSmokeRunner
             await Task.Delay(350);
             var root = (FrameworkElement)window.Content;
             Check(root.ActualWidth > 700 && root.ActualHeight > 500, "real main window has usable client area");
+            Check(UI.WindowCaptureExclusion.IsApplied(window), "messenger declares exclusion from OS screen capture");
             Check(vm.Rooms.Count == 2 && vm.Timeline.Count == 4, "fixture rooms and mixed timeline loaded");
             Check(window.Content is ContentControl { Content: HistoryWindow }, "single main window hosts messenger control");
             var timelineScroll = Descendants((ListView)shell.FindName("VideosList")).OfType<ScrollViewer>().First();
@@ -132,6 +133,7 @@ internal static class UiSmokeRunner
                 ensureArchiveFolders: () => { }, deleteExpiredArchiveFiles: () => { }, openArchiveFolder: _ => Task.FromResult(false));
             var settings = new SettingsWindow(settingsVm);
             settings.Activate();
+            Check(UI.WindowCaptureExclusion.IsApplied(settings), "settings declares exclusion from OS screen capture");
             await Task.Delay(250);
             var autoPlayToggle = Descendants(settings.Content).OfType<ToggleSwitch>().Single(toggle => toggle.Header?.ToString() == "받은 영상 자동 재생");
             Check(autoPlayToggle.IsOn, "real autoplay control defaults on");
@@ -146,6 +148,7 @@ internal static class UiSmokeRunner
             await AutoReplySmoke.RunAsync(window, Check, RenderAsync);
             await CaptureLifetimeSmoke.RunAsync(Check);
             await CaptureMirrorReviewSmoke.RunAsync(OutputDirectory!, Check, RenderAsync);
+            await CaptureViewportInputSmoke.RunAsync(OutputDirectory!, Check, RenderAsync);
 
             var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
             window.Close();

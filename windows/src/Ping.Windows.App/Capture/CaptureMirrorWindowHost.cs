@@ -28,7 +28,7 @@ internal sealed class CaptureMirrorWindowHost : IDisposable
         native = new(window);
         Apply(preferred);
         observer = new(native.Handle, root.DispatcherQueue, Refresh);
-        drag = new(root, native, Refresh, excludedFromDrag);
+        drag = new(root, native, Refresh, excludedFromDrag, mode == CaptureMode.ScreenFace);
         native.Window.Changed += HandleChanged;
         root.Loaded += HandleLoaded;
     }
@@ -57,6 +57,9 @@ internal sealed class CaptureMirrorWindowHost : IDisposable
         }
         finally { applying = false; }
     }
+
+    internal CaptureMirrorDisplay ReadDisplay() => native.ReadDisplay();
+    internal CaptureRect ReadClient() => native.ReadClient();
 
     internal void Refresh()
     {

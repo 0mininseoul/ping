@@ -643,6 +643,7 @@ public sealed partial class QuickSendHudWindow : Window, IQuickSendHudSession
         this.cancellation = cancellation;
         viewModel = new QuickSendHudViewModel(context);
         InitializeComponent();
+        Ping.Windows.App.UI.WindowCaptureExclusion.Apply(this);
         Root.DataContext = viewModel;
         Root.Loaded += HandleLoaded;
         viewModel.PropertyChanged += HandleViewModelPropertyChanged;

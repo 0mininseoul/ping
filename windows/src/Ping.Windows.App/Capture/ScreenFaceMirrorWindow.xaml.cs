@@ -30,6 +30,8 @@ public sealed partial class ScreenFaceMirrorWindow : Window
     private bool handlingEnter;
     private MediaPlayer? reviewPlayer;
     private CaptureMirrorWindowHost? mirrorHost;
+    internal CaptureViewportInput ViewportInput { get; private set; } = null!;
+    private Task inputShutdown = Task.CompletedTask;
     private bool shouldCloseAfterFade;
 
     public ScreenFaceMirrorWindow(ScreenFaceMirrorViewModel viewModel, Ping.Windows.Core.Capture.CameraLease cameraLease,
@@ -46,11 +48,12 @@ public sealed partial class ScreenFaceMirrorWindow : Window
         viewModel.CloseRequested += HandleCloseRequested;
         SetStateBrush();
         ConfigureWindow();
+        ViewportInput = new(viewModel, Root, mirrorHost!);
     }
 
     private async void HandleKeyDown(object sender, KeyRoutedEventArgs args)
     {
-        if (HandleTargetKey(args.Key))
+        if (HandleTargetOrViewportKey(args.Key, CaptureViewportInput.AltPressed))
         {
             args.Handled = true;
             return;
@@ -110,6 +113,12 @@ public sealed partial class ScreenFaceMirrorWindow : Window
             if (!viewModel.IsCloseRequested && !viewModel.HasReviewedClip) await StartPreviewAsync();
         }
         finally { handlingEnter = false; }
+    }
+
+    internal bool HandleTargetOrViewportKey(global::Windows.System.VirtualKey key, bool alt)
+    {
+        if (alt && key is (global::Windows.System.VirtualKey.Number0 or global::Windows.System.VirtualKey.NumberPad0)) return ViewportInput.Reset(true);
+        return HandleTargetKey(key);
     }
 
     private bool HandleTargetKey(global::Windows.System.VirtualKey key)
@@ -234,6 +243,7 @@ public sealed partial class ScreenFaceMirrorWindow : Window
             {
                 MirrorBorder.CornerRadius = new(16);
                 HintLabel.MaxWidth = Math.Max(20, width - 48);
+                ViewportGuideLabel.MaxWidth = Math.Max(20, width - 48);
                 PartnerLabelElement.MaxWidth = Math.Max(20, width - 48);
                 var diameter = Math.Min(width, height) * .32;
                 var padding = Math.Min(width, height) * .045;
@@ -328,6 +338,7 @@ public sealed partial class ScreenFaceMirrorWindow : Window
 
     private void HandleClosed(object sender, WindowEventArgs args)
     {
+        inputShutdown = ViewportInput.StopAsync();
         mirrorHost?.Dispose();
         Root.Loaded -= HandleLoaded;
         viewModel.PropertyChanged -= HandleViewModelPropertyChanged;
@@ -343,6 +354,7 @@ public sealed partial class ScreenFaceMirrorWindow : Window
     {
         try
         {
+            await inputShutdown;
             try { await StopPreviewAsync(); }
             finally { await viewModel.WaitForOperationAsync(); }
             viewModel.DisposePreview();

@@ -585,6 +585,7 @@ public sealed partial class SettingsWindow : Window
     {
         this.viewModel = viewModel;
         InitializeComponent();
+        Ping.Windows.App.UI.WindowCaptureExclusion.Apply(this);
         Root.DataContext = viewModel;
         _ = viewModel.RefreshStartupAsync();
     }

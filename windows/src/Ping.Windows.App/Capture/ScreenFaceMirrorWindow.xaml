@@ -79,6 +79,23 @@
                 </Border>
 
                 <Border
+                    Margin="12,48,12,0"
+                    Padding="8,4"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Top"
+                    Background="{StaticResource PingCapsuleBrush}"
+                    CornerRadius="10"
+                    Opacity="{Binding ViewportGuideOpacity}">
+                    <TextBlock
+                        x:Name="ViewportGuideLabel"
+                        FontSize="10"
+                        Foreground="{StaticResource PingTextBrush}"
+                        Text="{Binding ViewportGuideText}"
+                        TextTrimming="CharacterEllipsis"
+                        ToolTipService.ToolTip="Alt+휠 또는 지원되는 두 손가락 확대 제스처로 조정해요. Alt를 누르고 포인터를 움직이면 해당 위치를 따라가요. Alt+0으로 전체 화면으로 돌아가요." />
+                </Border>
+
+                <Border
                     x:Name="FacePreviewBubble"
                     Width="82"
                     Height="82"

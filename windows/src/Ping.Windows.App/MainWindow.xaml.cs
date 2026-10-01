@@ -13,6 +13,7 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        Ping.Windows.App.UI.WindowCaptureExclusion.Apply(this);
         Closed += (_, args) =>
         {
             if (allowClose) return;
