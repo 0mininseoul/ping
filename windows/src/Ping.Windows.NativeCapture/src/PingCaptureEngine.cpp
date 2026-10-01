@@ -10,7 +10,8 @@ namespace
 {
     int RecordScreenFace(const wchar_t* outputPath, int durationMs, int targetMonitorIndex,
         double faceDiameterRatio, double zoom, double centerX, double centerY, const wchar_t* cameraDeviceId,
-        const wchar_t* microphoneEndpointId, HANDLE cancellationEvent, double* outAspectRatio);
+        const wchar_t* microphoneEndpointId, HANDLE cancellationEvent, double* outAspectRatio,
+        PingCapturePreviewCallback preview = nullptr, void* previewContext = nullptr);
     bool IsValidDuration(int durationMs)
     {
         return durationMs > 0 && durationMs <= 30'000;
@@ -84,11 +85,25 @@ int PingCapture_RecordScreenFaceMp4V4(const wchar_t* outputPath, int durationMs,
         cameraDeviceId, microphoneEndpointId, cancellationEvent, outAspectRatio);
 }
 
+extern "C" __declspec(dllexport)
+int PingCapture_RecordScreenFaceMp4V5(const wchar_t* outputPath, int durationMs, int targetMonitorIndex,
+    double faceDiameterRatio, double zoom, double centerX, double centerY, const wchar_t* cameraDeviceId,
+    const wchar_t* microphoneEndpointId, HANDLE cancellationEvent, PingCapturePreviewCallback preview,
+    void* previewContext, double* outAspectRatio)
+{
+    if (outAspectRatio) *outAspectRatio = 1;
+    if (!cameraDeviceId || !cameraDeviceId[0]) return PingCaptureNoCamera;
+    if (!microphoneEndpointId || !microphoneEndpointId[0]) return PingCaptureNoMicrophone;
+    return RecordScreenFace(outputPath, durationMs, targetMonitorIndex, faceDiameterRatio, zoom, centerX, centerY,
+        cameraDeviceId, microphoneEndpointId, cancellationEvent, outAspectRatio, preview, previewContext);
+}
+
 namespace
 {
 int RecordScreenFace(const wchar_t* outputPath, int durationMs, int targetMonitorIndex,
     double faceDiameterRatio, double zoom, double centerX, double centerY, const wchar_t* cameraDeviceId,
-    const wchar_t* microphoneEndpointId, HANDLE cancellationEvent, double* outAspectRatio)
+    const wchar_t* microphoneEndpointId, HANDLE cancellationEvent, double* outAspectRatio,
+    PingCapturePreviewCallback preview, void* previewContext)
 try
 {
     if (outAspectRatio != nullptr)
@@ -114,7 +129,7 @@ try
     }
 
     // Producers already apply the frozen viewport before publishing bounded CPU frames.
-    int writerResult = WriteScreenFaceMp4Stream(outputPath, layout, *provider, durationMs, {}, cancellationEvent);
+    int writerResult = WriteScreenFaceMp4Stream(outputPath, layout, *provider, durationMs, {}, cancellationEvent, preview, previewContext);
     if (writerResult != PingCaptureSuccess)
     {
         DeleteFileW(outputPath);

@@ -20,6 +20,12 @@ internal static class CaptureWinRtOperation
         return result;
     }
 
+    public static async Task<T> WaitAsync<T, TProgress>(IAsyncOperationWithProgress<T, TProgress> operation, CancellationToken token)
+    {
+        using var registration = token.Register(() => Cancel(operation));
+        return await operation;
+    }
+
     private static void Cancel(IAsyncInfo operation)
     {
         try { operation.Cancel(); }

@@ -33,6 +33,8 @@ public sealed partial class ScreenFaceMirrorWindow : Window
     internal CaptureViewportInput ViewportInput { get; private set; } = null!;
     private Task inputShutdown = Task.CompletedTask;
     private bool shouldCloseAfterFade;
+    private readonly RecordingPreviewPresenter recordingPreview;
+    private Task recordingPreviewShutdown = Task.CompletedTask;
 
     public ScreenFaceMirrorWindow(ScreenFaceMirrorViewModel viewModel, Ping.Windows.Core.Capture.CameraLease cameraLease,
         Func<Ping.Windows.Core.Capture.CameraLease, IFacePreviewSession>? previewFactory = null)
@@ -41,6 +43,11 @@ public sealed partial class ScreenFaceMirrorWindow : Window
         this.cameraLease = cameraLease;
         this.previewFactory = previewFactory ?? (lease => new FaceRecorder(lease));
         InitializeComponent();
+        recordingPreview = new(RecordingPreviewImage, () =>
+        {
+            ScreenPreviewPlaceholder.Visibility = Visibility.Collapsed;
+            FacePreviewBubble.Visibility = Visibility.Collapsed;
+        });
         Root.DataContext = viewModel;
         Root.Loaded += HandleLoaded;
         viewModel.PropertyChanged += HandleViewModelPropertyChanged;
@@ -93,10 +100,12 @@ public sealed partial class ScreenFaceMirrorWindow : Window
         {
             if (recording) await StopPreviewAsync();
             if (windowLifetime.IsCancellationRequested) return;
-            await viewModel.HandleEnterAsync(selection);
+            var preview = recording ? recordingPreview.Start() : null;
+            await viewModel.HandleEnterAsync(selection, preview);
         }
         finally
         {
+            if (recording) await recordingPreview.StopAsync();
             viewModel.SetCapturePreparing(false);
             handlingEnter = false;
             if (!viewModel.IsCloseRequested && !viewModel.HasReviewedClip) _ = StartPreviewAsync();
@@ -345,6 +354,7 @@ public sealed partial class ScreenFaceMirrorWindow : Window
         viewModel.FadeOutRequested -= HandleFadeOutRequested;
         viewModel.CloseRequested -= HandleCloseRequested;
         windowLifetime.Cancel();
+        recordingPreviewShutdown = recordingPreview.StopAsync();
         StopReviewPlayback();
         viewModel.HandleWindowClosed();
         CameraShutdown = ShutdownCameraAsync();
@@ -355,6 +365,7 @@ public sealed partial class ScreenFaceMirrorWindow : Window
         try
         {
             await inputShutdown;
+            await recordingPreviewShutdown;
             try { await StopPreviewAsync(); }
             finally { await viewModel.WaitForOperationAsync(); }
             viewModel.DisposePreview();

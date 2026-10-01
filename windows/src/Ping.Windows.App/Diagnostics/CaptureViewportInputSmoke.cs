@@ -55,7 +55,23 @@ internal static class CaptureViewportInputSmoke
                 "plain0 retains all-recipient shortcut");
             input.Wheel(480, x, y, true);
             var frozen = model.Viewport;
-            await window.HandleEnterAsync();
+            var recording = window.HandleEnterAsync();
+            await engine.PreviewEmitted.Task.WaitAsync(TimeSpan.FromSeconds(3));
+            await Task.Delay(120);
+            await render(root, "capture-recording-preview.png");
+            var live = new RenderTargetBitmap(); await live.RenderAsync(root);
+            var livePixels = (await live.GetPixelsAsync()).ToArray();
+            var liveCenter = (live.PixelHeight / 2 * live.PixelWidth + live.PixelWidth / 2) * 4;
+            check(livePixels[liveCenter + 1] > 180 && livePixels[liveCenter] < 60 && livePixels[liveCenter + 2] < 60,
+                "recording mirror displays newest owned BGRA frame received on worker thread");
+            check(((FrameworkElement)root.FindName("FacePreviewBubble")).Visibility == Visibility.Collapsed,
+                "recording preview shows composed face once without separate camera bubble");
+            engine.CompleteRecording.TrySetResult();
+            await recording;
+            engine.DeliverLateFrame();
+            await Task.Delay(50);
+            check(((Image)root.FindName("RecordingPreviewImage")).Source is null,
+                "review transition drains presenter and ignores late recording preview frames");
             model.SelectTargetAtIndex(0);
             check(!input.Wheel(120, x, y, true) && window.HandleTargetOrViewportKey(VirtualKey.Number0, true)
                 && model.Viewport == frozen && !model.IsAllTargetsSelected,
@@ -71,9 +87,28 @@ internal static class CaptureViewportInputSmoke
         public Task StartPreviewAsync(MediaPlayerElement element, CancellationToken token = default) => Task.CompletedTask;
         public Task StopPreviewAsync(MediaPlayerElement element) => Task.CompletedTask;
     }
-    private sealed class SyntheticScreen(string output) : IScreenFaceCaptureEngine
+    private sealed class SyntheticScreen(string output) : IScreenFaceCaptureEngine, IRecordingPreviewCaptureEngine
     {
         internal ScreenCaptureViewport? LastPreview;
+        internal TaskCompletionSource PreviewEmitted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal TaskCompletionSource CompleteRecording = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private Action<CapturePreviewFrame>? preview;
+        private static CapturePreviewFrame GreenFrame()
+        {
+            var bytes = new byte[160 * 90 * 4];
+            for (var index = 0; index < bytes.Length; index += 4) { bytes[index + 1] = 255; bytes[index + 3] = 255; }
+            return new(160, 90, bytes);
+        }
+        internal void DeliverLateFrame() => preview?.Invoke(GreenFrame());
+        public async Task<ScreenFaceCaptureResult> RecordAsync(TimeSpan duration, int monitor, ScreenCaptureViewport viewport,
+            Action<CapturePreviewFrame> consumer, CancellationToken token)
+        {
+            preview = consumer;
+            await Task.Run(() => { for (var index = 0; index < 30; index++) consumer(GreenFrame()); }, token);
+            PreviewEmitted.TrySetResult();
+            await CompleteRecording.Task.WaitAsync(token);
+            return await RecordAsync(duration, monitor, viewport, token);
+        }
         public Task<ScreenFacePreviewResult> CapturePreviewAsync(int monitor, ScreenCaptureViewport viewport, CancellationToken token)
         {
             LastPreview = viewport;

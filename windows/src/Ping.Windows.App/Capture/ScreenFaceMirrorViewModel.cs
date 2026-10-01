@@ -378,7 +378,7 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
         }
     }
 
-    public async Task HandleEnterAsync(ScreenMirrorCaptureSelection? selection = null)
+    public async Task HandleEnterAsync(ScreenMirrorCaptureSelection? selection = null, Action<CapturePreviewFrame>? preview = null)
     {
         if (IsCloseRequested) return;
         if (State == MirrorState.Reviewing || (State == MirrorState.Failed && HasReviewedClip))
@@ -414,7 +414,9 @@ public sealed class ScreenFaceMirrorViewModel : INotifyPropertyChanged
             State = MirrorState.Recording;
             countdownCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             countdownTask = RunRecordingCountdownAsync(countdownCancellation.Token);
-            var recording = await captureEngine.RecordAsync(RecordingDuration, selected.MonitorIndex, selected.Viewport, cancellationToken);
+            var recording = preview is not null && captureEngine is IRecordingPreviewCaptureEngine live
+                ? await live.RecordAsync(RecordingDuration, selected.MonitorIndex, selected.Viewport, preview, cancellationToken)
+                : await captureEngine.RecordAsync(RecordingDuration, selected.MonitorIndex, selected.Viewport, cancellationToken);
             await StopRecordingCountdownAsync(countdownCancellation, countdownTask);
             countdownCancellation = null;
             countdownTask = null;

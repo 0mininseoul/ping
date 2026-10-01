@@ -114,7 +114,7 @@ namespace Ping::Windows::NativeCapture
         OutputLayout const& layout,
         IRecordingFrameProvider& provider,
         int durationMs, CaptureViewport viewport, HANDLE cancellationEvent, bool& outputTouched,
-        ApartmentScope& apartment, MediaFoundationScope& foundation)
+        ApartmentScope& apartment, MediaFoundationScope& foundation, PingCapturePreviewCallback preview, void* previewContext)
     {
         if (outputPath == nullptr
             || outputPath[0] == L'\0'
@@ -220,6 +220,7 @@ namespace Ping::Windows::NativeCapture
             if (ComposeScreenFaceFrame(layout, *packet.Screen, *packet.Camera, viewport, videoFrame) != PingCaptureSuccess)
             { hr = E_FAIL; break; }
             hr = WriteSample(sinkWriter.Get(), videoStreamIndex, videoFrame, sampleTime, frameDuration);
+            if (SUCCEEDED(hr) && preview) preview(videoFrame.data(), layout.Width, layout.Height, layout.Width * 4, previewContext);
             if (SUCCEEDED(hr))
             {
                 hr = WriteSample(sinkWriter.Get(), audioStreamIndex, packet.Audio, sampleTime, frameDuration);
@@ -239,7 +240,8 @@ namespace Ping::Windows::NativeCapture
     }
 
     int WriteScreenFaceMp4Stream(const wchar_t* outputPath, OutputLayout const& layout,
-        IRecordingFrameProvider& provider, int durationMs, CaptureViewport viewport, HANDLE cancellationEvent)
+        IRecordingFrameProvider& provider, int durationMs, CaptureViewport viewport, HANDLE cancellationEvent,
+        PingCapturePreviewCallback preview, void* previewContext)
     {
         OutputScope output{outputPath};
         ApartmentScope apartment;
@@ -249,7 +251,7 @@ namespace Ping::Windows::NativeCapture
         try
         {
             auto result = WriteStreamCore(outputPath, layout, provider, durationMs, viewport, cancellationEvent, output.Touched,
-                apartment, foundation);
+                apartment, foundation, preview, previewContext);
             output.Keep = result == PingCaptureSuccess;
             return result;
         }

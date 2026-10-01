@@ -28,6 +28,7 @@
     <Compile Include="..\..\src\Ping.Windows.App\Capture\MirrorTargetSelector.cs" Link="Capture\MirrorTargetSelector.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Capture\MonitorTargetResolver.cs" Link="Capture\MonitorTargetResolver.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Capture\NativeCaptureEngine.cs" Link="Capture\NativeCaptureEngine.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Capture\CapturePreviewFrame.cs" Link="Capture\CapturePreviewFrame.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Capture\NativeScreenCaptureApi.cs" Link="Capture\NativeScreenCaptureApi.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Capture\NativeMicrophoneIdentityReader.cs" Link="Capture\NativeMicrophoneIdentityReader.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Capture\OwnedScreenFaceCaptureEngine.cs" Link="Capture\OwnedScreenFaceCaptureEngine.cs" />

@@ -149,6 +149,7 @@ internal static class UiSmokeRunner
             await CaptureLifetimeSmoke.RunAsync(Check);
             await CaptureMirrorReviewSmoke.RunAsync(OutputDirectory!, Check, RenderAsync);
             await CaptureViewportInputSmoke.RunAsync(OutputDirectory!, Check, RenderAsync);
+            await FaceVideoCropSmoke.RunAsync(OutputDirectory!, Check);
 
             var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
             window.Close();

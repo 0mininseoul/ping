@@ -71,7 +71,9 @@ public sealed class FaceRecorder : IFaceRecorder, IFacePreviewSession, IAsyncDis
             await recording.FinishAsync();
             finished = true;
             token.ThrowIfCancellationRequested();
-            return new(file.Path, duration);
+            var squarePath = await FaceVideoCropper.CropToSquareAsync(file.Path, token);
+            TryDelete(file.Path);
+            return new(squarePath, duration);
         }
         catch
         {

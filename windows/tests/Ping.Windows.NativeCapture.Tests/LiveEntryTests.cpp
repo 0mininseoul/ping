@@ -12,6 +12,17 @@ extern CaptureViewport FixtureViewport;
 extern std::wstring FixtureCameraDevice;
 extern std::wstring FixtureMicrophoneDevice;
 
+namespace
+{
+    struct PreviewObservation { int Frames = 0; bool Valid = true; };
+    void __stdcall ObservePreview(const BYTE* pixels, int width, int height, int stride, void* context)
+    {
+        auto& seen = *static_cast<PreviewObservation*>(context);
+        ++seen.Frames;
+        seen.Valid = seen.Valid && pixels && width == 540 && height == 304 && stride == 540 * 4 && pixels[3] == 255;
+    }
+}
+
 void LiveEntryChecks(wchar_t const* directory, void (*check)(bool, char const*))
 {
     auto path = std::wstring(directory) + L"\\live-owned-sources.mp4";
@@ -69,5 +80,16 @@ void LiveEntryChecks(wchar_t const* directory, void (*check)(bool, char const*))
         && PingCapture_RecordScreenFaceMp4V4(path.c_str(), 1000, 0, .32, 1, .5, .5, L"camera", L"", nullptr, &aspect) == PingCaptureNoMicrophone
         && PingCapture_RecordScreenFaceMp4V4(path.c_str(), 1000, 0, .32, 1, .5, .5, nullptr, L"mic", nullptr, &aspect) == PingCaptureNoCamera
         && FixtureLiveStarted == starts, "V4 missing selected device cannot activate any default source");
+    path = std::wstring(directory) + L"\\live-preview.mp4";
+    PreviewObservation preview;
+    result = PingCapture_RecordScreenFaceMp4V5(path.c_str(), 1000, 0, .32, 2, .6, .4,
+        L"camera-preview", L"microphone-preview", nullptr, ObservePreview, &preview, &aspect);
+    check(result == PingCaptureSuccess && preview.Frames == 30 && preview.Valid
+        && FixtureCameraDevice == L"camera-preview" && FixtureMicrophoneDevice == L"microphone-preview",
+        "V5 emits composed top-down preview for every encoded frame using the selected device pair");
+    auto finalCount = preview.Frames;
+    std::this_thread::sleep_for(std::chrono::milliseconds(40));
+    check(preview.Frames == finalCount && GetFileAttributesW(path.c_str()) != INVALID_FILE_ATTRIBUTES,
+        "recording preview callbacks finish before native return and leave a usable MP4");
     FixtureLiveMode = 0;
 }

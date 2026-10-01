@@ -16,6 +16,15 @@ enum PingCaptureErrorCode
     PingCaptureCancelled = 9
 };
 
+// Top-down BGRA; borrowed pixels are valid only during this synchronous callback.
+typedef void (__stdcall *PingCapturePreviewCallback)(const BYTE* pixels, int width, int height, int stride, void* context);
+
+extern "C" __declspec(dllexport)
+int PingCapture_RecordScreenFaceMp4V5(const wchar_t* outputPath, int durationMs, int targetMonitorIndex,
+    double faceDiameterRatio, double zoom, double centerX, double centerY, const wchar_t* cameraDeviceId,
+    const wchar_t* microphoneEndpointId, HANDLE cancellationEvent, PingCapturePreviewCallback preview,
+    void* previewContext, double* outAspectRatio);
+
 extern "C" __declspec(dllexport)
 int PingCapture_RecordScreenFaceMp4(
     const wchar_t* outputPath,

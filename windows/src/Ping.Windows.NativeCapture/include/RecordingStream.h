@@ -53,5 +53,6 @@ namespace Ping::Windows::NativeCapture
     };
 
     int WriteScreenFaceMp4Stream(const wchar_t* outputPath, OutputLayout const& layout,
-        IRecordingFrameProvider& provider, int durationMs, CaptureViewport viewport = {}, HANDLE cancellationEvent = nullptr);
+        IRecordingFrameProvider& provider, int durationMs, CaptureViewport viewport = {}, HANDLE cancellationEvent = nullptr,
+        PingCapturePreviewCallback preview = nullptr, void* previewContext = nullptr);
 }
