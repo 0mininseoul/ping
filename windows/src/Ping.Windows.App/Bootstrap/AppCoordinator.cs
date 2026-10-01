@@ -48,7 +48,7 @@ public sealed class AppCoordinator : IDisposable
     private RealtimeConnectionState previousRealtimeState;
     private readonly NotificationController notificationController;
     private readonly IScreenFaceCaptureEngine screenFaceCaptureEngine;
-    private readonly CameraOwnership camera = new();
+    private readonly CameraOwnership camera;
     private readonly CaptureActivityState captureActivity = new(initiallyBlocked: true);
     private readonly AutoFaceReplyCoordinator autoFaceReply;
     private CaptureActivityAdapter? captureActivityAdapter;
@@ -63,7 +63,7 @@ public sealed class AppCoordinator : IDisposable
     private volatile string? currentUid;
     private string currentNickname = Environment.UserName;
     private string? remoteDefaultRoomId;
-    private ScreenFaceQuickSendSettings quickSendSettings;
+    private volatile ScreenFaceQuickSendSettings quickSendSettings;
     private IReadOnlyList<HotkeyRegistrationResult> lastHotkeyRegistrations = [];
     private FaceMirrorWindow? faceMirrorWindow;
     private ScreenFaceMirrorWindow? screenFaceMirrorWindow;
@@ -114,6 +114,7 @@ public sealed class AppCoordinator : IDisposable
         quickSendSettingsStore = new ScreenFaceQuickSendSettingsStore();
         mirrorPlacementStore = new MirrorPlacementStore();
         quickSendSettings = quickSendSettingsStore.Load();
+        camera = new(() => quickSendSettings.Devices);
         UI.PingAppearance.Apply(quickSendSettings.AppearanceMode);
         notificationController = new NotificationController(OpenMessageFromNotificationAsync, OpenChatFromNotificationAsync,
             soundEnabled: () => quickSendSettings.NotificationSoundEnabled);

@@ -23,13 +23,17 @@ public sealed class PresentationPreferencesTests
             var old = store.Load();
             Assert.True(old.NotificationSoundEnabled);
             Assert.Equal(PingAppearanceMode.System, old.AppearanceMode);
-            store.Save(old with { NotificationSoundEnabled = false, AppearanceMode = PingAppearanceMode.Light });
+            var devices = new Ping.Windows.Core.Capture.CaptureDevicePreferences("camera", new("winrt", "endpoint"));
+            Assert.Null(old.Devices.CameraId);
+            Assert.Null(old.Devices.Microphone);
+            store.Save(old with { NotificationSoundEnabled = false, AppearanceMode = PingAppearanceMode.Light, Devices = devices });
             var saved = store.Load();
             Assert.False(saved.NotificationSoundEnabled);
             Assert.Equal(PingAppearanceMode.Light, saved.AppearanceMode);
             Assert.Equal("room", saved.DefaultRoomId);
             Assert.True(saved.Preferences.SaveSentCopy);
             Assert.False(saved.AutoPlayIncoming);
+            Assert.Equal(devices, saved.Devices);
         }
         finally { Directory.Delete(root, true); }
     }

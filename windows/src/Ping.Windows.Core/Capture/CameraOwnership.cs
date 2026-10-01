@@ -2,7 +2,7 @@ namespace Ping.Windows.Core.Capture;
 
 public enum CameraPurpose { Manual, AutomaticReply }
 
-public sealed class CameraOwnership
+public sealed class CameraOwnership(Func<CaptureDevicePreferences>? preferences = null)
 {
     private readonly object sync = new();
     private CameraLease? current;
@@ -15,7 +15,7 @@ public sealed class CameraOwnership
         lock (sync)
         {
             if (current is not null || manualWaiters != 0) return null;
-            return current = new CameraLease(this, purpose);
+            return current = new CameraLease(this, purpose, preferences?.Invoke() ?? new());
         }
     }
 
@@ -35,7 +35,7 @@ public sealed class CameraOwnership
                 CameraLease previous;
                 lock (sync)
                 {
-                    if (current is null) return current = new CameraLease(this, CameraPurpose.Manual);
+                    if (current is null) return current = new CameraLease(this, CameraPurpose.Manual, preferences?.Invoke() ?? new());
                     if (current.Purpose == CameraPurpose.Manual) return null;
                     previous = current;
                 }
@@ -67,16 +67,18 @@ public sealed class CameraLease : IDisposable
     private readonly TaskCompletionSource released = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private int disposed;
 
-    internal CameraLease(CameraOwnership owner, CameraPurpose purpose)
+    internal CameraLease(CameraOwnership owner, CameraPurpose purpose, CaptureDevicePreferences devices)
     {
         this.owner = owner;
         Purpose = purpose;
+        Devices = devices;
         Token = cancellation.Token;
         CameraSelection = new(Token);
         MicrophoneSelection = new(Token, _ => { });
     }
 
     public CameraPurpose Purpose { get; }
+    public CaptureDevicePreferences Devices { get; }
     public CancellationToken Token { get; }
     public CaptureCameraSelection CameraSelection { get; }
     public CaptureDeviceSelection<CaptureMicrophoneDevice> MicrophoneSelection { get; }

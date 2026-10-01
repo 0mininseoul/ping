@@ -27,8 +27,8 @@ public sealed class FaceRecorder : IFaceRecorder, IFacePreviewSession, IAsyncDis
 
     private static async Task<MediaCapture> InitializeAsync(CameraLease lease, CancellationToken token)
     {
-        var cameraDeviceId = await lease.CameraSelection.GetAsync(CaptureCameraResolver.ResolveAsync, token);
-        var microphone = await lease.MicrophoneSelection.GetAsync(CaptureMicrophoneResolver.ResolveAsync, token);
+        var cameraDeviceId = await lease.CameraSelection.GetAsync(active => CaptureCameraResolver.ResolveAsync(lease.Devices.CameraId, active), token);
+        var microphone = await lease.MicrophoneSelection.GetAsync(active => CaptureMicrophoneResolver.ResolveAsync(lease.Devices.Microphone, active), token);
         var capture = new MediaCapture();
         try
         {

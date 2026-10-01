@@ -19,7 +19,8 @@ public enum SettingsSection
     Hotkeys = 1,
     Rooms = 2,
     Storage = 3,
-    Info = 4
+    Devices = 4,
+    Info = 5
 }
 
 public sealed class SettingsWindowViewModel : INotifyPropertyChanged
@@ -63,7 +64,8 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
         Action? ensureArchiveFolders = null,
         Action? deleteExpiredArchiveFiles = null,
         Func<string, Task<bool>>? openArchiveFolder = null,
-        Func<string, CancellationToken, Task<string>>? saveNickname = null)
+        Func<string, CancellationToken, Task<string>>? saveNickname = null,
+        Func<CancellationToken, Task<CaptureDeviceCatalog>>? deviceCatalog = null)
     {
         this.nickname = NormalizeNickname(nickname);
         nicknameDraft = this.nickname;
@@ -72,6 +74,11 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
         this.hotkeys = hotkeys.ToDictionary(pair => pair.Key, pair => pair.Value);
         this.settings = settings;
         this.saveSettings = saveSettings;
+        Devices = new(settings.Devices, value =>
+        {
+            this.settings = this.settings with { Devices = value };
+            this.saveSettings(this.settings);
+        }, deviceCatalog);
         this.openRooms = openRooms;
         this.ensureArchiveFolders = ensureArchiveFolders ?? (() => new LocalArchive(ArchiveRootPath).EnsureFolders());
         this.deleteExpiredArchiveFiles = deleteExpiredArchiveFiles ?? (() => _ = new LocalArchive(ArchiveRootPath).DeleteExpiredFiles());
@@ -90,6 +97,7 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
+    public DeviceSettingsViewModel Devices { get; }
 
     public bool AutoPlayIncoming
     {
@@ -500,6 +508,7 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
     public void ApplySettings(ScreenFaceQuickSendSettings updatedSettings)
     {
         settings = updatedSettings;
+        Devices.ApplyPreferences(updatedSettings.Devices);
         OnPropertyChanged(nameof(AutoPlayIncoming));
         OnPropertyChanged(nameof(NotificationSoundEnabled));
         OnPropertyChanged(nameof(AppearanceSelection));
@@ -604,6 +613,7 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
 public sealed partial class SettingsWindow : Window
 {
     private readonly SettingsWindowViewModel viewModel;
+    private readonly CancellationTokenSource deviceLifetime = new();
 
     public SettingsWindow(SettingsWindowViewModel viewModel)
     {
@@ -612,6 +622,8 @@ public sealed partial class SettingsWindow : Window
         Ping.Windows.App.UI.PingAppearance.Register(this);
         Ping.Windows.App.UI.WindowCaptureExclusion.Apply(this);
         Root.DataContext = viewModel;
+        Closed += (_, _) => { deviceLifetime.Cancel(); deviceLifetime.Dispose(); };
+        Root.Loaded += (_, _) => RefreshDevicesIfVisible();
         Ping.Windows.App.UI.SettingsWindowGeometry.Fit(this);
         _ = viewModel.RefreshStartupAsync();
     }
@@ -630,6 +642,23 @@ public sealed partial class SettingsWindow : Window
     {
         viewModel.SelectSection(section);
     }
+
+    private void SettingsTabs_SelectionChanged(object sender, Microsoft.UI.Xaml.Controls.SelectionChangedEventArgs args)
+    {
+        // ComboBox selection events also bubble through the settings tabs.
+        if (args.AddedItems.Any(item => item is Microsoft.UI.Xaml.Controls.TabViewItem)
+            || args.RemovedItems.Any(item => item is Microsoft.UI.Xaml.Controls.TabViewItem))
+            RefreshDevicesIfVisible();
+    }
+
+    private void RefreshDevicesIfVisible()
+    {
+        if (SettingsTabs?.SelectedIndex == (int)SettingsSection.Devices)
+            _ = viewModel.Devices.RefreshAsync(deviceLifetime.Token);
+    }
+
+    private async void RefreshDeviceListButton_Click(object sender, RoutedEventArgs args)
+        => await viewModel.Devices.RefreshAsync(deviceLifetime.Token);
 
     private void OpenRoomsButton_Click(object sender, RoutedEventArgs args)
     {

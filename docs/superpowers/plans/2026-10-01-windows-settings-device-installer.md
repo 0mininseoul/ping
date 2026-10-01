@@ -17,8 +17,9 @@
 
 ## 2. 기기 선택과 연결
 
-- [ ] 읽기 전용 장치 목록과 기본값/선택한 카메라·마이크를 제공한다. WinRT 카메라 ID와 MMDevice/WinRT 마이크 쌍을 명시적으로 대응시키며 문자열 추측 변환을 하지 않는다. 장치 없음/제거를 안내한다.
-- [ ] 선택을 다음 카메라 lease 생성에 고정해 얼굴·화면·빠른 전송·자동 회신에 동일하게 전달. 진행 중인 녹화를 설정 변경으로 교체하지 않는다.
+- [x] 읽기 전용 장치 목록과 기본값/선택한 카메라·마이크를 제공한다. WinRT 카메라 ID와 MMDevice/WinRT 마이크 쌍을 명시적으로 대응시키며 문자열 추측 변환을 하지 않는다. 장치 없음/제거를 안내한다.
+- [x] 선택을 다음 카메라 lease 생성에 고정해 얼굴·화면·빠른 전송·자동 회신에 동일하게 전달. 진행 중인 녹화를 설정 변경으로 교체하지 않는다.
+- [x] Task 2A: 장치 선택·기존 JSON 보존·lease 고정과 실제 WinUI 선택/연결 끊김 검사 및 정상 Release 빌드. Commit `feat(windows-devices): add capture device selection`. 결과: `docs/windows/2026-10-01-capture-device-selection-verification.ko.md`. QR 연결은 Task 2B로 계속 진행한다.
 - [ ] 기기 탭을 열 때만 최신 인증 세션으로 Mac와 동일한 필드·날짜 형식의 QR handoff를 생성. QR을 로그/아티팩트/clipboard에 자동 기록하지 않고 닫기·계정 변경 시 제거. 기존 refresh-token 공유 계약을 보존한다.
 - [ ] 합성 ID/세션/QR decode와 기본값 마이그레이션 검사, 실제 WinUI 기기 UI fixture 및 Release 빌드. Commit `feat(windows-devices): add capture selection and device pairing`.
 

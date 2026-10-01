@@ -22,8 +22,8 @@ public sealed class OwnedScreenFaceCaptureEngine(CameraOwnership camera, IScreen
         cancellation.Token.ThrowIfCancellationRequested();
         if (engine is IDeviceBoundScreenCaptureEngine devices)
         {
-            var deviceId = await active.CameraSelection.GetAsync(selectCamera ?? SelectDefaultCameraAsync, cancellation.Token);
-            var microphone = await active.MicrophoneSelection.GetAsync(selectMicrophone ?? SelectDefaultMicrophoneAsync, cancellation.Token);
+            var deviceId = await active.CameraSelection.GetAsync(selectCamera ?? (token => SelectCameraAsync(active.Devices.CameraId, token)), cancellation.Token);
+            var microphone = await active.MicrophoneSelection.GetAsync(selectMicrophone ?? (token => SelectMicrophoneAsync(active.Devices.Microphone, token)), cancellation.Token);
             if (preview is not null && engine is IDeviceBoundRecordingPreviewEngine live)
                 return await live.RecordAsync(duration, monitor, viewport, deviceId, microphone, preview, cancellation.Token);
             if (preview is not null) throw new NotSupportedException("Capture engine does not support recording preview.");
@@ -31,7 +31,7 @@ public sealed class OwnedScreenFaceCaptureEngine(CameraOwnership camera, IScreen
         }
         if (engine is ICameraBoundScreenCaptureEngine selected)
         {
-            var deviceId = await active.CameraSelection.GetAsync(selectCamera ?? SelectDefaultCameraAsync, cancellation.Token);
+            var deviceId = await active.CameraSelection.GetAsync(selectCamera ?? (token => SelectCameraAsync(active.Devices.CameraId, token)), cancellation.Token);
             return await selected.RecordAsync(duration, monitor, viewport, deviceId, cancellation.Token);
         }
         return await record(cancellation.Token);
@@ -48,19 +48,19 @@ public sealed class OwnedScreenFaceCaptureEngine(CameraOwnership camera, IScreen
         CancellationToken token) => engine.CapturePreviewAsync(monitorIndex, viewport, token);
     public Task<ScreenCaptureSelfTestResult> SelfTestAsync() => engine.SelfTestAsync();
 
-    private static Task<string> SelectDefaultCameraAsync(CancellationToken token)
+    private static Task<string> SelectCameraAsync(string? id, CancellationToken token)
     {
 #if WINDOWS
-        return CaptureCameraResolver.ResolveAsync(token);
+        return CaptureCameraResolver.ResolveAsync(id, token);
 #else
         throw new PlatformNotSupportedException("A camera resolver is required outside Windows.");
 #endif
     }
 
-    private static Task<CaptureMicrophoneDevice> SelectDefaultMicrophoneAsync(CancellationToken token)
+    private static Task<CaptureMicrophoneDevice> SelectMicrophoneAsync(CaptureMicrophoneDevice? device, CancellationToken token)
     {
 #if WINDOWS
-        return CaptureMicrophoneResolver.ResolveAsync(token);
+        return CaptureMicrophoneResolver.ResolveAsync(device, token);
 #else
         throw new PlatformNotSupportedException("A microphone resolver is required outside Windows.");
 #endif

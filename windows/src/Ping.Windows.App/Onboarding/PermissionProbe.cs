@@ -123,7 +123,8 @@ public sealed class PermissionProbe
             using var capture = new global::Windows.Media.Capture.MediaCapture();
             await Capture.CaptureWinRtOperation.WaitAsync(capture.InitializeAsync(new global::Windows.Media.Capture.MediaCaptureInitializationSettings
             {
-                StreamingCaptureMode = global::Windows.Media.Capture.StreamingCaptureMode.Video
+                StreamingCaptureMode = global::Windows.Media.Capture.StreamingCaptureMode.Video,
+                VideoDeviceId = await Capture.CaptureCameraResolver.ResolveAsync(lease.Devices.CameraId, cancellationToken)
             }), cancellationToken);
             return OnboardingProbeState.Available("Camera is ready.");
         }
@@ -164,7 +165,8 @@ public sealed class PermissionProbe
             using var capture = new global::Windows.Media.Capture.MediaCapture();
             await Capture.CaptureWinRtOperation.WaitAsync(capture.InitializeAsync(new global::Windows.Media.Capture.MediaCaptureInitializationSettings
             {
-                StreamingCaptureMode = global::Windows.Media.Capture.StreamingCaptureMode.Audio
+                StreamingCaptureMode = global::Windows.Media.Capture.StreamingCaptureMode.Audio,
+                AudioDeviceId = (await Capture.CaptureMicrophoneResolver.ResolveAsync(lease.Devices.Microphone, cancellationToken)).WinRtId
             }), cancellationToken);
             return OnboardingProbeState.Available("Microphone is ready.");
         }

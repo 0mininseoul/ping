@@ -5,6 +5,7 @@ using Ping.Windows.App.Onboarding;
 using Ping.Windows.Core.Backend;
 using Ping.Windows.Core.LocalState;
 using Ping.Windows.Core.Models;
+using Ping.Windows.Core.Capture;
 
 #if WINDOWS
 using Microsoft.UI;
@@ -80,6 +81,7 @@ public sealed record ScreenFaceQuickSendSettings
     public bool AutoPlayIncoming { get; init; } = true;
     public bool NotificationSoundEnabled { get; init; } = true;
     public PingAppearanceMode AppearanceMode { get; init; } = PingAppearanceMode.System;
+    public CaptureDevicePreferences Devices { get; init; } = new();
 }
 
 public sealed class ScreenFaceQuickSendSettingsStore

@@ -8,6 +8,7 @@
         Padding="18"
         Background="{ThemeResource PingBackgroundBrush}">
         <TabView
+            x:Name="SettingsTabs" SelectionChanged="SettingsTabs_SelectionChanged"
             IsAddTabButtonVisible="False" TabWidthMode="SizeToContent"
             SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}">
             <TabViewItem Header="일반" IsClosable="False">
@@ -222,6 +223,21 @@
                 </ScrollViewer>
             </TabViewItem>
 
+            <TabViewItem Header="기기" IsClosable="False">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Padding="16" Spacing="12" DataContext="{Binding Devices}">
+                        <TextBlock Text="촬영 기기" FontSize="18" FontWeight="SemiBold" />
+                        <ComboBox x:Name="CameraSelectionCombo" Header="카메라" HorizontalAlignment="Stretch"
+                            ItemsSource="{Binding Cameras}" DisplayMemberPath="Label" SelectedItem="{Binding SelectedCamera, Mode=TwoWay}" />
+                        <ComboBox x:Name="MicrophoneSelectionCombo" Header="마이크" HorizontalAlignment="Stretch"
+                            ItemsSource="{Binding Microphones}" DisplayMemberPath="Label" SelectedItem="{Binding SelectedMicrophone, Mode=TwoWay}" />
+                        <Button Content="목록 새로고침" Click="RefreshDeviceListButton_Click" IsEnabled="{Binding CanRefresh}" />
+                        <TextBlock Text="{Binding Status}" TextWrapping="WrapWholeWords" Foreground="{ThemeResource PingMutedBrush}" />
+                        <TextBlock Text="진행 중인 촬영은 기존 기기를 유지합니다. 얼굴·화면+얼굴·빠른 전송·자동 회신 모두 같은 선택을 사용해요."
+                            TextWrapping="WrapWholeWords" Foreground="{ThemeResource PingMutedBrush}" />
+                    </StackPanel>
+                </ScrollViewer>
+            </TabViewItem>
             <TabViewItem Header="정보" IsClosable="False">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" HorizontalScrollMode="Disabled">
                 <StackPanel Padding="16" Spacing="12">

@@ -60,3 +60,38 @@ try
     return PingCaptureSuccess;
 }
 catch (...) { return PingCaptureNoMicrophone; }
+
+extern "C" __declspec(dllexport)
+int PingCapture_EnumerateMicrophones(PingMicrophoneIdentityCallback callback, void* context)
+try
+{
+    if (!callback) return PingCaptureNoMicrophone;
+    Apartment apartment;
+    if (FAILED(apartment.Result) && apartment.Result != RPC_E_CHANGED_MODE) return Failure(apartment.Result);
+    ComPtr<IMMDeviceEnumerator> enumerator;
+    auto hr = CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_ALL, IID_PPV_ARGS(&enumerator));
+    if (FAILED(hr)) return Failure(hr);
+    ComPtr<IMMDeviceCollection> devices;
+    hr = enumerator->EnumAudioEndpoints(eCapture, DEVICE_STATE_ACTIVE, &devices);
+    if (FAILED(hr)) return Failure(hr);
+    UINT count = 0;
+    hr = devices->GetCount(&count);
+    if (FAILED(hr)) return Failure(hr);
+    for (UINT index = 0; index < count; ++index)
+    {
+        ComPtr<IMMDevice> device;
+        if (FAILED(devices->Item(index, &device))) continue;
+        LPWSTR rawId = nullptr;
+        hr = device->GetId(&rawId);
+        std::unique_ptr<wchar_t, decltype(&CoTaskMemFree)> ownedId(rawId, CoTaskMemFree);
+        if (FAILED(hr) || !rawId || !rawId[0]) continue;
+        ComPtr<IPropertyStore> properties;
+        if (FAILED(device->OpenPropertyStore(STGM_READ, &properties))) continue;
+        Property instance;
+        if (FAILED(properties->GetValue(PKEY_Device_InstanceId, &instance.Value))) continue;
+        if (instance.Value.vt == VT_LPWSTR && instance.Value.pwszVal && instance.Value.pwszVal[0])
+            callback(rawId, instance.Value.pwszVal, context);
+    }
+    return PingCaptureSuccess;
+}
+catch (...) { return PingCaptureNoMicrophone; }

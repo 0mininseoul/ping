@@ -129,9 +129,12 @@ internal static class UiSmokeRunner
             Step("Creating real secondary settings window.");
             shell.RequestedTheme = ElementTheme.Default;
             ScreenFaceQuickSendSettings? savedSettings = null;
+            var fixtureMicrophone = new Ping.Windows.Core.Capture.CaptureMicrophoneDevice("fixture-winrt-mic", "fixture-endpoint-mic");
+            var fixtureDevices = new CaptureDeviceCatalog([new("fixture-camera", "Fixture camera")], [new(fixtureMicrophone, "Fixture microphone")]);
             var settingsVm = new SettingsWindowViewModel("민", HotkeyBinding.Defaults(), ScreenFaceQuickSendSettings.Default,
                 value => { savedSettings = value; UI.PingAppearance.Apply(value.AppearanceMode); }, () => { }, new FixtureStartup(), archiveRootPath: OutputDirectory,
-                ensureArchiveFolders: () => { }, deleteExpiredArchiveFiles: () => { }, openArchiveFolder: _ => Task.FromResult(false));
+                ensureArchiveFolders: () => { }, deleteExpiredArchiveFiles: () => { }, openArchiveFolder: _ => Task.FromResult(false),
+                deviceCatalog: _ => Task.FromResult(fixtureDevices));
             var settings = new SettingsWindow(settingsVm);
             settings.Activate();
             Check(UI.WindowCaptureExclusion.IsApplied(settings), "settings declares exclusion from OS screen capture");
@@ -174,6 +177,27 @@ internal static class UiSmokeRunner
             await Task.Delay(50);
             Check(settingsRoot.RequestedTheme == ElementTheme.Default && root.RequestedTheme == ElementTheme.Default,
                 "system preference restores Windows theme tracking");
+            var tabs = (TabView)settingsRoot.FindName("SettingsTabs");
+            tabs.SelectedIndex = (int)SettingsSection.Devices;
+            await UntilAsync(() => settingsVm.Devices.Cameras.Count == 2 && !settingsVm.Devices.IsLoading);
+            var cameraCombo = (ComboBox)settingsRoot.FindName("CameraSelectionCombo");
+            var microphoneCombo = (ComboBox)settingsRoot.FindName("MicrophoneSelectionCombo");
+            Step($"Device controls before load: camera items={cameraCombo.Items.Count}, microphone items={microphoneCombo.Items.Count}");
+            await UntilAsync(() => cameraCombo.IsLoaded && microphoneCombo.IsLoaded && cameraCombo.Items.Count == 2 && microphoneCombo.Items.Count == 2);
+            cameraCombo.SelectedIndex = 1;
+            microphoneCombo.SelectedIndex = 1;
+            await Task.Delay(80);
+            Step($"Device binding: camera items={cameraCombo.Items.Count}, selected={cameraCombo.SelectedIndex}, model={settingsVm.Devices.SelectedCamera?.Id}, saved={savedSettings?.Devices.CameraId}; microphone items={microphoneCombo.Items.Count}, selected={microphoneCombo.SelectedIndex}, model={settingsVm.Devices.SelectedMicrophone?.Device?.EndpointId}, saved={savedSettings?.Devices.Microphone?.EndpointId}");
+            Check(savedSettings?.Devices.CameraId == "fixture-camera" && savedSettings.Devices.Microphone == fixtureMicrophone,
+                "real device bindings save camera and matched microphone identities");
+            Check(savedSettings is { AutoPlayIncoming: false, NotificationSoundEnabled: false }, "device selection preserves presentation preferences");
+            fixtureDevices = new([], []);
+            await settingsVm.Devices.RefreshAsync();
+            await Task.Delay(80);
+            Check(((CameraChoice)cameraCombo.SelectedItem).Id == "fixture-camera"
+                && ((MicrophoneChoice)microphoneCombo.SelectedItem).Device == fixtureMicrophone,
+                "disconnected devices remain selected without switching to default");
+            await RenderAsync(settingsRoot, "settings-devices.png");
             settings.Close();
             Check(true, "real settings window created, rendered and closed without crash");
             Step("Verifying owned native playback with a synthetic clip.");
