@@ -8,6 +8,7 @@
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="QRCoder" Version="1.8.0" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
   </ItemGroup>
   <ItemGroup>
@@ -34,6 +35,8 @@
     <Compile Include="..\..\src\Ping.Windows.App\Capture\NativeMicrophoneCatalogReader.cs" Link="Capture\NativeMicrophoneCatalogReader.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Capture\CaptureDeviceCatalog.cs" Link="Capture\CaptureDeviceCatalog.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Setup\DeviceSettingsViewModel.cs" Link="Setup\DeviceSettingsViewModel.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Setup\DevicePairingViewModel.cs" Link="Setup\DevicePairingViewModel.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Setup\PairingQrRenderer.cs" Link="Setup\PairingQrRenderer.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Capture\OwnedScreenFaceCaptureEngine.cs" Link="Capture\OwnedScreenFaceCaptureEngine.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Capture\QuickSendController.cs" Link="Capture\QuickSendController.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Capture\ScreenFaceMirrorViewModel.cs" Link="Capture\ScreenFaceMirrorViewModel.cs" />

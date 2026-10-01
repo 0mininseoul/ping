@@ -52,6 +52,14 @@ public sealed class SupabaseClient : ISupabaseRpcClient, IRealtimeCredentialsPro
 
     public string? CurrentUid => session?.UserId;
 
+    public async Task<DeviceHandoffPayload> ExportDeviceHandoffAsync(CancellationToken cancellationToken = default)
+    {
+        var config = await LoadConfigurationAsync(cancellationToken).ConfigureAwait(false);
+        var current = await AuthenticatedSessionAsync(cancellationToken).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+        return new(config, current);
+    }
+
     public async Task<RealtimeCredentials> GetRealtimeCredentialsAsync(CancellationToken cancellationToken = default)
     {
         var config = await LoadConfigurationAsync(cancellationToken).ConfigureAwait(false);

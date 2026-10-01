@@ -8,6 +8,32 @@ namespace Ping.Windows.Core.Tests;
 public sealed class SessionRecoveryTests
 {
     [Fact]
+    public async Task DeviceHandoffUsesRefreshedSessionAndMacWireFields()
+    {
+        using var fixture = new SessionFixture();
+        await fixture.WriteExpiredSessionAsync();
+        var calls = 0;
+        using var http = new HttpClient(new Handler(_ => { calls++; return SessionFixture.AuthResponse(); }));
+        using var client = fixture.Client(http);
+        var pendingHandoff = client.ExportDeviceHandoffAsync();
+        await client.BootstrapAsync();
+        var handoff = await pendingHandoff;
+        using var json = JsonDocument.Parse(handoff.EncodeUtf8());
+        var root = json.RootElement;
+        Assert.Equal(6, root.EnumerateObject().Count());
+        Assert.Equal("https://example.supabase.co/", root.GetProperty("url").GetString());
+        Assert.Equal("public-key", root.GetProperty("anonKey").GetString());
+        Assert.Equal("new-access", root.GetProperty("accessToken").GetString());
+        Assert.Equal("new-refresh", root.GetProperty("refreshToken").GetString());
+        Assert.Equal("existing-user", root.GetProperty("userId").GetString());
+        Assert.EndsWith("Z", root.GetProperty("expiresAt").GetString());
+        Assert.True(root.GetProperty("expiresAt").GetDateTimeOffset() > DateTimeOffset.UtcNow);
+        Assert.Equal(1, calls);
+        Assert.DoesNotContain("new-access", handoff.ToString());
+        Assert.DoesNotContain("new-refresh", handoff.ToString());
+    }
+
+    [Fact]
     public async Task RealtimeAndBootstrapShareOneRefreshAndCurrentIdentity()
     {
         using var fixture = new SessionFixture();

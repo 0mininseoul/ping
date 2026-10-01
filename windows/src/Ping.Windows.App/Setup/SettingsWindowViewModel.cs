@@ -65,7 +65,8 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
         Action? deleteExpiredArchiveFiles = null,
         Func<string, Task<bool>>? openArchiveFolder = null,
         Func<string, CancellationToken, Task<string>>? saveNickname = null,
-        Func<CancellationToken, Task<CaptureDeviceCatalog>>? deviceCatalog = null)
+        Func<CancellationToken, Task<CaptureDeviceCatalog>>? deviceCatalog = null,
+        Func<CancellationToken, Task<PairingQrImage>>? pairingGenerator = null, Func<string?>? pairingUid = null)
     {
         this.nickname = NormalizeNickname(nickname);
         nicknameDraft = this.nickname;
@@ -79,6 +80,7 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
             this.settings = this.settings with { Devices = value };
             this.saveSettings(this.settings);
         }, deviceCatalog);
+        Pairing = new(pairingGenerator ?? (_ => throw new InvalidOperationException("Pairing session is unavailable.")), pairingUid ?? (() => null));
         this.openRooms = openRooms;
         this.ensureArchiveFolders = ensureArchiveFolders ?? (() => new LocalArchive(ArchiveRootPath).EnsureFolders());
         this.deleteExpiredArchiveFiles = deleteExpiredArchiveFiles ?? (() => _ = new LocalArchive(ArchiveRootPath).DeleteExpiredFiles());
@@ -98,6 +100,7 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
     public DeviceSettingsViewModel Devices { get; }
+    public DevicePairingViewModel Pairing { get; }
 
     public bool AutoPlayIncoming
     {
@@ -614,6 +617,7 @@ public sealed partial class SettingsWindow : Window
 {
     private readonly SettingsWindowViewModel viewModel;
     private readonly CancellationTokenSource deviceLifetime = new();
+    private readonly DevicePairingPresenter pairing;
 
     public SettingsWindow(SettingsWindowViewModel viewModel)
     {
@@ -622,7 +626,8 @@ public sealed partial class SettingsWindow : Window
         Ping.Windows.App.UI.PingAppearance.Register(this);
         Ping.Windows.App.UI.WindowCaptureExclusion.Apply(this);
         Root.DataContext = viewModel;
-        Closed += (_, _) => { deviceLifetime.Cancel(); deviceLifetime.Dispose(); };
+        pairing = new(viewModel.Pairing, PairingImage);
+        Closed += (_, _) => { pairing.Dispose(); deviceLifetime.Cancel(); deviceLifetime.Dispose(); };
         Root.Loaded += (_, _) => RefreshDevicesIfVisible();
         Ping.Windows.App.UI.SettingsWindowGeometry.Fit(this);
         _ = viewModel.RefreshStartupAsync();
@@ -653,9 +658,13 @@ public sealed partial class SettingsWindow : Window
 
     private void RefreshDevicesIfVisible()
     {
-        if (SettingsTabs?.SelectedIndex == (int)SettingsSection.Devices)
+        var visible = SettingsTabs?.SelectedIndex == (int)SettingsSection.Devices;
+        pairing?.SetVisible(visible);
+        if (visible)
             _ = viewModel.Devices.RefreshAsync(deviceLifetime.Token);
     }
+    public void ClearDevicePairing() => pairing.Clear();
+    private async void RefreshPairingButton_Click(object sender, RoutedEventArgs args) => await viewModel.Pairing.OpenAsync();
 
     private async void RefreshDeviceListButton_Click(object sender, RoutedEventArgs args)
         => await viewModel.Devices.RefreshAsync(deviceLifetime.Token);

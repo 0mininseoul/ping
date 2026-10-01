@@ -224,17 +224,28 @@
             </TabViewItem>
 
             <TabViewItem Header="기기" IsClosable="False">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <StackPanel Padding="16" Spacing="12" DataContext="{Binding Devices}">
+                <ScrollViewer x:Name="DevicesScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Padding="16" Spacing="12">
                         <TextBlock Text="촬영 기기" FontSize="18" FontWeight="SemiBold" />
                         <ComboBox x:Name="CameraSelectionCombo" Header="카메라" HorizontalAlignment="Stretch"
-                            ItemsSource="{Binding Cameras}" DisplayMemberPath="Label" SelectedItem="{Binding SelectedCamera, Mode=TwoWay}" />
+                            ItemsSource="{Binding Devices.Cameras}" DisplayMemberPath="Label" SelectedItem="{Binding Devices.SelectedCamera, Mode=TwoWay}" />
                         <ComboBox x:Name="MicrophoneSelectionCombo" Header="마이크" HorizontalAlignment="Stretch"
-                            ItemsSource="{Binding Microphones}" DisplayMemberPath="Label" SelectedItem="{Binding SelectedMicrophone, Mode=TwoWay}" />
-                        <Button Content="목록 새로고침" Click="RefreshDeviceListButton_Click" IsEnabled="{Binding CanRefresh}" />
-                        <TextBlock Text="{Binding Status}" TextWrapping="WrapWholeWords" Foreground="{ThemeResource PingMutedBrush}" />
+                            ItemsSource="{Binding Devices.Microphones}" DisplayMemberPath="Label" SelectedItem="{Binding Devices.SelectedMicrophone, Mode=TwoWay}" />
+                        <Button Content="목록 새로고침" Click="RefreshDeviceListButton_Click" IsEnabled="{Binding Devices.CanRefresh}" />
+                        <TextBlock Text="{Binding Devices.Status}" TextWrapping="WrapWholeWords" Foreground="{ThemeResource PingMutedBrush}" />
                         <TextBlock Text="진행 중인 촬영은 기존 기기를 유지합니다. 얼굴·화면+얼굴·빠른 전송·자동 회신 모두 같은 선택을 사용해요."
                             TextWrapping="WrapWholeWords" Foreground="{ThemeResource PingMutedBrush}" />
+                        <TextBlock Text="iPhone · Apple Watch 추가" FontSize="18" FontWeight="SemiBold" Margin="0,14,0,0" />
+                        <TextBlock Text="{Binding Pairing.Status}" TextWrapping="WrapWholeWords" Foreground="{ThemeResource PingMutedBrush}" />
+                        <Border HorizontalAlignment="Center" Padding="8" Background="White" CornerRadius="16">
+                            <Grid MinWidth="220" MinHeight="220">
+                                <Image x:Name="PairingImage" Width="220" Height="220" Stretch="Uniform" />
+                                <ProgressRing Width="40" Height="40" IsActive="{Binding Pairing.IsLoading}" />
+                            </Grid>
+                        </Border>
+                        <TextBlock Text="이 QR에는 로그인 세션이 들어 있습니다. 타인에게 보이지 마세요."
+                            TextWrapping="WrapWholeWords" Foreground="{ThemeResource PingMutedBrush}" />
+                        <Button x:Name="RefreshPairingButton" Content="QR 다시 준비" Click="RefreshPairingButton_Click" IsEnabled="{Binding Pairing.CanRetry}" />
                     </StackPanel>
                 </ScrollViewer>
             </TabViewItem>

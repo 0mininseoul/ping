@@ -24,6 +24,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.1.3" />
+    <PackageReference Include="QRCoder" Version="1.8.0" />
   </ItemGroup>
   <PropertyGroup Condition="'$(PingUiSmoke)' == 'true'">
     <DefineConstants>$(DefineConstants);PING_UI_SMOKE</DefineConstants>
@@ -32,6 +33,9 @@
     <OutputPath>$(MSBuildThisFileDirectory)..\..\artifacts\ui-smoke\bin\$(Platform)\$(Configuration)\</OutputPath>
     <IntermediateOutputPath>$(MSBuildThisFileDirectory)..\..\artifacts\ui-smoke\obj\$(Platform)\$(Configuration)\</IntermediateOutputPath>
   </PropertyGroup>
+  <ItemGroup Condition="'$(PingUiSmoke)' == 'true'">
+    <PackageReference Include="ZXing.Net" Version="0.16.11" />
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Ping.Windows.Core\Ping.Windows.Core.csproj" />
     <ProjectReference

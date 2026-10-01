@@ -43,7 +43,7 @@ internal static class UiSmokeRunner
         MainWindow? window = null;
         try
         {
-            Step("Creating isolated fixture services — no SupabaseClient, user files, tray or camera.");
+            Step("Creating isolated fixture services — no production backend, user files, tray or camera. Pairing uses owned files and fake HTTP only.");
             var rpc = new FixtureRpc();
             var storage = new FixtureStorage();
             var vm = new HistoryViewModel(new RoomService(rpc), new MessageService(rpc, storage), new ChatMessageService(rpc),
@@ -134,7 +134,8 @@ internal static class UiSmokeRunner
             var settingsVm = new SettingsWindowViewModel("민", HotkeyBinding.Defaults(), ScreenFaceQuickSendSettings.Default,
                 value => { savedSettings = value; UI.PingAppearance.Apply(value.AppearanceMode); }, () => { }, new FixtureStartup(), archiveRootPath: OutputDirectory,
                 ensureArchiveFolders: () => { }, deleteExpiredArchiveFiles: () => { }, openArchiveFolder: _ => Task.FromResult(false),
-                deviceCatalog: _ => Task.FromResult(fixtureDevices));
+                deviceCatalog: _ => Task.FromResult(fixtureDevices),
+                pairingGenerator: token => DevicePairingSmoke.CreateAsync(OutputDirectory!, token), pairingUid: () => "me");
             var settings = new SettingsWindow(settingsVm);
             settings.Activate();
             Check(UI.WindowCaptureExclusion.IsApplied(settings), "settings declares exclusion from OS screen capture");
@@ -198,7 +199,24 @@ internal static class UiSmokeRunner
                 && ((MicrophoneChoice)microphoneCombo.SelectedItem).Device == fixtureMicrophone,
                 "disconnected devices remain selected without switching to default");
             await RenderAsync(settingsRoot, "settings-devices.png");
+            UI.SettingsWindowGeometry.Fit(settings);
+            var qrImage = (Image)settingsRoot.FindName("PairingImage");
+            await UntilAsync(() => qrImage.Source is not null);
+            var devicesScroll = (ScrollViewer)settingsRoot.FindName("DevicesScroll");
+            await Task.Delay(100);
+            devicesScroll.ChangeView(null, devicesScroll.ScrollableHeight, null, true);
+            await Task.Delay(100);
+            await RenderAsync(settingsRoot, "settings-pairing-synthetic.png");
+            await RenderAsync(qrImage, "pairing-image-synthetic.png");
+            await DevicePairingSmoke.VerifyAsync(qrImage, settingsVm.Pairing.Image!.Png, Check);
+            tabs.SelectedIndex = (int)SettingsSection.General;
+            await Task.Delay(80);
+            Check(qrImage.Source is null && settingsVm.Pairing.Image is null && !settingsVm.Pairing.IsActive,
+                "leaving devices clears pairing pixels and session image state");
+            tabs.SelectedIndex = (int)SettingsSection.Devices;
+            await UntilAsync(() => qrImage.Source is not null);
             settings.Close();
+            Check(qrImage.Source is null && settingsVm.Pairing.Image is null, "closing settings clears pairing image");
             Check(true, "real settings window created, rendered and closed without crash");
             Step("Verifying owned native playback with a synthetic clip.");
             await PlaybackSmoke.RunAsync(window, OutputDirectory!, Check, RenderAsync);

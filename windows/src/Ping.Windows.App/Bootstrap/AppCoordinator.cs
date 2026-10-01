@@ -457,7 +457,12 @@ public sealed class AppCoordinator : IDisposable
             ensureArchiveFolders: localArchive.EnsureFolders,
             deleteExpiredArchiveFiles: () => _ = localArchive.DeleteExpiredFiles(),
             openArchiveFolder: SettingsLauncher.LaunchFolderAsync,
-            saveNickname: SaveProfileNicknameAsync));
+            saveNickname: SaveProfileNicknameAsync,
+            pairingGenerator: async token =>
+            {
+                if (currentUid is null) throw new InvalidOperationException("Ping session is not ready.");
+                return PairingQrRenderer.Render(await this.supabaseClient.ExportDeviceHandoffAsync(token));
+            }, pairingUid: () => currentUid));
         settingsWindow.Closed += (_, _) => settingsWindow = null;
         settingsWindow.Activate();
     }
@@ -1286,6 +1291,7 @@ public sealed class AppCoordinator : IDisposable
         await RunOnUiThreadAsync(() =>
         {
             if (disposed || cancellationToken.IsCancellationRequested) return;
+            if (currentUid != uid) settingsWindow?.ClearDevicePairing();
             currentUid = uid;
             startupIdentity.SetReady(uid);
             if (!string.IsNullOrWhiteSpace(profile?.Nickname))
@@ -1334,6 +1340,7 @@ public sealed class AppCoordinator : IDisposable
             if (disposed || state == ConnectionState.Stopped) return;
             if (state is ConnectionState.SessionRejected or ConnectionState.ConfigurationRequired)
             {
+                settingsWindow?.ClearDevicePairing();
                 camera.InterruptAutomatic();
                 startupIdentity.Fail(error ?? new InvalidOperationException("Ping account startup failed."));
                 _ = incomingObserver.StopAsync();
