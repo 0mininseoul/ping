@@ -115,11 +115,8 @@ namespace Ping::Windows::NativeCapture
     };
 
     int CaptureOneMonitorFrame(int targetMonitorIndex, MonitorCaptureResult& result);
-    int CaptureMonitorFrames(int targetMonitorIndex, int durationMs, int framesPerSecond, std::vector<MonitorCaptureResult>& result);
-    int ProbeCameraFrameSource();
-    int CaptureCameraFrame(CameraFrameResult& result);
-    int CaptureCameraFrames(int durationMs, int framesPerSecond, std::vector<CameraFrameResult>& result);
-    int CaptureMicrophonePcm(int durationMs, AudioCaptureResult& result);
+    int CaptureMonitorPreviewFrame(int targetMonitorIndex, CaptureViewport viewport, HANDLE cancellationEvent,
+        MonitorCaptureResult& result);
     OutputLayout CreateScreenFaceLayout(CaptureSize sourceSize, double faceDiameterRatio, int maximumLongSide = 1920);
     CaptureCrop ComputeCaptureCrop(CaptureSize sourceSize, CaptureViewport viewport);
     int CropScreenFrame(MonitorCaptureResult const& source, CaptureViewport viewport,

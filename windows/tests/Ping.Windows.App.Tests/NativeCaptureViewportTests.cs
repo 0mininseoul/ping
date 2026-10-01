@@ -8,6 +8,27 @@ namespace Ping.Windows.App.Tests;
 public sealed class NativeCaptureViewportTests
 {
     [Fact]
+    public async Task ScreenSelfTestDoesNotBlockItsCallerWhileNativeCaptureWaits()
+    {
+        var api = new Api { BlockSelfTest = true };
+        var returned = new TaskCompletionSource<Task<ScreenCaptureSelfTestResult>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var caller = new Thread(() =>
+        {
+            try { returned.SetResult(new NativeCaptureEngine(api).SelfTestAsync()); }
+            catch (Exception error) { returned.SetException(error); }
+        });
+        caller.Start();
+        try
+        {
+            await api.Started.Task.WaitAsync(TimeSpan.FromSeconds(3));
+            var operation = await returned.Task.WaitAsync(TimeSpan.FromSeconds(1));
+            Assert.False(operation.IsCompleted);
+            api.Finish.Set();
+            Assert.True((await operation).IsSupported);
+        }
+        finally { api.Finish.Set(); Assert.True(caller.Join(TimeSpan.FromSeconds(3))); }
+    }
+    [Fact]
     public async Task SelectedCameraPassesExactIdentityToNativeApi()
     {
         var api = new Api();
@@ -111,6 +132,7 @@ public sealed class NativeCaptureViewportTests
         public ScreenCaptureViewport? Viewport;
         public string? SelectedCamera;
         public bool RejectSelectedCamera;
+        public bool BlockSelfTest;
         public SafeWaitHandle? Handle;
         public string Path = "";
         public int Duration, Monitor;
@@ -134,7 +156,15 @@ public sealed class NativeCaptureViewportTests
         }
         public int Preview(string path, int monitor, ScreenCaptureViewport viewport, SafeWaitHandle cancellationEvent, out double aspect)
             => Execute(path, monitor, viewport, cancellationEvent, out aspect);
-        public int SelfTest() => 0;
+        public int SelfTest()
+        {
+            if (BlockSelfTest)
+            {
+                Started.TrySetResult();
+                if (!Finish.Wait(TimeSpan.FromSeconds(5))) throw new TimeoutException("Fixture self-test was not released.");
+            }
+            return 0;
+        }
         private int Execute(string path, int monitor, ScreenCaptureViewport viewport, SafeWaitHandle handle, out double aspect)
         {
             Path = path; Monitor = monitor; Viewport = viewport; Handle = handle; aspect = 16d / 9;

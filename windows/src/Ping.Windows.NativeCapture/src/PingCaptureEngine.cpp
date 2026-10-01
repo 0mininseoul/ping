@@ -152,18 +152,13 @@ try
     if (cancellationEvent && WaitForSingleObject(cancellationEvent, 0) == WAIT_OBJECT_0) return PingCaptureCancelled;
 
     MonitorCaptureResult monitorResult{};
-    int captureResult = CaptureOneMonitorFrame(targetMonitorIndex, monitorResult);
+    int captureResult = CaptureMonitorPreviewFrame(targetMonitorIndex, {zoom, centerX, centerY}, cancellationEvent, monitorResult);
     if (captureResult != PingCaptureSuccess)
     {
         return NormalizeCaptureFailure(captureResult);
     }
 
     if (cancellationEvent && WaitForSingleObject(cancellationEvent, 0) == WAIT_OBJECT_0) return PingCaptureCancelled;
-    auto layout = CreateScreenFaceLayout(monitorResult.SourceSize, .32);
-    MonitorCaptureResult cropped{};
-    int cropResult = CropScreenFrame(monitorResult, {zoom, centerX, centerY}, {layout.Width, layout.Height}, cropped);
-    if (cropResult != PingCaptureSuccess) return cropResult;
-    monitorResult = std::move(cropped);
 
     if (monitorResult.SourceSize.Width <= 0
         || monitorResult.SourceSize.Height <= 0

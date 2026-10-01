@@ -33,6 +33,7 @@
     <ClCompile Include="LiveRecordingTests.cpp" />
     <ClCompile Include="LiveEntryTests.cpp" />
     <ClCompile Include="MicrophonePacketTests.cpp" />
+    <ClCompile Include="ScreenSnapshotTests.cpp" />
     <ClCompile Include="..\..\src\Ping.Windows.NativeCapture\src\MicrophonePacketReader.cpp" />
     <ClCompile Include="..\..\src\Ping.Windows.NativeCapture\src\LiveRecording.cpp" />
     <ClCompile Include="..\..\src\Ping.Windows.NativeCapture\src\CapturePixelView.cpp" />

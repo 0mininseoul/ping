@@ -11,9 +11,25 @@ std::atomic<LONGLONG> FixtureAudioDrift{0};
 HANDLE FixtureDrainRelease = nullptr;
 Ping::Windows::NativeCapture::CaptureViewport FixtureViewport{};
 std::wstring FixtureCameraDevice;
+int FixturePreviewMode = 0;
+Ping::Windows::NativeCapture::CaptureViewport FixturePreviewViewport{};
 namespace Ping::Windows::NativeCapture
 {
     int CaptureOneMonitorFrame(int, MonitorCaptureResult&) { ++FixtureSourceStarts; return PingCaptureNoMonitor; }
+    int CaptureMonitorPreviewFrame(int, CaptureViewport viewport, HANDLE, MonitorCaptureResult& result)
+    {
+        ++FixtureSourceStarts; FixturePreviewViewport = viewport;
+        if (!FixturePreviewMode) return PingCaptureNoMonitor;
+        if (FixturePreviewMode == 2) return PingCaptureCancelled;
+        MonitorCaptureResult source{}; source.SourceSize = {8, 4}; source.RowPitch = 32;
+        source.BgraPixels.resize(128);
+        for (int y = 0; y < 4; ++y) for (int x = 0; x < 8; ++x)
+        {
+            auto pixel = source.BgraPixels.data() + y * 32 + x * 4;
+            pixel[0] = static_cast<std::uint8_t>(x); pixel[1] = static_cast<std::uint8_t>(y); pixel[2] = 0; pixel[3] = 255;
+        }
+        return CropScreenFrame(source, viewport, {8, 4}, result);
+    }
     int CaptureMonitorFrames(int, int, int, std::vector<MonitorCaptureResult>&) { ++FixtureLegacyStarts; ++FixtureSourceStarts; return PingCaptureNoMonitor; }
     int CaptureCameraFrames(int, int, std::vector<CameraFrameResult>&) { ++FixtureLegacyStarts; ++FixtureSourceStarts; return PingCaptureNoCamera; }
     int CaptureMicrophonePcm(int, AudioCaptureResult&) { ++FixtureLegacyStarts; ++FixtureSourceStarts; return PingCaptureNoMicrophone; }

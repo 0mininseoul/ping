@@ -76,10 +76,9 @@
     <ClInclude Include="include\CaptureCallbackGate.h" />
     <ClInclude Include="include\MicrophonePacketReader.h" />
     <ClInclude Include="include\CapturePixelView.h" />
+    <ClInclude Include="include\ScreenFrameContract.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\CameraFrameSource.cpp" />
-    <ClCompile Include="src\MonitorCapture.cpp" />
     <ClCompile Include="src\Mp4SinkWriter.cpp" />
     <ClCompile Include="src\RecordingStream.cpp" />
     <ClCompile Include="src\LiveRecording.cpp" />

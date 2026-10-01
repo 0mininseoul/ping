@@ -144,32 +144,32 @@ public sealed class NativeCaptureEngine(INativeScreenCaptureApi? nativeApi = nul
         return new ScreenFaceCaptureResult(outputPath, NormalizeAspectRatio(aspectRatio));
     }
 
-    public Task<ScreenCaptureSelfTestResult> SelfTestAsync()
+    public async Task<ScreenCaptureSelfTestResult> SelfTestAsync()
     {
         try
         {
-            return Task.FromResult(ToSelfTestResult(api.SelfTest()));
+            return ToSelfTestResult(await Task.Run(api.SelfTest).ConfigureAwait(false));
         }
         catch (DllNotFoundException exception)
         {
-            return Task.FromResult(new ScreenCaptureSelfTestResult(
+            return new ScreenCaptureSelfTestResult(
                 false,
                 PingCaptureErrorCode.UnsupportedOs,
-                $"Native screen capture DLL was not found. {exception.Message}"));
+                $"Native screen capture DLL was not found. {exception.Message}");
         }
         catch (EntryPointNotFoundException exception)
         {
-            return Task.FromResult(new ScreenCaptureSelfTestResult(
+            return new ScreenCaptureSelfTestResult(
                 false,
                 PingCaptureErrorCode.UnsupportedOs,
-                $"Native screen capture entry point is unavailable. {exception.Message}"));
+                $"Native screen capture entry point is unavailable. {exception.Message}");
         }
         catch (BadImageFormatException exception)
         {
-            return Task.FromResult(new ScreenCaptureSelfTestResult(
+            return new ScreenCaptureSelfTestResult(
                 false,
                 PingCaptureErrorCode.UnsupportedOs,
-                $"Native screen capture DLL architecture does not match this process. {exception.Message}"));
+                $"Native screen capture DLL architecture does not match this process. {exception.Message}");
         }
     }
 

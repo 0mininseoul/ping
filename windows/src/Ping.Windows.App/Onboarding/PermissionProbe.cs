@@ -435,33 +435,36 @@ public sealed class PermissionProbe
 
     private sealed class NativeScreenCaptureSelfTest : INativeScreenCaptureSelfTest
     {
-        public Task<OnboardingProbeState> CapturePrimaryMonitorFrameAsync(CancellationToken cancellationToken = default)
+        public async Task<OnboardingProbeState> CapturePrimaryMonitorFrameAsync(CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (!OperatingSystem.IsWindows())
             {
-                return Task.FromResult(OnboardingProbeState.Unchecked("Native screen capture self-test requires Windows."));
+                return OnboardingProbeState.Unchecked("Native screen capture self-test requires Windows.");
             }
 
             if (!NativeLibrary.TryLoad("Ping.Windows.NativeCapture.dll", out var library))
             {
-                return Task.FromResult(OnboardingProbeState.Blocked("Native screen capture self-test bridge is unavailable."));
+                return OnboardingProbeState.Blocked("Native screen capture self-test bridge is unavailable.");
             }
 
             try
             {
                 if (!NativeLibrary.TryGetExport(library, "PingScreenCaptureSelfTest", out var function))
                 {
-                    return Task.FromResult(OnboardingProbeState.Blocked("Native screen capture self-test export is missing."));
+                    return OnboardingProbeState.Blocked("Native screen capture self-test export is missing.");
                 }
 
                 var selfTest = Marshal.GetDelegateForFunctionPointer<PingScreenCaptureSelfTestDelegate>(function);
-                return Task.FromResult(selfTest() switch
+                var result = await Task.Run(() => selfTest(), cancellationToken).ConfigureAwait(false);
+                cancellationToken.ThrowIfCancellationRequested();
+                return result switch
                 {
                     0 => OnboardingProbeState.Available("Screen capture self-test passed."),
                     1 => OnboardingProbeState.Unsupported("Graphics Capture is not supported on this device."),
                     2 => OnboardingProbeState.Blocked("Programmatic screen capture is blocked.", SettingsLauncher.GraphicsCapturePrivacyUri),
                     var code => OnboardingProbeState.Blocked($"Native screen capture self-test failed with code {code}.")
-                });
+                };
             }
             finally
             {
