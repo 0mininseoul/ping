@@ -21,6 +21,7 @@ public sealed partial class OnboardingWindow : Window
         this.openHotkeySettings = openHotkeySettings;
         viewModel = new OnboardingViewModel();
         InitializeComponent();
+        Ping.Windows.App.UI.PingAppearance.Register(this);
         Ping.Windows.App.UI.WindowCaptureExclusion.Apply(this);
         Root.DataContext = viewModel;
     }

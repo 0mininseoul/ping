@@ -9,13 +9,9 @@
         Width="760"
         Height="540"
         Padding="18"
-        Background="#121314"
+        Background="{ThemeResource PingBackgroundBrush}"
         ColumnSpacing="14">
         <Grid.Resources>
-            <SolidColorBrush x:Key="PingSurfaceBrush" Color="#24272A" />
-            <SolidColorBrush x:Key="PingTextBrush" Color="#F5F7FA" />
-            <SolidColorBrush x:Key="PingMutedBrush" Color="#9DA3AA" />
-            <SolidColorBrush x:Key="PingIdleBrush" Color="#4DFFFFFF" />
             <setup:PositiveIntToVisibilityConverter x:Key="PositiveIntToVisibilityConverter" />
         </Grid.Resources>
 
@@ -40,7 +36,7 @@
                 <TextBlock
                     FontSize="22"
                     FontWeight="SemiBold"
-                    Foreground="{StaticResource PingTextBrush}"
+                    Foreground="{ThemeResource PingTextBrush}"
                     Text="Rooms" />
                 <Button
                     Grid.Column="1"
@@ -74,7 +70,7 @@
                                     Text="{Binding Name}" />
                                 <TextBlock
                                     FontSize="11"
-                                    Foreground="{StaticResource PingMutedBrush}"
+                                    Foreground="{ThemeResource PingMutedBrush}"
                                     Text="{Binding Status}" />
                             </StackPanel>
                             <Border
@@ -100,7 +96,7 @@
             <TextBlock
                 Grid.Row="2"
                 FontSize="12"
-                Foreground="{StaticResource PingMutedBrush}"
+                Foreground="{ThemeResource PingMutedBrush}"
                 Text="{Binding StatusMessage}"
                 TextWrapping="WrapWholeWords" />
         </Grid>
@@ -109,19 +105,19 @@
             <StackPanel Spacing="14">
                 <Border
                     Padding="14"
-                    Background="{StaticResource PingSurfaceBrush}"
-                    BorderBrush="{StaticResource PingIdleBrush}"
+                    Background="{ThemeResource PingSurfaceBrush}"
+                    BorderBrush="{ThemeResource PingIdleBrush}"
                     BorderThickness="1"
                     CornerRadius="12">
                     <StackPanel Spacing="8">
                         <TextBlock
                             FontSize="18"
                             FontWeight="SemiBold"
-                            Foreground="{StaticResource PingTextBrush}"
+                            Foreground="{ThemeResource PingTextBrush}"
                             Text="{Binding SelectedRoomName}" />
                         <TextBlock
                             FontSize="12"
-                            Foreground="{StaticResource PingMutedBrush}"
+                            Foreground="{ThemeResource PingMutedBrush}"
                             Text="{Binding SelectedRoomMembers}"
                             TextWrapping="WrapWholeWords" />
                         <Grid ColumnSpacing="8">
@@ -153,15 +149,15 @@
 
                     <Border
                         Padding="14"
-                        Background="{StaticResource PingSurfaceBrush}"
-                        BorderBrush="{StaticResource PingIdleBrush}"
+                        Background="{ThemeResource PingSurfaceBrush}"
+                        BorderBrush="{ThemeResource PingIdleBrush}"
                         BorderThickness="1"
                         CornerRadius="12">
                         <StackPanel Spacing="8">
                             <TextBlock
                                 FontSize="14"
                                 FontWeight="SemiBold"
-                                Foreground="{StaticResource PingTextBrush}"
+                                Foreground="{ThemeResource PingTextBrush}"
                                 Text="Create and invite" />
                             <TextBox
                                 x:Name="NewRoomNameBox"
@@ -201,7 +197,7 @@
                                             <TextBlock FontWeight="SemiBold" Text="{Binding Nickname}" />
                                             <TextBlock
                                                 FontSize="11"
-                                                Foreground="{StaticResource PingMutedBrush}"
+                                                Foreground="{ThemeResource PingMutedBrush}"
                                                 Text="{Binding Id}" />
                                         </StackPanel>
                                     </DataTemplate>
@@ -228,15 +224,15 @@
                     <Border
                         Grid.Column="1"
                         Padding="14"
-                        Background="{StaticResource PingSurfaceBrush}"
-                        BorderBrush="{StaticResource PingIdleBrush}"
+                        Background="{ThemeResource PingSurfaceBrush}"
+                        BorderBrush="{ThemeResource PingIdleBrush}"
                         BorderThickness="1"
                         CornerRadius="12">
                         <StackPanel Spacing="8">
                             <TextBlock
                                 FontSize="14"
                                 FontWeight="SemiBold"
-                                Foreground="{StaticResource PingTextBrush}"
+                                Foreground="{ThemeResource PingTextBrush}"
                                 Text="Search open rooms" />
                             <Grid ColumnSpacing="8">
                                 <Grid.ColumnDefinitions>
@@ -262,7 +258,7 @@
                                             <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
                                             <TextBlock
                                                 FontSize="11"
-                                                Foreground="{StaticResource PingMutedBrush}"
+                                                Foreground="{ThemeResource PingMutedBrush}"
                                                 Text="{Binding Status}" />
                                         </StackPanel>
                                     </DataTemplate>
@@ -278,15 +274,15 @@
 
                 <Border
                     Padding="14"
-                    Background="{StaticResource PingSurfaceBrush}"
-                    BorderBrush="{StaticResource PingIdleBrush}"
+                    Background="{ThemeResource PingSurfaceBrush}"
+                    BorderBrush="{ThemeResource PingIdleBrush}"
                     BorderThickness="1"
                     CornerRadius="12">
                     <StackPanel Spacing="8">
                         <TextBlock
                             FontSize="14"
                             FontWeight="SemiBold"
-                            Foreground="{StaticResource PingTextBrush}"
+                            Foreground="{ThemeResource PingTextBrush}"
                             Text="Invitations" />
                         <ListView
                             x:Name="InvitationsList"

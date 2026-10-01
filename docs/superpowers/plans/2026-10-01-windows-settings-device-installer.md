@@ -11,9 +11,9 @@
 
 ## 1. 사용할 수 있는 설정 창
 
-- [ ] 영어/한국어가 섞인 고정 크기 설정을 한국어 항목과 스크롤 가능한 일반·단축키·룸·저장·기기·정보 탭으로 정리. 현재 DPI/work-area에 맞는 클라이언트 크기와 닫기 수명 관리. 기존 설정 기능 유지.
-- [ ] 소리와 외관을 기존 설정 파일에 하위 호환 필드로 저장. 외관을 기존/새 창에 적용하고 알림 무음을 실제 Windows 토스트 구성에 반영. 기존 핫키·저장·자동재생 값 보존.
-- [ ] 관련 순수 설정 저장/토스트 구성 검사, 실제 WinUI에서 선택·반영·스크롤을 합성 데이터로 확인하고 정상 Release 빌드. Commit `feat(windows-settings): add appearance and notification preferences`.
+- [x] 영어/한국어가 섞인 고정 크기 설정을 한국어 항목과 스크롤 가능한 일반·단축키·룸·저장·정보 탭으로 정리. 현재 DPI/work-area에 맞는 클라이언트 크기와 기존 닫기 동작 유지. 기기 탭은 실제 기능과 함께 Task 2에서 추가.
+- [x] 소리와 외관을 기존 설정 파일에 하위 호환 필드로 저장. 외관을 기존/새 창에 적용하고 알림 무음을 실제 Windows 토스트 구성에 반영. 기존 핫키·저장·자동재생 값 보존.
+- [x] 관련 순수 설정 저장/토스트 구성 검사, 실제 WinUI에서 선택·반영·스크롤을 합성 데이터로 확인하고 정상 Release 빌드. Commit `feat(windows-settings): add appearance and notification preferences`. 검증: `docs/windows/2026-10-01-settings-appearance-verification.ko.md`.
 
 ## 2. 기기 선택과 연결
 

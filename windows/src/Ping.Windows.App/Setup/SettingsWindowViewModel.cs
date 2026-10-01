@@ -39,8 +39,8 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
     private bool isSavingNickname;
     private string nickname;
     private string nicknameDraft;
-    private string nicknameStatus = "Shown to room members and message recipients.";
-    private string startupStatus = "Checking startup registration...";
+    private string nicknameStatus = "룸 멤버와 메시지를 받는 친구에게 표시됩니다.";
+    private string startupStatus = "자동 시작 설정을 확인하고 있어요…";
     private string faceHotkey;
     private string screenFaceHotkey;
     private string quickSendHotkey;
@@ -79,12 +79,12 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
         this.saveNickname = saveNickname ?? ((value, _) => Task.FromResult(NormalizeNickname(value)));
         this.startupTaskController = startupTaskController ?? new StartupTaskController();
         this.updateHotkey = updateHotkey ?? ((command, binding) => HotkeyRegistrationResult.Success(command, binding));
-        faceHotkey = LabelFor("Face Ping", this.hotkeys, HotkeyCommand.FacePing);
-        screenFaceHotkey = LabelFor("Screen+Face Ping", this.hotkeys, HotkeyCommand.ScreenFacePing);
-        quickSendHotkey = LabelFor("Quick Screen+Face Ping", this.hotkeys, HotkeyCommand.QuickScreenFacePing);
-        historyHotkey = LabelFor("History", this.hotkeys, HotkeyCommand.History);
-        quickSendOffContent = QuickSendModeText("opens mirror", this.hotkeys);
-        quickSendOnContent = QuickSendModeText("records immediately", this.hotkeys);
+        faceHotkey = LabelFor("얼굴 Ping", this.hotkeys, HotkeyCommand.FacePing);
+        screenFaceHotkey = LabelFor("화면+얼굴 Ping", this.hotkeys, HotkeyCommand.ScreenFacePing);
+        quickSendHotkey = LabelFor("화면+얼굴 빠른 전송", this.hotkeys, HotkeyCommand.QuickScreenFacePing);
+        historyHotkey = LabelFor("메신저", this.hotkeys, HotkeyCommand.History);
+        quickSendOffContent = QuickSendModeText("거울 열기", this.hotkeys);
+        quickSendOnContent = QuickSendModeText("바로 녹화", this.hotkeys);
         HotkeyRows = new ObservableCollection<HotkeySettingRow>(
             HotkeySettingRow.FromBindings(this.hotkeys));
     }
@@ -100,6 +100,28 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
             settings = settings with { AutoPlayIncoming = value };
             saveSettings(settings);
             OnPropertyChanged();
+        }
+    }
+
+    public bool NotificationSoundEnabled
+    {
+        get => settings.NotificationSoundEnabled;
+        set
+        {
+            if (settings.NotificationSoundEnabled == value) return;
+            settings = settings with { NotificationSoundEnabled = value };
+            saveSettings(settings); OnPropertyChanged();
+        }
+    }
+
+    public int AppearanceSelection
+    {
+        get => Enum.IsDefined(settings.AppearanceMode) ? (int)settings.AppearanceMode : 0;
+        set
+        {
+            if (value < 0 || value > 2 || AppearanceSelection == value) return;
+            settings = settings with { AppearanceMode = (PingAppearanceMode)value };
+            saveSettings(settings); OnPropertyChanged();
         }
     }
 
@@ -389,7 +411,7 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
         var normalized = NormalizeNickname(NicknameDraft);
         if (string.IsNullOrWhiteSpace(normalized))
         {
-            NicknameStatus = "Nickname is required.";
+            NicknameStatus = "닉네임을 입력해 주세요.";
             return;
         }
 
@@ -401,20 +423,20 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
         try
         {
             IsSavingNickname = true;
-            NicknameStatus = "Saving...";
+            NicknameStatus = "저장 중…";
             var savedNickname = await saveNickname(normalized, cancellationToken);
             var displayNickname = NormalizeNickname(savedNickname);
             Nickname = string.IsNullOrWhiteSpace(displayNickname) ? normalized : displayNickname;
             NicknameDraft = Nickname;
-            NicknameStatus = "Saved.";
+            NicknameStatus = "저장했어요.";
         }
         catch (OperationCanceledException)
         {
-            NicknameStatus = "Nickname save canceled.";
+            NicknameStatus = "닉네임 저장을 취소했어요.";
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException or HttpRequestException)
         {
-            NicknameStatus = "Could not save nickname.";
+            NicknameStatus = "닉네임을 저장하지 못했어요. 다시 시도해 주세요.";
         }
         finally
         {
@@ -429,12 +451,12 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
             ensureArchiveFolders();
             var opened = await openArchiveFolder(ArchiveRootPath);
             ArchiveFolderStatus = opened
-                ? "Archive folder opened."
-                : "Could not open archive folder.";
+                ? "저장 폴더를 열었어요."
+                : "저장 폴더를 열지 못했어요.";
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
         {
-            ArchiveFolderStatus = "Could not open archive folder.";
+            ArchiveFolderStatus = "저장 폴더를 열지 못했어요.";
         }
     }
 
@@ -465,7 +487,7 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
 
         hotkeys[row.Command] = binding;
         row.ApplyBinding(binding);
-        row.StatusMessage = "Saved.";
+        row.StatusMessage = "저장했어요.";
         RefreshHotkeyLabels();
     }
 
@@ -479,6 +501,8 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
     {
         settings = updatedSettings;
         OnPropertyChanged(nameof(AutoPlayIncoming));
+        OnPropertyChanged(nameof(NotificationSoundEnabled));
+        OnPropertyChanged(nameof(AppearanceSelection));
         OnPropertyChanged(nameof(IsQuickSendEnabled));
         OnPropertyChanged(nameof(SaveSentCopy));
         OnPropertyChanged(nameof(SaveReceivedCopy));
@@ -529,11 +553,11 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
         {
             ensureArchiveFolders();
             deleteExpiredArchiveFiles();
-            ArchiveFolderStatus = "Expired local copies cleaned.";
+            ArchiveFolderStatus = "30일이 지난 저장 영상을 정리했어요.";
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
         {
-            ArchiveFolderStatus = "Could not clean expired local copies.";
+            ArchiveFolderStatus = "저장 영상을 정리하지 못했어요.";
         }
     }
 
@@ -554,7 +578,7 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
     }
 
     private static string LabelFor(string label, IReadOnlyDictionary<HotkeyCommand, HotkeyBinding> hotkeys, HotkeyCommand command) =>
-        hotkeys.TryGetValue(command, out var binding) ? $"{label}: {binding}" : $"{label}: Unassigned";
+        hotkeys.TryGetValue(command, out var binding) ? $"{label}: {binding}" : $"{label}: 미지정";
 
     private static string QuickSendModeText(string action, IReadOnlyDictionary<HotkeyCommand, HotkeyBinding> hotkeys) =>
         $"{HotkeyStatusText.BindingLabel(hotkeys, HotkeyCommand.QuickScreenFacePing)} {action}";
@@ -564,12 +588,12 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
 
     private void RefreshHotkeyLabels()
     {
-        FaceHotkey = LabelFor("Face Ping", hotkeys, HotkeyCommand.FacePing);
-        ScreenFaceHotkey = LabelFor("Screen+Face Ping", hotkeys, HotkeyCommand.ScreenFacePing);
-        QuickSendHotkey = LabelFor("Quick Screen+Face Ping", hotkeys, HotkeyCommand.QuickScreenFacePing);
-        HistoryHotkey = LabelFor("History", hotkeys, HotkeyCommand.History);
-        QuickSendOffContent = QuickSendModeText("opens mirror", hotkeys);
-        QuickSendOnContent = QuickSendModeText("records immediately", hotkeys);
+        FaceHotkey = LabelFor("얼굴 Ping", hotkeys, HotkeyCommand.FacePing);
+        ScreenFaceHotkey = LabelFor("화면+얼굴 Ping", hotkeys, HotkeyCommand.ScreenFacePing);
+        QuickSendHotkey = LabelFor("화면+얼굴 빠른 전송", hotkeys, HotkeyCommand.QuickScreenFacePing);
+        HistoryHotkey = LabelFor("메신저", hotkeys, HotkeyCommand.History);
+        QuickSendOffContent = QuickSendModeText("거울 열기", hotkeys);
+        QuickSendOnContent = QuickSendModeText("바로 녹화", hotkeys);
     }
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>
@@ -585,8 +609,10 @@ public sealed partial class SettingsWindow : Window
     {
         this.viewModel = viewModel;
         InitializeComponent();
+        Ping.Windows.App.UI.PingAppearance.Register(this);
         Ping.Windows.App.UI.WindowCaptureExclusion.Apply(this);
         Root.DataContext = viewModel;
+        Ping.Windows.App.UI.SettingsWindowGeometry.Fit(this);
         _ = viewModel.RefreshStartupAsync();
     }
 

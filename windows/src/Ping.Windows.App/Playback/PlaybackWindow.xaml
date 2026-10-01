@@ -19,7 +19,7 @@
 
         <Border
             x:Name="PlaybackBorder"
-            Background="{StaticResource PingSurfaceBrush}"
+            Background="{ThemeResource PingSurfaceBrush}"
             BorderBrush="{StaticResource PingBorderIdleBrush}"
             BorderThickness="1"
             CornerRadius="{StaticResource PingCornerRadius}">
@@ -35,13 +35,13 @@
                     Padding="10,4"
                     HorizontalAlignment="Right"
                     VerticalAlignment="Bottom"
-                    Background="{StaticResource PingSurfaceBrush}"
+                    Background="{ThemeResource PingSurfaceBrush}"
                     BorderBrush="{StaticResource PingBorderIdleBrush}"
                     BorderThickness="1"
                     CornerRadius="{StaticResource PingCornerRadius}">
                     <TextBlock
                         FontSize="12"
-                        Foreground="{StaticResource PingTextBrush}"
+                        Foreground="{ThemeResource PingTextBrush}"
                         Text="{Binding SenderLabel}" />
                 </Border>
             </Grid>

@@ -127,9 +127,10 @@ internal static class UiSmokeRunner
             window.ReportStatus(null);
 
             Step("Creating real secondary settings window.");
+            shell.RequestedTheme = ElementTheme.Default;
             ScreenFaceQuickSendSettings? savedSettings = null;
             var settingsVm = new SettingsWindowViewModel("민", HotkeyBinding.Defaults(), ScreenFaceQuickSendSettings.Default,
-                value => savedSettings = value, () => { }, new FixtureStartup(), archiveRootPath: OutputDirectory,
+                value => { savedSettings = value; UI.PingAppearance.Apply(value.AppearanceMode); }, () => { }, new FixtureStartup(), archiveRootPath: OutputDirectory,
                 ensureArchiveFolders: () => { }, deleteExpiredArchiveFiles: () => { }, openArchiveFolder: _ => Task.FromResult(false));
             var settings = new SettingsWindow(settingsVm);
             settings.Activate();
@@ -140,7 +141,39 @@ internal static class UiSmokeRunner
             autoPlayToggle.IsOn = false;
             await Task.Delay(50);
             Check(savedSettings is { AutoPlayIncoming: false } && !settingsVm.AutoPlayIncoming, "real autoplay binding persists off");
-            await RenderAsync((FrameworkElement)settings.Content, "settings.png");
+            var settingsRoot = (Grid)settings.Content;
+            Check(Descendants(settingsRoot).OfType<TabViewItem>().All(tab => !tab.IsClosable), "settings sections cannot be accidentally closed");
+            Check(settingsRoot.ActualWidth >= 400 && settingsRoot.ActualHeight >= 300, "settings client geometry provides usable layout");
+            var generalScroll = (ScrollViewer)settingsRoot.FindName("GeneralScroll");
+            settings.AppWindow.ResizeClient(new(760, 420));
+            await Task.Delay(120);
+            Check(generalScroll.ScrollableHeight > 0 && generalScroll.ScrollableWidth == 0, "small settings window scrolls vertically without horizontal overflow");
+            generalScroll.ChangeView(null, generalScroll.ScrollableHeight, null, true);
+            await Task.Delay(120);
+            Check(generalScroll.VerticalOffset > 0, "bottom preferences remain reachable in a small client area");
+            var soundToggle = (ToggleSwitch)settingsRoot.FindName("NotificationSoundToggle");
+            soundToggle.IsOn = false;
+            await Task.Delay(50);
+            Check(savedSettings is { NotificationSoundEnabled: false, AutoPlayIncoming: false }, "real sound binding persists without changing autoplay");
+            var appearance = (ComboBox)settingsRoot.FindName("AppearanceComboBox");
+            appearance.SelectedIndex = 1;
+            await Task.Delay(120);
+            Check(savedSettings?.AppearanceMode == PingAppearanceMode.Light && settingsRoot.ActualTheme == ElementTheme.Light
+                && root.ActualTheme == ElementTheme.Light, "light preference updates settings and existing messenger");
+            var lightBackground = ((SolidColorBrush)settingsRoot.Background).Color;
+            await RenderAsync(settingsRoot, "settings-light.png");
+            appearance.SelectedIndex = 2;
+            await Task.Delay(120);
+            Check(settingsRoot.ActualTheme == ElementTheme.Dark && root.ActualTheme == ElementTheme.Dark
+                && ((SolidColorBrush)settingsRoot.Background).Color != lightBackground, "dark preference updates live theme resources");
+            var futureSettings = new SettingsWindow(settingsVm);
+            Check(((FrameworkElement)futureSettings.Content).RequestedTheme == ElementTheme.Dark, "new windows inherit selected appearance");
+            futureSettings.Close();
+            await RenderAsync(settingsRoot, "settings-dark.png");
+            appearance.SelectedIndex = 0;
+            await Task.Delay(50);
+            Check(settingsRoot.RequestedTheme == ElementTheme.Default && root.RequestedTheme == ElementTheme.Default,
+                "system preference restores Windows theme tracking");
             settings.Close();
             Check(true, "real settings window created, rendered and closed without crash");
             Step("Verifying owned native playback with a synthetic clip.");

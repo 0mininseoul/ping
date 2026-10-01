@@ -48,7 +48,7 @@ public sealed class StartupTaskController : IStartupTaskController
         {
             return new PingStartupTaskStatus(
                 PingStartupTaskState.Unavailable,
-                $"Startup registration is unavailable: {ex.Message}");
+                $"자동 시작 설정을 확인할 수 없어요: {ex.Message}");
         }
 #else
         await Task.CompletedTask.ConfigureAwait(false);
@@ -84,7 +84,7 @@ public sealed class StartupTaskController : IStartupTaskController
         {
             return new PingStartupTaskStatus(
                 PingStartupTaskState.Unavailable,
-                $"Startup registration is unavailable: {ex.Message}");
+                $"자동 시작 설정을 확인할 수 없어요: {ex.Message}");
         }
 #else
         await Task.CompletedTask.ConfigureAwait(false);
@@ -95,7 +95,7 @@ public sealed class StartupTaskController : IStartupTaskController
     private static PingStartupTaskStatus Unavailable() =>
         new(
             PingStartupTaskState.Unavailable,
-            "Startup registration is available only in packaged Windows builds.");
+            "설치된 Ping에서 자동 시작을 설정할 수 있어요.");
 
 #if WINDOWS
     private static PingStartupTaskStatus ToStatus(global::Windows.ApplicationModel.StartupTaskState state) =>
@@ -103,22 +103,22 @@ public sealed class StartupTaskController : IStartupTaskController
         {
             global::Windows.ApplicationModel.StartupTaskState.Disabled => new(
                 PingStartupTaskState.Disabled,
-                "Ping will not start with Windows."),
+                "Windows 로그인 시 자동 시작하지 않습니다."),
             global::Windows.ApplicationModel.StartupTaskState.DisabledByUser => new(
                 PingStartupTaskState.DisabledByUser,
-                "Startup was disabled in Windows Settings."),
+                "Windows 설정에서 자동 시작이 꺼져 있습니다."),
             global::Windows.ApplicationModel.StartupTaskState.Enabled => new(
                 PingStartupTaskState.Enabled,
-                "Ping starts with Windows."),
+                "Windows 로그인 시 자동 시작합니다."),
             global::Windows.ApplicationModel.StartupTaskState.DisabledByPolicy => new(
                 PingStartupTaskState.DisabledByPolicy,
-                "Startup is disabled by system policy."),
+                "시스템 정책에 따라 자동 시작이 꺼져 있습니다."),
             global::Windows.ApplicationModel.StartupTaskState.EnabledByPolicy => new(
                 PingStartupTaskState.EnabledByPolicy,
-                "Startup is enabled by system policy."),
+                "시스템 정책에 따라 자동 시작이 켜져 있습니다."),
             _ => new PingStartupTaskStatus(
                 PingStartupTaskState.Unavailable,
-                $"Startup returned an unknown state: {state}.")
+                $"자동 시작 상태를 확인할 수 없어요: {state}.")
         };
 #endif
 }

@@ -35,6 +35,7 @@ internal sealed class AutoReplyIndicatorWindow : Window, IAsyncDisposable
             BorderThickness = new Thickness(2), BorderBrush = progress.Foreground,
             Background = Application.Current.Resources["PingSurfaceBrush"] as Brush ?? new SolidColorBrush(Colors.DarkSlateGray), Child = grid };
         Ping.Windows.App.UI.WindowCaptureExclusion.Apply(this);
+        Ping.Windows.App.UI.PingAppearance.Register(this);
         var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
         var style = GetWindowLongPtr(hwnd, -20).ToInt64();
         SetWindowLongPtr(hwnd, -20, new IntPtr((style | 0x08000080L) & ~0x00040000L));

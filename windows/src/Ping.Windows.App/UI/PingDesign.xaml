@@ -1,13 +1,29 @@
 <ResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <SolidColorBrush x:Key="PingSurfaceBrush" Color="#D924272A" />
-    <SolidColorBrush x:Key="PingTextBrush" Color="#F5F7FA" />
-    <SolidColorBrush x:Key="PingMutedTextBrush" Color="#B4BBC3" />
+    <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Light">
+            <SolidColorBrush x:Key="PingSurfaceBrush" Color="#E6FDFEFF" />
+            <SolidColorBrush x:Key="PingTextBrush" Color="#182331" />
+            <SolidColorBrush x:Key="PingMutedTextBrush" Color="#617286" />
+            <SolidColorBrush x:Key="PingCapsuleBrush" Color="#D9FFFFFF" />
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="Default">
+            <SolidColorBrush x:Key="PingSurfaceBrush" Color="#D924272A" />
+            <SolidColorBrush x:Key="PingTextBrush" Color="#F5F7FA" />
+            <SolidColorBrush x:Key="PingMutedTextBrush" Color="#B4BBC3" />
+            <SolidColorBrush x:Key="PingCapsuleBrush" Color="#8C000000" />
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="HighContrast">
+            <SolidColorBrush x:Key="PingSurfaceBrush" Color="{ThemeResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="PingTextBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="PingMutedTextBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="PingCapsuleBrush" Color="{ThemeResource SystemColorWindowColor}" />
+        </ResourceDictionary>
+    </ResourceDictionary.ThemeDictionaries>
     <SolidColorBrush x:Key="PingBorderIdleBrush" Color="#4DFFFFFF" />
     <SolidColorBrush x:Key="PingBorderRecordingBrush" Color="#FFFF3B30" />
     <SolidColorBrush x:Key="PingBorderFailedBrush" Color="#FFFFCC00" />
-    <SolidColorBrush x:Key="PingCapsuleBrush" Color="#8C000000" />
 
     <CornerRadius x:Key="PingCornerRadius">16</CornerRadius>
     <CornerRadius x:Key="PingMirrorCornerRadius">100</CornerRadius>

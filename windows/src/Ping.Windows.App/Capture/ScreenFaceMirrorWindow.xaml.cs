@@ -43,6 +43,7 @@ public sealed partial class ScreenFaceMirrorWindow : Window
         this.cameraLease = cameraLease;
         this.previewFactory = previewFactory ?? (lease => new FaceRecorder(lease));
         InitializeComponent();
+        Ping.Windows.App.UI.PingAppearance.Register(this);
         recordingPreview = new(RecordingPreviewImage, () =>
         {
             ScreenPreviewPlaceholder.Visibility = Visibility.Collapsed;

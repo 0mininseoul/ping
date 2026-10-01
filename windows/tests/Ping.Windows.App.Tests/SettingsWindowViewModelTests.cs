@@ -107,7 +107,7 @@ public sealed class SettingsWindowViewModelTests
         Assert.Equal("Park Youngmin", savedNickname);
         Assert.Equal("Park Youngmin", viewModel.Nickname);
         Assert.Equal("Park Youngmin", viewModel.NicknameDraft);
-        Assert.Equal("Saved.", viewModel.NicknameStatus);
+        Assert.Equal("저장했어요.", viewModel.NicknameStatus);
         Assert.False(viewModel.CanSaveNickname);
     }
 
@@ -131,7 +131,7 @@ public sealed class SettingsWindowViewModelTests
         await viewModel.SaveNicknameAsync();
 
         Assert.False(saveCalled);
-        Assert.Equal("Nickname is required.", viewModel.NicknameStatus);
+        Assert.Equal("닉네임을 입력해 주세요.", viewModel.NicknameStatus);
     }
 
     [Fact]
@@ -193,7 +193,7 @@ public sealed class SettingsWindowViewModelTests
         Assert.Equal(Path.GetFullPath(root), viewModel.ArchiveRootPath);
         Assert.True(ensured);
         Assert.Equal(Path.GetFullPath(root), launchedPath);
-        Assert.Equal("Archive folder opened.", viewModel.ArchiveFolderStatus);
+        Assert.Equal("저장 폴더를 열었어요.", viewModel.ArchiveFolderStatus);
     }
 
     [Fact]
@@ -292,8 +292,8 @@ public sealed class SettingsWindowViewModelTests
 
         Assert.Equal(HotkeyCommand.FacePing, savedCommand);
         Assert.Equal(HotkeyBinding.FromParts(HotkeyModifiers.Control | HotkeyModifiers.Alt, "F"), savedBinding);
-        Assert.Equal("Saved.", row.StatusMessage);
-        Assert.Equal("Face Ping: Ctrl+Alt+F", viewModel.FaceHotkey);
+        Assert.Equal("저장했어요.", row.StatusMessage);
+        Assert.Equal("얼굴 Ping: Ctrl+Alt+F", viewModel.FaceHotkey);
     }
 
     [Fact]
@@ -316,7 +316,7 @@ public sealed class SettingsWindowViewModelTests
         viewModel.ApplyHotkey(row);
 
         Assert.Equal("Hotkey is already registered by another app.", row.StatusMessage);
-        Assert.Equal("Face Ping: Alt+P", viewModel.FaceHotkey);
+        Assert.Equal("얼굴 Ping: Alt+P", viewModel.FaceHotkey);
     }
 
     [Fact]
@@ -337,9 +337,9 @@ public sealed class SettingsWindowViewModelTests
         row.SelectedKey = "Q";
         viewModel.ApplyHotkey(row);
 
-        Assert.Equal("Quick Screen+Face Ping: Ctrl+Alt+Shift+Q", viewModel.QuickSendHotkey);
-        Assert.Equal("Ctrl+Alt+Shift+Q opens mirror", viewModel.QuickSendOffContent);
-        Assert.Equal("Ctrl+Alt+Shift+Q records immediately", viewModel.QuickSendOnContent);
+        Assert.Equal("화면+얼굴 빠른 전송: Ctrl+Alt+Shift+Q", viewModel.QuickSendHotkey);
+        Assert.Equal("Ctrl+Alt+Shift+Q 거울 열기", viewModel.QuickSendOffContent);
+        Assert.Equal("Ctrl+Alt+Shift+Q 바로 녹화", viewModel.QuickSendOnContent);
     }
 
     [Fact]
@@ -359,8 +359,8 @@ public sealed class SettingsWindowViewModelTests
         row.IsWindows = false;
         viewModel.ApplyHotkey(row);
 
-        Assert.Equal("Choose at least one modifier.", row.StatusMessage);
-        Assert.Equal("History: Alt+O", viewModel.HistoryHotkey);
+        Assert.Equal("Ctrl, Alt, Shift, Win 중 하나 이상을 선택하세요.", row.StatusMessage);
+        Assert.Equal("메신저: Alt+O", viewModel.HistoryHotkey);
     }
 
     [Fact]

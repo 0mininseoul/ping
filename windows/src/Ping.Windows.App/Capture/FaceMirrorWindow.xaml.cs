@@ -33,6 +33,7 @@ public sealed partial class FaceMirrorWindow : Window
         this.cameraLease = cameraLease;
         previewRecorder = viewModel.Recorder as FaceRecorder;
         InitializeComponent();
+        Ping.Windows.App.UI.PingAppearance.Register(this);
         Root.DataContext = viewModel;
         Root.Loaded += HandleLoaded;
         viewModel.PropertyChanged += HandleViewModelPropertyChanged;

@@ -78,6 +78,8 @@ public sealed record ScreenFaceQuickSendSettings
     public string? DefaultRoomId { get; init; }
 
     public bool AutoPlayIncoming { get; init; } = true;
+    public bool NotificationSoundEnabled { get; init; } = true;
+    public PingAppearanceMode AppearanceMode { get; init; } = PingAppearanceMode.System;
 }
 
 public sealed class ScreenFaceQuickSendSettingsStore
@@ -643,6 +645,7 @@ public sealed partial class QuickSendHudWindow : Window, IQuickSendHudSession
         this.cancellation = cancellation;
         viewModel = new QuickSendHudViewModel(context);
         InitializeComponent();
+        Ping.Windows.App.UI.PingAppearance.Register(this);
         Ping.Windows.App.UI.WindowCaptureExclusion.Apply(this);
         Root.DataContext = viewModel;
         Root.Loaded += HandleLoaded;

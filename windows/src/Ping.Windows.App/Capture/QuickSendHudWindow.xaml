@@ -23,7 +23,7 @@
         <Border
             x:Name="HudBorder"
             Padding="12"
-            Background="{StaticResource PingSurfaceBrush}"
+            Background="{ThemeResource PingSurfaceBrush}"
             BorderBrush="{StaticResource PingBorderIdleBrush}"
             BorderThickness="1"
             CornerRadius="{StaticResource PingCornerRadius}">
@@ -46,7 +46,7 @@
                         VerticalAlignment="Center"
                         FontSize="15"
                         FontWeight="SemiBold"
-                        Foreground="{StaticResource PingTextBrush}"
+                        Foreground="{ThemeResource PingTextBrush}"
                         Text="{Binding RecordingCountdownText}" />
                 </Border>
 
@@ -57,16 +57,16 @@
                     <TextBlock
                         FontSize="12"
                         FontWeight="SemiBold"
-                        Foreground="{StaticResource PingTextBrush}"
+                        Foreground="{ThemeResource PingTextBrush}"
                         Text="{Binding ModeLabel}" />
                     <TextBlock
                         FontSize="12"
-                        Foreground="{StaticResource PingMutedTextBrush}"
+                        Foreground="{ThemeResource PingMutedTextBrush}"
                         Text="{Binding RoomName}"
                         TextTrimming="CharacterEllipsis" />
                     <TextBlock
                         FontSize="11"
-                        Foreground="{StaticResource PingMutedTextBrush}"
+                        Foreground="{ThemeResource PingMutedTextBrush}"
                         Text="{Binding StatusMessage}"
                         TextWrapping="WrapWholeWords" />
                 </StackPanel>

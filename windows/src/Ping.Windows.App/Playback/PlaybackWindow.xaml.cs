@@ -31,6 +31,7 @@ public sealed partial class PlaybackWindow : Window
         this.owner = owner;
         this.historyReplay = historyReplay;
         InitializeComponent();
+        Ping.Windows.App.UI.PingAppearance.Register(this);
         Ping.Windows.App.UI.WindowCaptureExclusion.Apply(this);
         Root.DataContext = viewModel;
         Root.Loaded += HandleLoaded;

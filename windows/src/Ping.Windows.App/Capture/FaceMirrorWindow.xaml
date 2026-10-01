@@ -22,7 +22,7 @@
             x:Name="MirrorBorder"
             HorizontalAlignment="Stretch"
             VerticalAlignment="Stretch"
-            Background="{StaticResource PingSurfaceBrush}"
+            Background="{ThemeResource PingSurfaceBrush}"
             BorderBrush="{StaticResource PingBorderIdleBrush}"
             BorderThickness="1"
             CornerRadius="{StaticResource PingMirrorCornerRadius}">
@@ -45,12 +45,12 @@
                         HorizontalAlignment="Center"
                         FontSize="13"
                         FontWeight="SemiBold"
-                        Foreground="{StaticResource PingTextBrush}"
+                        Foreground="{ThemeResource PingTextBrush}"
                         Text="{Binding StateText}" />
                     <TextBlock
                         HorizontalAlignment="Center"
                         FontSize="11"
-                        Foreground="{StaticResource PingMutedTextBrush}"
+                        Foreground="{ThemeResource PingMutedTextBrush}"
                         Text="미리보기" />
                 </StackPanel>
 
@@ -60,7 +60,7 @@
                     Padding="10,5"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Top"
-                    Background="{StaticResource PingCapsuleBrush}"
+                    Background="{ThemeResource PingCapsuleBrush}"
                     CornerRadius="12"
                     Opacity="{Binding HintOpacity}">
                     <TextBlock
@@ -68,7 +68,7 @@
                         ToolTipService.ToolTip="{Binding StatusMessage}"
                         MaxWidth="168"
                         FontSize="11"
-                        Foreground="{StaticResource PingTextBrush}"
+                        Foreground="{ThemeResource PingTextBrush}"
                         Text="{Binding HintText}"
                         TextAlignment="Center"
                         TextTrimming="CharacterEllipsis"
@@ -91,7 +91,7 @@
                         VerticalAlignment="Center"
                         FontSize="15"
                         FontWeight="SemiBold"
-                        Foreground="{StaticResource PingTextBrush}"
+                        Foreground="{ThemeResource PingTextBrush}"
                         Text="{Binding RecordingCountdownText}" />
                 </Border>
 
@@ -101,7 +101,7 @@
                     Padding="12,5"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Bottom"
-                    Background="{StaticResource PingSurfaceBrush}"
+                    Background="{ThemeResource PingSurfaceBrush}"
                     BorderBrush="{StaticResource PingBorderIdleBrush}"
                     BorderThickness="1"
                     CornerRadius="{StaticResource PingCornerRadius}"
@@ -111,7 +111,7 @@
                         x:Name="PartnerLabelElement"
                         MaxWidth="152"
                         FontSize="12"
-                        Foreground="{StaticResource PingTextBrush}"
+                        Foreground="{ThemeResource PingTextBrush}"
                         Text="{Binding PartnerLabel}"
                         TextTrimming="CharacterEllipsis" />
                 </Border>

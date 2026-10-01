@@ -370,6 +370,7 @@ public sealed class NotificationController : IDisposable
     private readonly NotifiedMessageRegistry registry;
     private readonly NotifiedChatRegistry chatRegistry;
     private readonly Action<string>? showNotificationXml;
+    private readonly Func<bool> soundEnabled;
     private bool disposed;
 #if WINDOWS
     private readonly Func<string, string, CancellationToken, Task>? openChatAsync;
@@ -381,7 +382,7 @@ public sealed class NotificationController : IDisposable
         Func<string, string, CancellationToken, Task>? openChatAsync = null,
         NotifiedMessageRegistry? registry = null,
         NotifiedChatRegistry? chatRegistry = null,
-        Action<string>? showNotificationXml = null)
+        Action<string>? showNotificationXml = null, Func<bool>? soundEnabled = null)
     {
         this.openMessageAsync = openMessageAsync;
 #if WINDOWS
@@ -390,6 +391,7 @@ public sealed class NotificationController : IDisposable
         this.registry = registry ?? new NotifiedMessageRegistry();
         this.chatRegistry = chatRegistry ?? new NotifiedChatRegistry();
         this.showNotificationXml = showNotificationXml;
+        this.soundEnabled = soundEnabled ?? (() => true);
     }
 
     public void Start()
@@ -556,7 +558,7 @@ public sealed class NotificationController : IDisposable
 #endif
     }
 
-    private static string NotificationXml(VideoMessage message)
+    private string NotificationXml(VideoMessage message)
     {
         var messageId = Uri.EscapeDataString(message.Id ?? string.Empty);
         var sender = SecurityElement.Escape(message.SenderNickname) ?? "Ping";
@@ -569,11 +571,12 @@ public sealed class NotificationController : IDisposable
                   <text>새 Ping 메시지</text>
                 </binding>
               </visual>
+              {SoundXml()}
             </toast>
             """;
     }
 
-    private static string NotificationXml(IncomingChatNotification notification)
+    private string NotificationXml(IncomingChatNotification notification)
     {
         var chatId = Uri.EscapeDataString(notification.Message.Id ?? string.Empty);
         var roomId = Uri.EscapeDataString(notification.Message.RoomId);
@@ -602,9 +605,11 @@ public sealed class NotificationController : IDisposable
                   <text>{escapedCount}</text>
                 </binding>
               </visual>
+              {SoundXml()}
             </toast>
             """;
     }
+    private string SoundXml() => soundEnabled() ? string.Empty : "<audio silent=\"true\" />";
 }
 
 public sealed class NotifiedChatRegistry

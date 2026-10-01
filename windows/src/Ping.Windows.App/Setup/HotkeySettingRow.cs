@@ -19,7 +19,7 @@ public sealed class HotkeySettingRow : INotifyPropertyChanged
     private bool isShift;
     private bool isWindows;
     private string selectedKey;
-    private string statusMessage = "Ready.";
+    private string statusMessage = "사용할 단축키를 설정하세요.";
 
     public HotkeySettingRow(HotkeyCommand command, string label, HotkeyBinding binding)
     {
@@ -106,7 +106,7 @@ public sealed class HotkeySettingRow : INotifyPropertyChanged
 
         if (modifiers == HotkeyModifiers.None)
         {
-            throw new InvalidOperationException("Choose at least one modifier.");
+            throw new InvalidOperationException("Ctrl, Alt, Shift, Win 중 하나 이상을 선택하세요.");
         }
 
         var binding = HotkeyBinding.FromParts(modifiers, SelectedKey);
@@ -131,10 +131,10 @@ public sealed class HotkeySettingRow : INotifyPropertyChanged
     public static IReadOnlyList<HotkeySettingRow> FromBindings(
         IReadOnlyDictionary<HotkeyCommand, HotkeyBinding> bindings) =>
         [
-            FromBinding(bindings, HotkeyCommand.FacePing, "Face Ping"),
-            FromBinding(bindings, HotkeyCommand.ScreenFacePing, "Screen+Face Ping"),
-            FromBinding(bindings, HotkeyCommand.QuickScreenFacePing, "Quick Screen+Face Ping"),
-            FromBinding(bindings, HotkeyCommand.History, "History")
+            FromBinding(bindings, HotkeyCommand.FacePing, "얼굴 Ping"),
+            FromBinding(bindings, HotkeyCommand.ScreenFacePing, "화면+얼굴 Ping"),
+            FromBinding(bindings, HotkeyCommand.QuickScreenFacePing, "화면+얼굴 빠른 전송"),
+            FromBinding(bindings, HotkeyCommand.History, "메신저")
         ];
 
     private static HotkeySettingRow FromBinding(

@@ -111,7 +111,12 @@ public sealed class AppCoordinator : IDisposable
         incomingChatPoller = new IncomingChatPoller(chatService, roomService, () => currentUid, onError: HandleIncomingConnectionError);
         connectionSupervisor = new ConnectionSupervisor(ConnectAndLoadRoomsAsync);
         connectionSupervisor.StateChanged += HandleConnectionStateChanged;
-        notificationController = new NotificationController(OpenMessageFromNotificationAsync, OpenChatFromNotificationAsync);
+        quickSendSettingsStore = new ScreenFaceQuickSendSettingsStore();
+        mirrorPlacementStore = new MirrorPlacementStore();
+        quickSendSettings = quickSendSettingsStore.Load();
+        UI.PingAppearance.Apply(quickSendSettings.AppearanceMode);
+        notificationController = new NotificationController(OpenMessageFromNotificationAsync, OpenChatFromNotificationAsync,
+            soundEnabled: () => quickSendSettings.NotificationSoundEnabled);
         realtime = new RealtimeSupervisor(this.supabaseClient.GetRealtimeCredentialsAsync,
             (_, _) => { incomingObserver!.Signal(); return Task.CompletedTask; });
         incomingObserver = new IncomingObserver(ReconcileIncomingAsync,
@@ -125,9 +130,6 @@ public sealed class AppCoordinator : IDisposable
             hotkeyBindingsProvider: preferencesStore.Load,
             activeHotkeyRegistrationsProvider: () => lastHotkeyRegistrations,
             cameraOwnership: camera);
-        quickSendSettingsStore = new ScreenFaceQuickSendSettingsStore();
-        mirrorPlacementStore = new MirrorPlacementStore();
-        quickSendSettings = quickSendSettingsStore.Load();
         autoFaceReply = new(camera, captureActivity, appStartedAt,
             () => !disposed && currentUid is { } uid && connectionSupervisor.State is not (ConnectionState.SessionRejected or ConnectionState.ConfigurationRequired)
                 ? new(uid, CurrentNickname, quickSendSettings.Preferences.AllowsLocalSave) : null,
@@ -519,6 +521,7 @@ public sealed class AppCoordinator : IDisposable
     {
         quickSendSettings = settings;
         quickSendSettingsStore.Save(quickSendSettings);
+        UI.PingAppearance.Apply(quickSendSettings.AppearanceMode);
         RefreshDefaultRoomLabel();
     }
 
