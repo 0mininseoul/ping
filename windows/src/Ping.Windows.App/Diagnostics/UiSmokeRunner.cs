@@ -145,6 +145,7 @@ internal static class UiSmokeRunner
             await PlaybackSmoke.RunAsync(window, OutputDirectory!, Check, RenderAsync);
             await AutoReplySmoke.RunAsync(window, Check, RenderAsync);
             await CaptureLifetimeSmoke.RunAsync(Check);
+            await CaptureMirrorReviewSmoke.RunAsync(OutputDirectory!, Check, RenderAsync);
 
             var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
             window.Close();

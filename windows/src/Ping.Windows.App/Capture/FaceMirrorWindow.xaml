@@ -6,9 +6,6 @@
     Title="Ping">
     <Grid
         x:Name="Root"
-        Width="220"
-        Height="220"
-        Padding="10"
         Background="Transparent"
         IsTabStop="True"
         KeyDown="HandleKeyDown">
@@ -23,10 +20,8 @@
 
         <Border
             x:Name="MirrorBorder"
-            Width="{StaticResource PingMirrorDiameter}"
-            Height="{StaticResource PingMirrorDiameter}"
-            HorizontalAlignment="Center"
-            VerticalAlignment="Center"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch"
             Background="{StaticResource PingSurfaceBrush}"
             BorderBrush="{StaticResource PingBorderIdleBrush}"
             BorderThickness="1"
@@ -56,7 +51,7 @@
                         HorizontalAlignment="Center"
                         FontSize="11"
                         Foreground="{StaticResource PingMutedTextBrush}"
-                        Text="Preview" />
+                        Text="미리보기" />
                 </StackPanel>
 
                 <Border
@@ -69,6 +64,8 @@
                     CornerRadius="12"
                     Opacity="{Binding HintOpacity}">
                     <TextBlock
+                        x:Name="HintLabel"
+                        ToolTipService.ToolTip="{Binding StatusMessage}"
                         MaxWidth="168"
                         FontSize="11"
                         Foreground="{StaticResource PingTextBrush}"
@@ -111,6 +108,7 @@
                     IsTapEnabled="True"
                     Tapped="PartnerChip_Tapped">
                     <TextBlock
+                        x:Name="PartnerLabelElement"
                         MaxWidth="152"
                         FontSize="12"
                         Foreground="{StaticResource PingTextBrush}"

@@ -1,22 +1,9 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using Ping.Windows.Core.Backend;
+using Ping.Windows.Core.Capture;
 using Ping.Windows.Core.LocalState;
 using Ping.Windows.Core.Models;
-
-#if WINDOWS
-using Microsoft.UI;
-using Microsoft.UI.Windowing;
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Media.Animation;
-using Ping.Windows.App.UI;
-using Windows.Graphics;
-using Windows.Media.Core;
-using Windows.Media.Playback;
-#endif
 
 namespace Ping.Windows.App.Capture;
 
@@ -68,12 +55,13 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
     private TaskCompletionSource? operationFinished;
     public Task WaitForOperationAsync() => operationFinished?.Task ?? Task.CompletedTask;
     private MirrorState state = MirrorState.Idle;
-    private string statusMessage = "Press Enter to record.";
+    private string statusMessage = "Enter로 녹화하고 Esc로 닫아요.";
     private string recordingCountdownText = "3";
     private string partnerLabel;
     private Uri? reviewVideoUri;
     private string? reviewedPath;
     private MirrorPosition mirrorPosition = new(0.5, 0.5);
+    private MirrorPosition preferredMirrorPosition = new(0.5, 0.5);
     private bool isCloseRequested;
     private bool isFadeOutRequested;
 
@@ -99,6 +87,7 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
         targetSelector = new MirrorTargetSelector(context.Rooms, context.PartnerLabel);
         partnerLabel = targetSelector.Label;
         mirrorPosition = NormalizePosition(context.InitialPosition) ?? mirrorPosition;
+        preferredMirrorPosition = mirrorPosition;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -130,11 +119,11 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
 
     public string StateText => State switch
     {
-        MirrorState.Idle => "Ready",
-        MirrorState.Recording => "Recording",
-        MirrorState.Reviewing => "Review",
-        MirrorState.Uploading => "Sending",
-        MirrorState.Failed => "Failed",
+        MirrorState.Idle => "준비",
+        MirrorState.Recording => "녹화 중",
+        MirrorState.Reviewing => "확인",
+        MirrorState.Uploading => "보내는 중",
+        MirrorState.Failed => "다시 시도",
         _ => throw new ArgumentOutOfRangeException(nameof(State), State, "Unknown mirror state.")
     };
 
@@ -156,10 +145,10 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
 
     public string HintText => State switch
     {
-        MirrorState.Idle => "↵ Record · Esc Close",
-        MirrorState.Reviewing => "↵ Send · Backspace Redo · Esc Close",
-        MirrorState.Uploading => "Sending...",
-        MirrorState.Failed => StatusMessage,
+        MirrorState.Idle => "↵ 녹화 · Esc 닫기",
+        MirrorState.Reviewing => "↵ 전송 · ⌫ 다시",
+        MirrorState.Uploading => "보내는 중…",
+        MirrorState.Failed => HasReviewedClip ? "↵ 재전송 · ⌫ 다시" : "↵ 다시 · Esc 닫기",
         MirrorState.Recording => string.Empty,
         _ => StatusMessage
     };
@@ -220,6 +209,18 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
     }
 
     public MirrorPosition MirrorPosition => mirrorPosition;
+    public MirrorPosition PreferredMirrorPosition => preferredMirrorPosition;
+
+    public void UpdateMirrorPlacement(CaptureRect client, CaptureRect display, CaptureRect workArea, bool savePreference = true)
+    {
+        mirrorPosition = CaptureMirrorLayout.SenderPosition(client, display);
+        OnPropertyChanged(nameof(MirrorPosition));
+        if (!savePreference) return;
+        var preference = CaptureMirrorLayout.SenderPosition(client, workArea);
+        if (preferredMirrorPosition == preference) return;
+        preferredMirrorPosition = preference;
+        context.SaveMirrorPosition?.Invoke(preference);
+    }
 
     public IFaceRecorder Recorder => recorder;
 
@@ -495,7 +496,7 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(HasReviewedClip));
         OnPropertyChanged(nameof(CanRecord));
         State = MirrorState.Reviewing;
-        StatusMessage = "Press Enter to send. Backspace to redo.";
+        StatusMessage = "Enter로 보내거나 Backspace로 다시 찍어요. Esc로 닫을 수 있어요.";
     }
 
     private void ClearReviewedClip(bool deleteFile)
@@ -574,334 +575,3 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }
-
-#if WINDOWS
-public sealed partial class FaceMirrorWindow : Window
-{
-    private readonly FaceMirrorViewModel viewModel;
-    private readonly FaceRecorder? previewRecorder;
-    private readonly Ping.Windows.Core.Capture.CameraLease cameraLease;
-    private readonly CancellationTokenSource windowLifetime = new();
-    public Task CameraShutdown { get; private set; } = Task.CompletedTask;
-    private MediaPlayer? reviewPlayer;
-    private AppWindow? appWindow;
-    private bool shouldCloseAfterFade;
-
-    public FaceMirrorWindow(FaceMirrorViewModel viewModel, Ping.Windows.Core.Capture.CameraLease cameraLease)
-    {
-        this.viewModel = viewModel;
-        this.cameraLease = cameraLease;
-        previewRecorder = viewModel.Recorder as FaceRecorder;
-        InitializeComponent();
-        Root.DataContext = viewModel;
-        Root.Loaded += HandleLoaded;
-        viewModel.PropertyChanged += HandleViewModelPropertyChanged;
-        viewModel.FadeOutRequested += HandleFadeOutRequested;
-        viewModel.CloseRequested += HandleCloseRequested;
-        SetStateBrush();
-        ConfigureWindow();
-    }
-
-    private async void HandleKeyDown(object sender, KeyRoutedEventArgs args)
-    {
-        if (HandleTargetKey(args.Key))
-        {
-            args.Handled = true;
-            return;
-        }
-
-        if (args.Key == global::Windows.System.VirtualKey.Enter)
-        {
-            args.Handled = true;
-            await viewModel.HandleEnterAsync();
-            return;
-        }
-
-        if (args.Key == global::Windows.System.VirtualKey.Back
-            || args.Key == global::Windows.System.VirtualKey.Delete)
-        {
-            args.Handled = true;
-            await viewModel.HandleRedoAsync();
-            return;
-        }
-
-        if (args.Key == global::Windows.System.VirtualKey.Escape)
-        {
-            args.Handled = true;
-            viewModel.HandleEscape();
-        }
-    }
-
-    private bool HandleTargetKey(global::Windows.System.VirtualKey key)
-    {
-        switch (key)
-        {
-            case global::Windows.System.VirtualKey.Tab:
-                return viewModel.SelectNextTarget();
-            case global::Windows.System.VirtualKey.A:
-            case global::Windows.System.VirtualKey.Number0:
-            case global::Windows.System.VirtualKey.NumberPad0:
-                return viewModel.SelectAllTargets();
-        }
-
-        var keyValue = (int)key;
-        if (keyValue >= (int)global::Windows.System.VirtualKey.Number1
-            && keyValue <= (int)global::Windows.System.VirtualKey.Number9)
-        {
-            return viewModel.SelectTargetAtIndex(keyValue - (int)global::Windows.System.VirtualKey.Number1);
-        }
-
-        if (keyValue >= (int)global::Windows.System.VirtualKey.NumberPad1
-            && keyValue <= (int)global::Windows.System.VirtualKey.NumberPad9)
-        {
-            return viewModel.SelectTargetAtIndex(keyValue - (int)global::Windows.System.VirtualKey.NumberPad1);
-        }
-
-        return false;
-    }
-
-    private void PartnerChip_Tapped(object sender, TappedRoutedEventArgs args)
-    {
-        if (!viewModel.CanSelectTarget || !viewModel.HasTargetMenu)
-        {
-            return;
-        }
-
-        var flyout = new MenuFlyout();
-        foreach (var option in viewModel.TargetOptions)
-        {
-            var item = new ToggleMenuFlyoutItem
-            {
-                Text = option.Label,
-                IsChecked = option.IsSelected
-            };
-            item.Click += (_, _) => viewModel.SelectTargetOption(option);
-            flyout.Items.Add(item);
-        }
-
-        flyout.ShowAt(PartnerChip);
-        args.Handled = true;
-    }
-
-    private void HandleViewModelPropertyChanged(object? sender, PropertyChangedEventArgs args)
-    {
-        if (args.PropertyName == nameof(FaceMirrorViewModel.State)
-            || args.PropertyName == nameof(FaceMirrorViewModel.IsAllTargetsSelected))
-        {
-            SetStateBrush();
-        }
-
-        if (args.PropertyName == nameof(FaceMirrorViewModel.State)
-            || args.PropertyName == nameof(FaceMirrorViewModel.ReviewVideoUri))
-        {
-            UpdateReviewPlayback();
-        }
-    }
-
-    private void HandleCloseRequested(object? sender, EventArgs args)
-    {
-        if (shouldCloseAfterFade)
-        {
-            return;
-        }
-
-        Close();
-    }
-
-    private async void HandleFadeOutRequested(object? sender, EventArgs args)
-    {
-        shouldCloseAfterFade = true;
-        var animation = new DoubleAnimation
-        {
-            To = 0,
-            Duration = new Duration(TimeSpan.FromMilliseconds(300))
-        };
-        Storyboard.SetTarget(animation, Root);
-        Storyboard.SetTargetProperty(animation, nameof(Root.Opacity));
-        var storyboard = new Storyboard();
-        storyboard.Children.Add(animation);
-        var completed = new TaskCompletionSource();
-        storyboard.Completed += (_, _) => completed.SetResult();
-        storyboard.Begin();
-        await completed.Task;
-        Close();
-    }
-
-    private void ConfigureWindow()
-    {
-        var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
-        var windowId = Win32Interop.GetWindowIdFromWindow(hwnd);
-        appWindow = AppWindow.GetFromWindowId(windowId);
-        appWindow.Resize(new global::Windows.Graphics.SizeInt32(220, 220));
-        appWindow.TitleBar.ExtendsContentIntoTitleBar = true;
-        appWindow.SetPresenter(AppWindowPresenterKind.CompactOverlay);
-        MoveToMirrorPosition(viewModel.MirrorPosition);
-        UpdatePositionFromWindow();
-        appWindow.Changed += (_, args) =>
-        {
-            if (args.DidPositionChange || args.DidSizeChange)
-            {
-                UpdatePositionFromWindow();
-            }
-        };
-    }
-
-    private async void HandleLoaded(object sender, RoutedEventArgs args)
-    {
-        if (windowLifetime.IsCancellationRequested) return;
-        Root.Focus(FocusState.Programmatic);
-        ApplyRoundedMediaClips();
-        UpdatePositionFromWindow();
-        if (previewRecorder is null)
-        {
-            return;
-        }
-
-        try
-        {
-            await previewRecorder.StartPreviewAsync(PreviewElement, windowLifetime.Token);
-            if (windowLifetime.IsCancellationRequested) return;
-            PreviewPlaceholder.Visibility = Visibility.Collapsed;
-            UpdateReviewPlayback();
-        }
-        catch (Exception)
-        {
-            PreviewPlaceholder.Visibility = Visibility.Visible;
-        }
-    }
-
-    private void ApplyRoundedMediaClips()
-    {
-        const double diameter = 200;
-        RoundedCompositionClip.Apply(PreviewElement, diameter, diameter, diameter / 2d);
-        RoundedCompositionClip.Apply(ReviewElement, diameter, diameter, diameter / 2d);
-    }
-
-    private void UpdatePositionFromWindow()
-    {
-        if (appWindow is null)
-        {
-            return;
-        }
-
-        var area = DisplayArea.GetFromWindowId(appWindow.Id, DisplayAreaFallback.Primary);
-        var workArea = area.WorkArea;
-        var position = appWindow.Position;
-        var size = appWindow.Size;
-        viewModel.UpdateMirrorPosition(
-            position.X + size.Width / 2d - workArea.X,
-            position.Y + size.Height / 2d - workArea.Y,
-            workArea.Width,
-            workArea.Height);
-    }
-
-    private void MoveToMirrorPosition(MirrorPosition position)
-    {
-        if (appWindow is null)
-        {
-            return;
-        }
-
-        var area = DisplayArea.GetFromWindowId(appWindow.Id, DisplayAreaFallback.Primary);
-        var workArea = area.WorkArea;
-        var size = appWindow.Size;
-        var left = workArea.X + (int)Math.Round(workArea.Width * position.XRatio) - size.Width / 2;
-        var top = workArea.Y + (int)Math.Round(workArea.Height * position.YRatio) - size.Height / 2;
-        appWindow.Move(new global::Windows.Graphics.PointInt32(
-            ClampWindowCoordinate(left, workArea.X, workArea.X + workArea.Width - size.Width),
-            ClampWindowCoordinate(top, workArea.Y, workArea.Y + workArea.Height - size.Height)));
-    }
-
-    private static int ClampWindowCoordinate(int value, int min, int max)
-    {
-        if (max < min)
-        {
-            return min;
-        }
-
-        return Math.Max(min, Math.Min(max, value));
-    }
-
-    private void HandleClosed(object sender, WindowEventArgs args)
-    {
-        windowLifetime.Cancel();
-        viewModel.HandleWindowClosed();
-        StopReviewPlayback();
-        CameraShutdown = ShutdownCameraAsync();
-    }
-
-    private async Task ShutdownCameraAsync()
-    {
-        try
-        {
-            try { if (previewRecorder is not null) await previewRecorder.StopPreviewAsync(PreviewElement); }
-            finally { await viewModel.WaitForOperationAsync(); }
-        }
-        finally { cameraLease.Dispose(); windowLifetime.Dispose(); }
-    }
-
-    private void UpdateReviewPlayback()
-    {
-        if (viewModel.ReviewVideoUri is not { } uri
-            || viewModel.State is not (MirrorState.Reviewing or MirrorState.Failed))
-        {
-            StopReviewPlayback();
-            ReviewElement.Visibility = Visibility.Collapsed;
-            PreviewElement.Visibility = Visibility.Visible;
-            return;
-        }
-
-        PreviewElement.Visibility = Visibility.Collapsed;
-        PreviewPlaceholder.Visibility = Visibility.Collapsed;
-        ReviewElement.Visibility = Visibility.Visible;
-        StopReviewPlayback();
-        reviewPlayer = new MediaPlayer
-        {
-            AutoPlay = false,
-            IsMuted = true,
-            Source = MediaSource.CreateFromUri(uri)
-        };
-        reviewPlayer.MediaEnded += HandleReviewMediaEnded;
-        ReviewElement.SetMediaPlayer(reviewPlayer);
-        reviewPlayer.Play();
-    }
-
-    private void StopReviewPlayback()
-    {
-        ReviewElement.SetMediaPlayer(null);
-        if (reviewPlayer is null)
-        {
-            return;
-        }
-
-        reviewPlayer.MediaEnded -= HandleReviewMediaEnded;
-        reviewPlayer.Dispose();
-        reviewPlayer = null;
-    }
-
-    private static void HandleReviewMediaEnded(MediaPlayer sender, object args)
-    {
-        sender.PlaybackSession.Position = TimeSpan.Zero;
-        sender.Play();
-    }
-
-    private void SetStateBrush()
-    {
-        var key = viewModel.State switch
-        {
-            MirrorState.Idle when viewModel.IsAllTargetsSelected => "PingRainbowBorderBrush",
-            MirrorState.Reviewing when viewModel.IsAllTargetsSelected => "PingRainbowBorderBrush",
-            MirrorState.Idle => "PingBorderIdleBrush",
-            MirrorState.Reviewing => "PingBorderIdleBrush",
-            MirrorState.Recording => "PingBorderRecordingBrush",
-            MirrorState.Uploading => "PingRainbowBorderBrush",
-            MirrorState.Failed => "PingBorderFailedBrush",
-            _ => "PingBorderIdleBrush"
-        };
-
-        var thickness = (viewModel.State is MirrorState.Idle or MirrorState.Reviewing) && !viewModel.IsAllTargetsSelected ? 1 : 2;
-        MirrorBorder.BorderBrush = Root.Resources[key] as Brush;
-        MirrorBorder.BorderThickness = new Thickness(thickness);
-    }
-}
-#endif

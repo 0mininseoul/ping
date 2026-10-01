@@ -9,6 +9,36 @@ namespace Ping.Windows.App.Tests;
 public sealed class ScreenFaceMirrorViewModelTests
 {
     [Fact]
+    public void DragUpdatesSenderPositionButSavesPreferenceOnlyAfterRelease()
+    {
+        var saves = 0;
+        var model = new ScreenFaceMirrorViewModel(MultiRoomContext() with { SaveMirrorPosition = _ => saves++ },
+            new FakeScreenFaceCaptureEngine(), (_, _) => Task.CompletedTask);
+        var client = new Ping.Windows.Core.Capture.CaptureRect(20, 60, 480, 270);
+        var display = new Ping.Windows.Core.Capture.CaptureRect(0, 0, 1920, 1080);
+        var work = new Ping.Windows.Core.Capture.CaptureRect(0, 0, 1920, 1040);
+        model.UpdateMirrorPlacement(client, display, work, savePreference: false);
+        Assert.Equal(0, saves);
+        Assert.Equal(new MirrorPosition(.5, .5), model.PreferredMirrorPosition);
+        Assert.Equal(260d / 1920, model.MirrorPosition.XRatio, 8);
+        model.UpdateMirrorPlacement(client, display, work);
+        model.UpdateMirrorPlacement(client, display, work);
+        Assert.Equal(1, saves);
+        Assert.Equal(195d / 1040, model.PreferredMirrorPosition.YRatio, 8);
+    }
+    [Fact]
+    public void ClientPlacementSeparatesSavedWorkAreaPreferenceFromFullDisplaySenderPosition()
+    {
+        MirrorPosition? saved = null;
+        var model = new ScreenFaceMirrorViewModel(MultiRoomContext() with { SaveMirrorPosition = value => saved = value },
+            new FakeScreenFaceCaptureEngine(), (_, _) => Task.CompletedTask);
+        model.UpdateMirrorPlacement(new(-1700, -40, 400, 200), new(-1920, -100, 1920, 1080), new(-1920, -60, 1920, 1040));
+        Assert.Equal(420d / 1920, model.MirrorPosition.XRatio, 8);
+        Assert.Equal(160d / 1080, model.MirrorPosition.YRatio, 8);
+        Assert.Equal(120d / 1040, saved!.YRatio, 8);
+        Assert.Equal(saved, model.PreferredMirrorPosition);
+    }
+    [Fact]
     public async Task CloseWaitsForNativeRecordingBeforeReleasingCamera()
     {
         var engine = new BlockingScreenFaceCaptureEngine();

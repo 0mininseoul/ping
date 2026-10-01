@@ -319,34 +319,6 @@ public sealed class AppCoordinatorSourceTests
     }
 
     [Fact]
-    public void MirrorWindowsSubscribeClosedCleanupHandlers()
-    {
-        var root = RepoRoot();
-        var face = File.ReadAllText(Path.Combine(
-            root,
-            "windows",
-            "src",
-            "Ping.Windows.App",
-            "Capture",
-            "FaceMirrorViewModel.cs"));
-        var screenFace = File.ReadAllText(Path.Combine(
-            root,
-            "windows",
-            "src",
-            "Ping.Windows.App",
-            "Capture",
-            "ScreenFaceMirrorViewModel.cs"));
-
-        var captureRoot = Path.Combine(root, "windows", "src", "Ping.Windows.App", "Capture");
-        Assert.Contains("Closed=\"HandleClosed\"", File.ReadAllText(Path.Combine(captureRoot, "FaceMirrorWindow.xaml")), StringComparison.Ordinal);
-        Assert.DoesNotContain("Closed += HandleClosed;", face, StringComparison.Ordinal);
-        Assert.Contains("viewModel.HandleWindowClosed();", face, StringComparison.Ordinal);
-        Assert.Contains("Closed=\"HandleClosed\"", File.ReadAllText(Path.Combine(captureRoot, "ScreenFaceMirrorWindow.xaml")), StringComparison.Ordinal);
-        Assert.DoesNotContain("Closed += HandleClosed;", screenFace, StringComparison.Ordinal);
-        Assert.Contains("viewModel.HandleWindowClosed();", screenFace, StringComparison.Ordinal);
-    }
-
-    [Fact]
     public void QuickSendHudClosesAndCancelsBeforeUpload()
     {
         var source = File.ReadAllText(Path.Combine(
@@ -362,111 +334,6 @@ public sealed class AppCoordinatorSourceTests
         Assert.Contains("CancelIfBeforeUpload();", source, StringComparison.Ordinal);
         Assert.Contains("public void Hide() => CloseSafely();", source, StringComparison.Ordinal);
         Assert.Contains("if (uploadStarted || viewModel.CanRetry)", source, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void FacePlaybackAndCaptureUseWindowsSafeRoundedCompositionClips()
-    {
-        var root = RepoRoot();
-        var helper = File.ReadAllText(Path.Combine(
-            root,
-            "windows",
-            "src",
-            "Ping.Windows.App",
-            "UI",
-            "RoundedCompositionClip.cs"));
-        var face = File.ReadAllText(Path.Combine(
-            root,
-            "windows",
-            "src",
-            "Ping.Windows.App",
-            "Capture",
-            "FaceMirrorViewModel.cs"));
-        var screenFace = File.ReadAllText(Path.Combine(
-            root,
-            "windows",
-            "src",
-            "Ping.Windows.App",
-            "Capture",
-            "ScreenFaceMirrorViewModel.cs"));
-
-        Assert.Contains("CreateRoundedRectangleGeometry", helper, StringComparison.Ordinal);
-        Assert.Contains("CreateGeometricClip", helper, StringComparison.Ordinal);
-        Assert.Contains("RoundedCompositionClip.Apply(PreviewElement, diameter, diameter, diameter / 2d)", face, StringComparison.Ordinal);
-        Assert.Contains("RoundedCompositionClip.Apply(ReviewElement, diameter, diameter, diameter / 2d)", face, StringComparison.Ordinal);
-        Assert.Contains("RoundedCompositionClip.Apply(FacePreviewElement, 82, 82, 41)", screenFace, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void MirrorReviewPlaybackRemainsVisibleDuringFailedUpload()
-    {
-        var root = RepoRoot();
-        var face = File.ReadAllText(Path.Combine(
-            root,
-            "windows",
-            "src",
-            "Ping.Windows.App",
-            "Capture",
-            "FaceMirrorViewModel.cs"));
-        var screenFace = File.ReadAllText(Path.Combine(
-            root,
-            "windows",
-            "src",
-            "Ping.Windows.App",
-            "Capture",
-            "ScreenFaceMirrorViewModel.cs"));
-
-        Assert.Contains("viewModel.State is not (MirrorState.Reviewing or MirrorState.Failed)", face, StringComparison.Ordinal);
-        Assert.Contains("viewModel.State is not (MirrorState.Reviewing or MirrorState.Failed)", screenFace, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void MirrorWindowsUseMacStyleInPreviewOverlayLayout()
-    {
-        var root = RepoRoot();
-        var faceXaml = File.ReadAllText(Path.Combine(
-            root,
-            "windows",
-            "src",
-            "Ping.Windows.App",
-            "Capture",
-            "FaceMirrorWindow.xaml"));
-        var screenFaceXaml = File.ReadAllText(Path.Combine(
-            root,
-            "windows",
-            "src",
-            "Ping.Windows.App",
-            "Capture",
-            "ScreenFaceMirrorWindow.xaml"));
-        var faceCode = File.ReadAllText(Path.Combine(
-            root,
-            "windows",
-            "src",
-            "Ping.Windows.App",
-            "Capture",
-            "FaceMirrorViewModel.cs"));
-        var screenFaceCode = File.ReadAllText(Path.Combine(
-            root,
-            "windows",
-            "src",
-            "Ping.Windows.App",
-            "Capture",
-            "ScreenFaceMirrorViewModel.cs"));
-
-        Assert.Contains("Width=\"220\"", faceXaml, StringComparison.Ordinal);
-        Assert.Contains("Height=\"220\"", faceXaml, StringComparison.Ordinal);
-        Assert.Contains("VerticalAlignment=\"Bottom\"", faceXaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"{Binding HintText}\"", faceXaml, StringComparison.Ordinal);
-        Assert.Contains("appWindow.Resize(new global::Windows.Graphics.SizeInt32(220, 220));", faceCode, StringComparison.Ordinal);
-
-        Assert.Contains("Width=\"508\"", screenFaceXaml, StringComparison.Ordinal);
-        Assert.Contains("Height=\"298\"", screenFaceXaml, StringComparison.Ordinal);
-        Assert.Contains("Width=\"480\"", screenFaceXaml, StringComparison.Ordinal);
-        Assert.Contains("Height=\"270\"", screenFaceXaml, StringComparison.Ordinal);
-        Assert.Contains("FacePreviewBubble", screenFaceXaml, StringComparison.Ordinal);
-        Assert.Contains("VerticalAlignment=\"Bottom\"", screenFaceXaml, StringComparison.Ordinal);
-        Assert.Contains("Text=\"{Binding HintText}\"", screenFaceXaml, StringComparison.Ordinal);
-        Assert.Contains("appWindow.Resize(new global::Windows.Graphics.SizeInt32(508, 298));", screenFaceCode, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -976,7 +843,6 @@ public sealed class AppCoordinatorSourceTests
         Assert.Contains("$(RuntimeIdentifier)", project, StringComparison.Ordinal);
         Assert.Contains("Ping.Windows.NativeCapture.dll", project, StringComparison.Ordinal);
     }
-
 
     [Fact]
     public void WindowsInstallerInstallsMsixFrameworkDependencies()

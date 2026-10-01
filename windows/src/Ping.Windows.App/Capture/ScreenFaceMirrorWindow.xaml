@@ -6,9 +6,6 @@
     Title="Ping">
     <Grid
         x:Name="Root"
-        Width="508"
-        Height="298"
-        Padding="14"
         Background="Transparent"
         IsTabStop="True"
         KeyDown="HandleKeyDown">
@@ -23,18 +20,13 @@
 
         <Border
             x:Name="MirrorBorder"
-            Width="480"
-            Height="270"
-            HorizontalAlignment="Center"
-            VerticalAlignment="Center"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch"
             Background="{StaticResource PingSurfaceBrush}"
             BorderBrush="{StaticResource PingBorderIdleBrush}"
             BorderThickness="1"
             CornerRadius="{StaticResource PingCornerRadius}">
             <Grid>
-                <Grid.Clip>
-                    <RectangleGeometry Rect="0,0,480,270" />
-                </Grid.Clip>
                 <Rectangle
                     Fill="#182024"
                     RadiusX="16"
@@ -45,7 +37,7 @@
                 <MediaPlayerElement
                     x:Name="ReviewElement"
                     AreTransportControlsEnabled="False"
-                    Stretch="UniformToFill"
+                    Stretch="Uniform"
                     Visibility="Collapsed" />
                 <StackPanel
                     x:Name="ScreenPreviewPlaceholder"
@@ -62,7 +54,7 @@
                         HorizontalAlignment="Center"
                         FontSize="12"
                         Foreground="{StaticResource PingMutedTextBrush}"
-                        Text="Screen+Face" />
+                        Text="화면과 얼굴" />
                 </StackPanel>
 
                 <Border
@@ -75,6 +67,8 @@
                     CornerRadius="12"
                     Opacity="{Binding HintOpacity}">
                     <TextBlock
+                        x:Name="HintLabel"
+                        ToolTipService.ToolTip="{Binding StatusMessage}"
                         MaxWidth="360"
                         FontSize="11"
                         Foreground="{StaticResource PingTextBrush}"
@@ -93,7 +87,7 @@
                     VerticalAlignment="Bottom"
                     Background="#3324272A"
                     BorderBrush="{StaticResource PingBorderIdleBrush}"
-                    BorderThickness="1"
+                    BorderThickness="0"
                     CornerRadius="41">
                     <Grid>
                         <MediaPlayerElement
@@ -106,7 +100,7 @@
                             VerticalAlignment="Center"
                             FontSize="11"
                             Foreground="{StaticResource PingMutedTextBrush}"
-                            Text="Camera" />
+                            Text="카메라" />
                     </Grid>
                 </Border>
 
@@ -143,6 +137,7 @@
                     IsTapEnabled="True"
                     Tapped="PartnerChip_Tapped">
                     <TextBlock
+                        x:Name="PartnerLabelElement"
                         MaxWidth="260"
                         FontSize="12"
                         Foreground="{StaticResource PingTextBrush}"

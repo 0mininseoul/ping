@@ -18,8 +18,12 @@ internal static class CaptureLifetimeSmoke
         var face = new FaceMirrorWindow(faceModel, faceLease);
         face.Activate();
         await Task.Delay(100);
-        face.Close();
-        await face.CameraShutdown;
+        try
+        {
+            CaptureMirrorSmoke.Verify(face, false, faceModel.MirrorPosition, check);
+            await CaptureMirrorSmoke.VerifyWorkAreaRefreshAsync(face, check);
+        }
+        finally { face.Close(); await face.CameraShutdown; }
         await Task.Delay(80);
         check(!camera.IsBusy, "real face mirror closes once and releases camera ownership without initialization");
 
@@ -37,6 +41,8 @@ internal static class CaptureLifetimeSmoke
         var secondEnter = screen.HandleEnterAsync();
         try
         {
+            CaptureMirrorSmoke.Verify(screen, true, model.MirrorPosition, check);
+            await CaptureMirrorSmoke.VerifyWorkAreaRefreshAsync(screen, check);
             check(engine.Recordings == 0, "repeated Enter cannot record while old preview still owns camera");
             screen.Close();
             await Task.Delay(80);
