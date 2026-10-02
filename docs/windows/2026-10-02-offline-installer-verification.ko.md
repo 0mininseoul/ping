@@ -59,3 +59,8 @@ EXE 컴파일은 확인했다. UAC 승인/취소, 비관리자 실제 설치·�
 - 실제 메신저·설정 창의 디스플레이 식별 검사를 먼저 추가해 RED(주 모니터) 확인 후 지정 위치 구현. WinUI 167개 GREEN, 아티팩트 `windows/artifacts/ui-shell-5eb57bf6978a436692a284f7d5875208`. 얼굴/화면 거울·재생·자동 회신 UI 합성 검사를 같은 세로 모니터에서 통과. 합성 UI 영상은 실기 카메라 녹화 증거가 아니다.
 - 실제 서명된 0.4.0 DLL을 읽어 네이티브 화면 사전 확인 수행. PowerShell의 DPI-unaware 호스트는 주 모니터의 가상/물리 크기가 달라 code6 실패. 앱 manifest와 같은 PerMonitorV2 스레드에서 재현 시 화면 SelfTest code0. smoke 도구도 같은 스레드 DPI를 사용하고 종료 시 이전 컨텍스트를 복구하도록 수정.
 - DISPLAY3의 native index를 EnumDisplayMonitors/GetMonitorInfo로 찾은 뒤 3초 로컬 화면+얼굴 녹화 호출: code4(PingCaptureNoCamera), 실제 MP4 미생성. Windows Camera/Image present 장치도 없음. 웹캠 연결 여부를 사용자에게 질문했으며 소프트웨어 통과로 대체하지 않는다. 운영 룸/다른 사람에게 테스트 영상을 보내지 않았다.
+
+## 2026-10-03 EXE 등록 오류 원인과 수정
+실제 EXE 오류 출력에서 Windows PowerShell5.1이 `Microsoft.PowerShell.Security`를 자동 로드하지 못했다. PowerShell7에서 시작한 중간 EXE는 PS7의 PSModulePath를 그대로 상속하지만, pwsh가 직접 시작한 powershell.exe에는 호환 경로를 제공하므로 직접 스크립트만 통과했던 것이다. [Microsoft PSModulePath 문서](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_psmodulepath?view=powershell-7.6)의 중간 프로세스 설명과 일치한다.
+
+설치·제거의 PowerShell 호출 동안만 해당 프로세스의 모듈 경로를 OS Windows PowerShell 기본 모듈로 제한하고 종료 후 원래 값을 복구한다. 앱 업데이트의 서명 검사/적용 helper는 자식 환경에서 PSModulePath를 제거해 WinPS가 기본 경로를 생성하도록 한다. 사용자/시스템 환경변수 저장소는 수정하지 않는다. 동일 문제를 재현하는 소유 임시 모듈 + 실제 WinPS 프로세스 검사 RED→GREEN, App309/309 통과, 일반 Release 빌드0경고/오류. 수정된 앱 바이너리가 설치된 0.4.0과 구별되도록 Windows package version만 0.4.1.0으로 올린다. macOS 버전/identity는 변경하지 않는다.

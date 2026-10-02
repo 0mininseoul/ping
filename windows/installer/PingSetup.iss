@@ -51,6 +51,24 @@ Source: "app.ico"; DestDir: "{app}"; Flags: ignoreversion
 var
   RegistrationProgress: TOutputMarqueeProgressWizardPage;
 
+function SetProcessEnvironment(const Name, Value: String): Boolean;
+  external 'SetEnvironmentVariableW@kernel32.dll stdcall';
+
+function ExecWindowsPowerShell(const Params: String; var ResultCode: Integer): Boolean;
+var
+  PreviousModulePath: String;
+begin
+  PreviousModulePath := GetEnv('PSModulePath');
+  if not SetProcessEnvironment('PSModulePath', ExpandConstant('{win}\System32\WindowsPowerShell\v1.0\Modules')) then
+    RaiseException('Could not prepare Windows PowerShell module paths.');
+  try
+    Result := ExecAndLogOutput(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
+      Params, '', SW_HIDE, ewWaitUntilTerminated, ResultCode, nil);
+  finally
+    SetProcessEnvironment('PSModulePath', PreviousModulePath);
+  end;
+end;
+
 function IsArm64: Boolean;
 begin
   Result := ProcessorArchitecture = paArm64;
@@ -124,8 +142,7 @@ begin
     RegistrationProgress.Animate;
     try
       repeat
-        if not ExecAndLogOutput(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
-          CommandLine, '', SW_HIDE, ewWaitUntilTerminated, ResultCode, nil) then
+        if not ExecWindowsPowerShell(CommandLine, ResultCode) then
           Log('Ping registration process could not start: ' + SysErrorMessage(ResultCode));
         Log('Ping registration exit code: ' + IntToStr(ResultCode));
         if ResultCode = 0 then Break;
@@ -156,8 +173,7 @@ var
 begin
   if CurUninstallStep <> usUninstall then Exit;
   CommandLine := '-NoProfile -ExecutionPolicy Bypass -File "' + ExpandConstant('{app}\uninstall-ping-windows.ps1') + '" -NoDialogs';
-  if not ExecAndLogOutput(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
-    CommandLine, '', SW_HIDE, ewWaitUntilTerminated, ResultCode, nil) then
+  if not ExecWindowsPowerShell(CommandLine, ResultCode) then
     Log('Ping removal process could not start: ' + SysErrorMessage(ResultCode));
   Log('Ping removal exit code: ' + IntToStr(ResultCode));
   if ResultCode <> 0 then

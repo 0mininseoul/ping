@@ -68,6 +68,7 @@ internal static class WindowsUpdateController
     private static ProcessStartInfo ScriptStartInfo(string path)
     {
         var start = new ProcessStartInfo(PowerShellPath) { UseShellExecute = false, CreateNoWindow = true };
+        WindowsPowerShellEnvironment.Normalize(start);
         foreach (var value in new[] { "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", path }) start.ArgumentList.Add(value);
         return start;
     }
