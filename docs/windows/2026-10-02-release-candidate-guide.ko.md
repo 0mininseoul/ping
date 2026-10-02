@@ -1,5 +1,7 @@
 # Ping Windows 0.4.2 설치 후보
 
+최신 후보는 [0.4.3 설치 안내](2026-10-03-windows-0.4.3-candidate.ko.md)를 따른다. 아래는 이전 0.4.2 검증 기록이다.
+
 생성된 설치 파일: `windows/dist/PingSetup-v0.4.2.exe` (약 204 MiB).
 지원 환경은 Windows 11 24H2 이상(build 26100+), x64 또는 ARM64다.
 

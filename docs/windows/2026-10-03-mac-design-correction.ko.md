@@ -35,3 +35,5 @@ Windows package version은 0.4.2.0으로 구분한다. 이전 0.4.1 EXE에는 �
 Mac은 완료 payload에서 계정/룸 작업을 처리하지만 Windows는 닉네임 단계와 생성/참여 버튼에서 각각 서버 작업을 완료한다. 완료 화면은 성공 후에만 뜬다. 설정 룸 탭의 launcher, Windows 단축키 편집 방법, Mac의 sheet/popover, 시스템 material과 실제 실행 화면의 같은 상태 비교는 여전히 전체 parity 확인 항목이다. 이번 변경으로 모든 디자인이 같다고 주장하지 않는다.
 
 App 322개, DISPLAY3 실제 WinUI 205개 통과. 최종 렌더는 `windows/artifacts/ui-shell-a5978e3aaf1f40109dc53e52c5b5402e/`이며 정상 x64 Release 빌드는 경고/오류0이다. 마지막 산출물 검증과 설치 파일 정보는 후속 배포 기록으로 업데이트한다. 코드 리뷰의 룸 식별/생성 후 초대/입력 카드/오래된 룸 목록 문제를 실제 동작 검사와 함께 교정했다. 현재 사용자 계정/룸에 시험 데이터를 쓰지 않았으며 설치·장치·Mac peer QA 미완료 상태도 유지한다.
+
+[0.4.3 설치 후보](2026-10-03-windows-0.4.3-candidate.ko.md)를 생성했다. CI37039498491 성공, 두 실제 배포 DLL에서 새 안내 UI 존재와 진단 타입0개를 확인했다. 원래 인증서의 두 MSIX 서명이 Valid이며 PowerShell5.1 오프라인 payload 읽기 전용 검증도 통과했다. 외부 EXE는 NotSigned다. 실제 설치/기기 QA를 통과한 배포물이라고 표시하지 않는다.
