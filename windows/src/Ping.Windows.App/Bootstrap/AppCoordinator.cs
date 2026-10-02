@@ -69,6 +69,8 @@ public sealed class AppCoordinator : IDisposable
     private ScreenFaceMirrorWindow? screenFaceMirrorWindow;
     private QuickSendHudWindow? quickSendHudWindow;
     private OnboardingWindow? onboardingWindow;
+    private GuidedSetupWindow? guidedSetupWindow;
+    private bool offeredGuidedSetup;
     private RoomManagerWindow? roomManagerWindow;
     private HistoryWindow? historyWindow;
     private SettingsWindow? settingsWindow;
@@ -290,6 +292,7 @@ public sealed class AppCoordinator : IDisposable
         settingsWindow?.Close();
         roomManagerWindow?.Close();
         onboardingWindow?.Close();
+        guidedSetupWindow?.Close();
         connectionLifecycle?.Dispose();
         connectionSupervisor.StateChanged -= HandleConnectionStateChanged;
         shutdown = DisposeConnectionAsync();
@@ -505,6 +508,63 @@ public sealed class AppCoordinator : IDisposable
         }
 
         onboardingWindow.Activate();
+    }
+
+    private void OpenGuidedSetupWindow()
+    {
+        if (disposed || changingAccount) return;
+        offeredGuidedSetup = true;
+        if (guidedSetupWindow is null)
+        {
+            string? createdRoomId = null, joinedRoomId = null;
+            var model = new GuidedSetupViewModel(new(
+                async (nickname, token) =>
+                {
+                    await RequireSetupIdentityAsync(token);
+                    var saved = await SaveProfileNicknameAsync(nickname, token);
+                    settingsWindow?.RefreshProfileNickname(saved);
+                    return saved;
+                },
+                async (name, nickname, token) =>
+                {
+                    await RequireSetupIdentityAsync(token);
+                    createdRoomId = (await roomService.CreateRoomAsync(name, nickname, token)).Id;
+                    connectionSupervisor.RequestReconnect();
+                },
+                async (query, token) =>
+                {
+                    await RequireSetupIdentityAsync(token);
+                    return await roomService.SearchOpenRoomsAsync(query, token);
+                },
+                async (roomId, nickname, token) =>
+                {
+                    await RequireSetupIdentityAsync(token);
+                    await roomService.JoinRoomAsync(roomId, nickname, token);
+                    joinedRoomId = roomId;
+                    connectionSupervisor.RequestReconnect();
+                }, () => currentUid));
+            guidedSetupWindow = new(model, () =>
+            {
+                connectionSupervisor.RequestReconnect();
+                mainWindow.ShowShell();
+                if (createdRoomId is not null)
+                {
+                    OpenRoomManagerWindow();
+                    if (roomManagerWindow is { } manager) _ = manager.FocusRoomAsync(createdRoomId);
+                }
+                else if (joinedRoomId is not null) OpenHistoryWindow(joinedRoomId);
+            }, permissionProbe.ProbeAsync);
+            guidedSetupWindow.Closed += (_, _) => guidedSetupWindow = null;
+        }
+        guidedSetupWindow.Activate();
+    }
+
+    private async Task RequireSetupIdentityAsync(CancellationToken token)
+    {
+        var uid = await startupIdentity.WaitAsync(token);
+        token.ThrowIfCancellationRequested();
+        if (disposed || changingAccount || currentUid != uid)
+            throw new InvalidOperationException("Ping account is not ready for setup.");
     }
 
     private void MaybeOpenOnboardingAtStartup(IReadOnlyList<HotkeyRegistrationResult> registrations)
@@ -1332,6 +1392,7 @@ public sealed class AppCoordinator : IDisposable
 
             remoteDefaultRoomId = profile?.LastUsedRoomId;
             rooms = refreshedRooms;
+            if (!offeredGuidedSetup && string.IsNullOrWhiteSpace(profile?.Nickname)) OpenGuidedSetupWindow();
             if (ResolvePreferredDefaultRoom(SendableRoomsFor(uid)) is { Id: { } defaultRoomId })
             {
                 SaveQuickSendDefaultRoom(defaultRoomId);

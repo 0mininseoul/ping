@@ -24,6 +24,7 @@ public sealed partial class OnboardingWindow : Window
         Ping.Windows.App.UI.PingAppearance.Register(this);
         Ping.Windows.App.UI.WindowCaptureExclusion.Apply(this);
         Root.DataContext = viewModel;
+        Ping.Windows.App.UI.SettingsWindowGeometry.Fit(this, 680, 600);
     }
 
     private async void Root_Loaded(object sender, RoutedEventArgs e)

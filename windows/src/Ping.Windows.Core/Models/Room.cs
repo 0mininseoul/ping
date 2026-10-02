@@ -23,4 +23,8 @@ public sealed record Room(
 {
     [JsonIgnore]
     public string MemberCountLabel => $"{MemberUids.Count}명";
+
+    [JsonIgnore]
+    public string OwnerNicknameLabel => MemberNicknames.TryGetValue(OwnerUid, out var nickname) && !string.IsNullOrWhiteSpace(nickname)
+        ? $"방장: {nickname}" : "방장 닉네임을 확인할 수 없어요";
 }

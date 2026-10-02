@@ -16,6 +16,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\..\src\Ping.Windows.App\Onboarding\OnboardingViewModel.cs" Link="Onboarding\OnboardingViewModel.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Onboarding\GuidedSetupViewModel.cs" Link="Onboarding\GuidedSetupViewModel.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Onboarding\OnboardingStartupPolicy.cs" Link="Onboarding\OnboardingStartupPolicy.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Onboarding\PermissionProbe.cs" Link="Onboarding\PermissionProbe.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Onboarding\SettingsLauncher.cs" Link="Onboarding\SettingsLauncher.cs" />

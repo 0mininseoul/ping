@@ -142,6 +142,14 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
         }
     }
 
+    public async Task FocusRoomAsync(string roomId, CancellationToken cancellationToken = default)
+    {
+        SelectedRoom = Rooms.FirstOrDefault(room => room.Id == roomId);
+        if (SelectedRoom is not null) return;
+        await ReloadRoomsAsync(cancellationToken);
+        SelectedRoom = Rooms.FirstOrDefault(room => room.Id == roomId);
+    }
+
     public async Task LoadAsync(CancellationToken cancellationToken = default)
     {
         await ReloadRoomsAsync(cancellationToken);
@@ -395,6 +403,8 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
 public sealed partial class RoomManagerWindow : Window
 {
     private readonly RoomManagerViewModel viewModel;
+    private string? preferredRoomId;
+    private Task? initialLoad;
 
     public RoomManagerWindow(RoomManagerViewModel viewModel)
     {
@@ -414,7 +424,21 @@ public sealed partial class RoomManagerWindow : Window
 
     private async void HandleLoaded(object sender, RoutedEventArgs args)
     {
-        await RunAsync(() => viewModel.LoadAsync());
+        initialLoad ??= RunAsync(async () =>
+        {
+            await viewModel.LoadAsync();
+            if (preferredRoomId is { } id) await viewModel.FocusRoomAsync(id);
+        });
+        await initialLoad;
+    }
+
+    internal async Task FocusRoomAsync(string roomId)
+    {
+        preferredRoomId = roomId;
+        viewModel.SelectedRoom = null;
+        if (!Root.IsLoaded) return;
+        if (initialLoad is not null) await initialLoad;
+        await RunAsync(() => viewModel.FocusRoomAsync(roomId));
     }
 
     private void HandleRoomSelectionChanged(object sender, SelectionChangedEventArgs args)

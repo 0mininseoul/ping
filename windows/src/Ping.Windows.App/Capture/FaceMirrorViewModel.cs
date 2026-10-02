@@ -146,7 +146,7 @@ public sealed class FaceMirrorViewModel : INotifyPropertyChanged
     public string HintText => State switch
     {
         MirrorState.Idle => "↵ 녹화 · Esc 닫기",
-        MirrorState.Reviewing => "↵ 전송 · ⌫ 다시",
+        MirrorState.Reviewing => "↵ 보내기 · ⌫ 다시 · Esc",
         MirrorState.Uploading => "보내는 중…",
         MirrorState.Failed => HasReviewedClip ? "↵ 재전송 · ⌫ 다시" : "↵ 다시 · Esc 닫기",
         MirrorState.Recording => string.Empty,

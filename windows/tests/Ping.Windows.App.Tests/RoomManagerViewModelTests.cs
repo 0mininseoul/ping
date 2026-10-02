@@ -9,6 +9,28 @@ namespace Ping.Windows.App.Tests;
 public sealed class RoomManagerViewModelTests
 {
     [Fact]
+    public async Task Focus_newly_created_room_refreshes_stale_collection_before_invitation()
+    {
+        var rpc = new RecordingRoomRpcClient();
+        var model = new RoomManagerViewModel(new RoomService(rpc), new InvitationService(rpc), "민지");
+        var old = Room() with { Id = "old-room" };
+        model.Rooms.Add(old); model.SelectedRoom = old;
+        await model.FocusRoomAsync("room-id");
+        Assert.Equal("room-id", model.SelectedRoom?.Id);
+        Assert.Contains(rpc.Calls, call => call.Function == "ping_my_rooms");
+    }
+
+    [Fact]
+    public async Task Missing_target_room_never_leaves_another_room_selected_for_invitation()
+    {
+        var rpc = new RecordingRoomRpcClient();
+        var model = new RoomManagerViewModel(new RoomService(rpc), new InvitationService(rpc), "민지");
+        model.Rooms.Add(Room()); model.SelectedRoom = model.Rooms[0];
+        await model.FocusRoomAsync("deleted-room");
+        Assert.Null(model.SelectedRoom);
+    }
+
+    [Fact]
     public async Task CreateInviteLinkCopiesTokenToClipboard()
     {
         var rpc = new RecordingRoomRpcClient();

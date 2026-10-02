@@ -642,7 +642,7 @@ public sealed partial class SettingsWindow : Window
         pairing = new(viewModel.Pairing, PairingImage);
         Closed += (_, _) => { pairing.Dispose(); viewModel.Updates.Dispose(); deviceLifetime.Cancel(); deviceLifetime.Dispose(); };
         Root.Loaded += (_, _) => { RefreshDevicesIfVisible(); _ = viewModel.Accounts.RefreshAsync(deviceLifetime.Token); };
-        Ping.Windows.App.UI.SettingsWindowGeometry.Fit(this);
+        Ping.Windows.App.UI.SettingsWindowGeometry.Fit(this, 560, 440);
         _ = viewModel.RefreshStartupAsync();
     }
 

@@ -83,9 +83,16 @@ internal static class UiSmokeRunner
             var manager = new RoomManagerWindow(roomVm);
             try
             {
+                await manager.FocusRoomAsync("b");
                 manager.Activate();
                 TestDisplayPlacement.Verify(manager, Check);
                 await UntilAsync(() => roomVm.Rooms.Count == 2);
+                Check(roomVm.SelectedRoom?.Id == "b", "invitation launcher focuses requested room after asynchronous load");
+                await manager.FocusRoomAsync("a");
+                roomVm.Rooms.Remove(roomVm.Rooms.Single(room => room.Id == "b"));
+                await manager.FocusRoomAsync("b");
+                Check(roomVm.SelectedRoom?.Id == "b", "already-open invitation manager reloads absent target instead of keeping another room");
+                await manager.FocusRoomAsync("a");
                 var managerRoot = (FrameworkElement)manager.Content;
                 managerRoot.RequestedTheme = ElementTheme.Light;
                 await Task.Delay(180);
@@ -191,7 +198,7 @@ internal static class UiSmokeRunner
             settings.Activate();
             Check(UI.WindowCaptureExclusion.IsApplied(settings), "settings declares exclusion from OS screen capture");
             await Task.Delay(250);
-            var autoPlayToggle = Descendants(settings.Content).OfType<ToggleSwitch>().Single(toggle => toggle.Header?.ToString() == "받은 영상 자동 재생");
+            var autoPlayToggle = (ToggleSwitch)((Grid)settings.Content).FindName("AutoPlayIncomingToggle");
             Check(autoPlayToggle.IsOn, "real autoplay control defaults on");
             autoPlayToggle.IsOn = false;
             await Task.Delay(50);
@@ -250,7 +257,7 @@ internal static class UiSmokeRunner
             Check(Descendants(settingsRoot).OfType<TabViewItem>().All(tab => !tab.IsClosable), "settings sections cannot be accidentally closed");
             Check(settingsRoot.ActualWidth >= 400 && settingsRoot.ActualHeight >= 300, "settings client geometry provides usable layout");
             var generalScroll = (ScrollViewer)settingsRoot.FindName("GeneralScroll");
-            settings.AppWindow.ResizeClient(new(760, 420));
+            settings.AppWindow.ResizeClient(new(560, 420));
             await Task.Delay(120);
             Check(generalScroll.ScrollableHeight > 0 && generalScroll.ScrollableWidth == 0, "small settings window scrolls vertically without horizontal overflow");
             generalScroll.ChangeView(null, generalScroll.ScrollableHeight, null, true);
@@ -266,6 +273,8 @@ internal static class UiSmokeRunner
             Check(savedSettings?.AppearanceMode == PingAppearanceMode.Light && settingsRoot.ActualTheme == ElementTheme.Light
                 && root.ActualTheme == ElementTheme.Light, "light preference updates settings and existing messenger");
             var lightBackground = ((SolidColorBrush)settingsRoot.Background).Color;
+            generalScroll.ChangeView(null, 0, null, true);
+            await Task.Delay(80);
             await RenderAsync(settingsRoot, "settings-light.png");
             appearance.SelectedIndex = 2;
             await Task.Delay(120);
@@ -280,6 +289,23 @@ internal static class UiSmokeRunner
             Check(settingsRoot.RequestedTheme == ElementTheme.Default && root.RequestedTheme == ElementTheme.Default,
                 "system preference restores Windows theme tracking");
             var tabs = (TabView)settingsRoot.FindName("SettingsTabs");
+            tabs.SelectedIndex = (int)SettingsSection.Hotkeys;
+            await UntilAsync(() => (settingsRoot.FindName("HotkeysScroll") as ScrollViewer)?.IsLoaded == true);
+            var hotkeysScroll = (ScrollViewer)settingsRoot.FindName("HotkeysScroll");
+            var editors = Descendants(hotkeysScroll).OfType<Expander>().ToArray();
+            Check(editors.Length == 4 && hotkeysScroll.ScrollableWidth == 0, "four shortcut rows fit compact settings width");
+            await RenderAsync(settingsRoot, "settings-hotkeys.png");
+            editors[0].IsExpanded = true;
+            await Task.Delay(120);
+            var controlModifier = Descendants(editors[0]).OfType<CheckBox>().Single(box => box.Content?.ToString() == "Ctrl");
+            controlModifier.IsChecked = true;
+            await Task.Delay(50);
+            Check(settingsVm.HotkeyRows[0].DisplayShortcut == "Ctrl+Alt+P"
+                && Descendants(editors[0]).OfType<TextBlock>().Any(text => text.Text == "Ctrl+Alt+P"),
+                "shortcut header reflects actual modifier edits");
+            Check(hotkeysScroll.ScrollableWidth == 0, "expanded shortcut editor fits without horizontal scrolling");
+            await RenderAsync(settingsRoot, "settings-hotkey-editor.png");
+            settingsVm.HotkeyRows[0].ApplyBinding(HotkeyBinding.Alt("P"));
             tabs.SelectedIndex = (int)SettingsSection.Devices;
             await UntilAsync(() => settingsVm.Devices.Cameras.Count == 2 && !settingsVm.Devices.IsLoading);
             var cameraCombo = (ComboBox)settingsRoot.FindName("CameraSelectionCombo");
@@ -300,7 +326,7 @@ internal static class UiSmokeRunner
                 && ((MicrophoneChoice)microphoneCombo.SelectedItem).Device == fixtureMicrophone,
                 "disconnected devices remain selected without switching to default");
             await RenderAsync(settingsRoot, "settings-devices.png");
-            UI.SettingsWindowGeometry.Fit(settings);
+            UI.SettingsWindowGeometry.Fit(settings, 560, 440);
             var qrImage = (Image)settingsRoot.FindName("PairingImage");
             await UntilAsync(() => qrImage.Source is not null);
             var devicesScroll = (ScrollViewer)settingsRoot.FindName("DevicesScroll");
@@ -319,6 +345,8 @@ internal static class UiSmokeRunner
             settings.Close();
             Check(qrImage.Source is null && settingsVm.Pairing.Image is null, "closing settings clears pairing image");
             Check(true, "real settings window created, rendered and closed without crash");
+            Step("Verifying guided first-use setup with owned fake services and no devices.");
+            await GuidedSetupSmoke.RunAsync(Check, RenderAsync);
             Step("Verifying owned native playback with a synthetic clip.");
             await PlaybackSmoke.RunAsync(window, OutputDirectory!, Check, RenderAsync);
             await AutoReplySmoke.RunAsync(window, Check, RenderAsync);

@@ -360,11 +360,12 @@ public sealed class OnboardingViewModel : INotifyPropertyChanged
     {
         if (isEnabled)
         {
-            return "Ping is ready for Alt+Shift+L and incoming notifications.";
+            return "화면+얼굴 빠른 전송과 수신 알림을 사용할 수 있어요.";
         }
 
         var blocker = QuickSendBlocker(state);
-        return $"Ping is disabled until {blocker} is ready.";
+        var particle = blocker is "연결 설정" or "일반 사용자 실행" or "알림 권한" or "필수 항목" ? "을" : "를";
+        return $"화면+얼굴 빠른 전송을 사용하려면 {blocker}{particle} 확인해 주세요.";
     }
 
     private static string QuickSendBlocker(OnboardingEnvironmentState state)
@@ -376,40 +377,40 @@ public sealed class OnboardingViewModel : INotifyPropertyChanged
 
         if (!state.IsSupabaseConfigured)
         {
-            return "Supabase config";
+            return "연결 설정";
         }
 
         if (state.IsElevated)
         {
-            return "normal user mode";
+            return "일반 사용자 실행";
         }
 
         if (state.Camera.Status != OnboardingProbeStatus.Available)
         {
-            return "camera access";
+            return "카메라";
         }
 
         if (state.Microphone.Status != OnboardingProbeStatus.Available)
         {
-            return "microphone access";
+            return "마이크";
         }
 
         if (state.ScreenCapture.Status != OnboardingProbeStatus.Available)
         {
-            return "screen capture";
+            return "화면 녹화";
         }
 
         if (state.Notifications.Status != OnboardingProbeStatus.Available)
         {
-            return "notification access";
+            return "알림 권한";
         }
 
         if (state.Hotkeys.Status != OnboardingProbeStatus.Available)
         {
-            return "hotkeys";
+            return "단축키";
         }
 
-        return "required checks";
+        return "필수 항목";
     }
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)

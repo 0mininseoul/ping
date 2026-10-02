@@ -35,6 +35,12 @@ public sealed class HotkeySettingRow : INotifyPropertyChanged
 
     public string Label { get; }
 
+    public string DisplayShortcut => HotkeyBinding.FromParts(
+        (IsControl ? HotkeyModifiers.Control : HotkeyModifiers.None)
+        | (IsAlt ? HotkeyModifiers.Alt : HotkeyModifiers.None)
+        | (IsShift ? HotkeyModifiers.Shift : HotkeyModifiers.None)
+        | (IsWindows ? HotkeyModifiers.Windows : HotkeyModifiers.None), SelectedKey).ToString();
+
     public IReadOnlyList<string> KeyChoices => DefaultKeyChoices;
 
     public bool IsControl
@@ -126,6 +132,7 @@ public sealed class HotkeySettingRow : INotifyPropertyChanged
         OnPropertyChanged(nameof(IsShift));
         OnPropertyChanged(nameof(IsWindows));
         OnPropertyChanged(nameof(SelectedKey));
+        OnPropertyChanged(nameof(DisplayShortcut));
     }
 
     public static IReadOnlyList<HotkeySettingRow> FromBindings(
@@ -157,6 +164,7 @@ public sealed class HotkeySettingRow : INotifyPropertyChanged
 
         field = value;
         OnPropertyChanged(propertyName);
+        if (propertyName != nameof(StatusMessage)) OnPropertyChanged(nameof(DisplayShortcut));
     }
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>

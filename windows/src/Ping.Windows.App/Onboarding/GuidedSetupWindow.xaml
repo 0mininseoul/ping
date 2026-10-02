@@ -1,0 +1,170 @@
+<Window x:Class="Ping.Windows.App.Onboarding.GuidedSetupWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="Ping 시작하기">
+    <Grid x:Name="Root" Background="{ThemeResource PingBackgroundBrush}">
+        <Grid.Resources>
+            <ResourceDictionary>
+                <ResourceDictionary.ThemeDictionaries>
+                    <ResourceDictionary x:Key="Light">
+                        <Color x:Key="SetupWashLeading">#57BDE0FF</Color><Color x:Key="SetupWashTrailing">#47E8FAED</Color>
+                    </ResourceDictionary>
+                    <ResourceDictionary x:Key="Dark">
+                        <Color x:Key="SetupWashLeading">#6B142438</Color><Color x:Key="SetupWashTrailing">#291A2426</Color>
+                    </ResourceDictionary>
+                    <ResourceDictionary x:Key="HighContrast">
+                        <Color x:Key="SetupWashLeading">Transparent</Color><Color x:Key="SetupWashTrailing">Transparent</Color>
+                    </ResourceDictionary>
+                </ResourceDictionary.ThemeDictionaries>
+                <Style x:Key="SetupHeading" TargetType="TextBlock">
+                    <Setter Property="FontSize" Value="28" /><Setter Property="FontWeight" Value="SemiBold" />
+                    <Setter Property="Foreground" Value="{ThemeResource PingTextBrush}" /><Setter Property="TextWrapping" Value="WrapWholeWords" />
+                </Style>
+                <Style x:Key="SetupDetail" TargetType="TextBlock">
+                    <Setter Property="FontSize" Value="13" /><Setter Property="Foreground" Value="{ThemeResource PingMutedBrush}" />
+                    <Setter Property="TextWrapping" Value="WrapWholeWords" />
+                </Style>
+                <Style x:Key="SetupCard" TargetType="Border">
+                    <Setter Property="CornerRadius" Value="16" /><Setter Property="Padding" Value="16,8" />
+                    <Setter Property="Background" Value="{ThemeResource PingSurfaceBrush}" />
+                    <Setter Property="BorderBrush" Value="{ThemeResource PingIdleBrush}" /><Setter Property="BorderThickness" Value="0.8" />
+                </Style>
+            </ResourceDictionary>
+        </Grid.Resources>
+        <Border IsHitTestVisible="False">
+            <Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Offset="0" Color="{ThemeResource SetupWashLeading}" />
+                <GradientStop Offset="0.65" Color="{ThemeResource SetupWashTrailing}" /><GradientStop Offset="1" Color="Transparent" />
+            </LinearGradientBrush></Border.Background>
+        </Border>
+        <Grid Padding="28,22,28,24" RowSpacing="14">
+            <Grid.RowDefinitions><RowDefinition Height="68" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+            <StackPanel Spacing="12">
+                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <Image Source="ms-appx:///Assets/HeaderLogo.png" Width="38" Height="38" />
+                        <TextBlock Text="Ping" FontSize="23" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{ThemeResource PingTextBrush}" />
+                    </StackPanel>
+                    <TextBlock Grid.Column="1" Text="{Binding ProgressLabel}" Style="{StaticResource SetupDetail}" VerticalAlignment="Center" />
+                </Grid>
+                <ProgressBar Value="{Binding Progress}" Minimum="0" Maximum="100" Height="5" Foreground="{ThemeResource PingAccentBrush}" />
+            </StackPanel>
+            <ScrollViewer Grid.Row="1" IsEnabled="{Binding CanEdit}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" HorizontalScrollMode="Disabled">
+                <Grid x:Name="Pages">
+                    <StackPanel x:Name="WelcomePage" VerticalAlignment="Center" HorizontalAlignment="Stretch" Spacing="22" Padding="0,22">
+                        <Border Width="112" Height="112" CornerRadius="56" Background="{ThemeResource PingSurfaceBrush}"
+                            BorderBrush="{ThemeResource PingIdleBrush}" BorderThickness="0.8">
+                            <SymbolIcon Symbol="Video" Foreground="{ThemeResource PingTextBrush}" />
+                        </Border>
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="보고 싶을 때 바로 Ping" Style="{StaticResource SetupHeading}" TextAlignment="Center" />
+                            <TextBlock Text="Alt+P로 거울을 열고, Enter로 3초를 보냅니다." Style="{StaticResource SetupDetail}" TextAlignment="Center" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                            <Border CornerRadius="16" Padding="12,6" Background="{ThemeResource PingSurfaceBrush}"><TextBlock Text="Alt+P" Style="{StaticResource SetupDetail}" /></Border>
+                            <Border CornerRadius="16" Padding="12,6" Background="{ThemeResource PingSurfaceBrush}"><TextBlock Text="3초" Style="{StaticResource SetupDetail}" /></Border>
+                            <Border CornerRadius="16" Padding="12,6" Background="{ThemeResource PingSurfaceBrush}"><TextBlock Text="트레이" Style="{StaticResource SetupDetail}" /></Border>
+                        </StackPanel>
+                    </StackPanel>
+                    <StackPanel x:Name="PermissionsPage" Visibility="Collapsed" Spacing="8" Padding="0,8">
+                        <TextBlock Text="권한 허용" Style="{StaticResource SetupHeading}" />
+                        <TextBlock Text="영상 Ping과 새 메시지 알림에 필요합니다." Style="{StaticResource SetupDetail}" />
+                        <Border Style="{StaticResource SetupCard}"><Grid ColumnSpacing="10">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="26" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                            <SymbolIcon Symbol="Camera" /><StackPanel Grid.Column="1"><TextBlock Text="카메라" /><TextBlock x:Name="CameraStatus" Text="아직 확인하지 않았어요" Style="{StaticResource SetupDetail}" /></StackPanel>
+                            <Button Grid.Column="2" Content="설정" Tag="ms-settings:privacy-webcam" Click="PermissionSettings_Click" />
+                        </Grid></Border>
+                        <Border Style="{StaticResource SetupCard}"><Grid ColumnSpacing="10">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="26" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                            <SymbolIcon Symbol="Microphone" /><StackPanel Grid.Column="1"><TextBlock Text="마이크" /><TextBlock x:Name="MicrophoneStatus" Text="아직 확인하지 않았어요" Style="{StaticResource SetupDetail}" /></StackPanel>
+                            <Button Grid.Column="2" Content="설정" Tag="ms-settings:privacy-microphone" Click="PermissionSettings_Click" />
+                        </Grid></Border>
+                        <Border Style="{StaticResource SetupCard}"><Grid ColumnSpacing="10">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="26" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                            <SymbolIcon Symbol="Message" /><StackPanel Grid.Column="1"><TextBlock Text="알림" /><TextBlock x:Name="NotificationsStatus" Text="아직 확인하지 않았어요" Style="{StaticResource SetupDetail}" /></StackPanel>
+                            <Button Grid.Column="2" Content="설정" Tag="ms-settings:privacy-notifications" Click="PermissionSettings_Click" />
+                        </Grid></Border>
+                        <Border Style="{StaticResource SetupCard}"><Grid ColumnSpacing="10">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="26" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                            <SymbolIcon Symbol="ViewAll" /><StackPanel Grid.Column="1"><TextBlock Text="화면 녹화" /><TextBlock x:Name="ScreenStatus" Text="아직 확인하지 않았어요" Style="{StaticResource SetupDetail}" /></StackPanel>
+                            <Button Grid.Column="2" Content="설정" Tag="ms-settings:privacy-graphicscaptureprogrammatic" Click="PermissionSettings_Click" />
+                        </Grid></Border>
+                        <Button x:Name="CheckPermissionsButton" Content="상태 확인" Click="CheckPermissions_Click" />
+                    </StackPanel>
+                    <StackPanel x:Name="NicknamePage" Visibility="Collapsed" Spacing="20" Padding="0,14">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="닉네임 설정" Style="{StaticResource SetupHeading}" TextAlignment="Center" />
+                            <TextBlock Text="룸 검색과 초대 알림에 표시됩니다." Style="{StaticResource SetupDetail}" TextAlignment="Center" />
+                        </StackPanel>
+                        <Border Style="{StaticResource SetupCard}" CornerRadius="22" Padding="18">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="닉네임" Style="{StaticResource SetupDetail}" />
+                                <TextBox x:Name="NicknameInput" AutomationProperties.Name="닉네임" PlaceholderText="예: 민지"
+                                    FontSize="21" FontWeight="SemiBold" Height="52" CornerRadius="14" KeyDown="Input_KeyDown"
+                                    Text="{Binding Nickname, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                <Grid ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding NicknameHint}" Style="{StaticResource SetupDetail}" />
+                                    <TextBlock Grid.Column="1" Text="{Binding NicknameCount}" Style="{StaticResource SetupDetail}" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                    <StackPanel x:Name="ConnectionPage" Visibility="Collapsed" Spacing="18" Padding="0,14">
+                        <TextBlock Text="어떻게 시작할까요?" Style="{StaticResource SetupHeading}" />
+                        <TextBlock Text="룸을 만들거나 상대가 만든 룸에 참여할 수 있습니다." Style="{StaticResource SetupDetail}" />
+                        <Button x:Name="CreateChoiceButton" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="16" CornerRadius="16" Click="CreateChoice_Click">
+                            <StackPanel Spacing="5"><TextBlock Text="룸 생성하기" FontWeight="SemiBold" /><TextBlock Text="상대를 초대할 1:1 룸을 먼저 만듭니다." Style="{StaticResource SetupDetail}" /></StackPanel>
+                        </Button>
+                        <Button x:Name="JoinChoiceButton" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="16" CornerRadius="16" Click="JoinChoice_Click">
+                            <StackPanel Spacing="5"><TextBlock Text="룸 참여하기" FontWeight="SemiBold" /><TextBlock Text="상대가 만든 열린 룸을 검색해서 들어갑니다." Style="{StaticResource SetupDetail}" /></StackPanel>
+                        </Button>
+                        <HyperlinkButton x:Name="LaterButton" Content="나중에 연결할게요" Click="Later_Click" HorizontalAlignment="Center" />
+                    </StackPanel>
+                    <StackPanel x:Name="CreatePage" Visibility="Collapsed" Spacing="20" Padding="0,14">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="룸 생성하기" Style="{StaticResource SetupHeading}" TextAlignment="Center" />
+                            <TextBlock Text="상대가 들어올 1:1 룸 이름을 정하세요." Style="{StaticResource SetupDetail}" TextAlignment="Center" />
+                        </StackPanel>
+                        <Border Style="{StaticResource SetupCard}" CornerRadius="22" Padding="18">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="룸 이름 · 필수" Style="{StaticResource SetupDetail}" />
+                                <TextBox x:Name="RoomNameInput" AutomationProperties.Name="룸 이름" FontSize="21" FontWeight="SemiBold"
+                                    Height="52" CornerRadius="14" KeyDown="Input_KeyDown" Text="{Binding RoomName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <TextBlock Text="16자 이내로 입력하세요." Style="{StaticResource SetupDetail}" />
+                                    <TextBlock Grid.Column="1" Text="{Binding RoomNameCount}" Style="{StaticResource SetupDetail}" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                    <StackPanel x:Name="JoinPage" Visibility="Collapsed" Spacing="16" Padding="0,14">
+                        <TextBlock Text="룸 참여하기" Style="{StaticResource SetupHeading}" />
+                        <TextBlock Text="상대가 만든 열린 룸 이름을 검색하세요." Style="{StaticResource SetupDetail}" />
+                        <Grid ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                            <TextBox x:Name="RoomSearchInput" PlaceholderText="룸 이름" AutomationProperties.Name="룸 이름 검색" KeyDown="Search_KeyDown" Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            <Button x:Name="SearchRoomsButton" Grid.Column="1" Content="검색" Click="SearchRooms_Click" />
+                        </Grid>
+                        <ListView x:Name="JoinResults" ItemsSource="{Binding SearchResults}" SelectedItem="{Binding SelectedRoom, Mode=TwoWay}" MaxHeight="200">
+                            <ListView.ItemTemplate><DataTemplate><StackPanel Padding="4,8" Spacing="4"><TextBlock Text="{Binding Name}" /><TextBlock Text="{Binding OwnerNicknameLabel}" Style="{StaticResource SetupDetail}" /></StackPanel></DataTemplate></ListView.ItemTemplate>
+                        </ListView>
+                    </StackPanel>
+                    <StackPanel x:Name="DonePage" Visibility="Collapsed" Spacing="20" VerticalAlignment="Center" Padding="0,30">
+                        <Border Width="88" Height="88" CornerRadius="44" Background="{ThemeResource PingSurfaceBrush}"><SymbolIcon Symbol="Accept" Foreground="{ThemeResource PingAccentBrush}" /></Border>
+                        <TextBlock Text="설정 완료" Style="{StaticResource SetupHeading}" TextAlignment="Center" />
+                        <TextBlock Text="{Binding DoneSubtitle}" Style="{StaticResource SetupDetail}" TextAlignment="Center" />
+                    </StackPanel>
+                </Grid>
+            </ScrollViewer>
+            <StackPanel Grid.Row="2" Spacing="6">
+                <TextBlock x:Name="PermissionsHint" Visibility="Collapsed" Text="지금 허용하지 않아도 계속할 수 있어요. 영상은 카메라와 마이크가 준비된 뒤 보낼 수 있습니다." Style="{StaticResource SetupDetail}" />
+                <Grid x:Name="ErrorRow" ColumnSpacing="8" Visibility="Collapsed"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                    <ProgressRing Width="20" Height="20" IsActive="{Binding IsBusy}" /><TextBlock Grid.Column="1" Text="{Binding Error}" Style="{StaticResource SetupDetail}" />
+                </Grid>
+            </StackPanel>
+            <Grid Grid.Row="3"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                <Button x:Name="BackButton" Content="이전" Click="Back_Click" IsEnabled="{Binding CanGoBack}" CornerRadius="20" />
+                <Button x:Name="NextButton" Grid.Column="2" Content="{Binding ContinueLabel}" Click="Next_Click" IsEnabled="{Binding CanContinue}"
+                    Padding="20,10" CornerRadius="20" Background="{ThemeResource PingSentBubbleBrush}" Foreground="{ThemeResource PingSentTextBrush}" />
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>

@@ -33,7 +33,7 @@ public sealed class OnboardingStateTests
         var model = new OnboardingViewModel(state);
 
         Assert.True(model.IsScreenFaceQuickSendEnabled);
-        Assert.Equal("Ping is ready for Alt+Shift+L and incoming notifications.", model.ScreenFaceQuickSendStatusText);
+        Assert.Equal("화면+얼굴 빠른 전송과 수신 알림을 사용할 수 있어요.", model.ScreenFaceQuickSendStatusText);
         Assert.All(model.Rows, row => Assert.Equal(OnboardingRowStatus.Ready, row.Status));
     }
 
@@ -77,11 +77,11 @@ public sealed class OnboardingStateTests
 
         Assert.False(elevated.IsScreenFaceQuickSendEnabled);
         Assert.Equal(
-            "Ping is disabled until normal user mode is ready.",
+            "화면+얼굴 빠른 전송을 사용하려면 일반 사용자 실행을 확인해 주세요.",
             elevated.ScreenFaceQuickSendStatusText);
         Assert.False(notificationsBlocked.IsScreenFaceQuickSendEnabled);
         Assert.Equal(
-            "Ping is disabled until notification access is ready.",
+            "화면+얼굴 빠른 전송을 사용하려면 알림 권한을 확인해 주세요.",
             notificationsBlocked.ScreenFaceQuickSendStatusText);
     }
 
@@ -102,7 +102,7 @@ public sealed class OnboardingStateTests
         Assert.Equal(expectedMessage, row.Message);
         Assert.Null(row.PrimaryAction);
         Assert.False(model.IsScreenFaceQuickSendEnabled);
-        Assert.Equal("Ping is disabled until Windows 11 24H2+ is ready.", model.ScreenFaceQuickSendStatusText);
+        Assert.Equal("화면+얼굴 빠른 전송을 사용하려면 Windows 11 24H2+를 확인해 주세요.", model.ScreenFaceQuickSendStatusText);
     }
 
     [Fact]
@@ -119,8 +119,8 @@ public sealed class OnboardingStateTests
 
         Assert.False(cameraBlocked.IsScreenFaceQuickSendEnabled);
         Assert.False(microphoneBlocked.IsScreenFaceQuickSendEnabled);
-        Assert.Equal("Ping is disabled until camera access is ready.", cameraBlocked.ScreenFaceQuickSendStatusText);
-        Assert.Equal("Ping is disabled until microphone access is ready.", microphoneBlocked.ScreenFaceQuickSendStatusText);
+        Assert.Equal("화면+얼굴 빠른 전송을 사용하려면 카메라를 확인해 주세요.", cameraBlocked.ScreenFaceQuickSendStatusText);
+        Assert.Equal("화면+얼굴 빠른 전송을 사용하려면 마이크를 확인해 주세요.", microphoneBlocked.ScreenFaceQuickSendStatusText);
     }
 
     [Fact]
@@ -183,7 +183,7 @@ public sealed class OnboardingStateTests
         Assert.Equal("Open config folder", row.PrimaryAction?.Label);
         Assert.True(row.CanRetry);
         Assert.False(model.IsScreenFaceQuickSendEnabled);
-        Assert.Equal("Ping is disabled until Supabase config is ready.", model.ScreenFaceQuickSendStatusText);
+        Assert.Equal("화면+얼굴 빠른 전송을 사용하려면 연결 설정을 확인해 주세요.", model.ScreenFaceQuickSendStatusText);
     }
 
     [Fact]
