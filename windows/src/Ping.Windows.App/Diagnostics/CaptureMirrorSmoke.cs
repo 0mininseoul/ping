@@ -53,7 +53,7 @@ internal static class CaptureMirrorSmoke
         var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
         try
         {
-            window.AppWindow.Move(new(area.X - 12000, area.Y - 12000));
+            window.AppWindow.Move(new(area.X + area.Width - 1, area.Y + area.Height - 1));
             SendMessage(hwnd, 0x001a, IntPtr.Zero, IntPtr.Zero);
             await Task.Delay(100);
             area = DisplayArea.GetFromWindowId(window.AppWindow.Id, DisplayAreaFallback.Primary).WorkArea;

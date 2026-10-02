@@ -59,6 +59,9 @@ public sealed partial class MainWindow : Window
             presenter.PreferredMinimumHeight = (int)(540 * scale);
         }
         appWindow.Resize(new((int)(1060 * scale), (int)(720 * scale)));
+#if PING_UI_SMOKE
+        Diagnostics.TestDisplayPlacement.Apply(this);
+#endif
         appWindow.Closing += HandleAppWindowClosing;
     }
 

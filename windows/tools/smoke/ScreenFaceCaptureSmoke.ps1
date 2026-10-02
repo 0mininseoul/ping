@@ -56,6 +56,9 @@ using System.Runtime.InteropServices;
 
 public static class PingCaptureSmokeNative
 {
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern IntPtr SetThreadDpiAwarenessContext(IntPtr context);
+
     [UnmanagedFunctionPointer(CallingConvention.Winapi)]
     private delegate int SelfTestDelegate();
 
@@ -85,8 +88,11 @@ public static class PingCaptureSmokeNative
 
 Add-Type -TypeDefinition $source
 
-$library = [System.Runtime.InteropServices.NativeLibrary]::Load($NativeDllPath)
+$previousDpi = [PingCaptureSmokeNative]::SetThreadDpiAwarenessContext([IntPtr]::new(-4))
+if ($previousDpi -eq [IntPtr]::Zero) { throw 'Could not match the Ping app PerMonitorV2 DPI context.' }
+$library = [IntPtr]::Zero
 try {
+    $library = [System.Runtime.InteropServices.NativeLibrary]::Load($NativeDllPath)
     Write-Host "Native DLL: $NativeDllPath"
 
     $selfTestCode = [PingCaptureSmokeNative]::SelfTest($library)
@@ -159,5 +165,6 @@ try {
     Write-Warning "Manual check still required: bottom-right face PIP visibility, Windows Media Player playback, and macOS QuickTime playback."
 }
 finally {
-    [System.Runtime.InteropServices.NativeLibrary]::Free($library)
+    if ($library -ne [IntPtr]::Zero) { [System.Runtime.InteropServices.NativeLibrary]::Free($library) }
+    $null = [PingCaptureSmokeNative]::SetThreadDpiAwarenessContext($previousDpi)
 }

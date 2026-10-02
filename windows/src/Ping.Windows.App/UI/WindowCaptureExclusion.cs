@@ -9,6 +9,9 @@ internal static class WindowCaptureExclusion
 {
     internal static void Apply(Window window)
     {
+#if PING_UI_SMOKE
+        Diagnostics.TestDisplayPlacement.Apply(window);
+#endif
         var handle = WinRT.Interop.WindowNative.GetWindowHandle(window);
         if (!SetWindowDisplayAffinity(handle, 0x11))
             throw new Win32Exception(Marshal.GetLastWin32Error(), "Ping 창을 화면 녹화에서 제외할 수 없습니다.");

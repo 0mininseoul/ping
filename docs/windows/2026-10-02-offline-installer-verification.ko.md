@@ -53,3 +53,9 @@ EXE 컴파일은 확인했다. UAC 승인/취소, 비관리자 실제 설치·�
 - 실제 EXE 첫 설치 exit3: ssInstall 등록 실패에서 올바르게 중단. 직접 동일 서명 MSIX 등록은 성공(0.4.0.0, Status Ok). EXE 전용 원인 아직 미확정. 이후 사용자 Esc로 화면 제어 중단; 실기 영상/재설치 미검증.
 - PS5.1 기본 인자의 PSScriptRoot가 비어 Join-Path가 param binding 단계에서 실패함을 설치 ValidateOnly와 제거 스크립트에서 재현. 경로 기본값을 본문으로 옮기고 제거의 미사용 인증서 기본식 제거. owned signed fixture 기본 경로 검사 RED→GREEN, payload 검사 4개 통과.
 - EXE 등록/제거에 ExecAndLogOutput와 종료 코드 기록 추가: 스크립트는 토큰/프로필 내용을 출력하지 않는다. 원인 없이 설치 검증을 완성으로 표시하지 않는다.
+
+## 2026-10-03 지정 모니터 및 실제 캡처 사전 확인
+- 사용자 요청 DISPLAY3(세로형) 시험 위치 지원. `windows/scripts/test-ui-smoke.ps1 -MonitorDeviceName '\\.\DISPLAY3'`로 지정. 별도 진단 빌드에서만 모든 초기 창의 표시 영역을 선택하며 배포 앱에는 이 override를 포함하지 않는다. 없는 장치를 지정하면 주 모니터로 조용히 대체하지 않고 실패한다.
+- 실제 메신저·설정 창의 디스플레이 식별 검사를 먼저 추가해 RED(주 모니터) 확인 후 지정 위치 구현. WinUI 167개 GREEN, 아티팩트 `windows/artifacts/ui-shell-5eb57bf6978a436692a284f7d5875208`. 얼굴/화면 거울·재생·자동 회신 UI 합성 검사를 같은 세로 모니터에서 통과. 합성 UI 영상은 실기 카메라 녹화 증거가 아니다.
+- 실제 서명된 0.4.0 DLL을 읽어 네이티브 화면 사전 확인 수행. PowerShell의 DPI-unaware 호스트는 주 모니터의 가상/물리 크기가 달라 code6 실패. 앱 manifest와 같은 PerMonitorV2 스레드에서 재현 시 화면 SelfTest code0. smoke 도구도 같은 스레드 DPI를 사용하고 종료 시 이전 컨텍스트를 복구하도록 수정.
+- DISPLAY3의 native index를 EnumDisplayMonitors/GetMonitorInfo로 찾은 뒤 3초 로컬 화면+얼굴 녹화 호출: code4(PingCaptureNoCamera), 실제 MP4 미생성. Windows Camera/Image present 장치도 없음. 웹캠 연결 여부를 사용자에게 질문했으며 소프트웨어 통과로 대체하지 않는다. 운영 룸/다른 사람에게 테스트 영상을 보내지 않았다.

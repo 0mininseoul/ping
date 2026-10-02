@@ -50,6 +50,7 @@ internal static class UiSmokeRunner
                 new ReactionService(rpc), storage, () => "me", new FixtureLinks(), _ => rpc.AllowRead);
             window = new MainWindow();
             window.InitializeTrayWindowBehavior();
+            TestDisplayPlacement.Verify(window, Check);
             var shell = new HistoryWindow(window, vm, (_, _) => throw new NotSupportedException("No camera/video fixture"),
                 (_, _) => Task.CompletedTask, new MessageService(rpc, storage), loadOnStart: false, refreshInterval: TimeSpan.FromSeconds(5));
             window.AttachMessenger(shell);
@@ -155,6 +156,7 @@ internal static class UiSmokeRunner
                     return Task.CompletedTask;
                 }, updates: fixtureUpdates);
             var settings = new SettingsWindow(settingsVm);
+            TestDisplayPlacement.Verify(settings, Check);
             settings.Activate();
             Check(UI.WindowCaptureExclusion.IsApplied(settings), "settings declares exclusion from OS screen capture");
             await Task.Delay(250);
