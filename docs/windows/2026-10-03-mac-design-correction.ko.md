@@ -20,4 +20,4 @@ App 309개 통과, 정상 x64 Release 빌드 경고/오류0. DISPLAY3의 실제 
 
 현재 Mac 실행 화면을 이 PC에서 캡처하지 못했으므로 **현재 Mac 소스 기반 교정**으로 기록한다. 실제 Mac과 Windows의 같은 상태 스크린샷 비교와 전체 설정/온보딩/거울/리뷰 디자인 확인은 남아 있다. 오래된 검사 이미지를 현재 실행 앱의 감사 증거라고 주장하지 않는다.
 
-Windows package version은 0.4.2.0으로 구분한다. 이전 0.4.1 EXE에는 이 디자인 수정이 없다. 새 후보 생성 뒤 실제 경로와 CI 결과를 별도로 기록한다. 현재 실행 중인 0.4.0 앱을 강제 종료/재설치하지 않는다.
+Windows package version은 0.4.2.0으로 구분한다. 이전 0.4.1 EXE에는 이 디자인 수정이 없다. [CI 37032773315](https://github.com/0mininseoul/ping/actions/runs/37032773315)는 소스 `e09d7af`에서 성공했고 원래 인증서로 서명한 x64·ARM64 패키지와 EXE를 생성했다. 현재 파일은 `windows/dist/PingSetup-v0.4.2.exe`이다. SHA-256은 `E6310761307165CDF647714FE2319B36B7F74A388DAC85ABF0CCFC373253EFE4`, 213875782 bytes. 외부 EXE는 NotSigned, 내부 MSIX는 Valid다. 두 실제 관리 DLL에서 새 MessageBubble 타입을 확인했고 진단 타입/개인 데이터는 없다. 현재 실행 중인 0.4.0 앱을 강제 종료/재설치하지 않았으며 설치 성공/보존 실기 검증은 남아 있다. 공개 릴리즈·웹 다운로드는 교체하지 않았다.

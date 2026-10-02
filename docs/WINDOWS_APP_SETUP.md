@@ -92,26 +92,26 @@ Release packages:
 Outputs:
 
 ```text
-windows\dist\Ping-Windows-v0.4.1-x64.msix
-windows\dist\Ping-Windows-v0.4.1-arm64.msix
+windows\dist\Ping-Windows-v0.4.2-x64.msix
+windows\dist\Ping-Windows-v0.4.2-arm64.msix
 ```
 
 Signed packages are required for external distribution. If signing is not configured, `build-release.ps1` produces unsigned packages for build validation only; users will see install/signing friction and SmartScreen may warn.
 
 ### Zero-Cost EXE Sideload Distribution
 
-The v0.4.1 release candidate targets a single offline `PingSetup-v0.4.1.exe` installer. The EXE bundles the signed x64 and ARM64 MSIX packages, public backend configuration, Windows App Runtime dependencies, certificate and installer scripts. Only the OS architecture payload is extracted. CI run 37026929000 produced the signed x64/ARM64 packages and compiled EXE; actual installation/hardware QA remains pending. The public channel still serves v0.3.46. It avoids paid public code-signing, but Windows SmartScreen can still warn because the outer EXE is not publicly trusted.
+The v0.4.2 release candidate targets a single offline `PingSetup-v0.4.2.exe` installer. The EXE bundles the signed x64 and ARM64 MSIX packages, public backend configuration, Windows App Runtime dependencies, certificate and installer scripts. Only the OS architecture payload is extracted. CI run 37032773315 produced the signed x64/ARM64 packages and compiled EXE; actual installation/hardware QA remains pending. The public channel still serves v0.3.46. It avoids paid public code-signing, but Windows SmartScreen can still warn because the outer EXE is not publicly trusted.
 
 The existing `PING_WINDOWS_CERT_BASE64` and `PING_WINDOWS_CERT_PASSWORD` GitHub Secrets were reused successfully for this candidate. Local signing requires the private key matching the committed public certificate. Do not generate a replacement certificate or overwrite existing Secrets to rebuild this release.
 
 Only commit `windows\certs\Ping-Windows-Sideload.cer`. Do not commit `.pfx`, `.p12`, base64 payloads, or passwords.
 
-The GitHub Actions workflow imports the PFX secret into `Cert:\CurrentUser\My`, signs both MSIX packages by certificate thumbprint, builds `windows\dist\Ping-Windows-v0.4.1-sideload.zip`, and builds the offline installer `windows\dist\PingSetup-v0.4.1.exe` with Inno Setup. The workflow uploads a `ping-windows-web-downloads` artifact containing the setup EXE, both MSIX payloads, dependency manifests/packages, and the public certificate so those files can be published under `web/public/downloads/windows/`.
+The GitHub Actions workflow imports the PFX secret into `Cert:\CurrentUser\My`, signs both MSIX packages by certificate thumbprint, builds `windows\dist\Ping-Windows-v0.4.2-sideload.zip`, and builds the offline installer `windows\dist\PingSetup-v0.4.2.exe` with Inno Setup. The workflow uploads a `ping-windows-web-downloads` artifact containing the setup EXE, both MSIX payloads, dependency manifests/packages, and the public certificate so those files can be published under `web/public/downloads/windows/`.
 
 End-user install:
 
 ```text
-Run the delivered candidate PingSetup-v0.4.1.exe normally (not as administrator). Only certificate trust requests UAC elevation. SmartScreen may warn because the outer EXE is not publicly code-signed.
+Run the delivered candidate PingSetup-v0.4.2.exe normally (not as administrator). Only certificate trust requests UAC elevation. SmartScreen may warn because the outer EXE is not publicly code-signed.
 ```
 
 Fallback/debug install from the unzipped release folder:
