@@ -47,3 +47,9 @@ GitHub에 기존 서명/공개 구성 Secrets 이름이 존재함을 읽기 전�
 EXE 컴파일은 확인했다. UAC 승인/취소, 비관리자 실제 설치·제거·재설치·업데이트, Mac↔Windows 송수신, 카메라·마이크·화면 캡처, ARM64 실기 QA는 아직 수행하지 않았다. 공개 서버는 여전히 `0.3.46`을 제공한다. 새 후보의 공개 릴리즈·웹 다운로드 교체는 별도 단계다.
 
 기준: [Inno lowest privileges](https://jrsoftware.org/ishelp/topic_setup_privilegesrequired.htm), [marquee Animate](https://jrsoftware.org/ishelp/topic_isxfunc_createoutputmarqueeprogresspage.htm), [uninstall Abort](https://jrsoftware.org/ishelp/topic_isxfunc_abort.htm), [MSIX AppData 가상화](https://learn.microsoft.com/en-us/windows/msix/desktop/desktop-to-uwp-behind-the-scenes), [.NET SDK와 MSBuild 버전](https://learn.microsoft.com/en-us/dotnet/core/porting/versioning-sdk-msbuild-vs).
+
+## 2026-10-02 실제 PC 설치 검증 착수
+- 사용자 설치·제거·재설치 및 3초 로컬 녹화 허용. 기존 등록된 Ping/실행 프로세스/물리 데이터 없음, Windows 26200 x64 일반 권한, 기존 인증서 신뢰 있음.
+- 실제 EXE 첫 설치 exit3: ssInstall 등록 실패에서 올바르게 중단. 직접 동일 서명 MSIX 등록은 성공(0.4.0.0, Status Ok). EXE 전용 원인 아직 미확정. 이후 사용자 Esc로 화면 제어 중단; 실기 영상/재설치 미검증.
+- PS5.1 기본 인자의 PSScriptRoot가 비어 Join-Path가 param binding 단계에서 실패함을 설치 ValidateOnly와 제거 스크립트에서 재현. 경로 기본값을 본문으로 옮기고 제거의 미사용 인증서 기본식 제거. owned signed fixture 기본 경로 검사 RED→GREEN, payload 검사 4개 통과.
+- EXE 등록/제거에 ExecAndLogOutput와 종료 코드 기록 추가: 스크립트는 토큰/프로필 내용을 출력하지 않는다. 원인 없이 설치 검증을 완성으로 표시하지 않는다.

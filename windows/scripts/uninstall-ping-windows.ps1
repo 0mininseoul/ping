@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$CertificatePath = (Join-Path $PSScriptRoot "Ping-Windows-Sideload.cer"),
+    [string]$CertificatePath,
     [switch]$NoDialogs
 )
 

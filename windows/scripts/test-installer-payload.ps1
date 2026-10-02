@@ -28,6 +28,14 @@ function Invoke-Validation([string]$Version, [bool]$ExpectedSuccess, [string]$La
     Write-Output "PASS $Label"
 }
 Invoke-Validation '0.3.46' $true 'signed-offline-payload'
+Copy-Item -LiteralPath $installer -Destination (Join-Path $fixtureRoot 'install-ping-windows.ps1')
+$defaultsLog = Join-Path $fixtureRoot 'default-payload-paths.log'
+& powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $fixtureRoot 'install-ping-windows.ps1') -Architecture x64 -ValidateOnly *> $defaultsLog
+if ($LASTEXITCODE -ne 0) {
+    Get-Content -LiteralPath $defaultsLog -Tail 12 | Write-Output
+    throw 'Installer defaults must resolve relative to the script in Windows PowerShell5.1.'
+}
+Write-Output 'PASS default-payload-paths'
 Copy-Item -LiteralPath (Join-Path $fixtureRoot 'Ping-Windows-v0.3.46-x64.msix') -Destination (Join-Path $fixtureRoot 'Ping-Windows-v0.3.80-x64.msix')
 Invoke-Validation '0.3.80' $false 'mismatched-package-version'
 Set-Content -LiteralPath (Join-Path $fixtureRoot 'dependencies-x64.txt') -Encoding ascii -Value '../outside.msix'

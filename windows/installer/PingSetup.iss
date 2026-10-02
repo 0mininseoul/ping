@@ -124,9 +124,10 @@ begin
     RegistrationProgress.Animate;
     try
       repeat
-        if not Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
-          CommandLine, '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
-          ResultCode := -1;
+        if not ExecAndLogOutput(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
+          CommandLine, '', SW_HIDE, ewWaitUntilTerminated, ResultCode, nil) then
+          Log('Ping registration process could not start: ' + SysErrorMessage(ResultCode));
+        Log('Ping registration exit code: ' + IntToStr(ResultCode));
         if ResultCode = 0 then Break;
         if SuppressibleMsgBox('Ping을 설치하지 못했습니다. 트레이에서 Ping을 종료하고 인증서 승인과 Windows 버전을 확인해 주세요.' + #13#10 +
           '기존 계정과 설정은 유지됩니다. 다시 시도할까요?', mbError, MB_RETRYCANCEL, IDCANCEL) = IDCANCEL then Abort;
@@ -155,8 +156,10 @@ var
 begin
   if CurUninstallStep <> usUninstall then Exit;
   CommandLine := '-NoProfile -ExecutionPolicy Bypass -File "' + ExpandConstant('{app}\uninstall-ping-windows.ps1') + '" -NoDialogs';
-  if not Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
-    CommandLine, '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then ResultCode := -1;
+  if not ExecAndLogOutput(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
+    CommandLine, '', SW_HIDE, ewWaitUntilTerminated, ResultCode, nil) then
+    Log('Ping removal process could not start: ' + SysErrorMessage(ResultCode));
+  Log('Ping removal exit code: ' + IntToStr(ResultCode));
   if ResultCode <> 0 then
   begin
     SuppressibleMsgBox('Ping을 제거하지 못했습니다. 트레이에서 Ping을 종료한 뒤 다시 시도해 주세요. 계정 보존 파일과 설치 관리자는 유지됩니다.', mbError, MB_OK, IDOK);

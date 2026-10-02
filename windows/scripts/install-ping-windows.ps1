@@ -3,9 +3,9 @@ param(
     [string]$Version,
     [ValidateSet("x64", "arm64")]
     [string]$Architecture,
-    [string]$PackageDirectory = $PSScriptRoot,
+    [string]$PackageDirectory,
     [string]$PackageBaseUrl,
-    [string]$CertificatePath = (Join-Path $PSScriptRoot "Ping-Windows-Sideload.cer"),
+    [string]$CertificatePath,
     [switch]$NoLaunch,
     [switch]$CreateDesktopShortcut,
     [switch]$CreateStartMenuShortcut,
@@ -17,6 +17,8 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+if ([string]::IsNullOrWhiteSpace($PackageDirectory)) { $PackageDirectory = $PSScriptRoot }
+if ([string]::IsNullOrWhiteSpace($CertificatePath)) { $CertificatePath = Join-Path $PSScriptRoot 'Ping-Windows-Sideload.cer' }
 
 $packageName = "YoungminPark.PingWindows"
 
