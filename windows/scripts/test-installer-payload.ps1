@@ -21,7 +21,10 @@ function Invoke-Validation([string]$Version, [bool]$ExpectedSuccess, [string]$La
         $validationExitCode = $LASTEXITCODE
     } finally { $ErrorActionPreference = $previousErrorAction }
     $succeeded = $validationExitCode -eq 0
-    if ($succeeded -ne $ExpectedSuccess) { throw "$Label returned unexpected exit code $validationExitCode. See $log" }
+    if ($succeeded -ne $ExpectedSuccess) {
+        Get-Content -LiteralPath $log -Tail 12 | Write-Output
+        throw "$Label returned unexpected exit code $validationExitCode. See $log"
+    }
     Write-Output "PASS $Label"
 }
 Invoke-Validation '0.3.46' $true 'signed-offline-payload'

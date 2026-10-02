@@ -110,6 +110,8 @@ jobs:
             throw "Signing secret does not match the committed Ping certificate."
           }
           Import-Certificate -FilePath ".\windows\certs\Ping-Windows-Sideload.cer" -CertStoreLocation "Cert:\CurrentUser\TrustedPeople" | Out-Null
+          # MSIX verification uses machine trust. This changes only the ephemeral CI runner.
+          Import-Certificate -FilePath ".\windows\certs\Ping-Windows-Sideload.cer" -CertStoreLocation "Cert:\LocalMachine\TrustedPeople" | Out-Null
           "PING_WINDOWS_CERT_PATH=$pfxPath" >> $env:GITHUB_ENV
           "PING_WINDOWS_CERT_PASSWORD=$env:PING_WINDOWS_CERT_PASSWORD" >> $env:GITHUB_ENV
           "PING_WINDOWS_CERT_THUMBPRINT=$($importedCertificate.Thumbprint)" >> $env:GITHUB_ENV
