@@ -27,7 +27,7 @@ public sealed class RoomManagerViewModelTests
 
         Assert.Equal("https://0minping.vercel.app/invite/invite-token", token);
         Assert.Equal("https://0minping.vercel.app/invite/invite-token", clipboard.Text);
-        Assert.Equal("Invite link copied to clipboard.", viewModel.StatusMessage);
+        Assert.Equal("초대 링크를 복사했어요.", viewModel.StatusMessage);
     }
 
     [Fact]
@@ -48,12 +48,12 @@ public sealed class RoomManagerViewModelTests
 
         var user = Assert.Single(viewModel.UserSearchResults);
         Assert.Equal("Receiver", user.Nickname);
-        Assert.Equal("Select a user to invite.", viewModel.StatusMessage);
+        Assert.Equal("초대할 사람을 선택하세요.", viewModel.StatusMessage);
 
         viewModel.SelectedUserSearchResult = user;
         await viewModel.InviteSelectedUserAsync("Fallback");
 
-        Assert.Equal("Invitation sent.", viewModel.StatusMessage);
+        Assert.Equal("초대를 보냈어요.", viewModel.StatusMessage);
         Assert.Contains(rpc.Calls, call =>
             call.Function == "ping_search_profiles"
             && JsonSerializer.Serialize(call.Body, JsonOptions.Supabase) == """{"search_prefix":"rec"}""");

@@ -20,7 +20,7 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
     private readonly Func<string, string> inviteLinkFormatter;
     private readonly Func<string?> currentUidProvider;
     private string nickname;
-    private string statusMessage = "Rooms";
+    private string statusMessage = "내 룸";
     private Room? selectedRoom;
     private Room? selectedSearchResult;
     private PingUser? selectedUserSearchResult;
@@ -120,11 +120,11 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
         }
     }
 
-    public string SelectedRoomName => SelectedRoom?.Name ?? "No room selected";
+    public string SelectedRoomName => SelectedRoom?.Name ?? "룸을 선택하세요";
 
     public string SelectedRoomMembers =>
         SelectedRoom is null
-            ? "Create, join, or select a room."
+            ? "새 룸을 만들거나 열린 룸에 참여하세요."
             : string.Join(", ", SelectedRoom.MemberNicknames.Values.OrderBy(value => value, StringComparer.OrdinalIgnoreCase));
 
     public bool CanMoveSelectedRoomUp =>
@@ -154,7 +154,7 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
         await ReloadRoomsAsync(cancellationToken);
         RoomsChanged?.Invoke(this, EventArgs.Empty);
         SelectedRoom = Rooms.FirstOrDefault(candidate => candidate.Id == room.Id) ?? room;
-        StatusMessage = $"Created {room.Name}.";
+        StatusMessage = $"{room.Name} 룸을 만들었어요.";
     }
 
     public async Task SearchRoomsAsync(string prefix, CancellationToken cancellationToken = default)
@@ -166,7 +166,7 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
             SearchResults.Add(room);
         }
 
-        StatusMessage = SearchResults.Count == 0 ? "No matching open rooms." : "Select a room to join.";
+        StatusMessage = SearchResults.Count == 0 ? "검색한 룸이 없어요." : "참여할 룸을 선택하세요.";
     }
 
     public async Task JoinSelectedSearchResultAsync(CancellationToken cancellationToken = default)
@@ -181,7 +181,7 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
         await ReloadRoomsAsync(cancellationToken);
         RoomsChanged?.Invoke(this, EventArgs.Empty);
         SelectedRoom = Rooms.FirstOrDefault(room => room.Id == roomId) ?? SelectedRoom;
-        StatusMessage = $"Joined {roomName}.";
+        StatusMessage = $"{roomName} 룸에 참여했어요.";
     }
 
     public async Task RenameSelectedRoomAsync(string newName, CancellationToken cancellationToken = default)
@@ -194,7 +194,7 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
         await roomService.RenameRoomAsync(roomId, newName, cancellationToken);
         await ReloadRoomsAsync(cancellationToken);
         RoomsChanged?.Invoke(this, EventArgs.Empty);
-        StatusMessage = "Room renamed.";
+        StatusMessage = "룸 이름을 변경했어요.";
     }
 
     public async Task LeaveSelectedRoomAsync(CancellationToken cancellationToken = default)
@@ -207,7 +207,7 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
         await roomService.LeaveRoomAsync(roomId, cancellationToken);
         await ReloadRoomsAsync(cancellationToken);
         RoomsChanged?.Invoke(this, EventArgs.Empty);
-        StatusMessage = "Left room.";
+        StatusMessage = "룸에서 나왔어요.";
     }
 
     public async Task MoveSelectedRoomAsync(int delta, CancellationToken cancellationToken = default)
@@ -234,7 +234,7 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
         await roomService.ReorderMyRoomsAsync(orderedRoomIds, cancellationToken).ConfigureAwait(false);
         SelectedRoom = room;
         RoomsChanged?.Invoke(this, EventArgs.Empty);
-        StatusMessage = "Room order updated.";
+        StatusMessage = "룸 순서를 변경했어요.";
     }
 
     public async Task InviteUserAsync(string userId, string fallbackRoomName, CancellationToken cancellationToken = default)
@@ -247,7 +247,7 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
         if (SelectedRoom?.Id is { } roomId)
         {
             await invitationService.SendAsync(userId.Trim(), roomId, nickname, SelectedRoom.Name, cancellationToken);
-            StatusMessage = "Invitation sent.";
+            StatusMessage = "초대를 보냈어요.";
             return;
         }
 
@@ -255,7 +255,7 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
         await ReloadRoomsAsync(cancellationToken);
         RoomsChanged?.Invoke(this, EventArgs.Empty);
         SelectedRoom = Rooms.FirstOrDefault(candidate => candidate.Id == room.Id) ?? room;
-        StatusMessage = "Invitation sent in a new room.";
+        StatusMessage = "새 룸에 초대했어요.";
     }
 
     public async Task SearchUsersAsync(string prefix, CancellationToken cancellationToken = default)
@@ -265,7 +265,7 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
 
         if (userService is null)
         {
-            StatusMessage = "User search is unavailable.";
+            StatusMessage = "지금은 사람을 검색할 수 없어요.";
             return;
         }
 
@@ -279,15 +279,15 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
         }
 
         StatusMessage = UserSearchResults.Count == 0
-            ? "No matching users."
-            : "Select a user to invite.";
+            ? "검색한 사람이 없어요."
+            : "초대할 사람을 선택하세요.";
     }
 
     public async Task InviteSelectedUserAsync(string fallbackRoomName, CancellationToken cancellationToken = default)
     {
         if (SelectedUserSearchResult?.Id is not { Length: > 0 } userId)
         {
-            StatusMessage = "Select a user to invite.";
+            StatusMessage = "초대할 사람을 선택하세요.";
             return;
         }
 
@@ -304,7 +304,7 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
         await invitationService.AcceptAsync(invitationId, nickname, cancellationToken);
         await LoadAsync(cancellationToken);
         RoomsChanged?.Invoke(this, EventArgs.Empty);
-        StatusMessage = "Invitation accepted.";
+        StatusMessage = "초대를 수락했어요.";
     }
 
     public async Task RejectSelectedInvitationAsync(CancellationToken cancellationToken = default)
@@ -316,7 +316,7 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
 
         await invitationService.RejectAsync(invitationId, cancellationToken);
         await ReloadInvitationsAsync(cancellationToken);
-        StatusMessage = "Invitation rejected.";
+        StatusMessage = "초대를 거절했어요.";
     }
 
     public async Task<string?> CreateInviteLinkAsync(CancellationToken cancellationToken = default)
@@ -330,8 +330,8 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
         var shareText = inviteLinkFormatter(link.Token);
         var didCopy = await clipboardWriter.TrySetTextAsync(shareText, cancellationToken);
         StatusMessage = didCopy
-            ? "Invite link copied to clipboard."
-            : "Invite link created in the field.";
+            ? "초대 링크를 복사했어요."
+            : "초대 링크를 만들었어요. 찾기 탭에서 확인하세요.";
         return shareText;
     }
 
@@ -340,7 +340,7 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
         var inviteToken = PingInviteLink.TokenFrom(token);
         if (inviteToken is null)
         {
-            StatusMessage = "Paste a valid invite link or token.";
+            StatusMessage = "올바른 초대 링크를 붙여넣으세요.";
             return;
         }
 
@@ -348,7 +348,7 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
         await ReloadRoomsAsync(cancellationToken);
         RoomsChanged?.Invoke(this, EventArgs.Empty);
         SelectedRoom = Rooms.FirstOrDefault(candidate => candidate.Id == room.Id) ?? room;
-        StatusMessage = $"Joined {room.Name}.";
+        StatusMessage = $"{room.Name} 룸에 참여했어요.";
     }
 
     public void ReportError(Exception exception)
@@ -402,6 +402,7 @@ public sealed partial class RoomManagerWindow : Window
         InitializeComponent();
         Ping.Windows.App.UI.PingAppearance.Register(this);
         Ping.Windows.App.UI.WindowCaptureExclusion.Apply(this);
+        Ping.Windows.App.UI.SettingsWindowGeometry.Fit(this);
         Root.DataContext = viewModel;
         Root.Loaded += HandleLoaded;
     }
@@ -456,9 +457,6 @@ public sealed partial class RoomManagerWindow : Window
 
     private async void JoinRoomButton_Click(object sender, RoutedEventArgs args) =>
         await RunAsync(() => viewModel.JoinSelectedSearchResultAsync());
-
-    private async void InviteUserButton_Click(object sender, RoutedEventArgs args) =>
-        await RunAsync(() => viewModel.InviteUserAsync(InviteUserIdBox.Text, NewRoomNameBox.Text));
 
     private async void SearchUsersButton_Click(object sender, RoutedEventArgs args) =>
         await RunAsync(() => viewModel.SearchUsersAsync(UserSearchBox.Text));

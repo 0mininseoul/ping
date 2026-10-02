@@ -127,7 +127,7 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
     }
 
     public string SelectedRoomName => SelectedRoom?.Name ?? "대화를 시작하세요";
-    public string SelectedRoomMembers => SelectedRoom is { } room ? $"{room.MemberUids.Count}명 · {string.Join(", ", room.MemberNicknames.Values)}" : "방을 만들거나 초대를 수락해 보세요";
+    public string SelectedRoomMembers => SelectedRoom is { } room ? $"{room.MemberUids.Count}명" : "룸을 만들거나 초대를 수락해 보세요";
     public bool CanCompose => SelectedRoom?.Id is not null && !string.IsNullOrWhiteSpace(currentUidProvider());
     public string DraftText { get => composer.Text; set => composer.Text = value; }
     public string? DraftImagePath { get => composer.ImagePath; set => composer.ImagePath = value; }

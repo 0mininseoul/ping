@@ -55,10 +55,10 @@ public sealed partial class MainWindow : Window
         var scale = GetDpiForWindow(hwnd) / 96.0;
         if (appWindow.Presenter is OverlappedPresenter presenter)
         {
-            presenter.PreferredMinimumWidth = (int)(760 * scale);
+            presenter.PreferredMinimumWidth = (int)(560 * scale);
             presenter.PreferredMinimumHeight = (int)(540 * scale);
         }
-        appWindow.Resize(new((int)(1060 * scale), (int)(720 * scale)));
+        appWindow.Resize(new((int)(640 * scale), (int)(620 * scale)));
 #if PING_UI_SMOKE
         Diagnostics.TestDisplayPlacement.Apply(this);
 #endif

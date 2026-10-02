@@ -480,7 +480,7 @@ public sealed partial class HistoryWindow : UserControl
     {
         if (sender is not FrameworkElement element || element.DataContext is not TimelineHistoryItem { Video: { } video }) return;
         RoundedCompositionClip.Apply(element, element.ActualWidth, element.ActualHeight,
-            video.CaptureMode == CaptureMode.FaceOnly ? element.ActualWidth / 2 : 16);
+            video.CaptureMode == CaptureMode.FaceOnly ? element.ActualWidth / 2 : 8);
     }
 
     private static VideoHistoryItem? VideoItem(object sender) =>

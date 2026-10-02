@@ -38,6 +38,7 @@ public sealed class TimelineHistoryItem
 
 #if WINDOWS
     public HorizontalAlignment BubbleAlignment => IsMine ? HorizontalAlignment.Right : HorizontalAlignment.Left;
+    public Visibility SenderVisibility => IsMine ? Visibility.Collapsed : Visibility.Visible;
     public Visibility DayHeadingVisibility => string.IsNullOrEmpty(DayHeading) ? Visibility.Collapsed : Visibility.Visible;
     public Visibility VideoVisibility => Video is null ? Visibility.Collapsed : Visibility.Visible;
 
@@ -89,8 +90,9 @@ public sealed class VideoHistoryItem : INotifyPropertyChanged
     public string VideoId => Message.VideoId;
 
     public CaptureMode CaptureMode => Message.CaptureMode;
-    public double ThumbnailWidth => CaptureMode == CaptureMode.FaceOnly ? 120 : 200;
-    public double ThumbnailHeight => CaptureMode == CaptureMode.FaceOnly ? 120 : 128;
+    public double ThumbnailWidth => CaptureMode == CaptureMode.FaceOnly ? 60 : 90;
+    public double ThumbnailHeight => CaptureMode == CaptureMode.FaceOnly ? 60 : 90 / Math.Clamp(
+        Message.AspectRatio is { } aspect && double.IsFinite(aspect) ? aspect : 1.78, 0.5, 3.0);
     public string ModeLabel => Message.CaptureMode == CaptureMode.ScreenFace ? "화면 + 얼굴" : "얼굴 핑";
     public string AutoReplyLabel => Message.IsAutoReply ? "자동 회신" : "";
 
@@ -231,6 +233,7 @@ public sealed class ChatHistoryItem : INotifyPropertyChanged
     }
 
 #if WINDOWS
+    public Visibility BodyVisibility => string.IsNullOrWhiteSpace(Body) ? Visibility.Collapsed : Visibility.Visible;
     public Visibility AttachmentVisibility => HasImageAttachment ? Visibility.Visible : Visibility.Collapsed;
 
     public Visibility DeleteVisibility => CanDelete ? Visibility.Visible : Visibility.Collapsed;

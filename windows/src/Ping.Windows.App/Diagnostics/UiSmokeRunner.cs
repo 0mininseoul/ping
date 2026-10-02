@@ -60,7 +60,7 @@ internal static class UiSmokeRunner
             await shell.ReloadRoomsAsync();
             await Task.Delay(350);
             var root = (FrameworkElement)window.Content;
-            Check(root.ActualWidth > 700 && root.ActualHeight > 500, "real main window has usable client area");
+            Check(root.ActualWidth > 600 && root.ActualHeight > 500, "real compact main window has usable client area");
             Check(UI.WindowCaptureExclusion.IsApplied(window), "messenger declares exclusion from OS screen capture");
             Check(vm.Rooms.Count == 2 && vm.Timeline.Count == 4, "fixture rooms and mixed timeline loaded");
             Check(window.Content is ContentControl { Content: HistoryWindow }, "single main window hosts messenger control");
@@ -71,9 +71,40 @@ internal static class UiSmokeRunner
             shell.RequestedTheme = ElementTheme.Light;
             await Task.Delay(180);
             await RenderAsync(root, "messenger-light.png");
+            var bubbles = Descendants(root).OfType<UI.MessageBubble>().ToArray();
+            Check(bubbles.Any(b => b.IsMine) && bubbles.Any(b => !b.IsMine)
+                && bubbles.All(b => b.Background == (b.IsMine ? b.SentFill : b.ReceivedFill)
+                    && b.Foreground == (b.IsMine ? b.SentText : b.ReceivedText)),
+                "actual sent and received message bubbles use distinct Mac-style fills and text");
             shell.RequestedTheme = ElementTheme.Dark;
             await Task.Delay(180);
             await RenderAsync(root, "messenger-dark.png");
+            var roomVm = new RoomManagerViewModel(new RoomService(rpc), new InvitationService(rpc), "민");
+            var manager = new RoomManagerWindow(roomVm);
+            try
+            {
+                manager.Activate();
+                TestDisplayPlacement.Verify(manager, Check);
+                await UntilAsync(() => roomVm.Rooms.Count == 2);
+                var managerRoot = (FrameworkElement)manager.Content;
+                managerRoot.RequestedTheme = ElementTheme.Light;
+                await Task.Delay(180);
+                var managementTabs = Descendants(managerRoot).OfType<Pivot>().Single();
+                Check(managementTabs.Items.Count == 3 && managementTabs.SelectedIndex == 0,
+                    "room management presents one task at a time instead of the legacy form wall");
+                await RenderAsync(managerRoot, "rooms-management.png");
+                managementTabs.SelectedIndex = 1;
+                await Task.Delay(800);
+                Check(Descendants(managerRoot).OfType<TextBox>().Any(t => t.Name == "SearchBox" && t.ActualWidth > 100),
+                    "room search tab exposes its actual bound search control");
+                await RenderAsync(managerRoot, "rooms-search.png");
+                managementTabs.SelectedIndex = 2;
+                await Task.Delay(800);
+                Check(Descendants(managerRoot).OfType<TextBox>().Any(t => t.Name == "UserSearchBox" && t.ActualWidth > 100),
+                    "invitation tab exposes nickname search without raw user identity entry");
+                await RenderAsync(managerRoot, "rooms-invitations.png");
+            }
+            finally { manager.Close(); window.ShowShell(); }
 
             var chatBox = (TextBox)shell.FindName("ChatBox");
             var roomsList = (ListView)shell.FindName("RoomsList");
@@ -319,9 +350,9 @@ internal static class UiSmokeRunner
             Check(true, "real refresh timer updates snapshots on UI thread");
             shell.RequestedTheme = ElementTheme.Light;
             var scale = shell.XamlRoot.RasterizationScale;
-            window.AppWindow.Resize(new((int)(760 * scale), (int)(540 * scale)));
+            window.AppWindow.Resize(new((int)(560 * scale), (int)(540 * scale)));
             await Task.Delay(180);
-            Check(chatBox.ActualWidth >= 180 && sendButton.ActualWidth > 20 && roomsList.ActualWidth >= 200,
+            Check(chatBox.ActualWidth >= 180 && sendButton.ActualWidth > 20 && roomsList.ActualWidth >= 150,
                 "minimum window size keeps room list and composer usable");
             await RenderAsync(root, "messenger-minimum.png");
             await shell.DetachAsync();
@@ -416,6 +447,7 @@ internal static class UiSmokeRunner
             object result = function switch
             {
                 "ping_my_rooms" => new[] { Room("a", "디자인 이야기", 3), Room("b", "오늘의 작은 순간", 0) },
+                "ping_incoming_invitations" => Array.Empty<Invitation>(),
                 "ping_room_messages" => room == "a" ? new[] { Video() } : Array.Empty<VideoMessage>(),
                 "ping_room_chat_messages" => room == "a" ? new[]
                 {
