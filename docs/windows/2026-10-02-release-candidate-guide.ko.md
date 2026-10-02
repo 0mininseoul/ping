@@ -1,11 +1,11 @@
-# Ping Windows 0.4.0 설치 후보
+# Ping Windows 0.4.1 설치 후보
 
-생성된 설치 파일: `windows/dist/PingSetup-v0.4.0.exe` (약 204 MiB).
+생성된 설치 파일: `windows/dist/PingSetup-v0.4.1.exe` (약 204 MiB).
 지원 환경은 Windows 11 24H2 이상(build 26100+), x64 또는 ARM64다.
 
-**실기 검증 진행 중:** 아래 원본 EXE는 이 PC의 첫 앱 등록에서 실패해 설치를 중단했다. 같은 서명 MSIX의 직접 등록은 성공했다. 기본 경로 오류 수정과 실제 오류 로그를 포함한 새 EXE가 [CI 37023426805](https://github.com/0mininseoul/ping/actions/runs/37023426805)에서 생성됐으며 `windows/artifacts/ci-37023426805/installer/PingSetup-v0.4.0.exe`에 있다. 실행 중인 Ping을 정상 종료한 뒤 새 EXE의 등록·제거·재설치를 확인할 예정이므로, 아직 설치 완료가 검증된 배포판으로 간주하지 않는다.
+**실기 검증 진행 중:** 초기 0.4.0 EXE에서 발견한 PowerShell 기본 경로와 모듈 상속 오류를 수정했다. 새 0.4.1 EXE는 이 PC에서 서명 검사와 패키지 등록 호출까지 통과했으며, 실행 중인 Ping 때문에 `0x80073D02`로 안전하게 중단했다. 기존 0.4.0 앱은 실행 상태와 등록을 유지했다. 트레이에서 정상 종료한 뒤 등록·제거·재설치를 확인해야 하므로 아직 설치 완료가 검증된 배포판으로 간주하지 않는다. 이전 0.4.0 EXE는 현재 후보로 사용하지 않는다.
 
-[GitHub CI 성공](https://github.com/0mininseoul/ping/actions/runs/37017447762), 소스 `d0d4cdf`. 원래 인증서로 서명한 x64/ARM64 앱과 Microsoft 런타임을 EXE에 포함한다. 인터넷 연결 없이 패키지를 설치할 수 있으며, 메시지 서비스에는 인터넷이 필요하다. 아직 공개 릴리즈/웹 다운로드를 교체하지 않았다.
+[GitHub CI 성공](https://github.com/0mininseoul/ping/actions/runs/37026929000), 소스 `c40bc05`. 원래 인증서로 서명한 x64/ARM64 앱과 Microsoft 런타임을 EXE에 포함한다. 인터넷 연결 없이 패키지를 설치할 수 있으며, 메시지 서비스에는 인터넷이 필요하다. 아직 공개 릴리즈/웹 다운로드를 교체하지 않았다.
 
 ## 설치
 
@@ -13,7 +13,7 @@
 2. EXE를 **일반 실행**한다. 전체 설치를 관리자 권한으로 실행하지 않는다.
 3. 최초 인증서 신뢰가 필요할 때만 UAC를 승인한다. 외부 EXE 자체는 공인 코드 서명이 없어 SmartScreen이 경고할 수 있다. 앱 MSIX의 서명과 기존 Ping 인증서 일치는 확인했다.
 4. 바로가기/설치 후 실행 여부를 선택한다. 시작 프로그램은 앱 설정에서 선택한다.
-5. 정보 탭에서 Windows 버전 `0.4.0.0`을 확인한다. 별도로 .NET을 설치하거나 Supabase 설정을 입력할 필요가 없다.
+5. 정보 탭에서 Windows 버전 `0.4.1.0`을 확인한다. 별도로 .NET을 설치하거나 Supabase 설정을 입력할 필요가 없다.
 
 계정과 설정은 유지한다. 설치 관리자를 통한 제거는 현재 사용자의 최신 계정·설정을 먼저 보존하고, 재설치는 기존 계정을 덮어쓰지 않는다. 익명 계정의 로컬 제거는 앱 설정에서 별도 확인한다. 직접 저장한 영상과 서버 계정/룸은 제거 프로그램이 삭제하지 않는다.
 
@@ -32,9 +32,9 @@
 
 ## 산출물 확인
 
-- EXE SHA-256: `61773bf420841065ca09ff1fa90bb5747ad9a1501a1ef50a9b75cf4d2b28b9d8`.
-- 두 MSIX: `0.4.0.0`, 원래 identity/Publisher, OS 서명 `Valid`, 인증서 `12D9D5539B1851EE1A0725CCFCB6A9CCD098DCDC`.
+- EXE: `213867750` bytes. SHA-256: `A20C7AE10DEEB98AEF71321FFCCF5E41CE8E5A0445DF5CF22478F52A259E4738`.
+- 두 MSIX: `0.4.1.0`, 원래 identity/Publisher, OS 서명 `Valid`, 인증서 `12D9D5539B1851EE1A0725CCFCB6A9CCD098DCDC`.
 - 네이티브 DLL CPU: x64 `0x8664`, ARM64 `0xaa64`. 자체 포함 .NET, 공개 pinned 프로젝트 구성, 업데이트 helper 포함. 개인키/사용자 세션/진단 코드용 의존성은 포함하지 않는다.
-- Core 271/App 308, WinUI 165 및 오프라인 payload/데이터 보존 검사 통과. 실제 EXE는 Inno compiler가 성공적으로 생성했다.
+- Core 271/App 309, WinUI 167 및 오프라인 payload 4개/데이터 보존 5개 검사 통과. 실제 EXE는 Inno compiler가 성공적으로 생성했다.
 
-검증용 unsigned ZIP 대신 서명된 앱 두 개와 Microsoft 런타임으로 fallback `windows/dist/Ping-Windows-v0.4.0-sideload.zip`도 다시 생성하고 두 아키텍처의 읽기 전용 설치 payload 검증을 통과했다.
+서명된 앱 두 개와 Microsoft 런타임으로 fallback `windows/dist/Ping-Windows-v0.4.1-sideload.zip`도 생성했다. 두 아키텍처의 OS PowerShell 5.1 읽기 전용 설치 payload 검증을 통과했다. SHA-256은 `D4D1B44EE18D4F03289AE63ACB948D7E984B240CDAFFE554AECD500C1EB1F16E`이다.

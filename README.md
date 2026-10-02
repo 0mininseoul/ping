@@ -73,7 +73,7 @@ Windows 앱은 `windows/` 아래 별도 네이티브 클라이언트다.
 
 자세한 Windows 빌드/설치/QA 절차는 `docs/WINDOWS_APP_SETUP.md`와 `windows/README.md`를 따른다.
 
-개발 중인 Windows `0.4.0` 후보는 앱·런타임을 포함한 오프라인 EXE로 전환한다. 패키지 등록과 실행은 현재 사용자 권한으로 수행하고 인증서 신뢰에만 UAC 승인을 요청한다. 새 EXE와 서명된 x64/ARM64 패키지는 생성됐으며 실제 설치·기기 QA가 남아 있다. 위 `0.3.46`은 현재 공개 배포 버전이다. 실행 안내는 `docs/windows/2026-10-02-release-candidate-guide.ko.md`를 따른다.
+개발 중인 Windows `0.4.1` 후보는 앱·런타임을 포함한 오프라인 EXE로 전환한다. 패키지 등록과 실행은 현재 사용자 권한으로 수행하고 인증서 신뢰에만 UAC 승인을 요청한다. 새 EXE와 서명된 x64/ARM64 패키지는 생성됐으며 실제 설치·기기 QA가 남아 있다. 위 `0.3.46`은 현재 공개 배포 버전이다. 실행 안내는 `docs/windows/2026-10-02-release-candidate-guide.ko.md`를 따른다.
 
 ## 기존 룸과 익명 계정 보존
 

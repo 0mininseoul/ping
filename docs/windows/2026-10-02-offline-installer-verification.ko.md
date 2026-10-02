@@ -60,6 +60,14 @@ EXE 컴파일은 확인했다. UAC 승인/취소, 비관리자 실제 설치·�
 - 실제 서명된 0.4.0 DLL을 읽어 네이티브 화면 사전 확인 수행. PowerShell의 DPI-unaware 호스트는 주 모니터의 가상/물리 크기가 달라 code6 실패. 앱 manifest와 같은 PerMonitorV2 스레드에서 재현 시 화면 SelfTest code0. smoke 도구도 같은 스레드 DPI를 사용하고 종료 시 이전 컨텍스트를 복구하도록 수정.
 - DISPLAY3의 native index를 EnumDisplayMonitors/GetMonitorInfo로 찾은 뒤 3초 로컬 화면+얼굴 녹화 호출: code4(PingCaptureNoCamera), 실제 MP4 미생성. Windows Camera/Image present 장치도 없음. 웹캠 연결 여부를 사용자에게 질문했으며 소프트웨어 통과로 대체하지 않는다. 운영 룸/다른 사람에게 테스트 영상을 보내지 않았다.
 
+## 2026-10-03 새 후보 산출물과 실행 중 앱 보호 확인
+
+[CI 37026929000](https://github.com/0mininseoul/ping/actions/runs/37026929000)는 `c40bc05`에서 성공했다. x64·ARM64 0.4.1.0 MSIX의 원래 서명/Publisher/identity와 실제 네이티브 CPU를 로컬에서 확인했다. 실제 관리 DLL에서 진단 타입은 0개였으며 개인키/사용자 세션 파일은 없다. 외부 EXE는 NotSigned이고 내부 MSIX는 Valid다. 공개 릴리즈와 웹 교체 입력은 false였다.
+
+현재 EXE는 `windows/dist/PingSetup-v0.4.1.exe`, 213867750 bytes, SHA-256 `A20C7AE10DEEB98AEF71321FFCCF5E41CE8E5A0445DF5CF22478F52A259E4738`이다. 실제 일반 권한 실행에서 서명 검사와 Add-AppxPackage 호출까지 도달했고, 실행 중인 기존 0.4.0 앱 때문에 `0x80073D02`로 중단했다. EXE exit3이며 false success/강제 종료 없이 기존 package Status Ok와 실행 프로세스를 유지했다. 증거는 owned QA 폴더의 `install-041-running-app.log`와 result JSON에 있다. 정상 종료 후 성공 설치·제거·재설치 및 계정 보존 확인은 여전히 남아 있다.
+
+서명된 0.4.1 앱 두 개와 기존 Microsoft 런타임으로 fallback ZIP을 생성하고 두 아키텍처의 OS PowerShell 5.1 ValidateOnly 검사에 통과했다. 카메라가 없다는 사용자 답변과 실제 마이크 endpoint 0개를 기록하며 실기 영상·음성 결과로 합성 검사를 대체하지 않는다.
+
 ## 2026-10-03 EXE 등록 오류 원인과 수정
 실제 EXE 오류 출력에서 Windows PowerShell5.1이 `Microsoft.PowerShell.Security`를 자동 로드하지 못했다. PowerShell7에서 시작한 중간 EXE는 PS7의 PSModulePath를 그대로 상속하지만, pwsh가 직접 시작한 powershell.exe에는 호환 경로를 제공하므로 직접 스크립트만 통과했던 것이다. [Microsoft PSModulePath 문서](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_psmodulepath?view=powershell-7.6)의 중간 프로세스 설명과 일치한다.
 
