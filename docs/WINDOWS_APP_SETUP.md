@@ -100,7 +100,7 @@ Signed packages are required for external distribution. If signing is not config
 
 ### Zero-Cost EXE Sideload Distribution
 
-The v0.4.0 release candidate targets a single offline `PingSetup-v0.4.0.exe` installer. The EXE bundles the signed x64 and ARM64 MSIX packages, public backend configuration, Windows App Runtime dependencies, certificate and installer scripts. Only the OS architecture payload is extracted. New CI artifact generation, installer compilation, and hardware QA are pending; the public channel still serves v0.3.46. It avoids paid public code-signing, but Windows SmartScreen can still warn because the outer EXE is not publicly trusted.
+The v0.4.0 release candidate targets a single offline `PingSetup-v0.4.0.exe` installer. The EXE bundles the signed x64 and ARM64 MSIX packages, public backend configuration, Windows App Runtime dependencies, certificate and installer scripts. Only the OS architecture payload is extracted. CI run 37017447762 produced the signed x64/ARM64 packages and compiled EXE; actual installation/hardware QA remains pending. The public channel still serves v0.3.46. It avoids paid public code-signing, but Windows SmartScreen can still warn because the outer EXE is not publicly trusted.
 
 Maintainer setup on Windows:
 
@@ -117,7 +117,7 @@ The GitHub Actions workflow imports the PFX secret into `Cert:\CurrentUser\My`, 
 End-user install:
 
 ```text
-After the candidate is built and delivered, run PingSetup-v0.4.0.exe normally (not as administrator). Only certificate trust requests UAC elevation. SmartScreen may warn because the outer EXE is not publicly code-signed.
+Run the delivered candidate PingSetup-v0.4.0.exe normally (not as administrator). Only certificate trust requests UAC elevation. SmartScreen may warn because the outer EXE is not publicly code-signed.
 ```
 
 Fallback/debug install from the unzipped release folder:

@@ -14,7 +14,7 @@
 
 ## 확인한 결과
 
-- x64 Release 및 unsigned MSIX 생성: 경고 0, 오류 0. `windows/dist/Ping-Windows-v0.4.0-x64.msix`는 **로컬 검증용이며 설치 가능한 배포물이 아니다**.
+- 첫 로컬 x64 Release 및 unsigned MSIX 생성: 경고 0, 오류 0. unsigned 검증본은 `windows/artifacts/local-x64-034d1d9011894dfd94a42bc84349bc79/`에 남아 있다. 최종 `windows/dist/` 파일은 아래 CI의 서명된 후보로 교체했다.
 - MSIX 내용: `0.4.0.0`/x64 identity, 네이티브 캡처 DLL, 공개 `Supabase.json`, 업데이트 helper, 자체 포함 .NET 런타임. UI 진단/ZXing/사용자 세션 파일 없음.
 - `smoke-release.ps1 -Platform x64 -AllowUnsigned`, `package-sideload-release.ps1 -Platform x64 -AllowUnsigned`: 성공. unsigned ZIP에는 검증용이라는 안내를 포함한다.
 - OS PowerShell 5.1의 `test-installer-payload.ps1`: 기존 공개 서명 MSIX로 정상 오프라인 검증, 버전 불일치 거부, 의존성 경로 탈출 거부 3개 통과. 임시 복사본만 사용하며 앱 등록·인증서 추가·실행은 하지 않았다.
@@ -30,12 +30,20 @@
 
 최종 재검사: Core **271**, App **308** 통과, x64 Release/MSIX 빌드 경고·오류 0. App 수는 312에서 구형 온라인/관리자 설치 및 특정 빌드 인자 철자를 강제하던 소스 문자열 검사 5개를 실제 PowerShell payload/보존 검사와 패키지 확인으로 대체하고, 계정 알림 회귀 검사 1개를 추가한 결과다. 웹 다운로드 검사는 개발 manifest 대신 실제 공개 `latest-version.txt`와 EXE 존재 여부를 사용한다. 공개 링크를 미배포 버전으로 바꾸지 않았다.
 
-## 실제 산출물·기기 확인은 아직 필요
+## 실제 EXE 산출물
 
-GitHub에 기존 서명/공개 구성 Secrets 이름이 존재함을 읽기 전용으로 확인했다. 값은 출력하거나 회수하지 않았다. 로컬 개인키와 ARM64 compiler는 없으므로 기존 CI에서 두 아키텍처를 빌드·서명하고 Inno compiler로 EXE를 생성해야 한다. Secrets 존재만으로 실제 서명 성공을 주장하지 않는다.
+[CI 37017447762](https://github.com/0mininseoul/ping/actions/runs/37017447762)는 `d0d4cdf`에서 성공했다. Core 271/App 308/보존 fixture/서명 payload 검증 후 x64·ARM64를 빌드하고 원래 인증서로 서명했다. Inno compile도 성공해 `PingSetup-v0.4.0.exe`를 생성했다. 로컬로 내려받은 두 MSIX의 OS 서명 `Valid`/원래 thumbprint, 버전/CPU/pinned 공개 설정/.NET/update helper를 다시 확인했다. EXE는 `213867430` bytes, SHA-256 `61773bf420841065ca09ff1fa90bb5747ad9a1501a1ef50a9b75cf4d2b28b9d8`이며 외부 EXE 자체는 `NotSigned`이다. 내부 앱의 서명과 외부 EXE 공인 서명을 혼동하지 않는다.
+
+첫 CI 37016762383은 기존 서명 payload fixture에서 실패했다. CI가 공개 인증서를 CurrentUser에만 신뢰 등록하고 있었고, 로컬은 LocalMachine에도 등록되어 있었다. MSIX의 machine trust 요구에 맞춰 ephemeral CI runner의 LocalMachine TrustedPeople에도 같은 공개 인증서를 등록하고 엄격한 검증 기준을 유지했다. 다음 CI는 해당 검사와 실제 앱 서명/EXE 생성까지 통과했다. 로컬 PC의 신뢰 저장소나 기존 Secrets는 변경하지 않았다.
+
+아티팩트 업로드만 수행했으며 공개 릴리즈/웹 교체 입력은 false였다. 원래 인증서의 개인키를 로컬로 회수하거나 새 인증서로 교체하지 않았다. [설치 후보 안내](2026-10-02-release-candidate-guide.ko.md)에 실행 파일과 남은 실제 QA를 기록했다.
+
+## 실제 기기 확인은 아직 필요
+
+GitHub에 기존 서명/공개 구성 Secrets 이름이 존재함을 읽기 전용으로 확인했고, 이어서 실제 CI 서명이 성공했다. 값은 출력하거나 회수하지 않았다. 로컬 개인키와 ARM64 compiler는 없으며 실제 ARM64 PC 실행은 아직 필요하다.
 
 자동 승인 검토는 로컬 Inno 설치와 제거 스크립트 전체 교체 명령을 각각 “정책에 의해 차단”했다. 상세 사유는 제공되지 않았다. 같은 명령을 재시도하지 않았고, CI compiler 활용 및 기존 제거 코드의 현재 사용자/데이터 보존 수정으로 진행했다.
 
-새 EXE의 컴파일, UAC 승인/취소, 비관리자 실제 설치·제거·재설치·업데이트, Mac↔Windows 송수신, 카메라·마이크·화면 캡처, ARM64 실기 QA는 아직 수행하지 않았다. 공개 서버는 여전히 `0.3.46`을 제공한다. 새 후보의 공개 릴리즈·웹 다운로드 교체는 별도 단계다.
+EXE 컴파일은 확인했다. UAC 승인/취소, 비관리자 실제 설치·제거·재설치·업데이트, Mac↔Windows 송수신, 카메라·마이크·화면 캡처, ARM64 실기 QA는 아직 수행하지 않았다. 공개 서버는 여전히 `0.3.46`을 제공한다. 새 후보의 공개 릴리즈·웹 다운로드 교체는 별도 단계다.
 
 기준: [Inno lowest privileges](https://jrsoftware.org/ishelp/topic_setup_privilegesrequired.htm), [marquee Animate](https://jrsoftware.org/ishelp/topic_isxfunc_createoutputmarqueeprogresspage.htm), [uninstall Abort](https://jrsoftware.org/ishelp/topic_isxfunc_abort.htm), [MSIX AppData 가상화](https://learn.microsoft.com/en-us/windows/msix/desktop/desktop-to-uwp-behind-the-scenes), [.NET SDK와 MSBuild 버전](https://learn.microsoft.com/en-us/dotnet/core/porting/versioning-sdk-msbuild-vs).

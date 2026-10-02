@@ -35,9 +35,9 @@
 - [x] x64/ARM64 빌드 도구 확인. 현재 x64 SDK와 C++는 준비돼 있으나 ARM64 compiler가 확인되지 않았으므로 도구를 준비하거나 명시적인 결과를 기록한다.
 - [x] 기존 설치 EXE가 온라인 MSIX 다운로드에 의존하는 흐름을 번들 payload로 바꾼다. 필요한 런타임/dependency, 공개 Supabase 구성과 인증서 포함 여부를 검증. 구성/서명 재료가 없으면 완성된 패키징 단계와 정확한 누락 항목을 전달한다.
 - [x] 로그인 사용자의 패키지 등록·일반 권한 실행을 보장하고 필요한 인증서 신뢰 작업만 상승 권한으로 수행. 실제 작업 진행률, 실패·재시도·취소와 제거를 처리한다. 업데이트·재설치가 기존 데이터를 보존하고 데이터 삭제는 명시적 선택으로만 수행한다.
-- [ ] Inno compiler로 실제 EXE 생성, payload/signature/dependency·오프라인 설치 경로 검사. 실제 시스템 신뢰/사용자 계정 설치 검증은 별도 기록하고 unsigned validation artifact를 공개 릴리즈라고 표시하지 않는다. Commit `feat(windows-installer): bundle complete offline setup payload`.
+- [x] Inno compiler로 실제 EXE 생성, payload/signature/dependency·오프라인 설치 경로 검사. 실제 시스템 신뢰/사용자 계정 설치 검증은 별도 기록하고 unsigned validation artifact를 공개 릴리즈라고 표시하지 않는다. Commit `feat(windows-installer): bundle complete offline setup payload`. CI 37017447762에서 실제 x64/ARM64 서명 + Inno compile 성공. 로컬 `windows/dist/PingSetup-v0.4.0.exe` 및 서명된 fallback ZIP 확인. 실제 설치 경로 실행/기기 QA는 Task 5로 유지한다.
 
-Task 4A 구현/로컬 검증: `docs/windows/2026-10-02-offline-installer-verification.ko.md`. x64 unsigned 패키지 생성, 오프라인 payload 3/data preservation 5 fixture 통과. 인증서/ARM64/Inno는 기존 CI 경로를 사용한다. 실제 EXE 생성과 설치 QA는 위 마지막 항목으로 계속 진행한다. 데이터 전체 삭제는 설치 관리자에서 제공하지 않고, 익명 계정 제거는 앱 설정에서 별도 확인한다.
+Task 4 구현/검증: `docs/windows/2026-10-02-offline-installer-verification.ko.md`, 실행 안내 `docs/windows/2026-10-02-release-candidate-guide.ko.md`. 실제 EXE와 서명된 두 CPU 앱을 생성했다. 설치/기기 QA는 Task 5로 계속 진행한다. 데이터 전체 삭제는 설치 관리자에서 제공하지 않고, 익명 계정 제거는 앱 설정에서 별도 확인한다.
 
 ## 5. 릴리즈 후보 확인
 
