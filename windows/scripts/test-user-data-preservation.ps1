@@ -12,9 +12,12 @@ Set-Content -LiteralPath (Join-Path $physical 'SupabaseSession.json') -Value 'fi
 Set-Content -LiteralPath (Join-Path $virtual 'SupabaseSession.json') -Value 'fixture-latest-account'
 Set-Content -LiteralPath (Join-Path $physical 'UserPreferences.json') -Value 'fixture-preferences'
 Set-Content -LiteralPath (Join-Path $virtual 'recording.tmp') -Value 'fixture-temporary'
+$scopedLedger = 'NotifiedChatIds-' + ('a' * 64) + '.json'
+Set-Content -LiteralPath (Join-Path $virtual $scopedLedger) -Value 'fixture-scoped-ledger'
 $snapshot = Save-PingUserData -LocalAppDataRoot $fixtureRoot -PackageFamilyName $family
 if ((Get-Content -Raw -LiteralPath (Join-Path $snapshot 'SupabaseSession.json')).Trim() -ne 'fixture-latest-account') { throw 'Virtualized account did not take priority.' }
 if (Test-Path -LiteralPath (Join-Path $snapshot 'recording.tmp')) { throw 'Temporary recording was copied.' }
+if (-not (Test-Path -LiteralPath (Join-Path $snapshot $scopedLedger))) { throw 'Account notification ledger was not preserved.' }
 Write-Output 'PASS latest virtualized identity and physical preferences retained; temporary files excluded'
 Restore-PingUserData -LocalAppDataRoot $fixtureRoot -PackageFamilyName $family
 if ((Get-Content -Raw -LiteralPath (Join-Path $physical 'SupabaseSession.json')).Trim() -ne 'fixture-old-account') { throw 'Reinstallation replaced an existing account.' }

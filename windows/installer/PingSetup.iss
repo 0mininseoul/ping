@@ -32,23 +32,20 @@ Name: "startmenu"; Description: "시작 메뉴에 Ping 폴더 및 바로가기 �
 Name: "launch"; Description: "설치 완료 후 즉시 Ping 실행"; GroupDescription: "추가 옵션:"; Flags: checkedonce
 
 [Files]
-Source: "{#PayloadRoot}\Ping-Windows-Sideload.cer"; DestDir: "{tmp}"; Flags: deleteafterinstall
+Source: "{#PayloadRoot}\Ping-Windows-Sideload.cer"; DestDir: "{tmp}"; Flags: dontcopy
 Source: "{#PayloadRoot}\Ping-Windows-Sideload.cer"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#PayloadRoot}\install-ping-windows.ps1"; DestDir: "{tmp}"; Flags: deleteafterinstall
+Source: "{#PayloadRoot}\install-ping-windows.ps1"; DestDir: "{tmp}"; Flags: dontcopy
 Source: "{#PayloadRoot}\uninstall-ping-windows.ps1"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#PayloadRoot}\ping-user-data.ps1"; DestDir: "{tmp}"; Flags: deleteafterinstall
+Source: "{#PayloadRoot}\ping-user-data.ps1"; DestDir: "{tmp}"; Flags: dontcopy
 Source: "{#PayloadRoot}\ping-user-data.ps1"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#PayloadRoot}\Ping-Windows-v{#AppVersion}-x64.msix"; DestDir: "{tmp}"; Flags: deleteafterinstall; Check: not IsArm64
-Source: "{#PayloadRoot}\Ping-Windows-v{#AppVersion}-arm64.msix"; DestDir: "{tmp}"; Flags: deleteafterinstall; Check: IsArm64
-Source: "{#PayloadRoot}\dependencies-x64.txt"; DestDir: "{tmp}"; Flags: deleteafterinstall; Check: not IsArm64
-Source: "{#PayloadRoot}\dependencies-arm64.txt"; DestDir: "{tmp}"; Flags: deleteafterinstall; Check: IsArm64
-Source: "{#PayloadRoot}\Dependencies\x64\*"; DestDir: "{tmp}\Dependencies\x64"; Flags: deleteafterinstall recursesubdirs; Check: not IsArm64
-Source: "{#PayloadRoot}\Dependencies\arm64\*"; DestDir: "{tmp}\Dependencies\arm64"; Flags: deleteafterinstall recursesubdirs; Check: IsArm64
-Source: "app.ico"; DestDir: "{tmp}"; Flags: deleteafterinstall
+Source: "{#PayloadRoot}\Ping-Windows-v{#AppVersion}-x64.msix"; DestDir: "{tmp}"; Flags: dontcopy; Check: not IsArm64
+Source: "{#PayloadRoot}\Ping-Windows-v{#AppVersion}-arm64.msix"; DestDir: "{tmp}"; Flags: dontcopy; Check: IsArm64
+Source: "{#PayloadRoot}\dependencies-x64.txt"; DestDir: "{tmp}"; Flags: dontcopy; Check: not IsArm64
+Source: "{#PayloadRoot}\dependencies-arm64.txt"; DestDir: "{tmp}"; Flags: dontcopy; Check: IsArm64
+Source: "{#PayloadRoot}\Dependencies\x64\*"; DestDir: "{tmp}\Dependencies\x64"; Flags: dontcopy recursesubdirs; Check: not IsArm64
+Source: "{#PayloadRoot}\Dependencies\arm64\*"; DestDir: "{tmp}\Dependencies\arm64"; Flags: dontcopy recursesubdirs; Check: IsArm64
+Source: "app.ico"; DestDir: "{tmp}"; Flags: dontcopy
 Source: "app.ico"; DestDir: "{app}"; Flags: ignoreversion
-
-[UninstallDelete]
-Type: files; Name: "{app}\package-family.txt"
 
 [Code]
 var
@@ -86,8 +83,8 @@ begin
     '-Version "{#AppVersion}"' +
     ' -Architecture ' + MsixArchitecture +
     ' -PackageDirectory "' + ExpandConstant('{tmp}') + '"' +
-    ' -NoDialogs' +
-    ' -RegistrationRecordPath "' + ExpandConstant('{app}\package-family.txt') + '"' +
+    ' -NoDialogs -NoLaunch' +
+    ' -RegistrationRecordPath "' + ExpandConstant('{tmp}\package-family.txt') + '"' +
     ' -CertificatePath "' + ExpandConstant('{tmp}\Ping-Windows-Sideload.cer') + '"' +
     ' -IconPath "' + ExpandConstant('{tmp}\app.ico') + '"';
 
@@ -97,22 +94,27 @@ begin
   if WizardIsTaskSelected('startmenu') then
     Params := Params + ' -CreateStartMenuShortcut';
 
-  if not WizardIsTaskSelected('launch') then
-    Params := Params + ' -NoLaunch';
-
   Result := Params;
 end;
 
-{ 파일 압축 해제 뒤 인증서 등록 + MSIX 설치를 숨김 모드로 실행하고,
-  종료 코드를 확인해 실패 시 설치를 정확히 중단한다(거짓 '완료' 방지). }
+{ ssInstall에서 payload를 해제하고 등록한다. 이 이벤트의 Abort는 설치를 종료한다. }
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   ScriptPath: String;
   CommandLine: String;
   ResultCode: Integer;
+  FamilyName: String;
+  FamilyLines: TArrayOfString;
 begin
-  if CurStep = ssPostInstall then
+  if CurStep = ssInstall then
   begin
+    ExtractTemporaryFile('Ping-Windows-Sideload.cer');
+    ExtractTemporaryFile('install-ping-windows.ps1');
+    ExtractTemporaryFile('ping-user-data.ps1');
+    ExtractTemporaryFile('app.ico');
+    ExtractTemporaryFile(MsixFileName);
+    ExtractTemporaryFile('dependencies-' + MsixArchitecture + '.txt');
+    ExtractTemporaryFiles('{tmp}\Dependencies\' + MsixArchitecture + '\*');
     ScriptPath := ExpandConstant('{tmp}\install-ping-windows.ps1');
     CommandLine :=
       '-NoProfile -ExecutionPolicy Bypass -File "' + ScriptPath + '" ' + GetInstallerParams;
@@ -131,6 +133,17 @@ begin
       until False;
     finally
       RegistrationProgress.Hide;
+    end;
+  end;
+  if (CurStep = ssPostInstall) and WizardIsTaskSelected('launch') then
+  begin
+    if LoadStringsFromFile(ExpandConstant('{tmp}\package-family.txt'), FamilyLines) then
+    begin
+      if GetArrayLength(FamilyLines) <> 1 then Exit;
+      FamilyName := Trim(FamilyLines[0]);
+      if Pos('YoungminPark.PingWindows_', FamilyName) = 1 then
+        if not Exec(ExpandConstant('{win}\explorer.exe'), '"shell:AppsFolder\' + FamilyName + '!App"', '', SW_HIDE, ewNoWait, ResultCode) then
+          SuppressibleMsgBox('Ping 설치가 완료되었습니다. 시작 메뉴에서 Ping을 실행해 주세요.', mbInformation, MB_OK, IDOK);
     end;
   end;
 end;

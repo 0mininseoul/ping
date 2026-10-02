@@ -33,12 +33,24 @@ function Assert-PingDataPath([string]$Path, [string]$Root) {
     }
 }
 
+function Get-PingRetainedFileNames([string[]]$SourceDirectories) {
+    $names = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+    foreach ($name in $script:PingRetainedFiles) { $null = $names.Add($name) }
+    foreach ($directory in $SourceDirectories) {
+        if (-not (Test-Path -LiteralPath $directory -PathType Container)) { continue }
+        foreach ($file in @(Get-ChildItem -LiteralPath $directory -File -Filter 'Notified*Ids-*.json')) {
+            if ($file.Name -cmatch '^Notified(Chat|Message)Ids-[a-f0-9]{64}\.json$') { $null = $names.Add($file.Name) }
+        }
+    }
+    return @($names)
+}
+
 function Save-PingUserData([string]$LocalAppDataRoot, [string]$PackageFamilyName) {
     $paths = Get-PingDataPaths $LocalAppDataRoot $PackageFamilyName
     $snapshotId = [Guid]::NewGuid().ToString('N')
     $snapshot = Join-Path $paths.Preserved $snapshotId
     New-Item -ItemType Directory -Path $snapshot -Force | Out-Null
-    foreach ($name in $script:PingRetainedFiles) {
+    foreach ($name in @(Get-PingRetainedFileNames @($paths.Physical, $paths.Virtual))) {
         $source = Join-Path $paths.Virtual $name
         if (-not (Test-Path -LiteralPath $source)) { $source = Join-Path $paths.Physical $name }
         if (Test-Path -LiteralPath $source -PathType Leaf) {
@@ -64,7 +76,7 @@ function Restore-PingUserData([string]$LocalAppDataRoot, [string]$PackageFamilyN
     if ($snapshotId -notmatch '^[a-f0-9]{32}$') { throw 'Invalid preserved Ping data snapshot.' }
     $snapshot = Join-Path $paths.Preserved $snapshotId
     Assert-PingDataPath $snapshot $paths.Root
-    foreach ($name in $script:PingRetainedFiles) {
+    foreach ($name in @(Get-PingRetainedFileNames @($snapshot))) {
         $source = Join-Path $snapshot $name
         $destination = Join-Path $paths.Physical $name
         Assert-PingDataPath $source $paths.Root

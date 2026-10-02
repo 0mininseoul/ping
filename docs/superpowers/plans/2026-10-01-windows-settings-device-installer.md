@@ -41,6 +41,6 @@ Task 4A 구현/로컬 검증: `docs/windows/2026-10-02-offline-installer-verific
 
 ## 5. 릴리즈 후보 확인
 
-- [ ] 주요 구현을 한 번 검토하고 검증된 중요한 결함만 우선 수정한다. 불필요하게 내부 fixture 행렬을 확대하지 않는다.
+- [x] 주요 구현을 한 번 검토하고 검증된 중요한 결함만 우선 수정한다. 불필요하게 내부 fixture 행렬을 확대하지 않는다. Critical 없음, Important 2개(설치 취소 후 false success / 저장 계정 간 채팅 알림 억제)를 수정. `docs/windows/2026-10-02-offline-installer-verification.ko.md` 참조. 실제 EXE/기기 QA는 아래 항목으로 유지.
 - [ ] Mac↔Windows 영상/채팅/이미지/답장/반응/초대/삭제/자동 회신, Windows 카메라·마이크·권한·DPI·설치/업데이트와 ARM64 실기 결과를 기록한다. 장치·계정·서명 자료가 필요한 남은 검사와 구현 완료를 구분한다.
 - [ ] 사용자에게 실제 EXE 경로, 기능/설치 안내와 미검증 항목을 전달. 전체 목표는 실제 필요한 작업이 끝나기 전까지 완료로 표시하지 않는다.

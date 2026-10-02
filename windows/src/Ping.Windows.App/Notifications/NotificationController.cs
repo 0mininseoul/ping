@@ -367,8 +367,9 @@ public enum NotificationShowResult
 public sealed class NotificationController : IDisposable
 {
     private readonly Func<string, CancellationToken, Task> openMessageAsync;
-    private readonly NotifiedMessageRegistry registry;
-    private readonly NotifiedChatRegistry chatRegistry;
+    private NotifiedMessageRegistry registry;
+    private NotifiedChatRegistry chatRegistry;
+    private string? accountUid;
     private readonly Action<string>? showNotificationXml;
     private readonly Func<bool> soundEnabled;
     private bool disposed;
@@ -388,10 +389,23 @@ public sealed class NotificationController : IDisposable
 #if WINDOWS
         this.openChatAsync = openChatAsync;
 #endif
-        this.registry = registry ?? new NotifiedMessageRegistry();
-        this.chatRegistry = chatRegistry ?? new NotifiedChatRegistry();
+        this.registry = registry ?? NotifiedMessageRegistry.InMemory();
+        this.chatRegistry = chatRegistry ?? NotifiedChatRegistry.InMemory();
         this.showNotificationXml = showNotificationXml;
         this.soundEnabled = soundEnabled ?? (() => true);
+    }
+
+    public void UseAccount(string uid, string? dataDirectory = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(uid);
+        if (accountUid == uid) return;
+        dataDirectory ??= Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Ping");
+        var suffix = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(uid)));
+        // Legacy global IDs have no owner; attributing them to a new identity
+        // would suppress that account's independently unread room chats.
+        registry = new NotifiedMessageRegistry(Path.Combine(dataDirectory, $"NotifiedMessageIds-{suffix}.json"));
+        chatRegistry = new NotifiedChatRegistry(Path.Combine(dataDirectory, $"NotifiedChatIds-{suffix}.json"));
+        accountUid = uid;
     }
 
     public void Start()

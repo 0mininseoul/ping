@@ -361,6 +361,25 @@ public sealed class IncomingMessageDedupTests
     }
 
     [Fact]
+    public void SharedRoomChat_NotifiesEachAccount_AndDeduplicatesSameAccountAfterRestart()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "PingWindowsAccountNotificationTests", Guid.NewGuid().ToString("N"));
+        var notification = new IncomingChatNotification(Chat("shared-chat", "room", "sender", "hello", DateTimeOffset.UtcNow), "Room", 1);
+        using var first = new NotificationController((_, _) => Task.CompletedTask,
+            registry: NotifiedMessageRegistry.InMemory(), chatRegistry: new NotifiedChatRegistry(Path.Combine(root, "legacy.json")), showNotificationXml: _ => { });
+        first.UseAccount("fixture-account-a", root);
+        Assert.Equal(NotificationShowResult.Shown, first.ShowIncomingChat(notification));
+        using var second = new NotificationController((_, _) => Task.CompletedTask,
+            registry: NotifiedMessageRegistry.InMemory(), chatRegistry: new NotifiedChatRegistry(Path.Combine(root, "legacy.json")), showNotificationXml: _ => { });
+        second.UseAccount("fixture-account-b", root);
+        Assert.Equal(NotificationShowResult.Shown, second.ShowIncomingChat(notification));
+        using var reloaded = new NotificationController((_, _) => Task.CompletedTask,
+            registry: NotifiedMessageRegistry.InMemory(), chatRegistry: new NotifiedChatRegistry(Path.Combine(root, "legacy.json")), showNotificationXml: _ => { });
+        reloaded.UseAccount("fixture-account-a", root);
+        Assert.Equal(NotificationShowResult.Duplicate, reloaded.ShowIncomingChat(notification));
+    }
+
+    [Fact]
     public void NotifiedChatRegistry_PersistsChatIdsAcrossAppRestarts()
     {
         var path = Path.Combine(

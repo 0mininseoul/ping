@@ -1320,6 +1320,7 @@ public sealed class AppCoordinator : IDisposable
         {
             if (disposed || cancellationToken.IsCancellationRequested) return;
             if (currentUid != uid) settingsWindow?.ClearDevicePairing();
+            notificationController.UseAccount(uid);
             currentUid = uid;
             startupIdentity.SetReady(uid);
             if (!string.IsNullOrWhiteSpace(profile?.Nickname))
