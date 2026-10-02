@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
-    [string]$CertificatePath = (Join-Path $PSScriptRoot "Ping-Windows-Sideload.cer")
+    [string]$CertificatePath = (Join-Path $PSScriptRoot "Ping-Windows-Sideload.cer"),
+    [switch]$NoDialogs
 )
 
 Set-StrictMode -Version Latest
@@ -14,38 +15,19 @@ function Remove-ShortcutIfPresent([string]$Path) {
     }
 }
 
-function Remove-PingCertificate([string]$TrustedCertificatePath) {
-    if (-not (Test-Path -LiteralPath $TrustedCertificatePath)) {
-        return
-    }
-
-    $expectedCertificate = [Security.Cryptography.X509Certificates.X509Certificate2]::new($TrustedCertificatePath)
-    $thumbprint = $expectedCertificate.Thumbprint
-    $stores = @(
-        "Cert:\LocalMachine\TrustedPeople\$thumbprint",
-        "Cert:\CurrentUser\TrustedPeople\$thumbprint"
-    )
-
-    foreach ($storePath in $stores) {
-        if (Test-Path -LiteralPath $storePath) {
-            Remove-Item -LiteralPath $storePath -Force -ErrorAction SilentlyContinue
-        }
-    }
-}
-
 try {
-    $packages = @(Get-AppxPackage -Name $packageName -AllUsers -ErrorAction SilentlyContinue)
-    if ($packages.Count -eq 0) {
-        $packages = @(Get-AppxPackage -Name $packageName -ErrorAction SilentlyContinue)
-    }
+    . (Join-Path $PSScriptRoot 'ping-user-data.ps1')
+    $packages = @(Get-AppxPackage -Name $packageName -ErrorAction Stop)
 
     foreach ($package in $packages) {
-        try {
-            Remove-AppxPackage -Package $package.PackageFullName -AllUsers -ErrorAction Stop
-        }
-        catch {
-            Remove-AppxPackage -Package $package.PackageFullName -ErrorAction SilentlyContinue
-        }
+        if ($package.Publisher -ne 'CN=Youngmin Park') { throw 'Unexpected Ping publisher.' }
+        $running = @(Get-Process -Name 'Ping.Windows.App' -ErrorAction SilentlyContinue | Where-Object {
+            $_.Path -and $_.Path.StartsWith($package.InstallLocation.TrimEnd('\') + '\', [StringComparison]::OrdinalIgnoreCase)
+        })
+        if ($running.Count -gt 0) { throw 'Exit Ping from the tray before uninstalling, then retry.' }
+        Save-PingUserData -LocalAppDataRoot $env:LOCALAPPDATA -PackageFamilyName $package.PackageFamilyName | Out-Null
+        Remove-AppxPackage -Package $package.PackageFullName -ErrorAction Stop
+        Restore-PingUserData -LocalAppDataRoot $env:LOCALAPPDATA -PackageFamilyName $package.PackageFamilyName -OverwriteExisting
     }
 
     Remove-ShortcutIfPresent ([System.IO.Path]::Combine([System.Environment]::GetFolderPath("Desktop"), "Ping.lnk"))
@@ -57,14 +39,11 @@ try {
         Remove-Item -LiteralPath $startMenuFolder -Force -ErrorAction SilentlyContinue
     }
 
-    Remove-PingCertificate $CertificatePath
-
-    $localIconPath = Join-Path $env:LOCALAPPDATA "Ping\app.ico"
-    Remove-ShortcutIfPresent $localIconPath
-
-    Write-Host "Ping for Windows has been uninstalled."
+    # Shared certificate trust and runtime can serve another user's installation.
+    Write-Host 'Ping removed for the current user. Accounts and settings are retained.'
 }
 catch {
+    if ($NoDialogs) { Write-Error $_; exit 1 }
     try {
         Add-Type -AssemblyName PresentationFramework -ErrorAction SilentlyContinue
         [System.Windows.MessageBox]::Show("Ping 제거 중 오류가 발생했습니다:`n`n$($_.Exception.Message)", "Ping 제거 오류", "OK", "Error") | Out-Null

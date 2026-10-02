@@ -271,7 +271,6 @@ function Assert-PackageIsDotNetSelfContained($Archive, [string]$PackagePath) {
 }
 
 $version = Get-PingWindowsPackageVersion
-$msbuild = Resolve-MSBuild
 New-Item -ItemType Directory -Force -Path $distRoot | Out-Null
 
 if (-not $SkipTests) {
@@ -290,29 +289,11 @@ foreach ($targetPlatform in $Platform) {
     $architectureLabel = Get-PackageArchitectureLabel $targetPlatform
     $architectureManifestValue = Get-PackageArchitectureManifestValue $targetPlatform
     $runtimeIdentifier = Get-PackageRuntimeIdentifier $targetPlatform
-    $packageOutputRoot = Join-Path $windowsRoot "artifacts\appx\$targetPlatform"
-    Remove-Item -Recurse -Force -LiteralPath $packageOutputRoot -ErrorAction SilentlyContinue
+    $packageOutputRoot = Join-Path $windowsRoot ("artifacts\appx\{0}-{1}" -f $targetPlatform, [Guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Force -Path $packageOutputRoot | Out-Null
 
-    $arguments = [System.Collections.Generic.List[string]]::new()
-    $arguments.Add($solution)
-    $arguments.Add("/restore")
-    $arguments.Add("/m:1")
-    $arguments.Add("/p:Configuration=$Configuration")
-    $arguments.Add("/p:Platform=$targetPlatform")
-    $arguments.Add("/p:RuntimeIdentifier=$runtimeIdentifier")
-    $arguments.Add("/p:SelfContained=true")
-    $arguments.Add("/p:GenerateAppxPackageOnBuild=true")
-    $arguments.Add("/p:UapAppxPackageBuildMode=SideloadOnly")
-    $arguments.Add("/p:AppxBundle=Never")
-    $arguments.Add("/p:AppxPackageDir=$packageOutputRoot\")
-    Add-SigningProperties $arguments
-
     Write-Host "Building Ping Windows $version for $targetPlatform..."
-    & $msbuild @arguments
-    if ($LASTEXITCODE -ne 0) {
-        throw "MSBuild failed for $targetPlatform with exit code $LASTEXITCODE."
-    }
+    & (Join-Path $PSScriptRoot 'build-local.ps1') -Platform $targetPlatform -Configuration $Configuration -Package -PackageOutputRoot $packageOutputRoot
 
     $package = Get-ChildItem -Path $packageOutputRoot -Recurse -Filter "*.msix" |
         Where-Object {

@@ -9,9 +9,10 @@ param(
     [switch]$NoLaunch,
     [switch]$CreateDesktopShortcut,
     [switch]$CreateStartMenuShortcut,
-    [switch]$AddToStartup,
     [string]$IconPath,
-    [switch]$AllowUnsigned
+    [string]$RegistrationRecordPath,
+    [switch]$ValidateOnly,
+    [switch]$NoDialogs
 )
 
 Set-StrictMode -Version Latest
@@ -25,67 +26,12 @@ function Test-Administrator {
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
-function Quote-Argument([string]$Value) {
-    return '"' + ($Value -replace '"', '\"') + '"'
-}
-
-function Restart-Elevated {
-    $hostPath = (Get-Process -Id $PID).Path
-    if ([string]::IsNullOrWhiteSpace($hostPath)) {
-        $hostPath = "powershell.exe"
-    }
-
-    $arguments = [System.Collections.Generic.List[string]]::new()
-    $arguments.Add("-NoProfile")
-    $arguments.Add("-ExecutionPolicy")
-    $arguments.Add("Bypass")
-    $arguments.Add("-File")
-    $arguments.Add((Quote-Argument $PSCommandPath))
-    if (-not [string]::IsNullOrWhiteSpace($Version)) {
-        $arguments.Add("-Version")
-        $arguments.Add((Quote-Argument $Version))
-    }
-    if (-not [string]::IsNullOrWhiteSpace($Architecture)) {
-        $arguments.Add("-Architecture")
-        $arguments.Add($Architecture)
-    }
-    $arguments.Add("-PackageDirectory")
-    $arguments.Add((Quote-Argument $PackageDirectory))
-    if (-not [string]::IsNullOrWhiteSpace($PackageBaseUrl)) {
-        $arguments.Add("-PackageBaseUrl")
-        $arguments.Add((Quote-Argument $PackageBaseUrl))
-    }
-    $arguments.Add("-CertificatePath")
-    $arguments.Add((Quote-Argument $CertificatePath))
-    if ($CreateDesktopShortcut) {
-        $arguments.Add("-CreateDesktopShortcut")
-    }
-    if ($CreateStartMenuShortcut) {
-        $arguments.Add("-CreateStartMenuShortcut")
-    }
-    if ($AddToStartup) {
-        $arguments.Add("-AddToStartup")
-    }
-    if (-not [string]::IsNullOrWhiteSpace($IconPath)) {
-        $arguments.Add("-IconPath")
-        $arguments.Add((Quote-Argument $IconPath))
-    }
-    if ($NoLaunch) {
-        $arguments.Add("-NoLaunch")
-    }
-    if ($AllowUnsigned) {
-        $arguments.Add("-AllowUnsigned")
-    }
-
-    Start-Process -FilePath $hostPath -Verb RunAs -ArgumentList $arguments
-}
-
 function Resolve-Architecture {
     if (-not [string]::IsNullOrWhiteSpace($Architecture)) {
         return $Architecture
     }
 
-    if ([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture -eq [System.Runtime.InteropServices.Architecture]::Arm64) {
+    if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture -eq [System.Runtime.InteropServices.Architecture]::Arm64) {
         return "arm64"
     }
 
@@ -138,48 +84,10 @@ function Resolve-Version([string]$TargetArchitecture) {
     return $Matches.version
 }
 
-function Join-PackageUrl([string]$BaseUrl, [string]$FileName) {
-    return $BaseUrl.TrimEnd([char[]]"/") + "/" + $FileName
-}
-
-function Download-PackageIfNeeded([string]$PackagePath, [string]$PackageFileName) {
-    if (Test-Path -LiteralPath $PackagePath) {
-        return
-    }
-
-    if ([string]::IsNullOrWhiteSpace($PackageBaseUrl)) {
-        throw "Missing MSIX package: $PackagePath"
-    }
-
-    New-Item -ItemType Directory -Force -Path $PackageDirectory | Out-Null
-    $packageUrl = Join-PackageUrl $PackageBaseUrl $PackageFileName
-    Write-Host "Downloading $PackageFileName..."
-    Invoke-WebRequest -Uri $packageUrl -OutFile $PackagePath -UseBasicParsing
-}
-
-function Resolve-DependencyManifestLines([string]$TargetArchitecture) {
-    $manifestFileName = "dependencies-$TargetArchitecture.txt"
-    $localManifestPath = Join-Path $PackageDirectory $manifestFileName
-    if (Test-Path -LiteralPath $localManifestPath) {
-        return @(Get-Content -LiteralPath $localManifestPath | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
-    }
-
-    if ([string]::IsNullOrWhiteSpace($PackageBaseUrl)) {
-        return @()
-    }
-
-    try {
-        $manifestUrl = Join-PackageUrl $PackageBaseUrl $manifestFileName
-        Write-Host "Downloading $manifestFileName..."
-        return @((Invoke-RestMethod -Uri $manifestUrl -UseBasicParsing) -split "`r?`n" | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
-    }
-    catch {
-        throw "Could not download $manifestFileName from $PackageBaseUrl. Ping requires Microsoft Windows App Runtime dependency packages. $($_.Exception.Message)"
-    }
-}
-
 function Resolve-DependencyPackagePaths([string]$TargetArchitecture) {
-    $manifestLines = Resolve-DependencyManifestLines $TargetArchitecture
+    $manifestPath = Join-Path $PackageDirectory "dependencies-$TargetArchitecture.txt"
+    if (-not (Test-Path -LiteralPath $manifestPath)) { throw 'The bundled dependency manifest is missing.' }
+    $manifestLines = @(Get-Content -LiteralPath $manifestPath | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
     $dependencyPaths = [System.Collections.Generic.List[string]]::new()
     $packageRoot = [System.IO.Path]::GetFullPath($PackageDirectory).TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
 
@@ -200,22 +108,9 @@ function Resolve-DependencyPackagePaths([string]$TargetArchitecture) {
             throw "Dependency manifest entry escapes the package directory: $line"
         }
 
-        if (-not (Test-Path -LiteralPath $resolvedDependencyPath)) {
-            if ([string]::IsNullOrWhiteSpace($PackageBaseUrl)) {
-                throw "Missing framework dependency: $resolvedDependencyPath"
-            }
-
-            New-Item -ItemType Directory -Force -Path (Split-Path -Parent $resolvedDependencyPath) | Out-Null
-            $dependencyUrl = Join-PackageUrl $PackageBaseUrl $trimmedLine
-            Write-Host "Downloading $(Split-Path -Leaf $resolvedDependencyPath)..."
-            Invoke-WebRequest -Uri $dependencyUrl -OutFile $resolvedDependencyPath -UseBasicParsing
-        }
+        if (-not (Test-Path -LiteralPath $resolvedDependencyPath)) { throw "Missing bundled dependency: $resolvedDependencyPath" }
 
         $dependencyPaths.Add($resolvedDependencyPath)
-    }
-
-    if ($dependencyPaths.Count -eq 0) {
-        Write-Warning "No framework dependency manifest was found for $TargetArchitecture. Continuing without -DependencyPath; this can fail with 0x80073CF3 on clean Windows installs."
     }
 
     return $dependencyPaths.ToArray()
@@ -227,17 +122,40 @@ function Test-SignatureMatchesCertificate($Signature, [string]$ExpectedCertifica
     }
 
     $expectedCertificate = [Security.Cryptography.X509Certificates.X509Certificate2]::new($ExpectedCertificatePath)
-    return $Signature.SignerCertificate.Thumbprint -eq $expectedCertificate.Thumbprint
+    return $expectedCertificate.Thumbprint -eq '12D9D5539B1851EE1A0725CCFCB6A9CCD098DCDC' -and $Signature.SignerCertificate.Thumbprint -eq $expectedCertificate.Thumbprint
+}
+
+function Assert-PingPackageIdentity([string]$Path, [string]$TargetVersion, [string]$TargetArchitecture) {
+    if ($TargetVersion -notmatch '^\d+\.\d+\.\d+$') { throw 'Invalid Ping package version.' }
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $archive = [IO.Compression.ZipFile]::OpenRead($Path)
+    try {
+        $entry = $archive.GetEntry('AppxManifest.xml')
+        if (-not $entry -or $entry.Length -gt 131072) { throw 'Package manifest is missing or invalid.' }
+        $reader = [IO.StreamReader]::new($entry.Open())
+        try { [xml]$manifest = $reader.ReadToEnd() } finally { $reader.Dispose() }
+        $identity = $manifest.Package.Identity
+        if ($identity.Name -ne $packageName -or $identity.Publisher -ne 'CN=Youngmin Park' -or $identity.Version -ne "$TargetVersion.0" -or $identity.ProcessorArchitecture -ne $TargetArchitecture) {
+            throw 'The package identity, version or architecture does not match Ping.'
+        }
+    } finally { $archive.Dispose() }
+}
+
+function Trust-CertificateOnly([string]$Path) {
+    $certificate = [Security.Cryptography.X509Certificates.X509Certificate2]::new($Path)
+    if ($certificate.Thumbprint -ne '12D9D5539B1851EE1A0725CCFCB6A9CCD098DCDC') { throw 'Unexpected Ping trust certificate.' }
+    if (Test-Path -LiteralPath "Cert:\LocalMachine\TrustedPeople\$($certificate.Thumbprint)") { return }
+    $escapedPath = ([IO.Path]::GetFullPath($Path)).Replace("'", "''")
+    $command = '$ErrorActionPreference = ''Stop''; $certificate = [Security.Cryptography.X509Certificates.X509Certificate2]::new(''__PATH__''); if ($certificate.Thumbprint -ne ''__THUMBPRINT__'') { throw ''Unexpected certificate'' }; Import-Certificate -FilePath ''__PATH__'' -CertStoreLocation ''Cert:\LocalMachine\TrustedPeople'' | Out-Null'
+    $command = $command.Replace('__PATH__', $escapedPath).Replace('__THUMBPRINT__', $certificate.Thumbprint)
+    $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($command))
+    $hostPath = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+    $trust = Start-Process -FilePath $hostPath -ArgumentList @('-NoProfile','-NonInteractive','-EncodedCommand',$encoded) -Verb RunAs -WindowStyle Hidden -Wait -PassThru
+    if ($trust.ExitCode -ne 0) { throw 'Ping certificate trust was not approved or failed.' }
 }
 
 try {
-    if (-not (Test-Administrator)) {
-        Write-Host "Ping needs one administrator prompt to trust the sideload certificate."
-        Restart-Elevated
-        return
-    }
-
-    Assert-SupportedWindowsVersion
+    if (-not [string]::IsNullOrWhiteSpace($PackageBaseUrl)) { throw 'This installer requires the bundled offline payload.' }
 
     if ([string]::IsNullOrWhiteSpace($PackageBaseUrl) -and -not (Test-Path -LiteralPath $PackageDirectory)) {
         throw "Package directory does not exist: $PackageDirectory"
@@ -255,29 +173,40 @@ try {
     }
     $packagePath = Join-Path $PackageDirectory $packageFileName
 
-    Download-PackageIfNeeded $packagePath $packageFileName
+    if (-not (Test-Path -LiteralPath $packagePath)) { throw 'The bundled Ping MSIX is missing.' }
     [string[]]$dependencyPaths = @(Resolve-DependencyPackagePaths $targetArchitecture)
 
-    Write-Host "Trusting Ping sideload certificate..."
-    Import-Certificate -CertStoreLocation "Cert:\LocalMachine\TrustedPeople" -FilePath $CertificatePath | Out-Null
-
+    Assert-PingPackageIdentity $packagePath $Version $targetArchitecture
     $signature = Get-AuthenticodeSignature -LiteralPath $packagePath
     if (-not (Test-SignatureMatchesCertificate $signature $CertificatePath)) {
-        if ($AllowUnsigned) {
-            Write-Warning "The MSIX signer does not match Ping-Windows-Sideload.cer. Proceeding because -AllowUnsigned was provided."
-        } else {
-            throw "The MSIX signer does not match Ping-Windows-Sideload.cer. Refusing to install an unexpected package."
+        throw "The MSIX signer does not match Ping-Windows-Sideload.cer. Refusing to install an unexpected package."
+    }
+    if ($dependencyPaths.Count -eq 0) { throw 'The bundled Windows App Runtime dependencies are missing.' }
+    foreach ($dependency in $dependencyPaths) {
+        $dependencySignature = Get-AuthenticodeSignature -LiteralPath $dependency
+        if ($dependencySignature.Status -ne 'Valid' -or -not $dependencySignature.SignerCertificate -or $dependencySignature.SignerCertificate.Subject -notmatch '(^|, )O=Microsoft Corporation(,|$)') {
+            throw 'A Windows framework dependency signature is invalid.'
         }
     }
-    elseif ($signature.Status -ne "Valid") {
-        Write-Warning "The MSIX signer matches Ping-Windows-Sideload.cer, but signature status is $($signature.Status). Continuing after trusting the bundled certificate."
+    if ($ValidateOnly) {
+        if ($signature.Status -ne 'Valid') { throw 'The package signature is not trusted on this validation machine.' }
+        Write-Output 'Verified offline Ping package identity, architecture and signatures.'
+        return
+    }
+    Assert-SupportedWindowsVersion
+    if (Test-Administrator) { throw 'Run Ping Setup normally, without Run as administrator. Only certificate trust requires elevation.' }
+    if ($signature.Status -in @('HashMismatch','NotSigned','NotSupportedFileFormat')) { throw 'The package signature is invalid.' }
+    Write-Host 'Trusting the bundled Ping certificate if necessary...'
+    Trust-CertificateOnly $CertificatePath
+    if ((Get-AuthenticodeSignature -LiteralPath $packagePath).Status -ne 'Valid') {
+        throw 'The Ping package signature could not be verified after certificate trust.'
     }
 
     Write-Host "Installing $packageFileName..."
     if ($dependencyPaths.Count -gt 0) {
-        Add-AppxPackage -Path $packagePath -DependencyPath $dependencyPaths -ForceUpdateFromAnyVersion
+        Add-AppxPackage -Path $packagePath -DependencyPath $dependencyPaths
     } else {
-        Add-AppxPackage -Path $packagePath -ForceUpdateFromAnyVersion
+        Add-AppxPackage -Path $packagePath
     }
 
     $installed = Get-AppxPackage -Name $packageName |
@@ -285,6 +214,12 @@ try {
         Select-Object -First 1
     if (-not $installed) {
         throw "Ping package did not appear in Get-AppxPackage after installation."
+    }
+
+    . (Join-Path $PSScriptRoot 'ping-user-data.ps1')
+    Restore-PingUserData -LocalAppDataRoot $env:LOCALAPPDATA -PackageFamilyName $installed.PackageFamilyName
+    if (-not [string]::IsNullOrWhiteSpace($RegistrationRecordPath)) {
+        [IO.File]::WriteAllText($RegistrationRecordPath, $installed.PackageFamilyName)
     }
 
     # Icon 복사 및 단축키 구성
@@ -327,26 +262,14 @@ try {
         $shortcut.Save()
     }
 
-    if ($AddToStartup) {
-        Write-Host "Adding to startup folder..."
-        $startupFolder = [System.Environment]::GetFolderPath("Startup")
-        $startupPath = [System.IO.Path]::Combine($startupFolder, "Ping.lnk")
-        $shortcut = $wshShell.CreateShortcut($startupPath)
-        $shortcut.TargetPath = "explorer.exe"
-        $shortcut.Arguments = "shell:AppsFolder\$($installed.PackageFamilyName)!App"
-        if (-not [string]::IsNullOrWhiteSpace($localIconPath)) {
-            $shortcut.IconLocation = $localIconPath
-        }
-        $shortcut.Save()
-    }
-
     if (-not $NoLaunch) {
-        Start-Process -FilePath "explorer.exe" -ArgumentList "shell:AppsFolder\$($installed.PackageFamilyName)!App"
+        Start-Process -FilePath "explorer.exe" -ArgumentList "shell:AppsFolder\$($installed.PackageFamilyName)!App" -WindowStyle Hidden
     }
 
     Write-Host "Ping for Windows is installed."
 }
 catch {
+    if ($ValidateOnly -or $NoDialogs) { Write-Error $_; exit 1 }
     try {
         Add-Type -AssemblyName PresentationFramework -ErrorAction SilentlyContinue
         [System.Windows.MessageBox]::Show("Ping 설치 중 오류가 발생했습니다:`n`n$($_.Exception.Message)", "Ping 설치 오류", "OK", "Error") | Out-Null

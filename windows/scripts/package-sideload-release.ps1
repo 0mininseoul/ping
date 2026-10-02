@@ -51,7 +51,7 @@ function Assert-SignedPackage([string]$PackagePath, [string]$ExpectedCertificate
 
     if (Test-SignatureMatchesTrustedCertificate $signature $ExpectedCertificatePath) {
         if ($signature.Status -ne "Valid") {
-            Write-Warning "Package signature status is $($signature.Status), but the signer matches the committed Ping sideload certificate: $PackagePath"
+            throw "Package signature must be Valid before distribution: $PackagePath ($($signature.Status))."
         }
 
         return
@@ -95,6 +95,7 @@ function Copy-DependencyPackages([string]$ArchitectureLabel, [string]$TargetRoot
 if ([string]::IsNullOrWhiteSpace($Version)) {
     $Version = Get-PingWindowsPackageVersion
 }
+if ($Version -notmatch '^\d+\.\d+\.\d+$') { throw 'Invalid release version.' }
 
 if (-not (Test-Path -LiteralPath $DistRoot)) {
     throw "Release dist directory does not exist: $DistRoot"
@@ -114,6 +115,11 @@ if (-not (Test-Path -LiteralPath $UninstallerScriptPath)) {
 
 $releaseRoot = Join-Path $DistRoot "Ping-Windows-v$Version-sideload"
 $releaseZip = Join-Path $DistRoot "Ping-Windows-v$Version-sideload.zip"
+$resolvedDistRoot = (Resolve-Path -LiteralPath $DistRoot).Path.TrimEnd('\')
+$releaseRoot = [IO.Path]::GetFullPath($releaseRoot)
+$releaseZip = [IO.Path]::GetFullPath($releaseZip)
+if ([IO.Path]::GetDirectoryName($releaseRoot) -ne $resolvedDistRoot -or [IO.Path]::GetDirectoryName($releaseZip) -ne $resolvedDistRoot) { throw 'Release output must stay within the selected dist directory.' }
+if ((Test-Path -LiteralPath $releaseRoot) -and ((Get-Item -LiteralPath $releaseRoot -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'Release output must not be a link or junction.' }
 Remove-Item -Recurse -Force -LiteralPath $releaseRoot -ErrorAction SilentlyContinue
 Remove-Item -Force -LiteralPath $releaseZip -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $releaseRoot | Out-Null
@@ -133,6 +139,7 @@ foreach ($targetPlatform in $Platform) {
 Copy-Item -LiteralPath $CertificatePath -Destination (Join-Path $releaseRoot "Ping-Windows-Sideload.cer") -Force
 Copy-Item -LiteralPath $InstallerScriptPath -Destination (Join-Path $releaseRoot "install-ping-windows.ps1") -Force
 Copy-Item -LiteralPath $UninstallerScriptPath -Destination (Join-Path $releaseRoot "uninstall-ping-windows.ps1") -Force
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'ping-user-data.ps1') -Destination $releaseRoot -Force
 $icoSource = Join-Path $windowsRoot "installer\app.ico"
 if (Test-Path -LiteralPath $icoSource) {
     Copy-Item -LiteralPath $icoSource -Destination (Join-Path $releaseRoot "app.ico") -Force
@@ -150,14 +157,19 @@ Ping for Windows v$Version
 $distributionNotice
 
 Install:
-1. Right-click PowerShell and choose Run as administrator.
+1. Open PowerShell normally (not Run as administrator).
 2. cd to this folder.
 3. Run:
    powershell -ExecutionPolicy Bypass -File .\install-ping-windows.ps1
 
-The script imports Ping-Windows-Sideload.cer into LocalMachine\TrustedPeople,
+Only certificate trust requests administrator approval. Package registration
+and Ping run as the signed-in user. The script trusts the bundled certificate,
 installs the bundled Microsoft Windows App Runtime dependency, chooses x64 or
 arm64 for this PC, installs the MSIX, and launches Ping.
+
+Uninstall requires Ping to be closed from the tray. Accounts and settings
+are retained in the current user's profile and restored on reinstall.
+Removing an anonymous account is a separate, confirmed action in Ping settings.
 
 For a publicly trusted one-click install, Ping needs Microsoft Store submission
 or a paid public code-signing route. This folder is the standard sideload route.

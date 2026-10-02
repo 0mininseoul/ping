@@ -95,6 +95,10 @@ function Assert-PingPackageIdentity([string]$PackagePath, [string]$ExpectedVersi
         }
 
         Assert-PackageContainsNativeCaptureDll $archive $PackagePath
+        if (-not $archive.GetEntry('Supabase.json')) {
+            if (-not $AllowUnsigned) { throw 'A release package must bundle Supabase runtime configuration.' }
+            Write-Warning 'Validation package has no bundled backend configuration.'
+        }
     }
     finally {
         $archive.Dispose()
@@ -167,11 +171,6 @@ if ([string]::IsNullOrWhiteSpace($Version)) {
     $Version = Get-PingWindowsPackageVersion
 }
 
-$configPath = Join-Path $env:LOCALAPPDATA "Ping\Supabase.json"
-if (-not (Test-Path -LiteralPath $configPath)) {
-    Write-Warning "Supabase config was not found at $configPath. The app can install, but runtime auth/backend smoke tests will fail."
-}
-
 foreach ($targetPlatform in $Platform) {
     $architectureLabel = Get-PackageArchitectureLabel $targetPlatform
     $architectureManifestValue = Get-PackageArchitectureManifestValue $targetPlatform
@@ -202,7 +201,7 @@ if ($Install) {
     }
 
     $dependencyPaths = Get-DependencyPackagePaths $currentArchitectureLabel
-    Add-AppxPackage -Path $installPackage -DependencyPath $dependencyPaths -ForceUpdateFromAnyVersion
+    Add-AppxPackage -Path $installPackage -DependencyPath $dependencyPaths
     $installed = Get-AppxPackage -Name "YoungminPark.PingWindows" |
         Sort-Object InstallDate -Descending |
         Select-Object -First 1
@@ -210,6 +209,6 @@ if ($Install) {
         throw "Ping package did not appear in Get-AppxPackage after installation."
     }
 
-    Start-Process "shell:AppsFolder\$($installed.PackageFamilyName)!App"
+    Start-Process -FilePath 'explorer.exe' -ArgumentList "shell:AppsFolder\$($installed.PackageFamilyName)!App" -WindowStyle Hidden
     Write-Warning "Manual smoke still required: onboarding probes, Alt+P, Alt+L, Alt+Shift+L, notification click playback, and Mac/Windows cross-send."
 }

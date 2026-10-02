@@ -73,6 +73,8 @@ Windows 앱은 `windows/` 아래 별도 네이티브 클라이언트다.
 
 자세한 Windows 빌드/설치/QA 절차는 `docs/WINDOWS_APP_SETUP.md`와 `windows/README.md`를 따른다.
 
+개발 중인 Windows `0.4.0` 후보는 앱·런타임을 포함한 오프라인 EXE로 전환한다. 패키지 등록과 실행은 현재 사용자 권한으로 수행하고 인증서 신뢰에만 UAC 승인을 요청한다. 아직 새 EXE 생성과 실제 설치 QA가 끝나지 않았으며, 위 `0.3.46`은 현재 공개 배포 버전이다.
+
 ## 기존 룸과 익명 계정 보존
 
 Ping은 이메일 로그인 없이 Supabase Anonymous Auth 세션을 로컬에 저장한다. 일반 업데이트나 `Ping.app` 교체는 기존 룸을 유지하지만, 앱 컨테이너의 `Application Support/Ping/SupabaseSession.json`을 삭제하면 새 익명 계정으로 시작한다. 온보딩 QA를 위해 세션을 지울 때는 반드시 이 파일을 먼저 백업하고, QA 뒤 원래 파일을 복구한 다음 Ping을 다시 실행한다.

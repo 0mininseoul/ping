@@ -3,6 +3,7 @@ param(
     [ValidateSet('x64', 'ARM64')][string]$Platform = 'x64',
     [ValidateSet('Debug', 'Release')][string]$Configuration = 'Debug',
     [string]$DotnetPath,
+    [string]$PackageOutputRoot,
     [switch]$Package,
     [switch]$UiSmoke
 )
@@ -55,6 +56,11 @@ $managedArguments = @(
 )
 if ($Package) {
     $packageRoot = Join-Path $windowsRoot ("artifacts\local-{0}-{1}\" -f $Platform, [Guid]::NewGuid().ToString('N'))
+    if (-not [string]::IsNullOrWhiteSpace($PackageOutputRoot)) {
+        $packageRoot = [IO.Path]::GetFullPath($PackageOutputRoot).TrimEnd('\') + '/'
+        $artifactRoot = [IO.Path]::GetFullPath((Join-Path $windowsRoot 'artifacts')).TrimEnd('\') + '\'
+        if (-not $packageRoot.StartsWith($artifactRoot, [StringComparison]::OrdinalIgnoreCase)) { throw 'Package output must remain in Windows artifacts.' }
+    }
     $managedArguments += @(
         '-p:GenerateAppxPackageOnBuild=true', '-p:UapAppxPackageBuildMode=SideloadOnly',
         '-p:AppxBundle=Never', '-p:AppxPackageSigningEnabled=false',

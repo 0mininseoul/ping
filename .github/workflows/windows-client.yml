@@ -105,6 +105,10 @@ jobs:
           if (-not $importedCertificate.HasPrivateKey) {
             throw "Imported Windows sideload certificate does not include a private key."
           }
+          $expectedCertificate = [Security.Cryptography.X509Certificates.X509Certificate2]::new((Resolve-Path '.\windows\certs\Ping-Windows-Sideload.cer').Path)
+          if ($importedCertificate.Thumbprint -ne $expectedCertificate.Thumbprint) {
+            throw "Signing secret does not match the committed Ping certificate."
+          }
           Import-Certificate -FilePath ".\windows\certs\Ping-Windows-Sideload.cer" -CertStoreLocation "Cert:\CurrentUser\TrustedPeople" | Out-Null
           "PING_WINDOWS_CERT_PATH=$pfxPath" >> $env:GITHUB_ENV
           "PING_WINDOWS_CERT_PASSWORD=$env:PING_WINDOWS_CERT_PASSWORD" >> $env:GITHUB_ENV
@@ -121,7 +125,15 @@ jobs:
         shell: pwsh
         run: |
           dotnet test windows/tests/Ping.Windows.Core.Tests/Ping.Windows.Core.Tests.csproj -c Release --no-restore
+          if ($LASTEXITCODE -ne 0) { throw 'Core tests failed.' }
           dotnet test windows/tests/Ping.Windows.App.Tests/Ping.Windows.App.Tests.csproj -c Release --no-restore
+          if ($LASTEXITCODE -ne 0) { throw 'App tests failed.' }
+          powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File windows/scripts/test-user-data-preservation.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'Data preservation fixtures failed.' }
+          if ($env:PING_WINDOWS_SIGNED -eq 'true') {
+            powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File windows/scripts/test-installer-payload.ps1
+            if ($LASTEXITCODE -ne 0) { throw 'Offline payload fixtures failed.' }
+          }
 
       - name: Write bundled Supabase config
         shell: pwsh
@@ -143,6 +155,18 @@ jobs:
           }
 
           $config = [ordered]@{ url = $url; anonKey = $anonKey }
+          $uri = [Uri]$url
+          if ($uri.Scheme -ne 'https' -or $uri.Host -ne 'qxjtprxvjmaxlbtljcjw.supabase.co') {
+            throw 'Windows runtime configuration must target the pinned Ping project.'
+          }
+          if (-not $anonKey.StartsWith('sb_publishable_')) {
+            $parts = $anonKey.Split('.')
+            if ($parts.Count -ne 3) { throw 'Expected a public Supabase key.' }
+            $payload = $parts[1].Replace('-','+').Replace('_','/')
+            $payload = $payload.PadRight([int]([Math]::Ceiling($payload.Length / 4.0) * 4), '=')
+            $claims = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($payload)) | ConvertFrom-Json
+            if ($claims.role -ne 'anon' -or $claims.ref -ne 'qxjtprxvjmaxlbtljcjw') { throw 'Only the pinned project public anon key may be bundled.' }
+          }
           Set-Content -LiteralPath $configPath -Value ($config | ConvertTo-Json -Compress) -Encoding utf8
           Write-Host "Wrote bundled Supabase config to $configPath."
 
@@ -321,9 +345,9 @@ jobs:
 
           gh release view $tag 2>$null
           if ($LASTEXITCODE -ne 0) {
-            gh release create $tag --target $env:GITHUB_SHA --title "Ping Windows v$version" --notes "Zero-cost Windows web installer. PingSetup-v$version.exe imports Ping's self-signed MSIX certificate, downloads the right MSIX package from https://0minping.vercel.app/downloads/windows, installs the app, and launches it. Because it is not publicly code-signed, Windows SmartScreen may show a warning."
+            gh release create $tag --target $env:GITHUB_SHA --title "Ping Windows v$version" --notes "Offline Windows installer. PingSetup-v$version.exe bundles both architectures and their Windows App Runtime dependencies. Only certificate trust requests elevation; app registration and launch use the signed-in user. Internet is needed for messaging. Windows SmartScreen may warn because the EXE is not publicly code-signed."
           }
-          gh release edit $tag --title "Ping Windows v$version" --notes "Zero-cost Windows web installer. PingSetup-v$version.exe imports Ping's self-signed MSIX certificate, downloads the right MSIX package from https://0minping.vercel.app/downloads/windows, installs the app, and launches it. Because it is not publicly code-signed, Windows SmartScreen may show a warning."
+          gh release edit $tag --title "Ping Windows v$version" --notes "Offline Windows installer. PingSetup-v$version.exe bundles both architectures and their Windows App Runtime dependencies. Only certificate trust requests elevation; app registration and launch use the signed-in user. Internet is needed for messaging. Windows SmartScreen may warn because the EXE is not publicly code-signed."
 
           gh release upload $tag `
             $setupExe `
@@ -333,6 +357,7 @@ jobs:
             "$releaseDir/Ping-Windows-Sideload.cer" `
             "$releaseDir/install-ping-windows.ps1" `
             "$releaseDir/uninstall-ping-windows.ps1" `
+            "$releaseDir/ping-user-data.ps1" `
             "$releaseDir/dependencies-x64.txt" `
             "$releaseDir/dependencies-arm64.txt" `
             "$releaseDir/SHA256SUMS.txt" `

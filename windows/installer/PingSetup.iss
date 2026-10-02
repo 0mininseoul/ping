@@ -1,7 +1,6 @@
 #define AppVersion GetEnv("PING_VERSION")
 #define PayloadRoot GetEnv("PING_INSTALLER_PAYLOAD_ROOT")
 #define OutputRoot GetEnv("PING_INSTALLER_OUTPUT_DIR")
-#define PackageBaseUrl GetEnv("PING_INSTALLER_PACKAGE_BASE_URL")
 
 [Setup]
 AppId={{4DD8F1D2-8C4E-4D0D-9A48-FE2B4A906F01}
@@ -10,14 +9,14 @@ AppVersion={#AppVersion}
 AppPublisher=Youngmin Park
 AppPublisherURL=https://0minping.vercel.app
 AppSupportURL=https://github.com/0mininseoul/ping/releases
-DefaultDirName={autopf}\Ping
+DefaultDirName={localappdata}\Programs\Ping
 DefaultGroupName=Ping
 OutputDir={#OutputRoot}
 OutputBaseFilename=PingSetup-v{#AppVersion}
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
-PrivilegesRequired=admin
+PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible arm64
 ArchitecturesInstallIn64BitMode=x64compatible arm64
 DisableDirPage=no
@@ -30,7 +29,6 @@ SetupIconFile=app.ico
 [Tasks]
 Name: "desktopicon"; Description: "바탕 화면에 바로가기 만들기"; GroupDescription: "추가 옵션:"
 Name: "startmenu"; Description: "시작 메뉴에 Ping 폴더 및 바로가기 만들기"; GroupDescription: "추가 옵션:"; Flags: checkedonce
-Name: "startup"; Description: "Windows 부팅 시 자동 시작 등록"; GroupDescription: "추가 옵션:"
 Name: "launch"; Description: "설치 완료 후 즉시 Ping 실행"; GroupDescription: "추가 옵션:"; Flags: checkedonce
 
 [Files]
@@ -38,13 +36,33 @@ Source: "{#PayloadRoot}\Ping-Windows-Sideload.cer"; DestDir: "{tmp}"; Flags: del
 Source: "{#PayloadRoot}\Ping-Windows-Sideload.cer"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#PayloadRoot}\install-ping-windows.ps1"; DestDir: "{tmp}"; Flags: deleteafterinstall
 Source: "{#PayloadRoot}\uninstall-ping-windows.ps1"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#PayloadRoot}\ping-user-data.ps1"; DestDir: "{tmp}"; Flags: deleteafterinstall
+Source: "{#PayloadRoot}\ping-user-data.ps1"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#PayloadRoot}\Ping-Windows-v{#AppVersion}-x64.msix"; DestDir: "{tmp}"; Flags: deleteafterinstall; Check: not IsArm64
+Source: "{#PayloadRoot}\Ping-Windows-v{#AppVersion}-arm64.msix"; DestDir: "{tmp}"; Flags: deleteafterinstall; Check: IsArm64
+Source: "{#PayloadRoot}\dependencies-x64.txt"; DestDir: "{tmp}"; Flags: deleteafterinstall; Check: not IsArm64
+Source: "{#PayloadRoot}\dependencies-arm64.txt"; DestDir: "{tmp}"; Flags: deleteafterinstall; Check: IsArm64
+Source: "{#PayloadRoot}\Dependencies\x64\*"; DestDir: "{tmp}\Dependencies\x64"; Flags: deleteafterinstall recursesubdirs; Check: not IsArm64
+Source: "{#PayloadRoot}\Dependencies\arm64\*"; DestDir: "{tmp}\Dependencies\arm64"; Flags: deleteafterinstall recursesubdirs; Check: IsArm64
 Source: "app.ico"; DestDir: "{tmp}"; Flags: deleteafterinstall
 Source: "app.ico"; DestDir: "{app}"; Flags: ignoreversion
 
-[UninstallRun]
-Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\uninstall-ping-windows.ps1"" -CertificatePath ""{app}\Ping-Windows-Sideload.cer"""; Flags: runhidden waituntilterminated
+[UninstallDelete]
+Type: files; Name: "{app}\package-family.txt"
 
 [Code]
+var
+  RegistrationProgress: TOutputMarqueeProgressWizardPage;
+
+function IsArm64: Boolean;
+begin
+  Result := ProcessorArchitecture = paArm64;
+end;
+
+procedure InitializeWizard;
+begin
+  RegistrationProgress := CreateOutputMarqueeProgressPage('Ping 설치', 'Windows에 앱을 등록하고 있습니다.');
+end;
 { x64 또는 arm64 중 현재 PC에 맞는 패키지를 고른다. }
 function MsixArchitecture: String;
 begin
@@ -59,8 +77,7 @@ begin
   Result := 'Ping-Windows-v{#AppVersion}-' + MsixArchitecture + '.msix';
 end;
 
-{ install-ping-windows.ps1에 전달할 인자. EXE는 작게 유지하고 MSIX/런타임
-  dependency는 공개 다운로드 서버에서 설치 중 내려받는다. }
+{ 앱과 의존성은 EXE에서 현재 사용자 임시 폴더로 압축 해제한다. }
 function GetInstallerParams: String;
 var
   Params: String;
@@ -69,7 +86,8 @@ begin
     '-Version "{#AppVersion}"' +
     ' -Architecture ' + MsixArchitecture +
     ' -PackageDirectory "' + ExpandConstant('{tmp}') + '"' +
-    ' -PackageBaseUrl "{#PackageBaseUrl}"' +
+    ' -NoDialogs' +
+    ' -RegistrationRecordPath "' + ExpandConstant('{app}\package-family.txt') + '"' +
     ' -CertificatePath "' + ExpandConstant('{tmp}\Ping-Windows-Sideload.cer') + '"' +
     ' -IconPath "' + ExpandConstant('{tmp}\app.ico') + '"';
 
@@ -78,9 +96,6 @@ begin
 
   if WizardIsTaskSelected('startmenu') then
     Params := Params + ' -CreateStartMenuShortcut';
-
-  if WizardIsTaskSelected('startup') then
-    Params := Params + ' -AddToStartup';
 
   if not WizardIsTaskSelected('launch') then
     Params := Params + ' -NoLaunch';
@@ -102,19 +117,36 @@ begin
     CommandLine :=
       '-NoProfile -ExecutionPolicy Bypass -File "' + ScriptPath + '" ' + GetInstallerParams;
 
-    if not Exec(
-      ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
-      CommandLine, '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
-    begin
-      MsgBox(
-        'Ping 설치 프로그램을 실행하지 못했습니다.' + #13#10 +
-        'Windows PowerShell을 찾을 수 없습니다.',
-        mbCriticalError, MB_OK);
-      Abort;
+    RegistrationProgress.SetText('앱 등록 중…', '필요하면 인증서 신뢰 단계에서만 관리자 권한을 요청합니다. 자동 시작은 Ping 설정에서 선택할 수 있습니다.');
+    RegistrationProgress.Show;
+    RegistrationProgress.Animate;
+    try
+      repeat
+        if not Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
+          CommandLine, '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+          ResultCode := -1;
+        if ResultCode = 0 then Break;
+        if SuppressibleMsgBox('Ping을 설치하지 못했습니다. 트레이에서 Ping을 종료하고 인증서 승인과 Windows 버전을 확인해 주세요.' + #13#10 +
+          '기존 계정과 설정은 유지됩니다. 다시 시도할까요?', mbError, MB_RETRYCANCEL, IDCANCEL) = IDCANCEL then Abort;
+      until False;
+    finally
+      RegistrationProgress.Hide;
     end;
+  end;
+end;
 
-    if ResultCode <> 0 then
-      { install-ping-windows.ps1이 이미 한국어 오류 창을 표시했으므로 중단만 한다. }
-      Abort;
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  CommandLine: String;
+  ResultCode: Integer;
+begin
+  if CurUninstallStep <> usUninstall then Exit;
+  CommandLine := '-NoProfile -ExecutionPolicy Bypass -File "' + ExpandConstant('{app}\uninstall-ping-windows.ps1') + '" -NoDialogs';
+  if not Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
+    CommandLine, '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then ResultCode := -1;
+  if ResultCode <> 0 then
+  begin
+    SuppressibleMsgBox('Ping을 제거하지 못했습니다. 트레이에서 Ping을 종료한 뒤 다시 시도해 주세요. 계정 보존 파일과 설치 관리자는 유지됩니다.', mbError, MB_OK, IDOK);
+    Abort;
   end;
 end;

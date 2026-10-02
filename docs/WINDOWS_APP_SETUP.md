@@ -92,15 +92,15 @@ Release packages:
 Outputs:
 
 ```text
-windows\dist\Ping-Windows-v0.3.45-x64.msix
-windows\dist\Ping-Windows-v0.3.45-arm64.msix
+windows\dist\Ping-Windows-v0.4.0-x64.msix
+windows\dist\Ping-Windows-v0.4.0-arm64.msix
 ```
 
 Signed packages are required for external distribution. If signing is not configured, `build-release.ps1` produces unsigned packages for build validation only; users will see install/signing friction and SmartScreen may warn.
 
 ### Zero-Cost EXE Sideload Distribution
 
-The recommended no-cost self-hosted channel is the public landing page plus a single `PingSetup-v0.3.45.exe` installer. The EXE bundles `Ping-Windows-Sideload.cer` and installer scripts, then downloads the signed x64 or ARM64 MSIX package plus Windows App Runtime dependency packages from `https://0minping.vercel.app/downloads/windows/` during installation. It avoids paid public code-signing, but Windows SmartScreen can still warn because the outer EXE is not publicly trusted.
+The v0.4.0 release candidate targets a single offline `PingSetup-v0.4.0.exe` installer. The EXE bundles the signed x64 and ARM64 MSIX packages, public backend configuration, Windows App Runtime dependencies, certificate and installer scripts. Only the OS architecture payload is extracted. New CI artifact generation, installer compilation, and hardware QA are pending; the public channel still serves v0.3.46. It avoids paid public code-signing, but Windows SmartScreen can still warn because the outer EXE is not publicly trusted.
 
 Maintainer setup on Windows:
 
@@ -112,12 +112,12 @@ gh secret set PING_WINDOWS_CERT_PASSWORD
 
 Only commit `windows\certs\Ping-Windows-Sideload.cer`. Do not commit `.pfx`, `.p12`, base64 payloads, or passwords.
 
-The GitHub Actions workflow imports the PFX secret into `Cert:\CurrentUser\My`, signs both MSIX packages by certificate thumbprint, builds `windows\dist\Ping-Windows-v0.3.45-sideload.zip`, and builds the small web installer `windows\dist\PingSetup-v0.3.45.exe` with Inno Setup. The workflow uploads a `ping-windows-web-downloads` artifact containing the setup EXE, both MSIX payloads, dependency manifests/packages, and the public certificate so those files can be published under `web/public/downloads/windows/`.
+The GitHub Actions workflow imports the PFX secret into `Cert:\CurrentUser\My`, signs both MSIX packages by certificate thumbprint, builds `windows\dist\Ping-Windows-v0.4.0-sideload.zip`, and builds the offline installer `windows\dist\PingSetup-v0.4.0.exe` with Inno Setup. The workflow uploads a `ping-windows-web-downloads` artifact containing the setup EXE, both MSIX payloads, dependency manifests/packages, and the public certificate so those files can be published under `web/public/downloads/windows/`.
 
 End-user install:
 
 ```text
-Download PingSetup-v0.3.45.exe from the landing page, run it, accept SmartScreen/UAC prompts, and let the installer finish.
+After the candidate is built and delivered, run PingSetup-v0.4.0.exe normally (not as administrator). Only certificate trust requests UAC elevation. SmartScreen may warn because the outer EXE is not publicly code-signed.
 ```
 
 Fallback/debug install from the unzipped release folder:
@@ -126,7 +126,7 @@ Fallback/debug install from the unzipped release folder:
 powershell -ExecutionPolicy Bypass -File .\install-ping-windows.ps1
 ```
 
-Both installer paths import `Ping-Windows-Sideload.cer` into `Cert:\LocalMachine\TrustedPeople`, verify the MSIX signature, install the correct x64 or arm64 package, and launch Ping.
+Both paths register and launch the app as the signed-in user. Uninstall through Ping Setup requires exiting Ping from the tray, preserves current-user accounts/settings, and leaves shared trust/runtime in place. Reinstall restores retained data without replacing an existing account. Account removal requires a separate confirmation in Ping settings. Both installer paths import `Ping-Windows-Sideload.cer` into `Cert:\LocalMachine\TrustedPeople`, verify the MSIX signature, install the correct x64 or arm64 package, and launch Ping.
 
 ## Update Path
 

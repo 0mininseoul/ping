@@ -3,7 +3,6 @@ param(
     [string]$Version,
     [string]$DistRoot = (Join-Path $PSScriptRoot "..\dist"),
     [string]$PayloadRoot,
-    [string]$PackageBaseUrl = "https://0minping.vercel.app/downloads/windows",
     [string]$InnoSetupCompilerPath,
     [string]$InnoScriptPath = (Join-Path $PSScriptRoot "..\installer\PingSetup.iss")
 )
@@ -58,6 +57,7 @@ function Assert-InstallerPayload([string]$Root, [string]$TargetVersion) {
         "Ping-Windows-Sideload.cer",
         "install-ping-windows.ps1",
         "uninstall-ping-windows.ps1",
+        "ping-user-data.ps1",
         "dependencies-x64.txt",
         "dependencies-arm64.txt"
     )
@@ -85,12 +85,26 @@ function Assert-InstallerPayload([string]$Root, [string]$TargetVersion) {
         if (-not $dependencyPackages) {
             throw "Installer dependency directory has no MSIX/AppX packages: $dependencyRoot"
         }
+        & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'install-ping-windows.ps1') -Version $TargetVersion -Architecture $architectureLabel -PackageDirectory $Root -CertificatePath (Join-Path $Root 'Ping-Windows-Sideload.cer') -ValidateOnly
+        if ($LASTEXITCODE -ne 0) { throw "Offline installer payload validation failed for $architectureLabel." }
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        $archive = [IO.Compression.ZipFile]::OpenRead($msixPath)
+        try {
+            if (-not $archive.GetEntry('Ping.Windows.NativeCapture.dll')) { throw 'Installer package is missing the native capture bridge.' }
+            $configEntry = $archive.GetEntry('Supabase.json')
+            if (-not $configEntry -or $configEntry.Length -gt 65536) { throw 'Installer package is missing valid runtime configuration.' }
+            $reader = [IO.StreamReader]::new($configEntry.Open())
+            try { $config = $reader.ReadToEnd() | ConvertFrom-Json } finally { $reader.Dispose() }
+            $uri = [Uri]$config.url
+            if ($uri.Scheme -ne 'https' -or $uri.Host -ne 'qxjtprxvjmaxlbtljcjw.supabase.co' -or [string]::IsNullOrWhiteSpace($config.anonKey)) { throw 'Installer configuration must target the pinned Ping backend.' }
+        } finally { $archive.Dispose() }
     }
 }
 
 if ([string]::IsNullOrWhiteSpace($Version)) {
     $Version = Get-PingWindowsPackageVersion
 }
+if ($Version -notmatch '^\d+\.\d+\.\d+$') { throw 'Invalid installer version.' }
 
 if ([string]::IsNullOrWhiteSpace($PayloadRoot)) {
     $PayloadRoot = Join-Path $DistRoot "Ping-Windows-v$Version-sideload"
@@ -118,12 +132,10 @@ Remove-Item -Force -LiteralPath $setupPath -ErrorAction SilentlyContinue
 $previousVersion = $env:PING_VERSION
 $previousPayload = $env:PING_INSTALLER_PAYLOAD_ROOT
 $previousOutput = $env:PING_INSTALLER_OUTPUT_DIR
-$previousPackageBaseUrl = $env:PING_INSTALLER_PACKAGE_BASE_URL
 try {
     $env:PING_VERSION = $Version
     $env:PING_INSTALLER_PAYLOAD_ROOT = $resolvedPayloadRoot
     $env:PING_INSTALLER_OUTPUT_DIR = $resolvedDistRoot
-    $env:PING_INSTALLER_PACKAGE_BASE_URL = $PackageBaseUrl
 
     & $compiler $InnoScriptPath
     if ($LASTEXITCODE -ne 0) {
@@ -134,7 +146,6 @@ finally {
     $env:PING_VERSION = $previousVersion
     $env:PING_INSTALLER_PAYLOAD_ROOT = $previousPayload
     $env:PING_INSTALLER_OUTPUT_DIR = $previousOutput
-    $env:PING_INSTALLER_PACKAGE_BASE_URL = $previousPackageBaseUrl
 }
 
 if (-not (Test-Path -LiteralPath $setupPath)) {
