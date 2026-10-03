@@ -90,6 +90,7 @@ public sealed partial class HistoryWindow : UserControl
         {
             if (args.PropertyName is nameof(HistoryViewModel.SelectedRoom) or nameof(HistoryViewModel.DraftImagePath)) UpdateEmptyState();
             if (args.PropertyName == nameof(HistoryViewModel.SelectedRoom)) UpdateRoomActionButtons();
+            if (args.PropertyName == nameof(HistoryViewModel.SelectedRoom) && photoRoomId != viewModel.SelectedRoom?.Id) ClosePhotoPreview();
         };
         viewModel.Timeline.CollectionChanged += (_, _) => UpdateEmptyState();
         removalPermissionTimer = DispatcherQueue.CreateTimer();
@@ -120,6 +121,7 @@ public sealed partial class HistoryWindow : UserControl
     {
         detached = true; backendReady = false; IsEnabled = false;
         roomLifetime.Cancel();
+        ClosePhotoPreview();
         MembersFlyout.Hide();
         owner.Closed -= HandleOwnerClosed; owner.Activated -= HandleOwnerActivated;
         Root.Loaded -= HandleLoaded;

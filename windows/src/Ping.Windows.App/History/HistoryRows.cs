@@ -179,7 +179,7 @@ public sealed class ChatHistoryItem : INotifyPropertyChanged
         QuickReactions = message.Id is null
             ? []
             : quickReactions.Select(emoji => new ReactionChoice(ReactionTargetKind.Chat, message.Id, emoji)).ToArray();
-        attachmentStatus = message.MediaFileName ?? (HasImageAttachment ? "Image attachment" : string.Empty);
+        attachmentStatus = HasImageAttachment ? "사진을 불러오는 중…" : string.Empty;
         IsMine = string.Equals(message.SenderUid, currentUid, StringComparison.Ordinal);
         ReplyPreview = replyPreview ?? string.Empty;
         LinkPreviewUrl = LinkPreviewDetector.FirstUrl(Message.Body);
@@ -200,6 +200,22 @@ public sealed class ChatHistoryItem : INotifyPropertyChanged
     public string MediaFileName => Message.MediaFileName ?? string.Empty;
 
     public bool HasImageAttachment => !string.IsNullOrWhiteSpace(Message.MediaPath);
+    public bool CanPreviewImage => ImageSource is not null
+#if WINDOWS
+        && ImageSource.PixelWidth > 0 && ImageSource.PixelHeight > 0
+#endif
+        ;
+    private (double Width, double Height) ImageSize
+    {
+        get
+        {
+            if (Message.MediaWidth is not > 0 || Message.MediaHeight is not > 0) return (200, 160);
+            var scale = Math.Min(240d / Message.MediaWidth.Value, 260d / Message.MediaHeight.Value);
+            return (Math.Max(80, Message.MediaWidth.Value * scale), Math.Max(80, Message.MediaHeight.Value * scale));
+        }
+    }
+    public double ImageWidth => ImageSize.Width;
+    public double ImageHeight => ImageSize.Height;
 
     public bool IsMine { get; }
 
@@ -277,6 +293,7 @@ public sealed class ChatHistoryItem : INotifyPropertyChanged
             imageSource = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(ImageVisibility));
+            OnPropertyChanged(nameof(CanPreviewImage));
         }
     }
 
@@ -293,11 +310,14 @@ public sealed class ChatHistoryItem : INotifyPropertyChanged
     public void SetImagePath(string localPath)
     {
 #if WINDOWS
-        ImageSource = new BitmapImage(new Uri(Path.GetFullPath(localPath)));
+        var bitmap = new BitmapImage(new Uri(Path.GetFullPath(localPath)));
+        bitmap.ImageOpened += (_, _) => { if (ReferenceEquals(ImageSource, bitmap)) OnPropertyChanged(nameof(CanPreviewImage)); };
+        bitmap.ImageFailed += (_, _) => { if (ReferenceEquals(ImageSource, bitmap)) SetAttachmentError(); };
+        ImageSource = bitmap;
 #else
         ImageSource = new Uri(Path.GetFullPath(localPath));
 #endif
-        AttachmentStatus = string.IsNullOrWhiteSpace(MediaFileName) ? "Image" : MediaFileName;
+        AttachmentStatus = string.IsNullOrWhiteSpace(MediaFileName) ? "사진" : MediaFileName;
     }
 
     public void SetLinkPreview(LinkPreviewMetadata metadata)
@@ -319,9 +339,7 @@ public sealed class ChatHistoryItem : INotifyPropertyChanged
     public void SetAttachmentError()
     {
         ImageSource = null;
-        AttachmentStatus = string.IsNullOrWhiteSpace(MediaFileName)
-            ? "Image unavailable"
-            : $"{MediaFileName} unavailable";
+        AttachmentStatus = "사진을 불러올 수 없어요";
     }
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>

@@ -18,7 +18,7 @@ using global::Windows.Storage;
 
 namespace Ping.Windows.App.Diagnostics;
 
-internal static class UiSmokeRunner
+internal static partial class UiSmokeRunner
 {
     public static string? OutputDirectory { get; set; }
     private static readonly List<string> Checks = [];
@@ -62,6 +62,7 @@ internal static class UiSmokeRunner
             await Task.Delay(350);
             var root = (FrameworkElement)window.Content;
             TypographySmoke.Verify(root, Check);
+            await VerifyChatImagePreviewAsync();
             Check(root.ActualWidth > 600 && root.ActualHeight > 500, "real compact main window has usable client area");
             Check(UI.WindowCaptureExclusion.IsApplied(window), "messenger declares exclusion from OS screen capture");
             Check(vm.Rooms.Count == 2 && vm.Timeline.Count == 4, "fixture rooms and mixed timeline loaded");
@@ -535,6 +536,7 @@ internal static class UiSmokeRunner
         public int Sent;
         public int TimelineReads;
         public bool IncludeHiddenArrival;
+        public bool IncludePhoto;
         public bool RequireUiThread;
         public bool AllowRead;
         public Action? OnMarkRead;
@@ -555,7 +557,8 @@ internal static class UiSmokeRunner
                     Chat("c1", "peer", "안녕! Windows에서도 이제 가볍게 핑을 보낼 수 있겠네 😊", -3),
                     Chat("c2", "me", "응, 대화하면서 3초 얼굴 영상도 바로 보낼 수 있어.", -2),
                     Chat("c3", "peer", "좋아. 자세한 이야기는 여기에서 이어가자!", -1)
-                }.Concat(IncludeHiddenArrival ? new[] { Chat("while-hidden", "peer", "다시 열면 바로 보여야 하는 메시지", 0) } : Array.Empty<ChatMessage>()).ToArray() : Array.Empty<ChatMessage>(),
+                }.Concat(IncludeHiddenArrival ? new[] { Chat("while-hidden", "peer", "다시 열면 바로 보여야 하는 메시지", 0) } : Array.Empty<ChatMessage>())
+                .Concat(IncludePhoto ? new[] { Chat("photo", "peer", "함께 본 순간", 0) with { MediaPath = "peer/owned.png", MediaFileName = "공유한 사진.png", MediaWidth = 960, MediaHeight = 640 } } : Array.Empty<ChatMessage>()).ToArray() : Array.Empty<ChatMessage>(),
                 "ping_message_reactions" => Array.Empty<MessageReaction>(),
                 _ => throw new NotSupportedException(function)
             };
@@ -582,10 +585,11 @@ internal static class UiSmokeRunner
     }
     private sealed class FixtureStorage : IStorageService, IChatMediaStorageService
     {
+        public string? PhotoPath;
         public Task<string> UploadVideoAsync(string localVideoPath, string senderUid, string videoId, IReadOnlyCollection<string> authorizedReceiverUids, DateTimeOffset expiresAt, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task DeleteVideoAsync(string remotePath, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task<ChatImageUpload> UploadChatImageAsync(string localImagePath, string senderUid, string messageId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<string> DownloadChatMediaAsync(string remotePath, string fileExtension, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<string> DownloadChatMediaAsync(string remotePath, string fileExtension, CancellationToken cancellationToken = default) => PhotoPath is { } path ? Task.FromResult(path) : throw new NotSupportedException();
         public Task DeleteChatMediaAsync(string remotePath, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
     private sealed class FixtureLinks : ILinkPreviewService

@@ -166,7 +166,12 @@
                                                         <TextBlock Text="{Binding Chat.Body}" TextWrapping="Wrap" IsTextSelectionEnabled="True" Style="{StaticResource PingBodyTextStyle}" />
                                                     </ui:MessageBubble>
                                                     <StackPanel Visibility="{Binding Chat.AttachmentVisibility}" Spacing="4">
-                                                        <Image Source="{Binding Chat.ImageSource}" Visibility="{Binding Chat.ImageVisibility}" MaxWidth="320" MaxHeight="240" Stretch="Uniform" />
+                                                        <Button x:Name="PhotoButton" Click="ShowPhotoPreview_Click" IsEnabled="{Binding Chat.CanPreviewImage}" Visibility="{Binding Chat.ImageVisibility}"
+                                                            Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Left" AutomationProperties.Name="사진 크게 보기" ToolTipService.ToolTip="사진 크게 보기">
+                                                            <Border Width="{Binding Chat.ImageWidth}" Height="{Binding Chat.ImageHeight}" CornerRadius="14" Background="{ThemeResource PingReceivedBubbleBrush}" Loaded="PhotoTile_Loaded" SizeChanged="PhotoTile_SizeChanged">
+                                                                <Image Source="{Binding Chat.ImageSource}" Stretch="Uniform" />
+                                                            </Border>
+                                                        </Button>
                                                         <TextBlock Text="{Binding Chat.AttachmentStatus}" Style="{StaticResource PingCaptionTextStyle}" Foreground="{ThemeResource PingMutedBrush}" />
                                                     </StackPanel>
                                                     <Button Click="OpenChatLinkButton_Click" Visibility="{Binding Chat.LinkPreviewVisibility}" HorizontalContentAlignment="Stretch" MaxWidth="320">
