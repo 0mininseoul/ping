@@ -52,7 +52,8 @@ internal static class UiSmokeRunner
             window.InitializeTrayWindowBehavior();
             TestDisplayPlacement.Verify(window, Check);
             var shell = new HistoryWindow(window, vm, (_, _) => throw new NotSupportedException("No camera/video fixture"),
-                (_, _) => Task.CompletedTask, new MessageService(rpc, storage), loadOnStart: false, refreshInterval: TimeSpan.FromSeconds(5));
+                (_, _) => Task.CompletedTask, new MessageService(rpc, storage), loadOnStart: false, refreshInterval: TimeSpan.FromSeconds(5),
+                roomServices: new(new(rpc), new(rpc), new(rpc), () => "me", () => "민", () => { }));
             window.AttachMessenger(shell);
             shell.SetDefaultRoom("디자인 이야기");
             window.ShowShell();
@@ -131,6 +132,7 @@ internal static class UiSmokeRunner
                 ((IInvokeProvider)new ButtonAutomationPeer(renameRoomButton).GetPattern(PatternInterface.Invoke)).Invoke();
                 await UntilAsync(() => (roomDialog = VisualTreeHelper.GetOpenPopupsForXamlRoot(managerRoot.XamlRoot)
                     .SelectMany(p => Descendants(p.Child).Append(p.Child)).OfType<ContentDialog>().FirstOrDefault()) is not null);
+                await UntilAsync(() => Descendants(roomDialog!).OfType<TextBox>().Count() == 1);
                 roomInput = Descendants(roomDialog!).OfType<TextBox>().Single();
                 Check(roomInput.Text == roomVm.SelectedRoomName, "rename dialog starts with the selected room name");
                 roomInput.Text = "함께 이야기";
@@ -141,6 +143,7 @@ internal static class UiSmokeRunner
                 ((IInvokeProvider)new ButtonAutomationPeer(renameRoomButton).GetPattern(PatternInterface.Invoke)).Invoke();
                 await UntilAsync(() => (roomDialog = VisualTreeHelper.GetOpenPopupsForXamlRoot(managerRoot.XamlRoot)
                     .SelectMany(p => Descendants(p.Child).Append(p.Child)).OfType<ContentDialog>().FirstOrDefault()) is not null);
+                await UntilAsync(() => Descendants(roomDialog!).OfType<TextBox>().Count() == 1);
                 roomInput = Descendants(roomDialog!).OfType<TextBox>().Single();
                 roomInput.Text = "바뀌면 안 되는 이름";
                 await manager.FocusRoomAsync("b");
@@ -410,6 +413,7 @@ internal static class UiSmokeRunner
             Check(qrImage.Source is null && settingsVm.Pairing.Image is null, "closing settings clears pairing image");
             Check(true, "real settings window created, rendered and closed without crash");
             Step("Verifying guided first-use setup with owned fake services and no devices.");
+            await MessengerRoomsSmoke.RunAsync(Check, RenderAsync);
             await GuidedSetupSmoke.RunAsync(Check, RenderAsync);
             Step("Verifying owned native playback with a synthetic clip.");
             await PlaybackSmoke.RunAsync(window, OutputDirectory!, Check, RenderAsync);

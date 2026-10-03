@@ -62,7 +62,8 @@ public sealed class AppCoordinatorSourceTests
             "Bootstrap",
             "AppCoordinator.cs"));
 
-        Assert.Contains("Click=\"OpenRooms_Click\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Click=\"CreateRoom_Click\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Click=\"SearchRooms_Click\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Click=\"FacePing_Click\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Click=\"ScreenPing_Click\"", xaml, StringComparison.Ordinal);
         Assert.Contains("Click=\"OpenSettings_Click\"", xaml, StringComparison.Ordinal);

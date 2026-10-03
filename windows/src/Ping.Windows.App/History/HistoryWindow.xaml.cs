@@ -39,6 +39,7 @@ public sealed partial class HistoryWindow : UserControl
     private string? initialRoomId;
     private string? initialChatId;
     private bool isApplyingSelection;
+    private Task? firstRoomLoad;
     private string? lastScrolledRoomId;
     private TimelineHistoryItem? pendingScrollItem;
     private double? pendingScrollOffset;
@@ -53,7 +54,8 @@ public sealed partial class HistoryWindow : UserControl
         string? initialChatId = null,
         bool loadOnStart = true,
         TimeSpan? refreshInterval = null,
-        Func<VideoMessage, CancellationToken, Task>? playVideoAsync = null)
+        Func<VideoMessage, CancellationToken, Task>? playVideoAsync = null,
+        Setup.MessengerRoomServices? roomServices = null)
     {
         this.owner = owner;
         this.playVideoAsync = playVideoAsync;
@@ -68,6 +70,7 @@ public sealed partial class HistoryWindow : UserControl
         InitializeComponent();
         uiDispatcher = new UiTaskDispatcher(() => DispatcherQueue.HasThreadAccess, action => DispatcherQueue.TryEnqueue(() => action()));
         Root.DataContext = viewModel;
+        InitializeRoomActions(roomServices);
         VideosList.LayoutUpdated += (_, _) =>
         {
             if (VideosList.ActualHeight <= 0 || VideosList.Visibility != Visibility.Visible) return;
@@ -86,6 +89,7 @@ public sealed partial class HistoryWindow : UserControl
         viewModel.PropertyChanged += (_, args) =>
         {
             if (args.PropertyName is nameof(HistoryViewModel.SelectedRoom) or nameof(HistoryViewModel.DraftImagePath)) UpdateEmptyState();
+            if (args.PropertyName == nameof(HistoryViewModel.SelectedRoom)) UpdateRoomActionButtons();
         };
         viewModel.Timeline.CollectionChanged += (_, _) => UpdateEmptyState();
         removalPermissionTimer = DispatcherQueue.CreateTimer();
@@ -115,6 +119,8 @@ public sealed partial class HistoryWindow : UserControl
     public async Task DetachAsync()
     {
         detached = true; backendReady = false; IsEnabled = false;
+        roomLifetime.Cancel();
+        MembersFlyout.Hide();
         owner.Closed -= HandleOwnerClosed; owner.Activated -= HandleOwnerActivated;
         Root.Loaded -= HandleLoaded;
         removalPermissionTimer.Stop();
@@ -126,12 +132,13 @@ public sealed partial class HistoryWindow : UserControl
     {
         UpdateEmptyState();
         if (!loadOnFirstLoaded) return;
-        await ReloadRoomsAsync();
+        await (firstRoomLoad ??= ReloadRoomsAsync());
     }
 
     public async Task ReloadRoomsAsync()
     {
         backendReady = true;
+        UpdateRoomActionButtons();
         var roomId = initialRoomId;
         var chatId = initialChatId;
         initialRoomId = null;
@@ -143,6 +150,7 @@ public sealed partial class HistoryWindow : UserControl
         {
             ApplySelectionFromViewModel();
             autoRefresh.Start();
+            await RunAsync(LoadInvitationsAsync);
         }
     }
 

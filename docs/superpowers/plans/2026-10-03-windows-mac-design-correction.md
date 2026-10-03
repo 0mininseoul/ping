@@ -50,4 +50,6 @@ Mac `RoomManagerWindow.swift`, `RoomDetailView.swift`, `RoomSearchView.swift`처
 
 Commit: `feat(windows-ui): manage rooms directly from the messenger`.
 
+검증(0.4.5): Core272/App333, DISPLAY3 실제 WinUI243개 통과, 정상 x64 Release 경고/오류0. 메인 + 생성·룸/사람 자동 검색·초대 코드 참여·헤더 멤버/링크/이름 변경/나가기와 받은 초대 수락·거절을 실제 네이티브 조작으로 확인했다. 전체 사람 검색은 Mac처럼 직접 대화를 연결하며 멤버 popover의 초대는 선택한 룸에 적용한다. 첫 사용 완료의 생성 룸 선택·초대 화면 진입도 확인했다. 서버 변경 성공 뒤 목록 조회 실패는 성공 상태를 보존하는 5개 실패→통과 검사를 추가했다. 공용 나가기 확인은 닫힘 애니메이션 뒤가 아니라 확인 버튼 클릭 시 대상 룸을 확정한다. 검색 화면이 열린 동안 계정 런타임을 분리하면 화면과 검색을 취소한다. 최종 렌더는 `windows/artifacts/ui-shell-f13e21c36225469c85290dd8ad0dcf7e/`다. 실제 Mac 같은 상태 화면 비교와 장치/기기 간 검증은 미완료이며 전체 제품 완료로 표시하지 않는다.
+
 구현/로컬 확인: App309, WinUI175(DISPLAY3), 정상 x64 Release 경고/오류0. 원본의 메시지 최대 폭280, 11/6 여백, 얼굴60/화면90 썸네일까지 교정했다. Windows0.4.2.0으로 구분하며 서명 EXE 생성은 후속 배포 작업으로 이어간다. 설정/온보딩/거울/리뷰의 전체 시각적 parity 및 실제 Mac 이미지 대조는 완료로 표시하지 않는다.

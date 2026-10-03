@@ -7,17 +7,29 @@
         <Grid.Resources><setup:PositiveIntToVisibilityConverter x:Key="UnreadVisibilityConverter" /></Grid.Resources>
         <Grid.ColumnDefinitions><ColumnDefinition Width="180" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
         <Grid RowSpacing="8" Padding="10,12,10,8">
-            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
             <Grid ColumnSpacing="10">
-                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                 <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="내 룸" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource PingMutedBrush}" />
                 </StackPanel>
-                <Button Grid.Column="1" Click="OpenRooms_Click" Style="{StaticResource PingIconButtonStyle}" AutomationProperties.Name="방 만들기 또는 참여" ToolTipService.ToolTip="룸 만들기 · 찾기">
+                <Button x:Name="SearchRoomsButton" Grid.Column="1" Click="SearchRooms_Click" Style="{StaticResource PingIconButtonStyle}" AutomationProperties.Name="룸 또는 사람 찾기" ToolTipService.ToolTip="룸 · 사람 찾기"><FontIcon Glyph="&#xE721;" FontSize="15" /></Button>
+                <Button x:Name="CreateRoomButton" Grid.Column="2" Click="CreateRoom_Click" Style="{StaticResource PingIconButtonStyle}" AutomationProperties.Name="새 룸 만들기" ToolTipService.ToolTip="새 룸 만들기">
                     <FontIcon Glyph="&#xE710;" FontSize="16" />
                 </Button>
             </Grid>
-            <ListView x:Name="RoomsList" Grid.Row="1" ItemsSource="{Binding Rooms}" SelectionChanged="RoomsList_SelectionChanged"
+            <Expander x:Name="InvitationsPanel" Grid.Row="1" Header="받은 초대" Visibility="Collapsed" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                <ScrollViewer MaxHeight="160" HorizontalScrollBarVisibility="Disabled">
+                    <ItemsControl x:Name="InvitationsItems"><ItemsControl.ItemTemplate><DataTemplate>
+                        <StackPanel Margin="0,4" Spacing="6">
+                            <TextBlock Text="{Binding RoomName}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding FromNickname}" FontSize="11" Foreground="{ThemeResource PingMutedBrush}" TextTrimming="CharacterEllipsis" />
+                            <StackPanel Orientation="Horizontal" Spacing="6"><Button Content="수락" Tag="{Binding}" Click="AcceptInvitation_Click" Padding="7,3" FontSize="11" /><Button Content="거절" Tag="{Binding}" Click="RejectInvitation_Click" Padding="7,3" FontSize="11" /></StackPanel>
+                        </StackPanel>
+                    </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+                </ScrollViewer>
+            </Expander>
+            <ListView x:Name="RoomsList" Grid.Row="2" ItemsSource="{Binding Rooms}" SelectionChanged="RoomsList_SelectionChanged"
                 SelectionMode="Single" AutomationProperties.Name="대화방" Background="Transparent">
                 <ListView.ItemTemplate>
                     <DataTemplate>
@@ -35,7 +47,7 @@
                     </DataTemplate>
                 </ListView.ItemTemplate>
             </ListView>
-            <StackPanel Grid.Row="2" Spacing="10">
+            <StackPanel Grid.Row="3" Spacing="10">
                 <Border Padding="4,6">
                     <StackPanel Spacing="4">
                         <TextBlock Text="기본 전송 대상" FontSize="11" Foreground="{ThemeResource PingMutedBrush}" />
@@ -54,14 +66,30 @@
         <Grid Grid.Column="1" RowSpacing="0" Background="{ThemeResource PingSurfaceBrush}">
             <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
             <Grid ColumnSpacing="4" Padding="16,10" BorderBrush="{ThemeResource PingIdleBrush}" BorderThickness="0,0,0,1">
-                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                 <StackPanel Spacing="2">
                     <TextBlock Text="{Binding SelectedRoomName}" FontSize="14" FontWeight="SemiBold" Foreground="{ThemeResource PingTextBrush}" TextTrimming="CharacterEllipsis" />
-                    <TextBlock Text="{Binding SelectedRoomMembers}" FontSize="11" Foreground="{ThemeResource PingMutedBrush}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{Binding SelectedRoom.MemberCountLabel}" FontSize="11" Foreground="{ThemeResource PingMutedBrush}" />
                 </StackPanel>
-                <Button Grid.Column="1" Click="FacePing_Click" Style="{StaticResource PingIconButtonStyle}" ToolTipService.ToolTip="얼굴 핑 (Alt+P)" AutomationProperties.Name="얼굴 핑 녹화"><FontIcon Glyph="&#xE714;" FontSize="18" /></Button>
-                <Button Grid.Column="2" Click="ScreenPing_Click" Style="{StaticResource PingIconButtonStyle}" ToolTipService.ToolTip="화면 + 얼굴 (Alt+L)" AutomationProperties.Name="화면과 얼굴 녹화"><FontIcon Glyph="&#xE7F4;" FontSize="18" /></Button>
-                <Button Grid.Column="3" Click="RefreshButton_Click" Style="{StaticResource PingIconButtonStyle}" ToolTipService.ToolTip="대화 새로고침" AutomationProperties.Name="대화 새로고침"><FontIcon Glyph="&#xE72C;" FontSize="16" /></Button>
+                <Button x:Name="MembersButton" Grid.Column="1" Style="{StaticResource PingIconButtonStyle}" ToolTipService.ToolTip="룸 멤버" AutomationProperties.Name="룸 멤버">
+                    <FontIcon Glyph="&#xE716;" FontSize="16" />
+                    <Button.Flyout><Flyout x:Name="MembersFlyout" Opening="MembersFlyout_Opening">
+                        <StackPanel Width="240" Spacing="12">
+                            <TextBlock x:Name="MembersTitle" Text="멤버" FontSize="13" FontWeight="SemiBold" />
+                            <ItemsControl x:Name="MembersItems"><ItemsControl.ItemTemplate><DataTemplate>
+                                <Grid Margin="0,5" ColumnSpacing="10"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                    <Border Width="32" Height="32" CornerRadius="16" Background="{ThemeResource PingReceivedBubbleBrush}"><TextBlock Text="{Binding Initial}" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
+                                    <TextBlock Grid.Column="1" Text="{Binding Nickname}" FontSize="13" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="2" Text="{Binding Role}" FontSize="11" Foreground="{ThemeResource PingMutedBrush}" VerticalAlignment="Center" />
+                                </Grid>
+                            </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+                            <Button Content="사람 초대" Click="InvitePeople_Click" HorizontalAlignment="Stretch" />
+                        </StackPanel>
+                    </Flyout></Button.Flyout>
+                </Button>
+                <Button x:Name="InviteLinkButton" Grid.Column="2" Click="CopyInviteLink_Click" Style="{StaticResource PingIconButtonStyle}" ToolTipService.ToolTip="초대 링크 복사" AutomationProperties.Name="초대 링크 복사"><FontIcon Glyph="&#xE71B;" FontSize="16" /></Button>
+                <Button x:Name="RenameRoomButton" Grid.Column="3" Click="RenameRoom_Click" Style="{StaticResource PingIconButtonStyle}" ToolTipService.ToolTip="룸 이름 변경" AutomationProperties.Name="룸 이름 변경"><FontIcon Glyph="&#xE70F;" FontSize="16" /></Button>
+                <Button x:Name="LeaveRoomButton" Grid.Column="4" Click="LeaveRoom_Click" Style="{StaticResource PingIconButtonStyle}" ToolTipService.ToolTip="룸 나가기" AutomationProperties.Name="룸 나가기"><SymbolIcon Symbol="LeaveChat" /></Button>
             </Grid>
             <Border x:Name="ConnectionBanner" Grid.Row="1" Padding="12,8" CornerRadius="12" Background="{ThemeResource PingWarningFillBrush}" Visibility="Collapsed">
                 <Grid ColumnSpacing="12">
@@ -76,7 +104,7 @@
                         <FontIcon Glyph="&#xE8F2;" FontSize="38" Foreground="{ThemeResource PingAccentBrush}" />
                         <TextBlock x:Name="EmptyTitle" Text="대화를 시작하세요" FontSize="18" FontWeight="SemiBold" TextAlignment="Center" Foreground="{ThemeResource PingTextBrush}" />
                         <TextBlock x:Name="EmptyDetail" Text="방을 만들거나 참여한 뒤 메시지와 3초 영상을 주고받으세요." TextWrapping="Wrap" TextAlignment="Center" Foreground="{ThemeResource PingMutedBrush}" />
-                        <Button x:Name="EmptyRoomButton" Content="방 만들기 · 참여" Click="OpenRooms_Click" HorizontalAlignment="Center" />
+                        <Button x:Name="EmptyRoomButton" Content="룸 · 사람 찾기" Click="SearchRooms_Click" HorizontalAlignment="Center" />
                     </StackPanel>
                     <ListView x:Name="VideosList" ItemsSource="{Binding Timeline}" Visibility="{Binding TimelineVisibility}"
                         SelectionChanged="VideosList_SelectionChanged" DoubleTapped="VideosList_DoubleTapped" KeyDown="Timeline_KeyDown"
@@ -177,7 +205,14 @@
                     </Grid>
                     <Grid ColumnSpacing="8">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                        <Button Click="AttachImageButton_Click" Style="{StaticResource PingIconButtonStyle}" ToolTipService.ToolTip="사진 첨부" AutomationProperties.Name="사진 첨부" VerticalAlignment="Bottom"><FontIcon Glyph="&#xEB9F;" FontSize="18" /></Button>
+                        <Button x:Name="ComposeMenuButton" Style="{StaticResource PingIconButtonStyle}" ToolTipService.ToolTip="사진 · 영상 보내기" AutomationProperties.Name="사진과 영상 보내기" VerticalAlignment="Bottom"><FontIcon Glyph="&#xE710;" FontSize="18" />
+                            <Button.Flyout><MenuFlyout>
+                                <MenuFlyoutItem Text="사진 첨부" Click="AttachImageButton_Click"><MenuFlyoutItem.Icon><SymbolIcon Symbol="Pictures" /></MenuFlyoutItem.Icon></MenuFlyoutItem>
+                                <MenuFlyoutItem Text="얼굴 핑 (Alt+P)" Click="FacePing_Click"><MenuFlyoutItem.Icon><SymbolIcon Symbol="Camera" /></MenuFlyoutItem.Icon></MenuFlyoutItem>
+                                <MenuFlyoutItem Text="화면 + 얼굴 (Alt+L)" Click="ScreenPing_Click" />
+                                <MenuFlyoutSeparator /><MenuFlyoutItem Text="대화 새로고침" Click="RefreshButton_Click"><MenuFlyoutItem.Icon><SymbolIcon Symbol="Refresh" /></MenuFlyoutItem.Icon></MenuFlyoutItem>
+                            </MenuFlyout></Button.Flyout>
+                        </Button>
                         <TextBox x:Name="ChatBox" Grid.Column="1" Text="{Binding DraftText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True"
                             TextWrapping="Wrap" MinHeight="36" MaxHeight="120" PlaceholderText="메시지 입력…" KeyDown="ChatBox_KeyDown" KeyUp="ChatBox_KeyUp" MaxLength="2000"
                             TextCompositionStarted="ChatCompositionStarted" TextCompositionEnded="ChatCompositionEnded" AutomationProperties.Name="메시지 입력"

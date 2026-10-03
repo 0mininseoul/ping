@@ -54,6 +54,7 @@
     <Compile Include="..\..\src\Ping.Windows.App\Setup\ClipboardWriter.cs" Link="Setup\ClipboardWriter.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Setup\HotkeySettingRow.cs" Link="Setup\HotkeySettingRow.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Setup\RoomManagerViewModel.cs" Link="Setup\RoomManagerViewModel.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Setup\RoomSearchViewModel.cs" Link="Setup\RoomSearchViewModel.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Setup\SettingsWindowViewModel.cs" Link="Setup\SettingsWindowViewModel.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Setup\StartupTaskController.cs" Link="Setup\StartupTaskController.cs" />
   </ItemGroup>

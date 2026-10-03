@@ -456,7 +456,9 @@ public sealed class AppCoordinator : IDisposable
             preferredRoomId,
             preferredChatId,
             loadOnStart: currentUid is not null,
-            playVideoAsync: (message, token) => RequestPlaybackAsync(message, IncomingArrivalSource.HistoryReplay, token));
+            playVideoAsync: (message, token) => RequestPlaybackAsync(message, IncomingArrivalSource.HistoryReplay, token),
+            roomServices: new(roomService, invitationService, userService, () => currentUid, () => CurrentNickname,
+                () => connectionSupervisor.RequestReconnect()));
         mainWindow.AttachMessenger(historyWindow);
         historyWindow.Activate();
     }
@@ -549,8 +551,8 @@ public sealed class AppCoordinator : IDisposable
                 mainWindow.ShowShell();
                 if (createdRoomId is not null)
                 {
-                    OpenRoomManagerWindow();
-                    if (roomManagerWindow is { } manager) _ = manager.FocusRoomAsync(createdRoomId);
+                    OpenHistoryWindow();
+                    if (historyWindow is { } messenger) _ = messenger.OpenRoomInvitationAsync(createdRoomId);
                 }
                 else if (joinedRoomId is not null) OpenHistoryWindow(joinedRoomId);
             }, permissionProbe.ProbeAsync);
@@ -1083,13 +1085,18 @@ public sealed class AppCoordinator : IDisposable
             catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
             catch (Exception error) { HandleIncomingConnectionError(error); }
         }
+        var refreshedInvitations = await invitationService.IncomingAsync(token);
         Task refresh = Task.CompletedTask;
         await RunOnUiThreadAsync(() =>
         {
             if (disposed || currentUid != uid || token.IsCancellationRequested) return;
             rooms = refreshedRooms;
             RefreshDefaultRoomLabel();
-            if (historyWindow is { } history) refresh = history.ApplyIncomingRoomsAsync(refreshedRooms, token);
+            if (historyWindow is { } history)
+            {
+                history.ApplyIncomingInvitations(refreshedInvitations);
+                refresh = history.ApplyIncomingRoomsAsync(refreshedRooms, token);
+            }
         });
         await refresh;
     }

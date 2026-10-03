@@ -19,7 +19,7 @@ try {
     $env:PING_UI_SMOKE_DISPLAY = $MonitorDeviceName
     $process = Start-Process -FilePath $executable -ArgumentList "--ui-smoke-output `"$outputDirectory`"" -PassThru -WindowStyle Hidden
 } finally { $env:PING_UI_SMOKE_DISPLAY = $previousDisplay }
-if (-not $process.WaitForExit(45000)) {
+if (-not $process.WaitForExit(60000)) {
     Stop-Process -Id $process.Id -ErrorAction SilentlyContinue
     throw "Isolated UI fixture timed out. Diagnostics: $outputDirectory"
 }

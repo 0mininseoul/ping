@@ -8,6 +8,34 @@ namespace Ping.Windows.App.Tests;
 
 public sealed class RoomManagerViewModelTests
 {
+    [Theory]
+    [InlineData("join", "ping_join_room")]
+    [InlineData("link", "ping_accept_invite_link")]
+    [InlineData("invite", "ping_invite_user")]
+    [InlineData("rename", "ping_rename_room")]
+    [InlineData("leave", "ping_leave_room")]
+    public async Task Confirmed_mutation_is_preserved_if_following_room_reload_fails(string action, string function)
+    {
+        var rpc = new RecordingRoomRpcClient { FailReload = true };
+        var model = new RoomManagerViewModel(new(rpc), new(rpc), "민", currentUidProvider: () => "sender");
+        var changes = 0; model.RoomsChanged += (_, _) => changes++;
+        if (action is "rename" or "leave") { model.Rooms.Add(Room()); model.SelectedRoom = model.Rooms[0]; }
+        switch (action)
+        {
+            case "join": model.SelectedSearchResult = Room(); await model.JoinSelectedSearchResultAsync(); break;
+            case "link": await model.AcceptInviteLinkAsync("invite-token"); break;
+            case "invite": await model.InviteUserAsync("receiver", "함께 이야기"); break;
+            case "rename": await model.RenameSelectedRoomAsync("새 이름"); break;
+            case "leave": await model.LeaveSelectedRoomAsync(); break;
+        }
+        Assert.Equal(1, changes);
+        Assert.Single(rpc.Calls, call => call.Function == function);
+        Assert.Contains("목록", model.StatusMessage);
+        if (action == "leave") { Assert.Empty(model.Rooms); Assert.Null(model.SelectedRoom); }
+        else { Assert.Equal("room-id", model.SelectedRoom?.Id); Assert.Single(model.Rooms); }
+        if (action == "rename") Assert.Equal("새 이름", model.SelectedRoom?.Name);
+    }
+
     [Fact]
     public async Task CreatedRoomIsRetainedWhenOnlyTheFollowingReloadFails()
     {
