@@ -9,6 +9,21 @@ namespace Ping.Windows.App.Tests;
 public sealed class RoomManagerViewModelTests
 {
     [Fact]
+    public async Task CreatedRoomIsRetainedWhenOnlyTheFollowingReloadFails()
+    {
+        var rpc = new RecordingRoomRpcClient { FailReload = true };
+        var model = new RoomManagerViewModel(new RoomService(rpc), new InvitationService(rpc), "민");
+        var changes = 0;
+        model.RoomsChanged += (_, _) => changes++;
+        await model.CreateRoomAsync("새 룸");
+        Assert.Equal("room-id", Assert.Single(model.Rooms).Id);
+        Assert.Equal("room-id", model.SelectedRoom?.Id);
+        Assert.Equal(1, changes);
+        Assert.Contains("목록", model.StatusMessage);
+        Assert.Single(rpc.Calls, call => call.Function == "ping_create_room");
+    }
+
+    [Fact]
     public async Task Focus_newly_created_room_refreshes_stale_collection_before_invitation()
     {
         var rpc = new RecordingRoomRpcClient();
@@ -192,6 +207,7 @@ public sealed class RoomManagerViewModelTests
 
     private sealed class RecordingRoomRpcClient : ISupabaseRpcClient
     {
+        public bool FailReload { get; init; }
         public List<(string Function, object Body)> Calls { get; } = [];
 
         public IReadOnlyList<Room> SearchRoomResults { get; init; } = [Room()];
@@ -205,6 +221,7 @@ public sealed class RoomManagerViewModelTests
         {
             _ = cancellationToken;
             Calls.Add((function, body ?? new { }));
+            if (function == "ping_my_rooms" && FailReload) throw new InvalidOperationException("목록 연결 실패");
             object result = function switch
             {
                 "ping_create_invite_link" => new[]

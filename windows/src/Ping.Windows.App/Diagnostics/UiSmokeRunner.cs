@@ -99,7 +99,71 @@ internal static class UiSmokeRunner
                 var managementTabs = Descendants(managerRoot).OfType<Pivot>().Single();
                 Check(managementTabs.Items.Count == 3 && managementTabs.SelectedIndex == 0,
                     "room management presents one task at a time instead of the legacy form wall");
+                Check(!Descendants(managerRoot).OfType<TextBox>().Any(t =>
+                    t.Name is "NewRoomNameBox" or "RenameRoomBox" && t.ActualHeight > 0),
+                    "room overview hides creation and rename forms until requested");
+                await UntilAsync(() => Descendants(managerRoot).OfType<TextBlock>().Any(t => t.Text == "서연"));
+                Check(Descendants(managerRoot).OfType<TextBlock>().Any(t => t.Text == "민"),
+                    "room overview renders the actual selected room member nicknames");
                 await RenderAsync(managerRoot, "rooms-management.png");
+                var newRoomButton = (Button)managerRoot.FindName("NewRoomButton");
+                ((IInvokeProvider)new ButtonAutomationPeer(newRoomButton).GetPattern(PatternInterface.Invoke)).Invoke();
+                ContentDialog? roomDialog = null;
+                await UntilAsync(() => (roomDialog = VisualTreeHelper.GetOpenPopupsForXamlRoot(managerRoot.XamlRoot)
+                    .SelectMany(p => Descendants(p.Child).Append(p.Child)).OfType<ContentDialog>().FirstOrDefault()) is not null);
+                var roomInput = Descendants(roomDialog!).OfType<TextBox>().Single();
+                await RenderAsync(roomDialog!, "rooms-create-dialog.png");
+                roomInput.Text = new string('가', 17);
+                await InvokeDialogButtonAsync(managerRoot.XamlRoot, "만들기");
+                Check(rpc.CreateAttempts == 0 && roomInput.Text.Length == 17,
+                    "overlong room name stays editable without calling the backend");
+                roomInput.Text = "함께 이야기";
+                await InvokeDialogButtonAsync(managerRoot.XamlRoot, "만들기");
+                Check(rpc.CreateAttempts == 1 && roomInput.Text == "함께 이야기" && roomInput.IsEnabled
+                    && Descendants(roomDialog!).OfType<TextBlock>().Any(t => t.Text == "테스트 연결 실패"),
+                    "failed room creation keeps dialog, input and retry controls");
+                roomInput.Text = string.Concat(Enumerable.Repeat("🇰🇷", 13));
+                await InvokeDialogButtonAsync(managerRoot.XamlRoot, "만들기");
+                Check(rpc.CreateAttempts == 2, "13 flag emoji room name reaches the service as 13 graphemes");
+                await InvokeDialogButtonAsync(managerRoot.XamlRoot, "취소");
+                await Task.Delay(180);
+                var renameRoomButton = (Button)managerRoot.FindName("RenameRoomButton");
+                ((IInvokeProvider)new ButtonAutomationPeer(renameRoomButton).GetPattern(PatternInterface.Invoke)).Invoke();
+                await UntilAsync(() => (roomDialog = VisualTreeHelper.GetOpenPopupsForXamlRoot(managerRoot.XamlRoot)
+                    .SelectMany(p => Descendants(p.Child).Append(p.Child)).OfType<ContentDialog>().FirstOrDefault()) is not null);
+                roomInput = Descendants(roomDialog!).OfType<TextBox>().Single();
+                Check(roomInput.Text == roomVm.SelectedRoomName, "rename dialog starts with the selected room name");
+                roomInput.Text = "함께 이야기";
+                await InvokeDialogButtonAsync(managerRoot.XamlRoot, "저장");
+                Check(rpc.LastRename is { RoomUuid: "a", NewName: "함께 이야기" },
+                    "native rename dialog submits to the selected room service");
+                await Task.Delay(180);
+                ((IInvokeProvider)new ButtonAutomationPeer(renameRoomButton).GetPattern(PatternInterface.Invoke)).Invoke();
+                await UntilAsync(() => (roomDialog = VisualTreeHelper.GetOpenPopupsForXamlRoot(managerRoot.XamlRoot)
+                    .SelectMany(p => Descendants(p.Child).Append(p.Child)).OfType<ContentDialog>().FirstOrDefault()) is not null);
+                roomInput = Descendants(roomDialog!).OfType<TextBox>().Single();
+                roomInput.Text = "바뀌면 안 되는 이름";
+                await manager.FocusRoomAsync("b");
+                await InvokeDialogButtonAsync(managerRoot.XamlRoot, "저장");
+                Check(rpc.LastRename is { RoomUuid: "a", NewName: "함께 이야기" }
+                    && Descendants(roomDialog!).OfType<TextBlock>().Any(t => t.Text.Contains("바뀌었어요", StringComparison.Ordinal)),
+                    "rename never submits to another room selected while its dialog is open");
+                await InvokeDialogButtonAsync(managerRoot.XamlRoot, "취소");
+                await manager.FocusRoomAsync("a");
+                ((IInvokeProvider)new ButtonAutomationPeer((Button)managerRoot.FindName("LeaveRoomButton")).GetPattern(PatternInterface.Invoke)).Invoke();
+                await UntilAsync(() => VisualTreeHelper.GetOpenPopupsForXamlRoot(managerRoot.XamlRoot).Count > 0);
+                await manager.FocusRoomAsync("b");
+                await InvokeDialogButtonAsync(managerRoot.XamlRoot, "나가기");
+                Check(rpc.LeaveAttempts == 0, "leave confirmation never removes a room selected after the dialog opened");
+                await manager.FocusRoomAsync("a");
+                var targetRow = Descendants(managerRoot).OfType<Grid>().Single(g => g.ContextFlyout is MenuFlyout && g.DataContext is Room { Id: "b" });
+                ((MenuFlyout)targetRow.ContextFlyout).ShowAt(targetRow);
+                MenuFlyoutItem? moveItem = null;
+                await UntilAsync(() => (moveItem = VisualTreeHelper.GetOpenPopupsForXamlRoot(managerRoot.XamlRoot)
+                    .SelectMany(p => Descendants(p.Child)).OfType<MenuFlyoutItem>().FirstOrDefault(i => i.Text == "위로 이동")) is not null);
+                ((IInvokeProvider)new MenuFlyoutItemAutomationPeer(moveItem!).GetPattern(PatternInterface.Invoke)).Invoke();
+                await UntilAsync(() => roomVm.Rooms[0].Id == "b");
+                Check(roomVm.SelectedRoom?.Id == "b", "context reorder moves the clicked row even when another room was selected");
                 managementTabs.SelectedIndex = 1;
                 await Task.Delay(800);
                 Check(Descendants(managerRoot).OfType<TextBox>().Any(t => t.Name == "SearchBox" && t.ActualWidth > 100),
@@ -460,6 +524,9 @@ internal static class UiSmokeRunner
 
     private sealed class FixtureRpc : ISupabaseRpcClient
     {
+        public int CreateAttempts { get; private set; }
+        public RenameRoomRpcBody? LastRename { get; private set; }
+        public int LeaveAttempts { get; private set; }
         public int Sent;
         public int TimelineReads;
         public bool IncludeHiddenArrival;
@@ -468,6 +535,7 @@ internal static class UiSmokeRunner
         public Action? OnMarkRead;
         public Task<IReadOnlyList<T>> RpcArrayAsync<T>(string function, object? body = null, CancellationToken cancellationToken = default)
         {
+            if (function == "ping_create_room") { CreateAttempts++; throw new InvalidOperationException("테스트 연결 실패"); }
             if (RequireUiThread && Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread() is null)
                 throw new InvalidOperationException("Fixture RPC was invoked outside the owning UI thread.");
             if (function == "ping_room_chat_messages") Interlocked.Increment(ref TimelineReads);
@@ -496,6 +564,8 @@ internal static class UiSmokeRunner
         }
         public Task RpcVoidAsync(string function, object? body = null, CancellationToken cancellationToken = default)
         {
+            if (function == "ping_rename_room") LastRename = (RenameRoomRpcBody?)body;
+            if (function == "ping_leave_room") LeaveAttempts++;
             if (function == "ping_mark_room_read") OnMarkRead?.Invoke();
             return Task.CompletedTask;
         }

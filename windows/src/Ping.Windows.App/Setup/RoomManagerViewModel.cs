@@ -159,8 +159,15 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
     public async Task CreateRoomAsync(string roomName, CancellationToken cancellationToken = default)
     {
         var room = await roomService.CreateRoomAsync(roomName, nickname, cancellationToken);
-        await ReloadRoomsAsync(cancellationToken);
+        if (!Rooms.Any(candidate => candidate.Id == room.Id)) Rooms.Add(room);
+        SelectedRoom = Rooms.First(candidate => candidate.Id == room.Id);
         RoomsChanged?.Invoke(this, EventArgs.Empty);
+        try { await ReloadRoomsAsync(cancellationToken); }
+        catch (Exception)
+        {
+            StatusMessage = $"{room.Name} 룸을 만들었어요. 목록은 다시 열 때 갱신됩니다.";
+            return;
+        }
         SelectedRoom = Rooms.FirstOrDefault(candidate => candidate.Id == room.Id) ?? room;
         StatusMessage = $"{room.Name} 룸을 만들었어요.";
     }
@@ -367,8 +374,9 @@ public sealed class RoomManagerViewModel : INotifyPropertyChanged
     private async Task ReloadRoomsAsync(CancellationToken cancellationToken)
     {
         var previousSelectedId = SelectedRoom?.Id;
+        var rooms = await roomService.MyRoomsAsync(cancellationToken);
         Rooms.Clear();
-        foreach (var room in await roomService.MyRoomsAsync(cancellationToken))
+        foreach (var room in rooms)
         {
             Rooms.Add(room);
         }
@@ -412,7 +420,7 @@ public sealed partial class RoomManagerWindow : Window
         InitializeComponent();
         Ping.Windows.App.UI.PingAppearance.Register(this);
         Ping.Windows.App.UI.WindowCaptureExclusion.Apply(this);
-        Ping.Windows.App.UI.SettingsWindowGeometry.Fit(this);
+        Ping.Windows.App.UI.SettingsWindowGeometry.Fit(this, 640, 620);
         Root.DataContext = viewModel;
         Root.Loaded += HandleLoaded;
     }
@@ -461,20 +469,89 @@ public sealed partial class RoomManagerWindow : Window
         viewModel.SelectedInvitation = InvitationsList.SelectedItem as Invitation;
     }
 
-    private async void CreateRoomButton_Click(object sender, RoutedEventArgs args) =>
-        await RunAsync(() => viewModel.CreateRoomAsync(NewRoomNameBox.Text));
+    private async void CreateRoomButton_Click(object sender, RoutedEventArgs args) => await ShowRoomNameDialogAsync(true);
 
-    private async void RenameRoomButton_Click(object sender, RoutedEventArgs args) =>
-        await RunAsync(() => viewModel.RenameSelectedRoomAsync(RenameRoomBox.Text));
+    private async void RenameRoomButton_Click(object sender, RoutedEventArgs args)
+    {
+        if (viewModel.SelectedRoom is not null) await ShowRoomNameDialogAsync(false);
+    }
 
-    private async void LeaveRoomButton_Click(object sender, RoutedEventArgs args) =>
-        await RunAsync(() => viewModel.LeaveSelectedRoomAsync());
+    private async Task ShowRoomNameDialogAsync(bool create)
+    {
+        var openingRoomId = viewModel.SelectedRoom?.Id;
+        var input = new TextBox { Text = create ? "" : viewModel.SelectedRoomName, PlaceholderText = "룸 이름", CornerRadius = new(8) };
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(input, create ? "새 룸 이름" : "룸 이름 변경");
+        var error = new TextBlock { TextWrapping = TextWrapping.Wrap };
+        var content = new StackPanel { Spacing = 12 };
+        content.Children.Add(new TextBlock { Text = "룸 이름을 16자 이내로 입력하세요.", TextWrapping = TextWrapping.Wrap });
+        content.Children.Add(input); content.Children.Add(error);
+        var dialog = new ContentDialog
+        {
+            XamlRoot = Root.XamlRoot, RequestedTheme = Root.ActualTheme,
+            Title = create ? "새 룸 만들기" : "룸 이름 변경", Content = content,
+            PrimaryButtonText = create ? "만들기" : "저장", CloseButtonText = "취소", DefaultButton = ContentDialogButton.Primary
+        };
+        var submitting = false;
+        dialog.Closing += (_, args) => args.Cancel = submitting;
+        dialog.PrimaryButtonClick += async (_, args) =>
+        {
+            if (!create && viewModel.SelectedRoom?.Id != openingRoomId)
+            {
+                args.Cancel = true; error.Text = "선택한 룸이 바뀌었어요. 창을 닫고 다시 시도하세요."; return;
+            }
+            var name = DisplayText.NormalizeWhitespace(input.Text);
+            if (string.IsNullOrWhiteSpace(name) || System.Globalization.StringInfo.ParseCombiningCharacters(name).Length > 16)
+            {
+                args.Cancel = true; error.Text = "룸 이름을 1~16자로 입력하세요."; return;
+            }
+            var deferral = args.GetDeferral();
+            submitting = true;
+            dialog.IsPrimaryButtonEnabled = false;
+            dialog.CloseButtonText = "";
+            input.IsEnabled = false;
+            try
+            {
+                if (create) await viewModel.CreateRoomAsync(name);
+                else await viewModel.RenameSelectedRoomAsync(name);
+            }
+            catch (Exception ex) { args.Cancel = true; error.Text = ex.Message; viewModel.ReportError(ex); }
+            finally
+            {
+                submitting = false; dialog.IsPrimaryButtonEnabled = true; dialog.CloseButtonText = "취소";
+                input.IsEnabled = true; deferral.Complete();
+            }
+        };
+        dialog.Opened += (_, _) => { input.Focus(FocusState.Programmatic); input.SelectAll(); };
+        await dialog.ShowAsync();
+    }
 
-    private async void MoveUpRoomButton_Click(object sender, RoutedEventArgs args) =>
+    private async void LeaveRoomButton_Click(object sender, RoutedEventArgs args)
+    {
+        if (viewModel.SelectedRoom is null) return;
+        var openingRoomId = viewModel.SelectedRoom.Id;
+        var dialog = new ContentDialog
+        {
+            XamlRoot = Root.XamlRoot, RequestedTheme = Root.ActualTheme, Title = "룸 나가기",
+            Content = $"‘{viewModel.SelectedRoomName}’ 룸에서 나갑니다. 계속하시겠습니까?",
+            PrimaryButtonText = "나가기", CloseButtonText = "취소", DefaultButton = ContentDialogButton.Close
+        };
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary && viewModel.SelectedRoom?.Id == openingRoomId)
+            await RunAsync(() => viewModel.LeaveSelectedRoomAsync());
+    }
+
+    private async void MoveUpRoomButton_Click(object sender, RoutedEventArgs args)
+    {
+        if (sender is not MenuFlyoutItem { Tag: Room room }) return;
+        viewModel.SelectedRoom = room;
         await RunAsync(() => viewModel.MoveSelectedRoomAsync(-1));
+    }
 
-    private async void MoveDownRoomButton_Click(object sender, RoutedEventArgs args) =>
+    private async void MoveDownRoomButton_Click(object sender, RoutedEventArgs args)
+    {
+        if (sender is not MenuFlyoutItem { Tag: Room room }) return;
+        viewModel.SelectedRoom = room;
         await RunAsync(() => viewModel.MoveSelectedRoomAsync(1));
+    }
 
     private async void SearchButton_Click(object sender, RoutedEventArgs args) =>
         await RunAsync(() => viewModel.SearchRoomsAsync(SearchBox.Text));
@@ -486,7 +563,7 @@ public sealed partial class RoomManagerWindow : Window
         await RunAsync(() => viewModel.SearchUsersAsync(UserSearchBox.Text));
 
     private async void InviteSelectedUserButton_Click(object sender, RoutedEventArgs args) =>
-        await RunAsync(() => viewModel.InviteSelectedUserAsync(NewRoomNameBox.Text));
+        await RunAsync(() => viewModel.InviteSelectedUserAsync("새 룸"));
 
     private async void AcceptInvitationButton_Click(object sender, RoutedEventArgs args) =>
         await RunAsync(() => viewModel.AcceptSelectedInvitationAsync());

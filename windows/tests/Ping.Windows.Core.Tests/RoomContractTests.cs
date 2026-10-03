@@ -8,6 +8,20 @@ namespace Ping.Windows.Core.Tests;
 public sealed class RoomContractTests
 {
     [Fact]
+    public async Task RoomNamesCountGraphemesRatherThanUtf16Units()
+    {
+        var rpc = new RecordingSocialRpcClient();
+        var service = new RoomService(rpc);
+        var name = string.Concat(Enumerable.Repeat("🇰🇷", 13));
+        await service.CreateRoomAsync(name, "민");
+        await service.RenameRoomAsync("room-id", name);
+        Assert.Equal(name, ((CreateRoomRpcBody)rpc.Calls[0].Body!).RoomName);
+        Assert.Equal(name, ((RenameRoomRpcBody)rpc.Calls[1].Body!).NewName);
+        await Assert.ThrowsAsync<ArgumentException>(() => service.CreateRoomAsync(new string('가', 49), "민"));
+        Assert.Equal(2, rpc.Calls.Count);
+    }
+
+    [Fact]
     public async Task RoomService_UsesMacOSRoomRpcBodies()
     {
         var rpc = new RecordingSocialRpcClient();

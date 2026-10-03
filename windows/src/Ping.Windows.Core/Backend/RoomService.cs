@@ -68,7 +68,7 @@ public static class RoomName
     public static string Normalize(string value)
     {
         var normalized = DisplayText.NormalizeWhitespace(value);
-        if (normalized.Length is < 1 or > 48)
+        if (System.Globalization.StringInfo.ParseCombiningCharacters(normalized).Length is < 1 or > 48)
         {
             throw new ArgumentException("Room name must be 1-48 characters after trimming.", nameof(value));
         }
