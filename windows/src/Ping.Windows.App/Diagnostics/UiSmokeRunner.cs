@@ -61,6 +61,7 @@ internal static class UiSmokeRunner
             await shell.ReloadRoomsAsync();
             await Task.Delay(350);
             var root = (FrameworkElement)window.Content;
+            TypographySmoke.Verify(root, Check);
             Check(root.ActualWidth > 600 && root.ActualHeight > 500, "real compact main window has usable client area");
             Check(UI.WindowCaptureExclusion.IsApplied(window), "messenger declares exclusion from OS screen capture");
             Check(vm.Rooms.Count == 2 && vm.Timeline.Count == 4, "fixture rooms and mixed timeline loaded");

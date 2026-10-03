@@ -16,11 +16,13 @@
                     </ResourceDictionary>
                 </ResourceDictionary.ThemeDictionaries>
                 <Style x:Key="SetupHeading" TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="{StaticResource PingFontFamily}" />
                     <Setter Property="FontSize" Value="28" /><Setter Property="FontWeight" Value="SemiBold" />
                     <Setter Property="Foreground" Value="{ThemeResource PingTextBrush}" /><Setter Property="TextWrapping" Value="WrapWholeWords" />
                 </Style>
                 <Style x:Key="SetupDetail" TargetType="TextBlock">
-                    <Setter Property="FontSize" Value="13" /><Setter Property="Foreground" Value="{ThemeResource PingMutedBrush}" />
+                <Setter Property="FontFamily" Value="{StaticResource PingFontFamily}" />
+                    <Setter Property="FontSize" Value="14" /><Setter Property="LineHeight" Value="21" /><Setter Property="Foreground" Value="{ThemeResource PingMutedBrush}" />
                     <Setter Property="TextWrapping" Value="WrapWholeWords" />
                 </Style>
                 <Style x:Key="SetupCard" TargetType="Border">

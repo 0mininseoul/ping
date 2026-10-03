@@ -6,7 +6,8 @@
     <Grid x:Name="Root" Padding="12" Background="{ThemeResource PingBackgroundBrush}">
         <Grid.Resources>
             <Style x:Key="GroupLabel" TargetType="TextBlock">
-                <Setter Property="FontSize" Value="12" />
+                <Setter Property="FontFamily" Value="{StaticResource PingFontFamily}" />
+                <Setter Property="FontSize" Value="12" /><Setter Property="LineHeight" Value="18" />
                 <Setter Property="Foreground" Value="{ThemeResource PingMutedBrush}" />
                 <Setter Property="Margin" Value="2,0,0,0" />
             </Style>
@@ -17,12 +18,14 @@
                 <Setter Property="BorderThickness" Value="0.8" />
             </Style>
             <Style x:Key="SettingTitle" TargetType="TextBlock">
-                <Setter Property="FontSize" Value="13" />
+                <Setter Property="FontFamily" Value="{StaticResource PingFontFamily}" />
+                <Setter Property="FontSize" Value="14" /><Setter Property="LineHeight" Value="21" />
                 <Setter Property="Foreground" Value="{ThemeResource PingTextBrush}" />
                 <Setter Property="TextWrapping" Value="WrapWholeWords" />
             </Style>
             <Style x:Key="SettingDetail" TargetType="TextBlock">
-                <Setter Property="FontSize" Value="12" />
+                <Setter Property="FontFamily" Value="{StaticResource PingFontFamily}" />
+                <Setter Property="FontSize" Value="12" /><Setter Property="LineHeight" Value="18" />
                 <Setter Property="Foreground" Value="{ThemeResource PingMutedBrush}" />
                 <Setter Property="TextWrapping" Value="WrapWholeWords" />
             </Style>

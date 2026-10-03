@@ -9,7 +9,7 @@
             <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
             <Grid>
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                <TextBlock Text="내 룸" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource PingMutedBrush}" VerticalAlignment="Center" />
+                <TextBlock Text="내 룸" Style="{StaticResource PingBodyTextStyle}" FontWeight="SemiBold" Foreground="{ThemeResource PingMutedBrush}" VerticalAlignment="Center" />
                 <Button x:Name="NewRoomButton" Grid.Column="1" Click="CreateRoomButton_Click" Style="{StaticResource PingIconButtonStyle}" ToolTipService.ToolTip="새 룸 만들기" AutomationProperties.Name="새 룸 만들기"><FontIcon Glyph="&#xE710;" FontSize="16" /></Button>
             </Grid>
             <ListView x:Name="RoomsList" Grid.Row="1" ItemsSource="{Binding Rooms}" SelectedItem="{Binding SelectedRoom, Mode=TwoWay}" SelectionChanged="HandleRoomSelectionChanged" SelectionMode="Single" Background="Transparent" AutomationProperties.Name="내 룸">
@@ -20,14 +20,14 @@
                             <MenuFlyoutItem Text="아래로 이동" Tag="{Binding}" Click="MoveDownRoomButton_Click" />
                         </MenuFlyout></Grid.ContextFlyout>
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                        <StackPanel Spacing="2"><TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" /><TextBlock Text="{Binding MemberCountLabel}" FontSize="11" Foreground="{ThemeResource PingMutedBrush}" /></StackPanel>
+                        <StackPanel Spacing="2"><TextBlock Text="{Binding Name}" Style="{StaticResource PingBodyTextStyle}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" /><TextBlock Text="{Binding MemberCountLabel}" Style="{StaticResource PingCaptionTextStyle}" Foreground="{ThemeResource PingMutedBrush}" /></StackPanel>
                         <Border Grid.Column="1" Padding="6,2" CornerRadius="10" VerticalAlignment="Center" Background="{ThemeResource PingAccentBrush}" Visibility="{Binding UnreadCount, Converter={StaticResource PositiveIntToVisibilityConverter}}">
-                            <TextBlock Text="{Binding UnreadCount}" FontSize="11" Foreground="{ThemeResource PingSentTextBrush}" />
+                            <TextBlock Text="{Binding UnreadCount}" Style="{StaticResource PingCaptionTextStyle}" Foreground="{ThemeResource PingSentTextBrush}" />
                         </Border>
                     </Grid>
                 </DataTemplate></ListView.ItemTemplate>
             </ListView>
-            <TextBlock Grid.Row="2" Text="{Binding StatusMessage}" FontSize="11" TextWrapping="Wrap" Foreground="{ThemeResource PingMutedBrush}" AutomationProperties.LiveSetting="Polite" />
+            <TextBlock Grid.Row="2" Text="{Binding StatusMessage}" Style="{StaticResource PingCaptionTextStyle}" TextWrapping="Wrap" Foreground="{ThemeResource PingMutedBrush}" AutomationProperties.LiveSetting="Polite" />
         </Grid>
         <Pivot Grid.Column="1" Background="{ThemeResource PingSurfaceBrush}">
             <Pivot.HeaderTemplate><DataTemplate><TextBlock Text="{Binding}" FontSize="14" FontWeight="SemiBold" /></DataTemplate></Pivot.HeaderTemplate>
@@ -38,14 +38,14 @@
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                         <StackPanel Spacing="2" VerticalAlignment="Center">
                             <TextBlock Text="{Binding SelectedRoomName}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                            <TextBlock Text="{Binding SelectedRoom.MemberCountLabel}" FontSize="11" Foreground="{ThemeResource PingMutedBrush}" />
+                            <TextBlock Text="{Binding SelectedRoom.MemberCountLabel}" Style="{StaticResource PingCaptionTextStyle}" Foreground="{ThemeResource PingMutedBrush}" />
                         </StackPanel>
                         <Button Grid.Column="1" Click="CreateInviteLinkButton_Click" Style="{StaticResource PingIconButtonStyle}" ToolTipService.ToolTip="초대 링크 복사" AutomationProperties.Name="초대 링크 복사"><FontIcon Glyph="&#xE71B;" FontSize="16" /></Button>
                         <Button x:Name="RenameRoomButton" Grid.Column="2" Click="RenameRoomButton_Click" Style="{StaticResource PingIconButtonStyle}" ToolTipService.ToolTip="룸 이름 변경" AutomationProperties.Name="룸 이름 변경"><FontIcon Glyph="&#xE70F;" FontSize="16" /></Button>
                         <Button x:Name="LeaveRoomButton" Grid.Column="3" Click="LeaveRoomButton_Click" Content="나가기" FontSize="12" Style="{StaticResource PingIconButtonStyle}" ToolTipService.ToolTip="룸 나가기" AutomationProperties.Name="룸 나가기" />
                     </Grid>
                     <ScrollViewer Grid.Row="1"><StackPanel Padding="16,20" Spacing="12">
-                        <TextBlock Text="멤버" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource PingMutedBrush}" />
+                        <TextBlock Text="멤버" Style="{StaticResource PingBodyTextStyle}" FontWeight="SemiBold" Foreground="{ThemeResource PingMutedBrush}" />
                         <ItemsControl ItemsSource="{Binding SelectedRoom.MemberNicknames.Values}">
                             <ItemsControl.ItemTemplate><DataTemplate>
                                 <Grid Padding="0,8" ColumnSpacing="10">
@@ -67,7 +67,7 @@
                         <Button Grid.Column="1" Click="SearchButton_Click" Content="검색" />
                     </Grid>
                     <ListView x:Name="SearchResultsList" Height="180" ItemsSource="{Binding SearchResults}" SelectionChanged="HandleSearchSelectionChanged" AutomationProperties.Name="검색한 룸">
-                        <ListView.ItemTemplate><DataTemplate><StackPanel Padding="4,8" Spacing="3"><TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" /><TextBlock Text="{Binding OwnerNicknameLabel}" FontSize="11" Foreground="{ThemeResource PingMutedBrush}" /></StackPanel></DataTemplate></ListView.ItemTemplate>
+                        <ListView.ItemTemplate><DataTemplate><StackPanel Padding="4,8" Spacing="3"><TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" /><TextBlock Text="{Binding OwnerNicknameLabel}" Style="{StaticResource PingCaptionTextStyle}" Foreground="{ThemeResource PingMutedBrush}" /></StackPanel></DataTemplate></ListView.ItemTemplate>
                     </ListView>
                     <Button Click="JoinRoomButton_Click" Content="선택한 룸 참여" HorizontalAlignment="Right" />
                     <Border BorderBrush="{ThemeResource PingIdleBrush}" BorderThickness="0,1,0,0" Padding="0,16,0,0">

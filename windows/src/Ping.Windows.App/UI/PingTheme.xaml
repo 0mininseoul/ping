@@ -42,6 +42,24 @@
             <SolidColorBrush x:Key="PingWarningFillBrush" Color="{ThemeResource SystemColorWindowColor}" />
         </ResourceDictionary>
     </ResourceDictionary.ThemeDictionaries>
+    <FontFamily x:Key="PingFontFamily">ms-appx:///Assets/Fonts/PretendardVariable.ttf#Pretendard Variable, Malgun Gothic, Segoe UI Emoji</FontFamily>
+    <FontFamily x:Key="ContentControlThemeFontFamily">ms-appx:///Assets/Fonts/PretendardVariable.ttf#Pretendard Variable, Malgun Gothic, Segoe UI Emoji</FontFamily>
+    <x:Double x:Key="PingBodyFontSize">14</x:Double>
+    <x:Double x:Key="PingCaptionFontSize">12</x:Double>
+    <Style TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource PingFontFamily}" />
+        <Setter Property="FontSize" Value="{StaticResource PingBodyFontSize}" />
+    </Style>
+    <Style x:Key="PingBodyTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource PingFontFamily}" />
+        <Setter Property="FontSize" Value="{StaticResource PingBodyFontSize}" />
+        <Setter Property="LineHeight" Value="21" />
+    </Style>
+    <Style x:Key="PingCaptionTextStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource PingFontFamily}" />
+        <Setter Property="FontSize" Value="{StaticResource PingCaptionFontSize}" />
+        <Setter Property="LineHeight" Value="18" />
+    </Style>
     <Style x:Key="PingMessageBubbleStyle" TargetType="ui:MessageBubble">
         <Setter Property="Template">
             <Setter.Value>

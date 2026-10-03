@@ -20,10 +20,10 @@
                 <Button x:Name="JoinLinkButton" Grid.Column="2" Content="참여" Click="JoinLink" IsEnabled="False" AutomationProperties.Name="초대 링크로 참여" />
             </Grid>
         </Border>
-        <TextBlock x:Name="SearchError" Grid.Row="2" Text="{Binding Error}" TextWrapping="Wrap" FontSize="12" Foreground="{ThemeResource PingMutedBrush}" AutomationProperties.LiveSetting="Polite" />
+        <TextBlock x:Name="SearchError" Grid.Row="2" Text="{Binding Error}" TextWrapping="Wrap" Style="{StaticResource PingCaptionTextStyle}" Foreground="{ThemeResource PingMutedBrush}" AutomationProperties.LiveSetting="Polite" />
         <Grid Grid.Row="3">
             <Pivot x:Name="ResultsTabs" SelectionChanged="TabChanged">
-                <Pivot.HeaderTemplate><DataTemplate><TextBlock Text="{Binding}" FontSize="13" FontWeight="SemiBold" /></DataTemplate></Pivot.HeaderTemplate>
+                <Pivot.HeaderTemplate><DataTemplate><TextBlock Text="{Binding}" Style="{StaticResource PingBodyTextStyle}" FontWeight="SemiBold" /></DataTemplate></Pivot.HeaderTemplate>
                 <PivotItem Header="룸">
                     <ListView x:Name="RoomResultsList" ItemsSource="{Binding RoomResults}" SelectionMode="None" Padding="0" ItemContainerStyle="{StaticResource SearchResultItemStyle}" Background="Transparent" AutomationProperties.Name="검색한 룸">
                         <ListView.ItemTemplate><DataTemplate>
@@ -31,7 +31,7 @@
                                 <Grid ColumnSpacing="12">
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                     <FontIcon Glyph="&#xE716;" FontSize="18" Foreground="{ThemeResource PingMutedBrush}" />
-                                    <StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis" /><TextBlock Text="{Binding OwnerNicknameLabel}" FontSize="11" Foreground="{ThemeResource PingMutedBrush}" TextTrimming="CharacterEllipsis" /></StackPanel>
+                                    <StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="{Binding Name}" Style="{StaticResource PingBodyTextStyle}" TextTrimming="CharacterEllipsis" /><TextBlock Text="{Binding OwnerNicknameLabel}" Style="{StaticResource PingCaptionTextStyle}" Foreground="{ThemeResource PingMutedBrush}" TextTrimming="CharacterEllipsis" /></StackPanel>
                                     <Button Grid.Column="2" Content="{Binding ActionLabel}" IsEnabled="{Binding CanJoin}" Tag="{Binding}" Click="JoinRoom" VerticalAlignment="Center" AutomationProperties.Name="룸 참여 요청" />
                                 </Grid>
                             </Border>
@@ -45,7 +45,7 @@
                                 <Grid ColumnSpacing="12">
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                     <FontIcon Glyph="&#xE77B;" FontSize="20" Foreground="{ThemeResource PingMutedBrush}" />
-                                    <StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="{Binding Nickname}" FontSize="13" TextTrimming="CharacterEllipsis" /><TextBlock Text="{Binding RoomsLabel}" FontSize="11" Foreground="{ThemeResource PingMutedBrush}" /></StackPanel>
+                                    <StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="{Binding Nickname}" Style="{StaticResource PingBodyTextStyle}" TextTrimming="CharacterEllipsis" /><TextBlock Text="{Binding RoomsLabel}" Style="{StaticResource PingCaptionTextStyle}" Foreground="{ThemeResource PingMutedBrush}" /></StackPanel>
                                     <Button Grid.Column="2" Content="{Binding ActionLabel}" IsEnabled="{Binding CanInvite}" Tag="{Binding}" Click="InviteUser" VerticalAlignment="Center" AutomationProperties.Name="사용자 초대" />
                                 </Grid>
                             </Border>
@@ -53,9 +53,9 @@
                     </ListView>
                 </PivotItem>
             </Pivot>
-            <TextBlock x:Name="EmptyResults" Text="검색어를 입력하세요" FontSize="13" Foreground="{ThemeResource PingMutedBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False" />
+            <TextBlock x:Name="EmptyResults" Text="검색어를 입력하세요" Style="{StaticResource PingBodyTextStyle}" Foreground="{ThemeResource PingMutedBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False" />
             <ProgressRing Width="24" Height="24" IsActive="{Binding IsSearching}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,10" />
         </Grid>
-        <TextBlock x:Name="OperationStatus" Grid.Row="4" FontSize="12" TextWrapping="Wrap" Foreground="{ThemeResource PingMutedBrush}" AutomationProperties.LiveSetting="Polite" />
+        <TextBlock x:Name="OperationStatus" Grid.Row="4" Style="{StaticResource PingCaptionTextStyle}" TextWrapping="Wrap" Foreground="{ThemeResource PingMutedBrush}" AutomationProperties.LiveSetting="Polite" />
     </Grid>
 </UserControl>
