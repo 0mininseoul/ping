@@ -19,16 +19,19 @@ public sealed class IncomingVideoDelivery(DateTimeOffset appStartedAt, Func<bool
     public async Task DeliverAsync(string uid, VideoMessage message, IncomingArrivalSource source, CancellationToken token = default)
     {
         var decision = IncomingArrivalPolicy.Decide(message, uid, source, appStartedAt, clock(), autoPlayEnabled());
-        if (!decision.IsEligible || !decision.ShouldNotify) return;
+        if (!decision.IsEligible || decision.IsExplicitReplay) return;
         using var reservation = ledger.TryReserve(uid, IncomingItemKind.Video, message.Id!);
         if (reservation is null) return;
         var key = (uid, message.Id!);
         var arrival = arrivals.GetOrAdd(key, _ => new(source, message.ExpiresAt));
         decision = IncomingArrivalPolicy.Decide(message, uid, arrival.Source, appStartedAt, clock(), autoPlayEnabled());
-        var result = await notify(message, token).ConfigureAwait(false);
-        if (result == IncomingNotificationResult.Unavailable) throw new IncomingDeliveryException();
-        if (decision.ShouldAutoPlay && result == IncomingNotificationResult.Shown)
-            await enqueuePlayback(message, arrival.Source, token).ConfigureAwait(false);
+        if (decision.ShouldNotify)
+        {
+            var result = await notify(message, token).ConfigureAwait(false);
+            if (result == IncomingNotificationResult.Unavailable) throw new IncomingDeliveryException();
+            if (decision.ShouldAutoPlay && result == IncomingNotificationResult.Shown)
+                await enqueuePlayback(message, arrival.Source, token).ConfigureAwait(false);
+        }
         token.ThrowIfCancellationRequested();
         reservation.Commit();
         arrivals.TryRemove(key, out _);

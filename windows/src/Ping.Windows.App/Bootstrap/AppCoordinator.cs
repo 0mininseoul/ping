@@ -1083,6 +1083,14 @@ public sealed class AppCoordinator : IDisposable
             if (notification.Message.Id is not { Length: > 0 } id) continue;
             using var reservation = chatDelivery.TryReserve(uid, IncomingItemKind.Chat, id);
             if (reservation is null) continue;
+            if (source is IncomingArrivalSource.StartupCatchUp or IncomingArrivalSource.ReconnectCatchUp
+                || notification.Message.CreatedAt < appStartedAt - IncomingArrivalPolicy.MaximumFutureClockSkew)
+            {
+                reservation.Commit();
+                yieldedChatIds.Add(id);
+                if (yieldedChatIds.Count > 512) yieldedChatIds.Clear();
+                continue;
+            }
             try
             {
                 NotificationShowResult result = NotificationShowResult.Unavailable;
