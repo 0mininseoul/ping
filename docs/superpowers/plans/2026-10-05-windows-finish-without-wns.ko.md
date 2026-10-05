@@ -62,8 +62,8 @@ Commit: `fix(windows): clarify capture and playback recovery messages`
 Files: `Package.appxmanifest`, `.github/workflows/windows-client.yml`, 후보 안내와 실행 기록.
 - [x] Windows만 0.4.15.0으로 올린다.
 - [x] 수동 workflow에 build_only 입력을 추가해 테스트·smoke를 생략하고 기존 CI 보관 인증서로 x64/ARM64 MSIX·오프라인 EXE를 생성한다. 공개 배포는 끈다.
-- [ ] 현재 작업 브랜치의 산출물을 로컬 `windows/dist`에 내려받아 전달한다. 설치·실행 검증을 추가하지 않는다.
-- [ ] 구현 완료, 패키징 결과, 미검증 항목을 명시한다. Goal 도구의 기존 paused 상태와 재개 제한도 기록한다.
+- [x] 현재 작업 브랜치의 산출물을 로컬 `windows/dist`에 내려받아 전달한다. 설치·실행 검증을 추가하지 않는다.
+- [x] 구현 완료, 패키징 결과, 미검증 항목을 명시한다. Goal 도구의 기존 paused 상태와 재개 제한도 기록한다.
 Commit: `release(windows): package 0.4.15 without automatic validation`
 
 ## 사용자가 나중에 할 액션
@@ -77,3 +77,6 @@ Commit: `release(windows): package 0.4.15 without automatic validation`
 - Tasks 1–5 구현 commit: cceaa52, 6e3966a, 07bf0d1, 8baf753, a31f0e3. Task 6 packaging source: f06769e.
 - 0.4.15 패키징 실행: https://github.com/0mininseoul/ping/actions/runs/37287804018 (build_only=true, 공개 배포 false). 테스트·smoke를 실행하지 않는 산출물 생성 경로다.
 - Goal 등록은 기존 unfinished/paused goal 때문에 거절됐다. 도구로 재개하거나 기존 objective를 수정할 수 없으므로 목표 상태를 active로 표시하지 않는다.
+
+- 완료: CI 37287804018 패키징 성공. 테스트 restore/test 및 smoke는 생략했고, 공개 배포 단계도 생략했다. EXE와 x64/ARM64 MSIX를 windows/dist로 내려받았다. 설치·실행·화면·송수신 검증은 하지 않았다.
+- 사용자 범위 변경을 반영한 구현·설치물 생성 작업은 완료했다. 실제 장비와 Mac 확인은 필수 개발 장애가 아닌 사용자 선택 후속 작업으로 남긴다.
