@@ -1,5 +1,7 @@
 # Windows 완성 조건 대조 —0.4.14
 
+> 2026-10-05 범위 변경: 아래 0.4.14 근거는 과거 기록이다. 사용자는 WNS를 제외하고 서버 변경 없는 트레이 수신·재실행 동기화를 선택했다. 종료 상태 신규 push는 더 이상 미완료 조건이 아니다. 자동 검증도 중단했으며 현재 구현 계획은 [서버 변경 없는 마무리 계획](../superpowers/plans/2026-10-05-windows-finish-without-wns.ko.md)을 따른다. 실제 장치·Mac 확인은 사용자 요청 시 수행할 미확인 항목으로 구별한다.
+
 사용자의 목표는 최신 Mac과 같은 메신저 동작·디자인, Windows에 맞는 상호작용과 정상 EXE 설치다. 테스트 수나 설치 후보 생성만으로 목표를 완료로 축소하지 않는다.
 
 현재 HEAD의 제품 소스는0.4.14이며 설치 상태는0.4.14.0 / Ok, 앱은 종료 상태다. 패키지 원본은 `cde5133432f0ccf63d056ee0d4bd56e201f16401`의 CI37270892324다. 최근 `origin/main`은 `5b21c1962de83d1e0d6c08ba8619802cbd53280b`이며 현재 작업과 `Ping/`, `project.yml` 차이가 없다. Mac13+/Swift6/glass wrapper/기존 startup 구현을 변경하지 않았다.
@@ -18,7 +20,7 @@
 
 실제 WinUI 결과 `windows/artifacts/ui-shell-3a18b08d48624df1835e7f86994d0721/result.json`은 Success=true/313개, 실제 소유 계정 수신 결과 `windows/artifacts/owned-native-8c92cbb6b78247d5a7a299eb4b538978/result.json`은 Success=true/39개를 다시 확인했다. 후자는 합성3초 MP4를 사용한다. Core285/App348은 실제 UI 전체 실행을 대체하지 않는다. 앱 클릭 처리기 호출·COM fixture·실제 OS 알림 클릭도 각각 구별한다.
 
-## 구현이 남은 종료 상태 신규 알림
+## 범위에서 제외한 종료 상태 신규 알림 (기존 분석 기록)
 
 Windows `AppCoordinator`의 Realtime/polling은 실행 중인 프로세스에 속하고 `NotificationController`는 `AppNotificationManager.Show`로 로컬 알림을 만든다. 현재 소스·manifest에는 WNS 채널 생성·등록·push activation이 없다. 백엔드 `device_tokens`의 platform 제약도 `ios`, `watchos`, `macos`만 허용한다. 따라서 Windows 앱이 완전히 종료된 후 도착한 신규 메시지의 원격 배너는 미구현이다. 기존 배너를 클릭해 종료된 앱을 여는 활성화 검증과는 별도 요구사항이다.
 
@@ -33,7 +35,7 @@ Azure 등록·매핑의 기존 위치를 사용자에게 문의했다. 현재 �
 - Mac↔Windows 송수신·시각 비교·기기 handoff: 현재 Mac이 없다는 사용자 응답. 실제 상대 기기 결과가 필요하다.
 - ARM64 실행, 혼합 DPI/고대비/물리 입력, MSIX staging 중간 실패 복구와 앱 내 업데이트 전체 경로: 기존 fixture·서명 검사·EXE 성공 범위를 넘어서는 실기 검증이 남아 있다.
 
-확인된 새 결함 없이 후보를 반복 생성하지 않는다. 현재0.4.14를 유지하고 위 입력·실기 검증으로 다음 제품 변경을 결정한다. 전체 목표는 완료되지 않았다.
+확인된 새 결함 없이 후보를 반복 생성하지 않는다. 0.4.14 이후에는 새 사용자 범위에 필요한 변경과 설치물만 생성하고 위 실기 검증을 자동 진행하지 않는다. 현재 목표에서는 WNS나 장비 미확인만을 이유로 코드·설치물 완료를 무한 대기하지 않는다.
 
 ## 현재 장치와 푸시 구성 재확인
 
