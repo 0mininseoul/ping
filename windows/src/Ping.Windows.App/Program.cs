@@ -131,7 +131,7 @@ public static class Program
         try
         {
             var process = Process.GetProcessById((int)keyInstance.ProcessId);
-            if (process.MainWindowHandle != IntPtr.Zero)
+            if (args.Kind != ExtendedActivationKind.StartupTask && process.MainWindowHandle != IntPtr.Zero)
             {
                 SetForegroundWindow(process.MainWindowHandle);
             }

@@ -129,7 +129,7 @@ public partial class App : Application
         window = new MainWindow();
         window.InitializeTrayWindowBehavior();
         coordinator = new AppCoordinator(window);
-        coordinator.Start();
+        coordinator.Start(allowBackgroundStartup: true);
         coordinator.HandleInitialNotificationActivation();
         DrainPendingActivationArguments();
     }
@@ -154,7 +154,8 @@ public partial class App : Application
             return;
         }
 
-        window.ShowShell();
+        if (args.Kind == ExtendedActivationKind.StartupTask) return;
+        coordinator.ShowMessenger();
     }
 
     private void DrainPendingActivationArguments()

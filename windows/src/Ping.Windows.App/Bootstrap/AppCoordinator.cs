@@ -72,6 +72,8 @@ public sealed class AppCoordinator : IDisposable
     private OnboardingWindow? onboardingWindow;
     private GuidedSetupWindow? guidedSetupWindow;
     private bool offeredGuidedSetup;
+    private bool backgroundStartup;
+    private bool deferredGuidedSetup;
     private RoomManagerWindow? roomManagerWindow;
     private HistoryWindow? historyWindow;
     private SettingsWindow? settingsWindow;
@@ -182,18 +184,20 @@ public sealed class AppCoordinator : IDisposable
         mainWindow.OpenSettingsRequested += HandleOpenSettingsRequested;
     }
 
-    public void Start()
+    public void Start(bool allowBackgroundStartup = false)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
 
-        OpenHistoryWindow();
+        OpenHistoryWindow(activate: false);
 
         hotkeys.HotkeyPressed += HandleHotkeyPressed;
         lastHotkeyRegistrations = RegisterSavedHotkeys();
         TryAddOrUpdateTrayIcon();
         notificationController.Start();
+        backgroundStartup = allowBackgroundStartup && notificationController.IsStartupTaskActivation();
+        if (!backgroundStartup) historyWindow?.Activate();
         ShowRegistrationState(lastHotkeyRegistrations);
-        MaybeOpenOnboardingAtStartup(lastHotkeyRegistrations);
+        if (!backgroundStartup) MaybeOpenOnboardingAtStartup(lastHotkeyRegistrations);
         connectionLifecycle = new ConnectionLifecycleAdapter(connectionSupervisor);
         captureActivityAdapter = new(mainWindow, captureActivity);
         connectionSupervisor.Start();
@@ -431,12 +435,27 @@ public sealed class AppCoordinator : IDisposable
         connectionSupervisor.RequestReconnect();
     }
 
-    private void OpenHistoryWindow(string? preferredRoomId = null, string? preferredChatId = null)
+    internal void ShowMessenger() => OpenHistoryWindow();
+
+    private void ShowDeferredStartupSetup()
+    {
+        if (!backgroundStartup) return;
+        backgroundStartup = false;
+        MaybeOpenOnboardingAtStartup(lastHotkeyRegistrations);
+        if (deferredGuidedSetup)
+        {
+            deferredGuidedSetup = false;
+            OpenGuidedSetupWindow();
+        }
+    }
+
+    private void OpenHistoryWindow(string? preferredRoomId = null, string? preferredChatId = null, bool activate = true)
     {
         if (disposed || changingAccount) return;
+        if (activate) ShowDeferredStartupSetup();
         if (historyWindow is not null)
         {
-            historyWindow.Activate();
+            if (activate) historyWindow.Activate();
             if (!string.IsNullOrWhiteSpace(preferredRoomId) && !string.IsNullOrWhiteSpace(preferredChatId))
             {
                 _ = historyWindow.FocusChatAsync(preferredRoomId, preferredChatId);
@@ -471,7 +490,7 @@ public sealed class AppCoordinator : IDisposable
             roomServices: new(roomService, invitationService, userService, () => currentUid, () => CurrentNickname,
                 () => connectionSupervisor.RequestReconnect()));
         mainWindow.AttachMessenger(historyWindow);
-        historyWindow.Activate();
+        if (activate) historyWindow.Activate();
     }
 
     internal void OpenSettingsWindow(SettingsSection section = SettingsSection.General)
@@ -1421,7 +1440,11 @@ public sealed class AppCoordinator : IDisposable
 
             remoteDefaultRoomId = profile?.LastUsedRoomId;
             rooms = refreshedRooms;
-            if (!offeredGuidedSetup && string.IsNullOrWhiteSpace(profile?.Nickname)) OpenGuidedSetupWindow();
+            if (!offeredGuidedSetup && string.IsNullOrWhiteSpace(profile?.Nickname))
+            {
+                if (backgroundStartup) deferredGuidedSetup = true;
+                else OpenGuidedSetupWindow();
+            }
             if (ResolvePreferredDefaultRoom(SendableRoomsFor(uid)) is { Id: { } defaultRoomId })
             {
                 SaveQuickSendDefaultRoom(defaultRoomId);

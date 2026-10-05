@@ -433,6 +433,17 @@ public sealed class NotificationController : IDisposable
 #endif
     }
 
+    public bool IsStartupTaskActivation()
+    {
+#if WINDOWS
+        if (!isRegistered) return false;
+        try { return AppInstance.GetCurrent().GetActivatedEventArgs()?.Kind == ExtendedActivationKind.StartupTask; }
+        catch (Exception) { return false; }
+#else
+        return false;
+#endif
+    }
+
     public NotificationActivationArguments? TryGetInitialActivationArguments()
     {
 #if WINDOWS

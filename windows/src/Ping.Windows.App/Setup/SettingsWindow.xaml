@@ -53,6 +53,7 @@
                                     <StackPanel Spacing="4">
                                         <TextBlock Text="로그인 시 자동 시작" Style="{StaticResource SettingTitle}" />
                                         <TextBlock Text="{Binding StartupStatus}" Style="{StaticResource SettingDetail}" />
+                                        <TextBlock Text="자동 시작하면 대화창을 열지 않고 트레이에서 메시지를 받습니다." Style="{StaticResource SettingDetail}" />
                                     </StackPanel>
                                     <ToggleSwitch Grid.Column="1" Style="{StaticResource SettingToggle}"
                                         AutomationProperties.Name="로그인 시 자동 시작"
@@ -62,6 +63,7 @@
                         </StackPanel>
                         <StackPanel Spacing="8">
                             <TextBlock Text="알림과 화면" Style="{StaticResource GroupLabel}" />
+                            <TextBlock Text="창을 닫아도 트레이에서 수신합니다. 트레이 메뉴에서 Ping을 종료하면 알림은 멈추고, 다음 실행 시 보관 기간 안의 메시지를 불러옵니다." Style="{StaticResource SettingDetail}" />
                             <Border Style="{StaticResource SettingsCard}">
                                 <StackPanel>
                                     <Grid Padding="16,12" ColumnSpacing="16">
