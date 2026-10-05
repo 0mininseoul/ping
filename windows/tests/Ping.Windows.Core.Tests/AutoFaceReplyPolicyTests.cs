@@ -13,6 +13,19 @@ public sealed class AutoFaceReplyPolicyTests
     [Fact]
     public void FreshLivePingRecords() => Assert.Equal(AutoFaceReplyDecision.Record, Decide(Video()));
 
+    [Fact]
+    public void FreshLiveReplyToleratesSmallLaunchClockLagWithoutRelaxingCaptureGuards()
+    {
+        var launched = Now.AddSeconds(-5);
+        var message = Video() with { CreatedAt = Now.AddSeconds(-7) };
+        AutoFaceReplyDecision Check(IncomingArrivalSource source, bool authorized, VideoMessage video) =>
+            AutoFaceReplyPolicy.Decide(video, "me", source, launched, Now, false, false, authorized, false);
+        Assert.Equal(AutoFaceReplyDecision.Record, Check(IncomingArrivalSource.Live, true, message));
+        Assert.Equal(AutoFaceReplyDecision.NotLive, Check(IncomingArrivalSource.StartupCatchUp, true, message));
+        Assert.Equal(AutoFaceReplyDecision.CameraUnavailable, Check(IncomingArrivalSource.Live, false, message));
+        Assert.Equal(AutoFaceReplyDecision.StaleMessage, Check(IncomingArrivalSource.Live, true, message with { CreatedAt = launched.AddSeconds(-31) }));
+    }
+
     [Theory]
     [InlineData(IncomingArrivalSource.StartupCatchUp)]
     [InlineData(IncomingArrivalSource.ReconnectCatchUp)]

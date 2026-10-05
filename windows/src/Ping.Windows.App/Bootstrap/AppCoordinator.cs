@@ -1063,6 +1063,9 @@ public sealed class AppCoordinator : IDisposable
         var messages = await messageService.IncomingAsync(token);
         foreach (var message in messages)
         {
+#if PING_UI_SMOKE
+            Diagnostics.UiSmokeRunner.RecordIncoming(source, message, appStartedAt);
+#endif
             token.ThrowIfCancellationRequested();
             if (currentUid != uid || disposed) return;
             autoFaceReply.HandleIncoming(message, source);

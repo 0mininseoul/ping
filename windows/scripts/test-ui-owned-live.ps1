@@ -37,8 +37,9 @@ function Get-OwnedQaUserSnapshot {
         }
     })
 }
-if (-not $SkipBuild) { & (Join-Path $PSScriptRoot 'build-local.ps1') -UiSmoke }
-$executable = Join-Path $windowsRoot 'artifacts\ui-smoke\bin\x64\Debug\net10.0-windows10.0.26100.0\win-x64\Ping.Windows.App.exe'
+if (-not $SkipBuild) { & (Join-Path $PSScriptRoot 'build-local.ps1') -UiSmoke -UiRuntime:$Runtime }
+$buildDirectory = if ($Runtime) { 'ui-runtime' } else { 'ui-smoke' }
+$executable = Join-Path $windowsRoot "artifacts\$buildDirectory\bin\x64\Debug\net10.0-windows10.0.26100.0\win-x64\Ping.Windows.App.exe"
 if (-not (Test-Path -LiteralPath $executable)) { throw 'Build the isolated native diagnostic first.' }
 $output = Join-Path $windowsRoot ('artifacts\owned-native-' + [Guid]::NewGuid().ToString('N'))
 $null = New-Item -ItemType Directory -Path $output

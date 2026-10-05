@@ -15,11 +15,12 @@ namespace Ping.Windows.App.Diagnostics;
 
 internal static partial class UiSmokeRunner
 {
+    internal static void RecordIncoming(Ping.Windows.Core.Incoming.IncomingArrivalSource source, VideoMessage message, DateTimeOffset started) =>
+        Step($"ARRIVAL source={source}; mode={message.CaptureMode}; afterStartup={message.CreatedAt > started}; deltaSeconds={(message.CreatedAt - started)?.TotalSeconds}; ageSeconds={(DateTimeOffset.UtcNow - message.CreatedAt)?.TotalSeconds}; status={message.Status}");
     private static async Task VerifyOwnedRuntimeAsync()
     {
         var options = OwnedLive!;
         var errors = new List<string>();
-        var limitations = new List<string>();
         var notificationIds = new HashSet<uint>();
         var ownedVideoPaths = new List<string>();
         string? roomId = null;
@@ -72,14 +73,8 @@ internal static partial class UiSmokeRunner
             await UntilAsync(() => receiver.DiagnosticReady, 45);
             TestDisplayPlacement.Verify(receiverWindow, Check);
             Check(receiver.DiagnosticTrayVisible, "actual shell tray icon is registered");
-            var notificationsRegistered = receiver.DiagnosticNotificationsRegistered;
-            if (notificationsRegistered) Check(true, "actual Windows notifications are registered");
-            else
-            {
-                limitations.Add("OS notifications unavailable in unpackaged diagnostic: " + receiver.DiagnosticNotificationFailure);
-                limitations.Add("Automatic playback and OS duplicate suppression not verified; public video activation handler tested instead.");
-                Step("UNVERIFIED OS notification registration and automatic playback");
-            }
+            if (!receiver.DiagnosticNotificationsRegistered) Step("FAILED notification registration: " + receiver.DiagnosticNotificationFailure);
+            Check(receiver.DiagnosticNotificationsRegistered, "actual Windows notifications are registered");
             var shell = Descendants((FrameworkElement)receiverWindow.Content).OfType<HistoryWindow>().Single();
             Check(receiverWindow.Content is ContentControl { Content: HistoryWindow }, "real coordinator hosts native messenger");
             var handle = WinRT.Interop.WindowNative.GetWindowHandle(receiverWindow);
@@ -91,7 +86,6 @@ internal static partial class UiSmokeRunner
             var chatId = await new ChatMessageService(a).SendChatAsync(roomId, body);
             async Task<IReadOnlyList<AppNotification>> OwnedNotifications(string id)
             {
-                if (!notificationsRegistered) return [];
                 var all = await AppNotificationManager.Default.GetAllAsync();
                 var owned = all.Where(n => n.Payload.Contains(id, StringComparison.Ordinal)).ToArray();
                 foreach (var notification in owned) notificationIds.Add(notification.Id);
@@ -99,7 +93,6 @@ internal static partial class UiSmokeRunner
             }
             async Task WaitForNotification(string id)
             {
-                if (!notificationsRegistered) return;
                 var deadline = DateTimeOffset.UtcNow.AddSeconds(40);
                 while ((await OwnedNotifications(id)).Count == 0 && DateTimeOffset.UtcNow < deadline) await Task.Delay(200);
                 Check((await OwnedNotifications(id)).Count == 1, "OS queue contains one owned notification");
@@ -119,27 +112,25 @@ internal static partial class UiSmokeRunner
                 ownedVideoPaths.Add($"{uidA}/{videoId}.mp4");
                 File.WriteAllText(Path.Combine(OutputDirectory!, "owned-videos.json"), JsonSerializer.Serialize(new { roomId, paths = ownedVideoPaths }));
                 await videos.SendAsync(new([roomForSend], Path.Combine(options.Fixtures, "owned-face-source.mp4"), new(0.25, 0.75), uidA, "QA 민", mode, 320d / 192, false, videoId));
-                if (!notificationsRegistered)
-                {
-                    var received = (await videos.RoomMessagesAsync(roomId)).Single(v => v.VideoId == videoId && v.ReceiverUid == uidB);
-                    receiver.HandleNotificationActivation(new("play", received.Id));
-                }
                 await UntilAsync(() => receiver.DiagnosticPlayers.Any(p => p.ViewModel.Message.VideoId == videoId), 40);
                 var player = receiver.DiagnosticPlayers.Single(p => p.ViewModel.Message.VideoId == videoId);
                 TestDisplayPlacement.Verify(player, Check);
                 await UntilAsync(() => Descendants((FrameworkElement)player.Content).OfType<MediaPlayerElement>().Any(p => p.MediaPlayer?.PlaybackSession.NaturalVideoWidth == 320), 15);
-                var deliveryLabel = (notificationsRegistered ? "automatic " : "public video activation ") + mode;
+                var deliveryLabel = "automatic " + mode;
                 Check(true, deliveryLabel + " player decodes owned private download");
                 var messageId = player.ViewModel.Message.Id!;
                 await WaitForNotification(messageId);
                 var deadline = DateTimeOffset.UtcNow.AddSeconds(15);
                 while ((await videos.GetAsync(messageId))?.Status != MessageStatus.Seen && DateTimeOffset.UtcNow < deadline) await Task.Delay(150);
                 Check((await videos.GetAsync(messageId))?.Status == MessageStatus.Seen, deliveryLabel + " completion marks server seen");
-                player.ViewModel.HandleEnter(); await Task.Delay(100);
+                player.ViewModel.HandleEnter();
+                await UntilAsync(() => Descendants((FrameworkElement)player.Content).OfType<MediaPlayerElement>().Any(p =>
+                    p.MediaPlayer?.PlaybackSession is { PlaybackState: global::Windows.Media.Playback.MediaPlaybackState.Playing } playback && playback.Position.TotalSeconds < 1), 3);
+                Check(true, "native replay restarts " + mode + " video from beginning");
                 Check(receiver.DiagnosticPlayers.Count(p => p.ViewModel.Message.Id == messageId) == 1, "replay keeps one existing player");
                 player.ViewModel.HandleEscape();
                 await UntilAsync(() => receiver.DiagnosticPlayers.All(p => p.ViewModel.Message.Id != messageId), 5);
-                if (notificationsRegistered) Check((await OwnedNotifications(messageId)).Count == 1, "replay does not duplicate OS notification");
+                Check((await OwnedNotifications(messageId)).Count == 1, "replay does not duplicate OS notification");
             }
             phase = "tray reopen";
             receiver.Execute(HotkeyCommand.History);
@@ -193,7 +184,7 @@ internal static partial class UiSmokeRunner
                 }
                 catch (Exception error) { errors.Add("owned cleanup (repair manifest retained): " + SafeLiveError(error)); }
             }
-            File.WriteAllText(Path.Combine(OutputDirectory!, "result.json"), JsonSerializer.Serialize(new { Success = errors.Count == 0, Checks, Errors = errors, Limitations = limitations, ShellToastClickTested = false }));
+            File.WriteAllText(Path.Combine(OutputDirectory!, "result.json"), JsonSerializer.Serialize(new { Success = errors.Count == 0, Checks, Errors = errors, ShellToastClickTested = false }));
             lifetimeWindow.CloseForQuit();
         }
     }

@@ -5,12 +5,14 @@ param(
     [string]$DotnetPath,
     [string]$PackageOutputRoot,
     [switch]$Package,
-    [switch]$UiSmoke
+    [switch]$UiSmoke,
+    [switch]$UiRuntime
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 if ($UiSmoke -and $Package) { throw 'Diagnostic fixture builds must not be packaged for distribution.' }
+if ($UiRuntime -and -not $UiSmoke) { throw 'UiRuntime requires the isolated UiSmoke diagnostic.' }
 $windowsRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 
 if ([string]::IsNullOrWhiteSpace($DotnetPath)) {
@@ -74,6 +76,11 @@ if ($Package) {
     Write-Warning 'This creates an unsigned validation MSIX. It is not an installable public release.'
 }
 if ($UiSmoke) { $managedArguments += '-p:PingUiSmoke=true' }
+if ($UiRuntime) {
+    # AppNotification registration in the SDK self-contained runtime lacks its
+    # version resource DLL. Exercise the installed runtime in a separate QA build.
+    $managedArguments += '-p:PingUiRuntime=true'
+}
 Invoke-Checked $DotnetPath $managedArguments
 Write-Host "Built $Platform $Configuration."
 if ($Package) { Write-Host "Validation packages: $packageRoot" }

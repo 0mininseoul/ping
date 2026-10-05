@@ -26,7 +26,7 @@ public static class AutoFaceReplyPolicy
             return AutoFaceReplyDecision.InvalidMessage;
         if (alreadyReplied) return AutoFaceReplyDecision.AlreadyReplied;
         if (message.CreatedAt is not { } created) return AutoFaceReplyDecision.MissingTimestamp;
-        if (created <= appStartedAt || !IsFresh(created, now)) return AutoFaceReplyDecision.StaleMessage;
+        if (created <= appStartedAt - IncomingArrivalPolicy.MaximumFutureClockSkew || !IsFresh(created, now)) return AutoFaceReplyDecision.StaleMessage;
         if (isDisplayAsleep) return AutoFaceReplyDecision.DisplayAsleep;
         if (!isCameraAuthorized) return AutoFaceReplyDecision.CameraUnavailable;
         if (isCameraBusy) return AutoFaceReplyDecision.CameraBusy;

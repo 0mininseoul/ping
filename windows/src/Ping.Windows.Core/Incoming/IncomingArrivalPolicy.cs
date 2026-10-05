@@ -26,7 +26,7 @@ public static class IncomingArrivalPolicy
 
         var age = now - created;
         var autoPlay = source == IncomingArrivalSource.Live && autoPlayEnabled && message.SenderUid != currentUid
-            && created > appStartedAt && age >= TimeSpan.Zero && age <= AutoPlayFreshness;
+            && created > appStartedAt - MaximumFutureClockSkew && age >= TimeSpan.Zero && age <= AutoPlayFreshness;
         return new(true, !explicitReplay, autoPlay, explicitReplay);
     }
 }

@@ -30,6 +30,17 @@ public sealed class IncomingArrivalPolicyTests
         Assert.Equal(expected, Decide(Video(Now.AddSeconds(-ageSeconds))).ShouldAutoPlay);
 
     [Fact]
+    public void FreshLivePingToleratesSmallServerClockLagAtLaunch()
+    {
+        var launched = Now.AddSeconds(-5);
+        var message = Video(Now.AddSeconds(-7));
+        Assert.True(IncomingArrivalPolicy.Decide(message, "me", IncomingArrivalSource.Live, launched, Now, true).ShouldAutoPlay);
+        Assert.False(IncomingArrivalPolicy.Decide(message, "me", IncomingArrivalSource.StartupCatchUp, launched, Now, true).ShouldAutoPlay);
+        Assert.False(IncomingArrivalPolicy.Decide(message, "me", IncomingArrivalSource.ReconnectCatchUp, launched, Now, true).ShouldAutoPlay);
+        Assert.False(IncomingArrivalPolicy.Decide(Video(launched.AddSeconds(-31)), "me", IncomingArrivalSource.Live, launched, Now, true).ShouldAutoPlay);
+    }
+
+    [Fact]
     public void DisabledPreferenceStillNotifies() =>
         Assert.Equal(new IncomingVideoDecision(true, true, false),
             IncomingArrivalPolicy.Decide(Video(Now.AddSeconds(-1)), "me", IncomingArrivalSource.Live, Started, Now, autoPlayEnabled: false));

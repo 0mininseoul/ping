@@ -41,7 +41,7 @@
 
 - [x] Explicit opt-in route restores existing QA sessions and requires empty QA room lists.
 - [x] Create one unique two-person room. Boot receiver AppCoordinator with scoped stores and actual tray/hotkey/notification services. Both message modes use owned three-second files, never hardware capture.
-- [ ] Confirm receiving room/chat, actual OS notification queue, automatic player decoding/seen, duplicate suppression and replay. Notification routing may be invoked through its public app handler; distinguish this from a literal shell toast click.
+- [x] Confirm receiving room/chat, actual OS notification queue, automatic player decoding/seen, duplicate suppression and replay. Notification routing may be invoked through its public app handler; distinguish this from a literal shell toast click.
 - [x] Close messenger through its native window and verify the same HWND survives hidden. Reopen using the coordinator entry point. Do not inject input into unrelated apps.
 - [x] Stop receiver fully, load current cleanup session, remove owned rows/objects, leave both memberships, read back empty lists and original user-file hashes.
 - [x] Record unsupported real OS notification behavior as a limitation, not a simulated pass.
@@ -54,3 +54,5 @@
 ## Progress ledger
 
 Task 1 native storage scoping verified with actual receiver and original-profile snapshots. Task 2 diagnostic implementation and read-only review completed; OS notifications and automatic playback are still unverified because unpackaged registration returned 0x8007007E. Public activation handler playback is recorded separately, not substituted as automatic-playback evidence. Results: [runtime report](../../windows/2026-10-05-windows-runtime-readiness.ko.md). No full goal completion claim.
+
+Follow-up: identified the SDK self-contained resource-DLL defect and used a separate framework-dependent diagnostic build against the installed runtime. Actual OS registration/queue and automatic playback passed. A native failure exposed a small server/local startup clock difference; two policy regression tests failed before the fix, then Core285/App339 passed. Final incoming/replay checks39 and full native UI304 passed. Literal shell toast clicking, installed-package cold activation and hardware/cross-device checks remain distinct. Production fix is prepared as0.4.11, with package delivery tracked separately.

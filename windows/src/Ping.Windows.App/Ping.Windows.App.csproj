@@ -36,6 +36,11 @@
   <ItemGroup Condition="'$(PingUiSmoke)' == 'true'">
     <PackageReference Include="ZXing.Net" Version="0.16.11" />
   </ItemGroup>
+  <PropertyGroup Condition="'$(PingUiSmoke)' == 'true' and '$(PingUiRuntime)' == 'true'">
+    <WindowsAppSDKSelfContained>false</WindowsAppSDKSelfContained>
+    <OutputPath>$(MSBuildThisFileDirectory)..\..\artifacts\ui-runtime\bin\$(Platform)\$(Configuration)\</OutputPath>
+    <IntermediateOutputPath>$(MSBuildThisFileDirectory)..\..\artifacts\ui-runtime\obj\$(Platform)\$(Configuration)\</IntermediateOutputPath>
+  </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Ping.Windows.Core\Ping.Windows.Core.csproj" />
     <ProjectReference
