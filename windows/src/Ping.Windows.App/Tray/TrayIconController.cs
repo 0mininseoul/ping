@@ -35,6 +35,9 @@ public sealed class TrayIconController : IDisposable
     private readonly IntPtr iconHandle;
     private readonly bool ownsIconHandle;
     private bool iconVisible;
+#if PING_UI_SMOKE
+    internal bool DiagnosticVisible => iconVisible;
+#endif
     private bool disposed;
 
     public TrayIconController(Action<TrayCommand> dispatch)

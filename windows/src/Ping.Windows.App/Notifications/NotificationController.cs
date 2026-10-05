@@ -376,6 +376,10 @@ public sealed class NotificationController : IDisposable
 #if WINDOWS
     private readonly Func<string, string, CancellationToken, Task>? openChatAsync;
     private bool isRegistered;
+#if PING_UI_SMOKE
+    internal bool DiagnosticIsRegistered => isRegistered;
+    internal string? DiagnosticRegistrationFailure { get; private set; }
+#endif
 #endif
 
     public NotificationController(
@@ -417,8 +421,12 @@ public sealed class NotificationController : IDisposable
             AppNotificationManager.Default.Register();
             isRegistered = true;
         }
-        catch (Exception)
+        catch (Exception error)
         {
+            System.Diagnostics.Debug.WriteLine($"Ping notification registration failed: 0x{error.HResult:X8}");
+#if PING_UI_SMOKE
+            DiagnosticRegistrationFailure = $"{error.GetType().Name} / 0x{error.HResult:X8}";
+#endif
             AppNotificationManager.Default.NotificationInvoked -= HandleNotificationInvoked;
             isRegistered = false;
         }

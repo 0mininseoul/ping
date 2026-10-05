@@ -18,6 +18,15 @@ internal static partial class UiSmokeRunner
     internal sealed record OwnedLiveOptions(string Config, string Sessions, string Fixtures);
     public static OwnedLiveOptions? OwnedLive { get; set; }
     private static string NormalizeLines(string text) => text.Replace("\r\n", "\n").Replace('\r', '\n');
+    private static bool IsPinnedOwnedConfiguration(SupabaseConfiguration config)
+    {
+        var url = config.Normalize().Url;
+        return url.Scheme == Uri.UriSchemeHttps && url.Host == "qxjtprxvjmaxlbtljcjw.supabase.co"
+            && url.IsDefaultPort && url.UserInfo.Length == 0 && url.AbsolutePath == "/" && url.Query.Length == 0 && url.Fragment.Length == 0;
+    }
+    private static bool IsPinnedOwnedConfigurationFile(string path) => IsPinnedOwnedConfiguration(
+        JsonSerializer.Deserialize<SupabaseConfiguration>(File.ReadAllText(path), JsonOptions.Supabase)
+            ?? throw new InvalidOperationException("Missing owned config"));
     private static string SafeLiveError(Exception error) => error is SupabaseRequestException request
         ? $"HTTP {(int?)request.StatusCode} / code {request.ErrorCode}" : error.GetType().Name;
 
@@ -34,8 +43,7 @@ internal static partial class UiSmokeRunner
         var lifetimeWindow = new MainWindow(); lifetimeWindow.InitializeTrayWindowBehavior(); lifetimeWindow.ShowShell();
         try
         {
-            using var config = JsonDocument.Parse(File.ReadAllText(options.Config));
-            Check(new Uri(config.RootElement.GetProperty("url").GetString()!).Host == "qxjtprxvjmaxlbtljcjw.supabase.co", "pinned Ping project guard");
+            Check(IsPinnedOwnedConfigurationFile(options.Config), "pinned Ping project guard validates effective configuration");
             string Session(string name) => Path.Combine(options.Sessions, name, "SupabaseSession.json");
             var storedA = await new SupabaseSessionStore(Session("a")).LoadAsync();
             var storedB = await new SupabaseSessionStore(Session("b")).LoadAsync();

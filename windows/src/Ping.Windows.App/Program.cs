@@ -36,6 +36,13 @@ public static class Program
             Diagnostics.UiSmokeRunner.OwnedLive = new(Path.GetFullPath(config), Path.GetFullPath(ownedSessions), Path.GetFullPath(fixtures));
             diagnostic = true;
         }
+        else if (args is ["--ui-owned-runtime", var runtimeOutput, var runtimeConfig, var runtimeSessions, var runtimeFixtures])
+        {
+            Diagnostics.UiSmokeRunner.OutputDirectory = Path.GetFullPath(runtimeOutput);
+            Diagnostics.UiSmokeRunner.OwnedLive = new(Path.GetFullPath(runtimeConfig), Path.GetFullPath(runtimeSessions), Path.GetFullPath(runtimeFixtures));
+            Diagnostics.UiSmokeRunner.OwnedRuntime = true;
+            diagnostic = true;
+        }
         else return 64; // A fixture executable must never launch the real account path.
 #endif
         WinRT.ComWrappersSupport.InitializeComWrappers();

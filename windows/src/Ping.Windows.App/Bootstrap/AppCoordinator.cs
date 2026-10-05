@@ -34,6 +34,7 @@ public sealed class AppCoordinator : IDisposable
     private readonly ReactionService reactionService;
     private readonly CleanupService cleanupService;
     private readonly LocalArchive localArchive;
+    private readonly string? notificationDataDirectory;
     private readonly IncomingChatPoller incomingChatPoller;
     private readonly IncomingObserver incomingObserver;
     private readonly RealtimeSupervisor realtime;
@@ -81,6 +82,13 @@ public sealed class AppCoordinator : IDisposable
     private bool disposed;
     private volatile bool changingAccount;
     internal bool IsDisposed => disposed;
+#if PING_UI_SMOKE
+    internal bool DiagnosticReady => connectionSupervisor.State == ConnectionState.Connected && realtime.State == RealtimeConnectionState.Connected;
+    internal bool DiagnosticNotificationsRegistered => notificationController.DiagnosticIsRegistered;
+    internal string? DiagnosticNotificationFailure => notificationController.DiagnosticRegistrationFailure;
+    internal bool DiagnosticTrayVisible => tray.DiagnosticVisible;
+    internal IReadOnlyList<PlaybackWindow> DiagnosticPlayers => playbackWindows.Values.ToArray();
+#endif
     internal void ReportAccountTransitionFailure() => settingsWindow?.ReportAccountTransitionFailure();
     internal void ReportUpdateFailure() => settingsWindow?.ReportUpdateFailure();
     internal Task<IReadOnlyList<StoredAccountSummary>> GetAccountsAsync(CancellationToken token) => supabaseClient.GetAccountsAsync(token);
@@ -112,7 +120,9 @@ public sealed class AppCoordinator : IDisposable
         HotkeyPreferencesStore preferencesStore,
         GlobalHotkeyManager hotkeys,
         TrayIconController? tray,
-        SupabaseClient? supabaseClient = null)
+        SupabaseClient? supabaseClient = null,
+        AppCoordinatorStorage? storage = null,
+        Func<bool>? automaticCaptureAccess = null)
     {
         this.mainWindow = mainWindow;
         this.preferencesStore = preferencesStore;
@@ -126,12 +136,13 @@ public sealed class AppCoordinator : IDisposable
         chatService = new ChatMessageService(this.supabaseClient);
         reactionService = new ReactionService(this.supabaseClient);
         cleanupService = new CleanupService(this.supabaseClient);
-        localArchive = new LocalArchive(LocalArchive.DefaultRootDirectory());
+        localArchive = new LocalArchive(storage?.ArchiveDirectory ?? LocalArchive.DefaultRootDirectory());
+        notificationDataDirectory = storage?.NotificationDirectory;
         incomingChatPoller = new IncomingChatPoller(chatService, roomService, () => currentUid, onError: HandleIncomingConnectionError);
         connectionSupervisor = new ConnectionSupervisor(ConnectAndLoadRoomsAsync);
         connectionSupervisor.StateChanged += HandleConnectionStateChanged;
-        quickSendSettingsStore = new ScreenFaceQuickSendSettingsStore();
-        mirrorPlacementStore = new MirrorPlacementStore();
+        quickSendSettingsStore = storage is null ? new ScreenFaceQuickSendSettingsStore() : new(storage.QuickSendSettingsPath);
+        mirrorPlacementStore = storage is null ? new MirrorPlacementStore() : new(storage.MirrorPlacementPath);
         quickSendSettings = quickSendSettingsStore.Load();
         camera = new(() => quickSendSettings.Devices);
         UI.PingAppearance.Apply(quickSendSettings.AppearanceMode);
@@ -153,7 +164,7 @@ public sealed class AppCoordinator : IDisposable
         autoFaceReply = new(camera, captureActivity, appStartedAt,
             () => !disposed && !changingAccount && currentUid is { } uid && connectionSupervisor.State is not (ConnectionState.SessionRejected or ConnectionState.ConfigurationRequired)
                 ? new(uid, CurrentNickname, quickSendSettings.Preferences.AllowsLocalSave) : null,
-            HasAutomaticCaptureAccess, RecordAutomaticReplyAsync, ShowAutoReplyIndicatorAsync,
+            automaticCaptureAccess ?? HasAutomaticCaptureAccess, RecordAutomaticReplyAsync, ShowAutoReplyIndicatorAsync,
             messageService.SendAutoReplyAsync, path => File.Delete(path), onError: _ => Debug.WriteLine("Ping automatic face reply failed."));
         videoDelivery = new IncomingVideoDelivery(appStartedAt, () => quickSendSettings.AutoPlayIncoming,
             ShowIncomingNotificationAsync, EnqueueAutomaticPlaybackAsync, messageService.MarkNotifiedAsync, HandleIncomingConnectionError);
@@ -1387,7 +1398,7 @@ public sealed class AppCoordinator : IDisposable
         {
             if (disposed || cancellationToken.IsCancellationRequested) return;
             if (currentUid != uid) settingsWindow?.ClearDevicePairing();
-            notificationController.UseAccount(uid);
+            notificationController.UseAccount(uid, notificationDataDirectory);
             currentUid = uid;
             startupIdentity.SetReady(uid);
             if (!string.IsNullOrWhiteSpace(profile?.Nickname))

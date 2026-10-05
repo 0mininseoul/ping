@@ -3,7 +3,8 @@ param(
     [Parameter(Mandatory)][string]$OwnedSessionsDirectory,
     [Parameter(Mandatory)][string]$FixturesDirectory,
     [Parameter(Mandatory)][ValidatePattern('^\\\\\.\\DISPLAY[1-9][0-9]*$')][string]$MonitorDeviceName,
-    [switch]$SkipBuild
+    [switch]$SkipBuild,
+    [switch]$Runtime
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -47,7 +48,8 @@ $config = Join-Path $package.InstallLocation 'Supabase.json'
 $previousDisplay = $env:PING_UI_SMOKE_DISPLAY
 try {
     $env:PING_UI_SMOKE_DISPLAY = $MonitorDeviceName
-    $arguments = '--ui-owned-live "{0}" "{1}" "{2}" "{3}"' -f $output, $config, $sessions, $fixtures
+    $route = if ($Runtime) { '--ui-owned-runtime' } else { '--ui-owned-live' }
+    $arguments = '{0} "{1}" "{2}" "{3}" "{4}"' -f $route, $output, $config, $sessions, $fixtures
     $process = Start-Process -FilePath $executable -ArgumentList $arguments -PassThru -WindowStyle Hidden
 } finally { $env:PING_UI_SMOKE_DISPLAY = $previousDisplay }
 $output | Set-Content -LiteralPath (Join-Path $windowsRoot 'artifacts\current-owned-native.txt')
@@ -63,4 +65,7 @@ foreach ($file in $before) {
 if (-not (Test-Path -LiteralPath "$output\result.json")) { throw "Native owned QA exited without a result; inspect $output and repair only its recorded owned room." }
 $result = Get-Content -LiteralPath "$output\result.json" -Raw | ConvertFrom-Json
 if (-not $unchanged -or -not $result.Success) { throw "Native owned QA failed; inspect $output. UserDataUnchanged=$unchanged" }
+if ($result.PSObject.Properties.Name -contains 'Limitations') {
+    foreach ($limitation in $result.Limitations) { Write-Host "UNVERIFIED: $limitation" }
+}
 Write-Host "PASS: $($result.Checks.Count) native owned live checks, $($after.Count) retained user files unchanged. Results: $output"

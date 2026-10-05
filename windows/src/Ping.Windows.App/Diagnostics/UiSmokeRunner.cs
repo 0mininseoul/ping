@@ -22,6 +22,7 @@ internal static partial class UiSmokeRunner
 {
     public static string? OutputDirectory { get; set; }
     public static bool ConversationOnly { get; set; }
+    public static bool OwnedRuntime { get; set; }
     private static readonly List<string> Checks = [];
     private static bool failureWritten;
     private static void Step(string text) => File.AppendAllText(Path.Combine(OutputDirectory!, "phases.txt"), text + Environment.NewLine);
@@ -46,7 +47,8 @@ internal static partial class UiSmokeRunner
         {
             if (OwnedLive is not null)
             {
-                await VerifyOwnedLiveAsync();
+                if (OwnedRuntime) await VerifyOwnedRuntimeAsync();
+                else await VerifyOwnedLiveAsync();
                 app.Exit();
                 return;
             }
