@@ -11,3 +11,5 @@ Windows PowerShell5.1에서 의미 있는 실패를 먼저 재현했고 수정 �
 수정된 초기화를 QA 프로필에 적용한 두 번째 정상 설치본 실행은 기존 QA 수신 계정과 일치했다. 상대 QA 계정에서 다른 룸으로 보낸 텍스트가 읽지 않음1로 조회됐고, Windows 알림 기록에 해당 메시지 ID의 실제 Ping 알림1개가 등록됐다. 근거 폴더는 `windows/artifacts/packaged-toast-b73804bd513748abb0128e06aad1fcfd`이며 `effective-identity-diagnostic.json`, `before-warm.json`, `toast-history.json`, `profile-restoration.json`, `server-cleanup.json`을 따른다. 개인정보가 담긴 세션 파일과 ID는 커밋하지 않는다.
 
 이 결과는 정상 설치본의 실제 수신 계정 및 OS 알림 생성 증거다. OS 알림의 실제 클릭, 종료 상태의 알림 활성화와 대화방 이동을 검증한 결과는 아니다. 자동화가 알림 창을 선택할 수 없었으며 캡처 제외를 우회하지 않았다. Mac 상대, 카메라/마이크, ARM64 실제 기기와 혼합 DPI 검증도 남아 있다.0.4.13 EXE 생성 및 실제 설치 결과는 후속 후보 안내에 기록한다.
+
+[0.4.13 후보 안내](2026-10-05-windows-0.4.13-candidate.ko.md)에 EXE 업데이트·제거·재설치와 정상 재설치본의 실제 QA 계정/알림 생성 결과를 기록했다. 원래 일반/패키지 저장소 일곱 파일은 검사 종료 후 바이트 그대로 복원했다.
