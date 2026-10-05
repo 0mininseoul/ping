@@ -220,6 +220,7 @@ try {
 
     . (Join-Path $PSScriptRoot 'ping-user-data.ps1')
     Restore-PingUserData -LocalAppDataRoot $env:LOCALAPPDATA -PackageFamilyName $installed.PackageFamilyName
+    Initialize-PingPackagedData -LocalAppDataRoot $env:LOCALAPPDATA -PackageFamilyName $installed.PackageFamilyName
     if (-not [string]::IsNullOrWhiteSpace($RegistrationRecordPath)) {
         [IO.File]::WriteAllText($RegistrationRecordPath, $installed.PackageFamilyName)
     }

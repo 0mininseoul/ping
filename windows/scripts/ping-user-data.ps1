@@ -50,9 +50,17 @@ function Save-PingUserData([string]$LocalAppDataRoot, [string]$PackageFamilyName
     $snapshotId = [Guid]::NewGuid().ToString('N')
     $snapshot = Join-Path $paths.Preserved $snapshotId
     New-Item -ItemType Directory -Path $snapshot -Force | Out-Null
+    $accountDirectory = $paths.Physical
+    if ((Test-Path -LiteralPath (Join-Path $paths.Virtual 'SupabaseSession.json')) -or
+        (Test-Path -LiteralPath (Join-Path $paths.Virtual 'SupabaseSession.json.bak'))) { $accountDirectory = $paths.Virtual }
     foreach ($name in @(Get-PingRetainedFileNames @($paths.Physical, $paths.Virtual))) {
-        $source = Join-Path $paths.Virtual $name
-        if (-not (Test-Path -LiteralPath $source)) { $source = Join-Path $paths.Physical $name }
+        if ($name -in @('SupabaseSession.json', 'SupabaseSession.json.bak')) {
+            $source = Join-Path $accountDirectory $name
+            if ($name -eq 'SupabaseSession.json' -and -not (Test-Path -LiteralPath $source)) { $source += '.bak' }
+        } else {
+            $source = Join-Path $paths.Virtual $name
+            if (-not (Test-Path -LiteralPath $source)) { $source = Join-Path $paths.Physical $name }
+        }
         if (Test-Path -LiteralPath $source -PathType Leaf) {
             Assert-PingDataPath $source $paths.Root
             Copy-Item -LiteralPath $source -Destination (Join-Path $snapshot $name)
@@ -76,18 +84,83 @@ function Restore-PingUserData([string]$LocalAppDataRoot, [string]$PackageFamilyN
     if ($snapshotId -notmatch '^[a-f0-9]{32}$') { throw 'Invalid preserved Ping data snapshot.' }
     $snapshot = Join-Path $paths.Preserved $snapshotId
     Assert-PingDataPath $snapshot $paths.Root
-    foreach ($name in @(Get-PingRetainedFileNames @($snapshot))) {
-        $source = Join-Path $snapshot $name
-        $destination = Join-Path $paths.Physical $name
+    function Restore-PreservedFile([string]$SourceName, [string]$DestinationName) {
+        $source = Join-Path $snapshot $SourceName
+        $destination = Join-Path $paths.Physical $DestinationName
         Assert-PingDataPath $source $paths.Root
         Assert-PingDataPath $destination $paths.Root
-        if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { continue }
-        if (-not $OverwriteExisting -and ((Test-Path -LiteralPath $destination) -or (Test-Path -LiteralPath (Join-Path $paths.Virtual $name)))) { continue }
+        if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { return }
         New-Item -ItemType Directory -Path $paths.Physical -Force | Out-Null
         $temporary = Join-Path $paths.Physical ([Guid]::NewGuid().ToString('N') + '.tmp')
-        Copy-Item -LiteralPath $source -Destination $temporary
-        if (Test-Path -LiteralPath $destination) { [IO.File]::Replace($temporary, $destination, [NullString]::Value) }
-        else { [IO.File]::Move($temporary, $destination) }
+        Assert-PingDataPath $temporary $paths.Root
+        try {
+            Copy-Item -LiteralPath $source -Destination $temporary
+            if (Test-Path -LiteralPath $destination) { [IO.File]::Replace($temporary, $destination, [NullString]::Value) }
+            else { [IO.File]::Move($temporary, $destination) }
+        } finally { if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary } }
+    }
+    $existingAccount = $false
+    foreach ($directory in @($paths.Physical, $paths.Virtual)) {
+        foreach ($name in @('SupabaseSession.json', 'SupabaseSession.json.bak')) {
+            if (Test-Path -LiteralPath (Join-Path $directory $name)) { $existingAccount = $true }
+        }
+    }
+    if ($OverwriteExisting -or -not $existingAccount) {
+        $primary = Join-Path $snapshot 'SupabaseSession.json'
+        $backup = Join-Path $snapshot 'SupabaseSession.json.bak'
+        if ((Test-Path -LiteralPath $primary -PathType Leaf) -or (Test-Path -LiteralPath $backup -PathType Leaf)) {
+            if (Test-Path -LiteralPath $primary -PathType Leaf) { Restore-PreservedFile 'SupabaseSession.json' 'SupabaseSession.json' }
+            else { Restore-PreservedFile 'SupabaseSession.json.bak' 'SupabaseSession.json' }
+            if (Test-Path -LiteralPath $backup -PathType Leaf) { Restore-PreservedFile 'SupabaseSession.json.bak' 'SupabaseSession.json.bak' }
+            elseif ($OverwriteExisting) {
+                $staleBackup = Join-Path $paths.Physical 'SupabaseSession.json.bak'
+                Assert-PingDataPath $staleBackup $paths.Root
+                if (Test-Path -LiteralPath $staleBackup -PathType Leaf) { Remove-Item -LiteralPath $staleBackup }
+            }
+        }
+    }
+    foreach ($name in @(Get-PingRetainedFileNames @($snapshot))) {
+        if ($name -in @('SupabaseSession.json', 'SupabaseSession.json.bak')) { continue }
+        if (-not $OverwriteExisting -and ((Test-Path -LiteralPath (Join-Path $paths.Physical $name)) -or (Test-Path -LiteralPath (Join-Path $paths.Virtual $name)))) { continue }
+        Restore-PreservedFile $name $name
+    }
+}
+
+function Initialize-PingPackagedData([string]$LocalAppDataRoot, [string]$PackageFamilyName) {
+    $paths = Get-PingDataPaths $LocalAppDataRoot $PackageFamilyName
+    function Copy-MissingPackagedFile([string]$source, [string]$destination) {
+        Assert-PingDataPath $source $paths.Root
+        Assert-PingDataPath $destination $paths.Root
+        if ((Test-Path -LiteralPath $destination) -or -not (Test-Path -LiteralPath $source -PathType Leaf)) { return }
+        New-Item -ItemType Directory -Path $paths.Virtual -Force | Out-Null
+        $temporary = Join-Path $paths.Virtual ([Guid]::NewGuid().ToString('N') + '.tmp')
+        Assert-PingDataPath $temporary $paths.Root
+        try {
+            Copy-Item -LiteralPath $source -Destination $temporary
+            # Never replace data if the app created it while setup was running.
+            [IO.File]::Move($temporary, $destination)
+        } finally { if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary } }
+    }
+
+    $session = Join-Path $paths.Virtual 'SupabaseSession.json'
+    $backup = $session + '.bak'
+    Assert-PingDataPath $session $paths.Root
+    Assert-PingDataPath $backup $paths.Root
+    if (-not (Test-Path -LiteralPath $session)) {
+        if (Test-Path -LiteralPath $backup) { Copy-MissingPackagedFile $backup $session }
+        else {
+            $legacy = Join-Path $paths.Physical 'SupabaseSession.json'
+            $legacyBackup = $legacy + '.bak'
+            Assert-PingDataPath $legacy $paths.Root
+            if (Test-Path -LiteralPath $legacy) { Copy-MissingPackagedFile $legacy $session }
+            else { Copy-MissingPackagedFile $legacyBackup $session }
+            Copy-MissingPackagedFile $legacyBackup $backup
+        }
+    }
+    # The active package account and its backup belong to one refresh chain.
+    foreach ($name in @(Get-PingRetainedFileNames @($paths.Physical))) {
+        if ($name -in @('SupabaseSession.json', 'SupabaseSession.json.bak')) { continue }
+        Copy-MissingPackagedFile (Join-Path $paths.Physical $name) (Join-Path $paths.Virtual $name)
     }
 }
 
