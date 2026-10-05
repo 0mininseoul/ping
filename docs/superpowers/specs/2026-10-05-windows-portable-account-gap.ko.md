@@ -27,8 +27,14 @@
 
 이 안은 PC 이전/복구의 편의를 제공한다. 세션 복사는 기기별 독립 로그인이 아니며, 여러 기기의 refresh-token 공유는 갱신/reuse 정책에 영향을 받는다. 여러 PC 동시 사용을 안정적으로 완성했다고 표현하지 않는다.
 
-## 결정 대기
+## 승인된 구현 — 선택 A
 
-사용자에게 A(선택형 이메일 로그인 허용)와 B(서버 변경 없는 이전만)를 제시했다. 이 문서는 구체적 결정 자료이며 구현·설치물·운영 변경을 완료했다는 기록이 아니다. 선택 후 해당 범위의 설계와 실행 계획을 작성한다.
+2026-10-05 사용자가 “여러 PC 동시 사용 — 기존 Supabase에 선택형 이메일 로그인 추가 허용”을 선택했다. Anonymous Auth 기본 진입은 유지하고 Windows의 선택형 이메일 인증을 허용한다. 소셜 로그인은 추가하지 않는다.
+
+설정 → 일반 → 계정에서 현재 UID에 이메일을 연결한다. `PUT /auth/v1/user` 후 `POST /auth/v1/verify`의 `email_change` 코드로 확인한다. 이미 확인된 이메일의 변경은 이번 범위에 포함하지 않는다. 다른 PC에서는 `POST /auth/v1/otp` (`create_user: false`)와 `POST /auth/v1/verify` (`type: email`)로 별도 세션을 만든다. 비밀번호와 브라우저 리디렉션 없이 메일의 인증번호를 입력한다. 이메일과 UID는 서버 응답으로 확인한다.
+
+확인 전·실패 시 현재 계정은 유지한다. 인증 결과는 토큰을 노출하지 않는 객체로 메모리에 보관하고 기존 계정 변경 수명 절차로 송수신을 정지한 뒤 원자적으로 저장한다. 연결 검증의 UID 불일치를 거절하고, 로그인 시 기존 계정을 삭제하거나 데이터를 합치지 않는다. 저장 실패 시 인증번호를 다시 소비하지 않고 저장을 재시도한다. 재시작 이후에는 인증번호를 새로 요청한다.
+
+필요 운영 설정은 이메일 provider, manual linking, 메일 확인, 복수 세션 허용과 인증번호를 포함한 email-change/magic-link 템플릿이다. 현재 설정을 덮어쓰는 `config push`는 사용하지 않는다. SMTP가 없다면 일반 사용자 메일 발송에 별도 SMTP 설정이 필요하다. SMTP 자격증명은 채팅이나 Git에 저장하지 않는다. 현재 이 문서는 운영 변경 완료 기록이 아니다.
 
 참고: Supabase [Anonymous Sign-Ins](https://supabase.com/docs/guides/auth/auth-anonymous), [User sessions](https://supabase.com/docs/guides/auth/sessions), 현재 `SupabaseClient.Accounts.cs`, `DeviceHandoffPayload.cs`, `AccountSettingsViewModel.cs`.
