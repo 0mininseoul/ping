@@ -1,3 +1,7 @@
+# Windows 0.4.15 candidate
+
+Current scope: tray reception and launch synchronization, without WNS or backend changes. Generate signed installer artifacts with workflow_dispatch build_only=true, upload_artifacts=true, publish_release=false and publish_web_downloads=false. Tests and smoke validation are skipped; packaging integrity guards remain. See [0.4.15 candidate notes](../docs/windows/2026-10-05-windows-0.4.15-candidate.ko.md). Earlier validation below belongs to 0.4.14, not this candidate.
+
 # Ping Windows Client
 
 This directory contains the native Windows client workspace. It is intentionally isolated from the existing macOS app and does not change the macOS project, Sparkle setup, Swift version, deployment target, or Liquid Glass compatibility wrapper.

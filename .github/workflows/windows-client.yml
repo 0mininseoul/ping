@@ -6,6 +6,11 @@ permissions:
 on:
   workflow_dispatch:
     inputs:
+      build_only:
+        description: "Generate installer artifacts without tests or smoke validation"
+        required: false
+        type: boolean
+        default: false
       publish_release:
         description: "Publish the signed sideload bundle to a GitHub Release"
         required: false
@@ -51,7 +56,7 @@ on:
 
 jobs:
   build:
-    name: Build and test Windows client
+    name: Package Windows client
     runs-on: windows-2022
     env:
       DOTNET_NOLOGO: true
@@ -118,12 +123,14 @@ jobs:
           "PING_WINDOWS_SIGNED=true" >> $env:GITHUB_ENV
 
       - name: Restore managed tests
+        if: ${{ github.event_name != 'workflow_dispatch' || !inputs.build_only }}
         shell: pwsh
         run: |
           dotnet restore windows/tests/Ping.Windows.Core.Tests/Ping.Windows.Core.Tests.csproj
           dotnet restore windows/tests/Ping.Windows.App.Tests/Ping.Windows.App.Tests.csproj
 
       - name: Test managed projects
+        if: ${{ github.event_name != 'workflow_dispatch' || !inputs.build_only }}
         shell: pwsh
         run: |
           dotnet test windows/tests/Ping.Windows.Core.Tests/Ping.Windows.Core.Tests.csproj -c Release --no-restore
@@ -177,11 +184,15 @@ jobs:
         run: |
           & .\windows\scripts\build-release.ps1 -Platform x64,ARM64 -SkipTests
           if ($env:PING_WINDOWS_SIGNED -eq "true") {
-            & .\windows\scripts\smoke-release.ps1 -Platform x64,ARM64
+            if ("${{ inputs.build_only }}" -ne "true") {
+              & .\windows\scripts\smoke-release.ps1 -Platform x64,ARM64
+            }
             & .\windows\scripts\package-sideload-release.ps1 -Platform x64,ARM64
             & .\windows\scripts\build-installer.ps1
           } else {
-            & .\windows\scripts\smoke-release.ps1 -Platform x64,ARM64 -AllowUnsigned
+            if ("${{ inputs.build_only }}" -ne "true") {
+              & .\windows\scripts\smoke-release.ps1 -Platform x64,ARM64 -AllowUnsigned
+            }
             & .\windows\scripts\package-sideload-release.ps1 -Platform x64,ARM64 -AllowUnsigned
           }
 
