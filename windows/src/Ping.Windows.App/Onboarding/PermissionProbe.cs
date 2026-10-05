@@ -112,7 +112,7 @@ public sealed class PermissionProbe
         if (access != global::Windows.Security.Authorization.AppCapabilityAccess.AppCapabilityAccessStatus.Allowed)
         {
             return OnboardingProbeState.Blocked(
-                $"Camera privacy access is {access}.",
+                "Windows 개인정보 설정에서 Ping의 카메라 접근을 허용해 주세요.",
                 SettingsLauncher.WebcamPrivacyUri);
         }
 
@@ -126,19 +126,19 @@ public sealed class PermissionProbe
                 StreamingCaptureMode = global::Windows.Media.Capture.StreamingCaptureMode.Video,
                 VideoDeviceId = await Capture.CaptureCameraResolver.ResolveAsync(lease.Devices.CameraId, cancellationToken)
             }), cancellationToken);
-            return OnboardingProbeState.Available("Camera is ready.");
+            return OnboardingProbeState.Available("카메라를 사용할 수 있어요.");
         }
-        catch (UnauthorizedAccessException ex)
+        catch (UnauthorizedAccessException)
         {
-            return OnboardingProbeState.Blocked(ex.Message, SettingsLauncher.WebcamPrivacyUri);
+            return OnboardingProbeState.Blocked("카메라 접근이 차단됐어요. Windows 개인정보 설정에서 허용해 주세요.", SettingsLauncher.WebcamPrivacyUri);
         }
         catch (COMException ex) when ((uint)ex.HResult == 0x80070005)
         {
-            return OnboardingProbeState.Blocked(ex.Message, SettingsLauncher.WebcamPrivacyUri);
+            return OnboardingProbeState.Blocked("카메라 접근이 차단됐어요. Windows 개인정보 설정에서 허용해 주세요.", SettingsLauncher.WebcamPrivacyUri);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return OnboardingProbeState.Blocked($"Camera initialization failed: {ex.Message}", SettingsLauncher.WebcamPrivacyUri);
+            return OnboardingProbeState.Blocked("카메라를 준비하지 못했어요. 기기 연결과 촬영 기기 선택을 확인하고, 다른 앱에서 사용 중이면 닫아 주세요.", SettingsLauncher.WebcamPrivacyUri);
         }
 #else
         await Task.CompletedTask.ConfigureAwait(false);
@@ -154,7 +154,7 @@ public sealed class PermissionProbe
         if (access != global::Windows.Security.Authorization.AppCapabilityAccess.AppCapabilityAccessStatus.Allowed)
         {
             return OnboardingProbeState.Blocked(
-                $"Microphone privacy access is {access}.",
+                "Windows 개인정보 설정에서 Ping의 마이크 접근을 허용해 주세요.",
                 SettingsLauncher.MicrophonePrivacyUri);
         }
 
@@ -168,19 +168,19 @@ public sealed class PermissionProbe
                 StreamingCaptureMode = global::Windows.Media.Capture.StreamingCaptureMode.Audio,
                 AudioDeviceId = (await Capture.CaptureMicrophoneResolver.ResolveAsync(lease.Devices.Microphone, cancellationToken)).WinRtId
             }), cancellationToken);
-            return OnboardingProbeState.Available("Microphone is ready.");
+            return OnboardingProbeState.Available("마이크를 사용할 수 있어요.");
         }
-        catch (UnauthorizedAccessException ex)
+        catch (UnauthorizedAccessException)
         {
-            return OnboardingProbeState.Blocked(ex.Message, SettingsLauncher.MicrophonePrivacyUri);
+            return OnboardingProbeState.Blocked("마이크 접근이 차단됐어요. Windows 개인정보 설정에서 허용해 주세요.", SettingsLauncher.MicrophonePrivacyUri);
         }
         catch (COMException ex) when ((uint)ex.HResult == 0x80070005)
         {
-            return OnboardingProbeState.Blocked(ex.Message, SettingsLauncher.MicrophonePrivacyUri);
+            return OnboardingProbeState.Blocked("마이크 접근이 차단됐어요. Windows 개인정보 설정에서 허용해 주세요.", SettingsLauncher.MicrophonePrivacyUri);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return OnboardingProbeState.Blocked($"Microphone initialization failed: {ex.Message}", SettingsLauncher.MicrophonePrivacyUri);
+            return OnboardingProbeState.Blocked("마이크를 준비하지 못했어요. 기기 연결과 촬영 기기 선택을 확인해 주세요.", SettingsLauncher.MicrophonePrivacyUri);
         }
 #else
         await Task.CompletedTask.ConfigureAwait(false);
@@ -193,7 +193,7 @@ public sealed class PermissionProbe
 #if NET8_0_WINDOWS || NET9_0_WINDOWS || NET10_0_WINDOWS
         if (!global::Windows.Graphics.Capture.GraphicsCaptureSession.IsSupported())
         {
-            return OnboardingProbeState.Unsupported("Graphics Capture is not supported on this device.");
+            return OnboardingProbeState.Unsupported("이 PC에서는 Windows 화면 캡처를 지원하지 않아요.");
         }
 
         var selfTest = await screenCaptureSelfTest.CapturePrimaryMonitorFrameAsync(cancellationToken).ConfigureAwait(false);
@@ -202,7 +202,7 @@ public sealed class PermissionProbe
             OnboardingProbeStatus.Available => selfTest,
             OnboardingProbeStatus.Blocked => selfTest,
             OnboardingProbeStatus.Unsupported => selfTest,
-            _ => OnboardingProbeState.Blocked("Screen capture support exists, but the native one-frame self-test did not complete.")
+            _ => OnboardingProbeState.Blocked("화면 캡처를 준비하지 못했어요. 디스플레이 연결과 화면 캡처 권한을 확인해 주세요.")
         };
 #else
         await Task.CompletedTask.ConfigureAwait(false);

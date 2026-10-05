@@ -1190,6 +1190,11 @@ public sealed class AppCoordinator : IDisposable
             var message = await messageService.GetAsync(messageId, cancellationToken);
             if (message is null)
             {
+                await RunOnUiThreadAsync(() =>
+                {
+                    ShowHomeShell();
+                    ShowBlockedState("영상 재생", "영상을 열 수 없어요.", "영상이 만료되었거나 삭제됐어요. 대화 기록에서 다른 메시지를 확인해 주세요.");
+                });
                 return;
             }
 
@@ -1200,9 +1205,9 @@ public sealed class AppCoordinator : IDisposable
             await RunOnUiThreadAsync(() =>
             {
                 ShowBlockedState(
-                    "Playback",
-                    "Ping could not open the selected notification.",
-                    ex.Message);
+                    "영상 재생",
+                    "선택한 알림의 영상을 열지 못했어요.",
+                    "인터넷 연결을 확인한 뒤 대화 기록에서 영상을 다시 열어 주세요.");
             });
         }
     }
