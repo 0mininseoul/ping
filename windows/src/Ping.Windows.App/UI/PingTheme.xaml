@@ -89,6 +89,20 @@
         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
         <Setter Property="Padding" Value="0" />
         <Setter Property="Margin" Value="0,0,0,3" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListViewItem">
+                    <ListViewItemPresenter Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
+                        ContentTemplateSelector="{TemplateBinding ContentTemplateSelector}" HorizontalContentAlignment="Stretch"
+                        ContentMargin="{TemplateBinding Padding}" CornerRadius="10" Background="Transparent"
+                        PointerOverBackground="Transparent" PressedBackground="Transparent"
+                        SelectedBackground="{ThemeResource PingAccentFillBrush}"
+                        SelectedPointerOverBackground="{ThemeResource PingAccentFillBrush}"
+                        SelectedPressedBackground="{ThemeResource PingAccentFillBrush}"
+                        SelectedForeground="{ThemeResource PingTextBrush}" SelectionCheckMarkVisualEnabled="False" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
     <Style x:Key="PingIconButtonStyle" TargetType="Button">
         <Setter Property="Padding" Value="6" />

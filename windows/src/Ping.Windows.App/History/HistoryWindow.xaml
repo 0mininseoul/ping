@@ -110,15 +110,16 @@
                     <ListView x:Name="VideosList" ItemsSource="{Binding Timeline}" Visibility="{Binding TimelineVisibility}"
                         SelectionChanged="VideosList_SelectionChanged" DoubleTapped="VideosList_DoubleTapped" KeyDown="Timeline_KeyDown"
                         ItemContainerStyle="{StaticResource PingTimelineItemStyle}" Background="Transparent" AutomationProperties.Name="메시지 타임라인">
+                        <ListView.ItemContainerTransitions><TransitionCollection /></ListView.ItemContainerTransitions>
                         <ListView.ItemTemplate>
                             <DataTemplate>
                                 <StackPanel Spacing="3">
                                     <TextBlock Text="{Binding DayHeading}" Visibility="{Binding DayHeadingVisibility}" HorizontalAlignment="Center" Style="{StaticResource PingCaptionTextStyle}" Foreground="{ThemeResource PingMutedBrush}" Margin="0,8" />
-                                    <StackPanel HorizontalAlignment="{Binding BubbleAlignment}" MaxWidth="280" Spacing="2" ToolTipService.ToolTip="{Binding TimeLabel}">
-                                        <Grid ColumnSpacing="8">
-                                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                            <TextBlock Text="{Binding SenderLabel}" Visibility="{Binding SenderVisibility}" Style="{StaticResource PingCaptionTextStyle}" Foreground="{ThemeResource PingMutedBrush}" />
-                                        </Grid>
+                                    <StackPanel HorizontalAlignment="{Binding BubbleAlignment}" MaxWidth="280" Spacing="2">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <TextBlock Text="{Binding SenderLabel}" Style="{StaticResource PingCaptionTextStyle}" Foreground="{ThemeResource PingMutedBrush}" TextTrimming="CharacterEllipsis" MaxWidth="190" />
+                                            <TextBlock Text="{Binding TimeLabel}" Style="{StaticResource PingCaptionTextStyle}" Foreground="{ThemeResource PingMutedBrush}" Opacity="0.75" AutomationProperties.Name="전송 시간" />
+                                        </StackPanel>
                                         <Border>
                                             <Grid>
                                                 <StackPanel Spacing="8" Visibility="{Binding VideoVisibility}">

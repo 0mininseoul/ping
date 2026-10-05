@@ -152,7 +152,7 @@ ping/
 
 ## 6. Supabase 권장 사항
 
-- **Anonymous Auth 기본 진입 유지**. 2026-10-05 사용자 승인으로 Windows에는 기존 UID를 유지하는 선택형 이메일 인증번호 연결/로그인을 허용한다. 소셜 로그인과 임의 계정 병합은 추가하지 않는다. `docs/windows/EMAIL_ACCOUNT_SETUP.ko.md` 참조.
+- **Anonymous Auth 기본 진입 유지**. 2026-10-05 사용자가 이메일 방식을 철회했다. 이메일/소셜 로그인은 추가하지 않는다. 가입 없이 시작하고 기존 기기의 승인으로 다른 PC를 연결하는 방향은 제안 단계이며 아직 구현되지 않았다. 여러 기기의 refresh token을 복사해 동시 사용 완료로 취급하지 않는다. 기존 계정을 임의로 병합하지 않는다.
 - **Edge Functions 없음** — 무료 플랜 유지와 단순성을 위해 클라이언트 + Postgres RPC + RLS로 처리.
 - **Storage는 비공개 버킷** — `ping-videos` 객체는 소유자 prefix 업로드, 메시지 sender/receiver 읽기 정책으로 제한.
 - **마이그레이션 변경 시 즉시 적용**: `./scripts/supabase-ping.sh db push`.

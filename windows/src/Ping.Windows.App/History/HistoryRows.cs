@@ -41,7 +41,18 @@ public sealed class TimelineHistoryItem : INotifyPropertyChanged
     public bool IsMine => Video?.IsMine ?? Chat?.IsMine ?? false;
     public string SenderLabel => Video?.SenderNickname ?? Chat?.SenderNickname ?? "";
     public string TimeLabel => CreatedAt?.ToLocalTime().ToString("HH:mm") ?? "";
-    public string DayHeading { get; internal set; } = "";
+    private string dayHeading = "";
+    public string DayHeading
+    {
+        get => dayHeading;
+        internal set
+        {
+            if (dayHeading == value) return;
+            dayHeading = value;
+            PropertyChanged?.Invoke(this, new(nameof(DayHeading)));
+            PropertyChanged?.Invoke(this, new(nameof(DayHeadingVisibility)));
+        }
+    }
 
 #if WINDOWS
     public HorizontalAlignment BubbleAlignment => IsMine ? HorizontalAlignment.Right : HorizontalAlignment.Left;
@@ -100,7 +111,9 @@ public sealed class VideoHistoryItem : INotifyPropertyChanged
         CanSave = message.CanBeSavedLocally(currentUid);
     }
 
-    public VideoMessage Message { get; }
+    public VideoMessage Message { get; private set; }
+
+    internal void UpdateDeliveryState(VideoMessage message) => Message = message;
 
     public ObservableCollection<ReactionAggregate> Reactions { get; }
 
@@ -246,6 +259,7 @@ public sealed class ChatHistoryItem : INotifyPropertyChanged
     public string ReplyPreview { get; }
 
     public Uri? LinkPreviewUrl { get; }
+    public bool HasResolvedLinkPreview => linkPreview is not null;
 
     public string LinkPreviewTitle => linkPreview?.DisplayTitle
         ?? (LinkPreviewUrl is null ? string.Empty : LinkPreviewDetector.DisplayHost(LinkPreviewUrl));

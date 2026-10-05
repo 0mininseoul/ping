@@ -18,19 +18,6 @@ public partial class App : Application
     private AppCoordinator? coordinator;
     private readonly SemaphoreSlim accountTransition = new(1, 1);
     private SupabaseClient? pendingAccountCreation;
-    private EmailAuthenticationResult? pendingEmailAuthentication;
-    internal EmailAuthenticationResult? PendingEmailAuthentication => pendingEmailAuthentication;
-
-    internal async Task<T> RunAccountAuthenticationAsync<T>(Func<CancellationToken, Task<T>> operation, CancellationToken token)
-    {
-        await accountTransition.WaitAsync(token);
-        try { return await operation(token); }
-        finally { accountTransition.Release(); }
-    }
-
-    internal Task RunAccountAuthenticationAsync(Func<CancellationToken, Task> operation, CancellationToken token)
-        => RunAccountAuthenticationAsync<bool>(async cancellation => { await operation(cancellation); return true; }, token);
-
     internal async Task ApplyPreparedUpdateAsync(PreparedWindowsUpdate update)
     {
         await accountTransition.WaitAsync();
@@ -69,8 +56,6 @@ public partial class App : Application
         try
         {
             if (coordinator is null || window is null) throw new InvalidOperationException("Ping is not ready.");
-            if (change.Kind == AccountChangeKind.EmailSignIn)
-                pendingEmailAuthentication = change.Authentication ?? throw new ArgumentException("Verified email authentication is required.");
             try { await coordinator.ShutdownForAccountChangeAsync(); }
             catch
             {
@@ -96,10 +81,6 @@ public partial class App : Application
                     case AccountChangeKind.Create: await client.CreateAccountAsync(token); break;
                     case AccountChangeKind.Switch: await client.SwitchAccountAsync(change.UserId!, token); break;
                     case AccountChangeKind.Remove: await client.RemoveAccountAsync(change.UserId!, token); break;
-                    case AccountChangeKind.EmailSignIn:
-                        await client.AcceptEmailAccountAsync(pendingEmailAuthentication!, token);
-                        pendingEmailAuthentication = null;
-                        break;
                     default: throw new ArgumentOutOfRangeException(nameof(change));
                 }
             }

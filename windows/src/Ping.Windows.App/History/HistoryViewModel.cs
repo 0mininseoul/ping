@@ -57,6 +57,8 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
+    public event EventHandler? TimelineUpdating;
+    public event EventHandler? TimelineUpdated;
 
     public ObservableCollection<Room> Rooms { get; } = [];
 
@@ -186,11 +188,7 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         var refreshedRooms = await roomService.MyRoomsAsync(cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         if (generation != roomListGeneration) return;
-        Rooms.Clear();
-        foreach (var room in refreshedRooms)
-        {
-            Rooms.Add(room);
-        }
+        SynchronizeRooms(refreshedRooms);
 
         var targetId = selectionRevision != requestedSelectionRevision ? SelectedRoom?.Id : preferredRoomId ?? previousSelectedId;
         SelectedRoom = Rooms.FirstOrDefault(room => string.Equals(room.Id, targetId, StringComparison.Ordinal)) ?? Rooms.FirstOrDefault();
@@ -201,8 +199,7 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
     {
         Interlocked.Increment(ref roomListGeneration);
         var selectedId = SelectedRoom?.Id;
-        Rooms.Clear();
-        foreach (var room in refreshedRooms) Rooms.Add(room);
+        SynchronizeRooms(refreshedRooms);
         SelectedRoom = Rooms.FirstOrDefault(room => room.Id == selectedId) ?? Rooms.FirstOrDefault();
     }
 
@@ -240,8 +237,6 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
     public async Task LoadSelectedRoomAsync(CancellationToken cancellationToken = default)
     {
         var generation = Interlocked.Increment(ref loadGeneration);
-        var previousSelectedSortKind = SelectedTimelineItem?.SortKind;
-        var previousSelectedSortId = SelectedTimelineItem?.SortId;
         if (SelectedRoom?.Id is not { } roomId)
         {
             StatusMessage = "No room selected.";
@@ -269,41 +264,45 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
 
         cancellationToken.ThrowIfCancellationRequested();
         if (generation != loadGeneration || SelectedRoom?.Id != roomId) return;
-        SelectedTimelineItem = null;
-        SelectedVideo = null;
-        Videos.Clear();
-        Chats.Clear();
-        Reactions.Clear();
-
-        foreach (var video in videos)
+        var sameRoom = timelineRoomId == roomId;
+        var previousSelectedSortKind = SelectedTimelineItem?.SortKind;
+        var previousSelectedSortId = SelectedTimelineItem?.SortId;
+        var nextVideos = videos.Select(video =>
         {
-            var row = new VideoHistoryItem(video, QuickReactions, ReactionsFor(reactionMap, ReactionTargetKind.Video, video.Id), currentUid, nowProvider);
-            Videos.Add(row);
-        }
-
-        foreach (var chat in chats)
+            var row = sameRoom ? Videos.FirstOrDefault(existing => existing.Message.Id == video.Id
+                && (existing.Message with { Status = video.Status }) == video) : null;
+            row ??= new VideoHistoryItem(video, QuickReactions, [], currentUid, nowProvider);
+            row.UpdateDeliveryState(video);
+            Synchronize(row.Reactions, ReactionsFor(reactionMap, ReactionTargetKind.Video, video.Id));
+            return row;
+        }).ToArray();
+        var nextChats = chats.Select(chat =>
         {
-            var row = new ChatHistoryItem(
-                chat,
-                QuickReactions,
-                ReactionsFor(reactionMap, ReactionTargetKind.Chat, chat.Id),
-                currentUid,
-                ReplyPreviewFor(chat, chatById, videoById), nowProvider);
-            Chats.Add(row);
-        }
+            var preview = ReplyPreviewFor(chat, chatById, videoById) ?? string.Empty;
+            var row = sameRoom ? Chats.FirstOrDefault(existing => existing.Message == chat && existing.ReplyPreview == preview) : null;
+            if (row is null)
+            {
+                row = new ChatHistoryItem(chat, QuickReactions, [], currentUid, preview, nowProvider);
+            }
+            Synchronize(row.Reactions, ReactionsFor(reactionMap, ReactionTargetKind.Chat, chat.Id));
+            return row;
+        }).ToArray();
 
-        foreach (var reaction in reactions)
+        TimelineUpdating?.Invoke(this, EventArgs.Empty);
+        try
         {
-            Reactions.Add(reaction);
+            Synchronize(Videos, nextVideos);
+            Synchronize(Chats, nextChats);
+            Synchronize(Reactions, reactions);
+            RebuildTimeline();
+            timelineRoomId = roomId;
+            OnPropertyChanged(nameof(TimelineVisibility));
+            RestoreSelectedTimelineItem(sameRoom ? previousSelectedSortKind : null, sameRoom ? previousSelectedSortId : null);
+            if (SelectedTimelineItem is not null && !Timeline.Contains(SelectedTimelineItem)) SelectedTimelineItem = null;
         }
-
-        RebuildTimeline();
-        timelineRoomId = roomId;
-        OnPropertyChanged(nameof(TimelineVisibility));
-        RestoreSelectedTimelineItem(previousSelectedSortKind, previousSelectedSortId);
-        var snapshotChats = Chats.ToArray();
-        await LoadChatImagesAsync(snapshotChats, cancellationToken);
-        await LoadLinkPreviewsAsync(snapshotChats, cancellationToken);
+        finally { TimelineUpdated?.Invoke(this, EventArgs.Empty); }
+        await LoadChatImagesAsync(Chats.Where(row => row.ImageSource is null).ToArray(), cancellationToken);
+        await LoadLinkPreviewsAsync(Chats.Where(row => !row.HasResolvedLinkPreview).ToArray(), cancellationToken);
         if (generation != loadGeneration || SelectedRoom?.Id != roomId) return;
         await MarkVisibleRoomReadAsync(cancellationToken);
         StatusMessage = $"{Videos.Count} videos, {Chats.Count} chats, {Reactions.Count} reactions.";
@@ -723,24 +722,53 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
 
     private void RebuildTimeline()
     {
-        Timeline.Clear();
         var rows = Videos
-            .Select(video => new TimelineHistoryItem(video))
-            .Concat(Chats.Select(chat => new TimelineHistoryItem(chat)))
+            .Select(video => Timeline.FirstOrDefault(existing => ReferenceEquals(existing.Video, video)) ?? new TimelineHistoryItem(video))
+            .Concat(Chats.Select(chat => Timeline.FirstOrDefault(existing => ReferenceEquals(existing.Chat, chat)) ?? new TimelineHistoryItem(chat)))
             .OrderBy(row => row.CreatedAt ?? DateTimeOffset.MaxValue)
             .ThenBy(row => row.SortKind)
-            .ThenBy(row => row.SortId, StringComparer.Ordinal);
+            .ThenBy(row => row.SortId, StringComparer.Ordinal).ToArray();
 
         DateTime? previousDay = null;
         foreach (var row in rows)
         {
             row.ShowsSender = SelectedRoom?.MemberUids.Count >= 3;
+            var heading = string.Empty;
             if (row.CreatedAt?.ToLocalTime() is { } timestamp && timestamp.Date != previousDay)
             {
-                row.DayHeading = timestamp.Date == nowProvider().ToLocalTime().Date ? "오늘" : timestamp.ToString("yyyy년 M월 d일");
+                heading = timestamp.Date == nowProvider().ToLocalTime().Date ? "오늘" : timestamp.ToString("yyyy년 M월 d일");
                 previousDay = timestamp.Date;
             }
-            Timeline.Add(row);
+            row.DayHeading = heading;
+        }
+        Synchronize(Timeline, rows);
+    }
+
+    private void SynchronizeRooms(IReadOnlyList<Room> rooms)
+    {
+        var next = rooms.Select(room =>
+        {
+            var previous = Rooms.FirstOrDefault(existing => existing.Id == room.Id);
+            return previous is not null && room.MemberUids.SequenceEqual(previous.MemberUids)
+                && room.MemberNicknames.Count == previous.MemberNicknames.Count
+                && room.MemberNicknames.All(pair => previous.MemberNicknames.TryGetValue(pair.Key, out var name) && name == pair.Value)
+                && (room with { MemberUids = previous.MemberUids, MemberNicknames = previous.MemberNicknames }) == previous
+                ? previous : room;
+        }).ToArray();
+        Synchronize(Rooms, next);
+    }
+
+    private static void Synchronize<T>(ObservableCollection<T> collection, IReadOnlyList<T> desired)
+    {
+        var retained = new HashSet<T>(desired);
+        for (var index = collection.Count - 1; index >= 0; index--)
+            if (!retained.Contains(collection[index])) collection.RemoveAt(index);
+        for (var index = 0; index < desired.Count; index++)
+        {
+            if (index < collection.Count && EqualityComparer<T>.Default.Equals(collection[index], desired[index])) continue;
+            var existingIndex = collection.IndexOf(desired[index]);
+            if (existingIndex >= 0) collection.Move(existingIndex, index);
+            else collection.Insert(index, desired[index]);
         }
     }
 

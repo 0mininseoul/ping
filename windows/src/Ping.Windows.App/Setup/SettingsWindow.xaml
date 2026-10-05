@@ -122,32 +122,10 @@
                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                         <Button x:Name="SwitchAccountButton" Content="전환" Click="SwitchAccountButton_Click" IsEnabled="{Binding CanSwitch}" />
                                         <Button x:Name="CreateAccountButton" Content="새 계정 추가" Click="CreateAccountButton_Click" IsEnabled="{Binding CanCreate}" />
-                                        <Button x:Name="RemoveAccountButton" Content="삭제" Click="RemoveAccountButton_Click" IsEnabled="{Binding CanRemove}" />
+                                        <Button x:Name="RemoveAccountButton" Content="이 PC에서 제거" Click="RemoveAccountButton_Click" IsEnabled="{Binding CanRemove}" />
                                         <Button Content="새로 고침" Click="RefreshAccountsButton_Click" IsEnabled="{Binding CanCreate}" />
                                     </StackPanel>
                                     <TextBlock Text="{Binding Status}" Style="{StaticResource SettingDetail}" />
-                                    <ProgressRing IsActive="{Binding IsBusy}" Width="22" Height="22" HorizontalAlignment="Left" />
-                                </StackPanel>
-                            </Border>
-                            <Border Style="{StaticResource SettingsCard}" Padding="16,12">
-                                <StackPanel Spacing="10" DataContext="{Binding EmailAccount}">
-                                    <TextBlock Text="다른 PC에서도 같은 계정 사용" Style="{StaticResource SettingTitle}" FontWeight="SemiBold" />
-                                    <TextBlock Text="{Binding LinkedEmail}" Style="{StaticResource SettingDetail}" />
-                                    <TextBlock Text="이 PC의 계정을 계속 쓰려면 이메일을 연결하세요. 다른 PC에서는 연결한 이메일로 로그인하면 같은 친구와 대화방을 불러옵니다." Style="{StaticResource SettingDetail}" />
-                                    <TextBox Header="이메일" AutomationProperties.Name="계정 이메일" PlaceholderText="name@example.com"
-                                        MaxLength="254" Text="{Binding Email, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding CanEditEmail}" />
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <Button Content="현재 계정에 이메일 연결" Click="LinkAccountEmailButton_Click" IsEnabled="{Binding CanLink}" />
-                                        <Button Content="기존 계정 로그인" Click="EmailSignInButton_Click" IsEnabled="{Binding CanSignIn}" />
-                                    </StackPanel>
-                                    <TextBox Header="메일 인증번호" AutomationProperties.Name="메일 인증번호" PlaceholderText="메일에 표시된 숫자"
-                                        MaxLength="10" Text="{Binding Code, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding CanEditCode}" />
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <Button Content="{Binding CompleteButtonText}" Click="CompleteEmailButton_Click" IsEnabled="{Binding CanVerify}" />
-                                        <Button Content="번호 다시 받기" Click="ResendEmailButton_Click" IsEnabled="{Binding CanResend}" />
-                                        <Button Content="취소" Click="ResetEmailButton_Click" IsEnabled="{Binding CanReset}" />
-                                    </StackPanel>
-                                    <TextBlock Text="{Binding Status}" Style="{StaticResource SettingDetail}" AutomationProperties.LiveSetting="Polite" />
                                     <ProgressRing IsActive="{Binding IsBusy}" Width="22" Height="22" HorizontalAlignment="Left" />
                                 </StackPanel>
                             </Border>

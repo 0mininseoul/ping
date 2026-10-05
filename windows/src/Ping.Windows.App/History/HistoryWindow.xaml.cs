@@ -43,6 +43,12 @@ public sealed partial class HistoryWindow : UserControl
     private string? lastScrolledRoomId;
     private TimelineHistoryItem? pendingScrollItem;
     private double? pendingScrollOffset;
+    private (TimelineHistoryItem Item, double Y)? pendingScrollAnchor;
+    private TimelineHistoryItem[] viewportRows = [];
+    private string? viewportRoomId;
+    private double? viewportOffset;
+    private bool viewportFollowsNewest;
+    private (TimelineHistoryItem Item, double Y)? viewportAnchor;
 
     public HistoryWindow(
         Window owner,
@@ -79,7 +85,17 @@ public sealed partial class HistoryWindow : UserControl
             {
                 pendingScrollItem = null;
                 pendingScrollOffset = null;
+                pendingScrollAnchor = null;
                 if (viewModel.Timeline.Contains(target)) VideosList.ScrollIntoView(target);
+            }
+            else if (pendingScrollAnchor is { } anchor && FindVisualChild<ScrollViewer>(VideosList) is { } anchoredScroll)
+            {
+                pendingScrollAnchor = null;
+                var offset = pendingScrollOffset ?? anchoredScroll.VerticalOffset;
+                pendingScrollOffset = null;
+                if (VideosList.ContainerFromItem(anchor.Item) is FrameworkElement container)
+                    offset = anchoredScroll.VerticalOffset + container.TransformToVisual(VideosList).TransformPoint(new global::Windows.Foundation.Point()).Y - anchor.Y;
+                anchoredScroll.ChangeView(null, Math.Clamp(offset, 0, anchoredScroll.ScrollableHeight), null, true);
             }
             else if (pendingScrollOffset is { } offset && FindVisualChild<ScrollViewer>(VideosList) is { } scroll)
             {
@@ -95,6 +111,8 @@ public sealed partial class HistoryWindow : UserControl
             if (args.PropertyName == nameof(HistoryViewModel.SelectedRoom) && inlineMessage?.RoomId != viewModel.SelectedRoom?.Id) CloseInlineFace();
         };
         viewModel.Timeline.CollectionChanged += (_, _) => { UpdateEmptyState(); SyncInlineFaceRows(); };
+        viewModel.TimelineUpdating += CaptureTimelineViewport;
+        viewModel.TimelineUpdated += RestoreTimelineViewport;
         removalPermissionTimer = DispatcherQueue.CreateTimer();
         removalPermissionTimer.Interval = TimeSpan.FromSeconds(1);
         removalPermissionTimer.Tick += (_, _) => viewModel.RefreshRemovalPermissions();
@@ -132,6 +150,8 @@ public sealed partial class HistoryWindow : UserControl
         owner.Closed -= HandleOwnerClosed; owner.Activated -= HandleOwnerActivated;
         Root.Loaded -= HandleLoaded;
         removalPermissionTimer.Stop();
+        viewModel.TimelineUpdating -= CaptureTimelineViewport;
+        viewModel.TimelineUpdated -= RestoreTimelineViewport;
         foreach (var window in playbackWindows.ToArray()) window.Close();
         await autoRefresh.StopAsync();
     }
@@ -156,7 +176,7 @@ public sealed partial class HistoryWindow : UserControl
             : await RunAsync(() => viewModel.LoadAsync(roomId));
         if (loaded)
         {
-            ApplySelectionFromViewModel();
+            ApplySelectionFromViewModel(revealSelection: !string.IsNullOrWhiteSpace(chatId));
             autoRefresh.Start();
             await RunAsync(LoadInvitationsAsync);
         }
@@ -176,7 +196,7 @@ public sealed partial class HistoryWindow : UserControl
         if (!backendReady) { initialRoomId = roomId; initialChatId = chatId; return; }
         if (await RunAsync(() => viewModel.FocusChatAsync(roomId, chatId)))
         {
-            ApplySelectionFromViewModel();
+            ApplySelectionFromViewModel(revealSelection: true);
         }
     }
 
@@ -186,6 +206,8 @@ public sealed partial class HistoryWindow : UserControl
         {
             return;
         }
+
+        if ((RoomsList.SelectedItem as Room)?.Id == viewModel.SelectedRoom?.Id) return;
 
         viewModel.SelectedRoom = RoomsList.SelectedItem as Room;
         if (await RunAsync(() => viewModel.LoadSelectedRoomAsync()))
@@ -455,7 +477,7 @@ public sealed partial class HistoryWindow : UserControl
         }
     }
 
-    private void ApplySelectionFromViewModel()
+    private void ApplySelectionFromViewModel(bool revealSelection = false)
     {
         isApplyingSelection = true;
         try
@@ -463,7 +485,7 @@ public sealed partial class HistoryWindow : UserControl
             RoomsList.SelectedItem = viewModel.SelectedRoom;
             VideosList.SelectedItem = viewModel.SelectedTimelineItem;
             var currentRoomId = viewModel.SelectedRoom?.Id;
-            if (viewModel.SelectedTimelineItem is not null)
+            if (revealSelection && viewModel.SelectedTimelineItem is not null)
             {
                 pendingScrollItem = viewModel.SelectedTimelineItem;
             }
@@ -609,21 +631,9 @@ public sealed partial class HistoryWindow : UserControl
         if (detached) return false;
         try
         {
-            var roomId = viewModel.SelectedRoom?.Id;
-            var previousLast = viewModel.Timeline.LastOrDefault();
-            var scroll = roomId == lastScrolledRoomId ? FindVisualChild<ScrollViewer>(VideosList) : null;
-            var offset = scroll?.VerticalOffset;
-            var followNewest = scroll is not null && scroll.ScrollableHeight - scroll.VerticalOffset <= 2;
             await work();
             if (detached) return false;
             SyncInlineFaceRows(closeIfMissing: true);
-            if (offset is not null && viewModel.SelectedRoom?.Id == roomId
-                && !ReferenceEquals(previousLast, viewModel.Timeline.LastOrDefault()))
-            {
-                if (followNewest) pendingScrollItem = viewModel.Timeline.LastOrDefault();
-                else pendingScrollOffset = offset;
-                VideosList.InvalidateMeasure();
-            }
             return true;
         }
         catch (Exception ex)
@@ -633,6 +643,40 @@ public sealed partial class HistoryWindow : UserControl
             ReportConnectionStatus(ex.Message, canRetry: true);
             return false;
         }
+    }
+
+    private void CaptureTimelineViewport(object? sender, EventArgs args)
+    {
+        viewportRoomId = viewModel.SelectedRoom?.Id;
+        viewportRows = viewModel.Timeline.ToArray();
+        viewportOffset = null;
+        viewportAnchor = null;
+        viewportFollowsNewest = false;
+        if (viewportRoomId != lastScrolledRoomId || FindVisualChild<ScrollViewer>(VideosList) is not { } scroll) return;
+        viewportOffset = scroll.VerticalOffset;
+        viewportFollowsNewest = scroll.ScrollableHeight - scroll.VerticalOffset <= 32;
+        foreach (var row in viewportRows)
+        {
+            if (VideosList.ContainerFromItem(row) is not FrameworkElement container) continue;
+            var y = container.TransformToVisual(VideosList).TransformPoint(new global::Windows.Foundation.Point()).Y;
+            if (y + container.ActualHeight <= 0 || y >= VideosList.ActualHeight) continue;
+            viewportAnchor = (row, y);
+            break;
+        }
+    }
+
+    private void RestoreTimelineViewport(object? sender, EventArgs args)
+    {
+        if (viewportOffset is null || viewportRoomId != viewModel.SelectedRoom?.Id
+            || viewportRows.SequenceEqual(viewModel.Timeline)) return;
+        if (viewportFollowsNewest)
+            pendingScrollItem = viewModel.Timeline.LastOrDefault();
+        else
+        {
+            pendingScrollOffset = viewportOffset;
+            pendingScrollAnchor = viewportAnchor is { } anchor && viewModel.Timeline.Contains(anchor.Item) ? anchor : null;
+        }
+        VideosList.InvalidateMeasure();
     }
 
     private static bool IsShiftDown() =>
