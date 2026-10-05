@@ -38,4 +38,9 @@
 - [x] 정확한 Auth 필드만 PATCH하는 운영 스크립트와 SMTP/템플릿 안내. credential 없이 적용하지 않는다.
 - [x] AGENTS/spec의 이메일 금지 조항을 승인된 Windows 예외로 갱신한다.
 - [x] 구현/미적용 운영 설정/미생성 설치물/미검증 상태를 구분하여 기록한다.
-- [ ] Commit: `docs(windows): document email account activation`
+- [x] Commit: `9c4d3b8` — `docs(windows): document email account activation`
+
+## 산출물 생성
+
+- [ ] 설치 파일 요청을 이어서 0.4.16 EXE/MSIX를 `build_only=true`로 생성한다. 테스트·smoke·앱 실행은 수행하지 않는다.
+- [ ] GitHub `codex/windows-parity`에 커밋을 올린다. 운영 SMTP/Auth 설정 미적용 상태는 유지하여 보고한다.
