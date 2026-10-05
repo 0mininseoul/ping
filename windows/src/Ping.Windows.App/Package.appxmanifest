@@ -10,11 +10,11 @@
   <Identity
     Name="YoungminPark.PingWindows"
     Publisher="CN=Youngmin Park"
-    Version="0.4.16.0" />
+    Version="0.4.17.0" />
   <Properties>
     <DisplayName>Ping</DisplayName>
     <PublisherDisplayName>Youngmin Park</PublisherDisplayName>
-    <Logo>Assets\StoreLogo.png</Logo>
+    <Logo>Assets\PingStoreLogo.png</Logo>
   </Properties>
   <Dependencies>
     <TargetDeviceFamily
@@ -34,8 +34,8 @@
         DisplayName="Ping"
         Description="Ping for Windows"
         BackgroundColor="transparent"
-        Square44x44Logo="Assets\Square44x44Logo.png"
-        Square150x150Logo="Assets\Square150x150Logo.png" />
+        Square44x44Logo="Assets\PingAppList.png"
+        Square150x150Logo="Assets\PingTile.png" />
       <Extensions>
         <desktop:Extension Category="windows.toastNotificationActivation">
           <desktop:ToastNotificationActivation

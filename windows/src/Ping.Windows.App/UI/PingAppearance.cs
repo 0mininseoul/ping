@@ -11,6 +11,7 @@ internal static class PingAppearance
 
     internal static void Register(Window window)
     {
+        WindowIcon.Apply(window);
         if (window.Content is not FrameworkElement root) return;
         roots.RemoveAll(reference => !reference.TryGetTarget(out _));
         roots.Add(new(root)); root.RequestedTheme = theme;
