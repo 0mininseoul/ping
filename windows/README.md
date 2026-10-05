@@ -140,6 +140,8 @@ The native startup activation handoff can be checked without opening the real ac
 
 This builds an isolated diagnostic and checks the actual Program activation queue during handler registration. It does not simulate a successful shell toast click. See [handoff regression evidence](../docs/windows/2026-10-05-windows-activation-handoff.ko.md); the fix is included in the installed0.4.13 candidate.
 
+For native notification registration and argument parsing, run `windows/scripts/test-notification-startup.ps1`, then `windows/scripts/test-notification-startup.ps1 -SkipBuild -Redirection`. These headless diagnostics use actual SDK COM callbacks and two-process activation redirection without opening UI or a user account. See [notification startup evidence](../docs/windows/2026-10-05-windows-notification-startup.ko.md) for the reproduced failures and limits. The new fix is targeted at0.4.14; the currently installed candidate remains0.4.13 until package verification.
+
 Managed portable tests can run on macOS with .NET 10 and should be kept green there:
 
 ```bash

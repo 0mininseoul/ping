@@ -436,6 +436,7 @@ public sealed class NotificationController : IDisposable
     public NotificationActivationArguments? TryGetInitialActivationArguments()
     {
 #if WINDOWS
+        if (!isRegistered) return null;
         try
         {
             var activatedArgs = AppInstance.GetCurrent().GetActivatedEventArgs();
@@ -789,13 +790,18 @@ public sealed record NotificationActivationArguments(
 
 #if WINDOWS
     public static NotificationActivationArguments From(AppNotificationActivatedEventArgs args)
-    {
-        var parsed = From(args.Arguments);
-        return parsed.HasValues
-            ? parsed
-            : Parse(args.Argument);
-    }
+        => From(args.Argument, args.Arguments);
 #endif
+
+    public static NotificationActivationArguments From(string? argument, IDictionary<string, string> values)
+    {
+        // Ping XML uses query separators; the SDK map also accepts another format.
+        var raw = Parse(argument);
+        if (raw.Action == "play" && !string.IsNullOrWhiteSpace(raw.MessageId)
+            || raw.Action == "chat" && !string.IsNullOrWhiteSpace(raw.ChatId) && !string.IsNullOrWhiteSpace(raw.RoomId)) return raw;
+        var mapped = From(values);
+        return mapped.HasValues ? mapped : raw;
+    }
 
     public static NotificationActivationArguments Parse(string? arguments)
     {
