@@ -20,4 +20,4 @@
 
 이것은 실제 프로그램의 동시 전달 경계 검사다. OS 배너를 클릭한 결과나 설치본 cold activation 송수신 완료를 뜻하지 않는다. [Microsoft 알림 시작 안내](https://learn.microsoft.com/en-us/windows/apps/develop/notifications/app-notifications/app-notifications-quickstart)는 COM으로 시작된 알림을 `NotificationInvoked`에서 처리해야 할 수 있음을 설명하므로, 시작 종류를 보는 검사와 실제 OS 클릭 검증을 구분한다.
 
-현재 설치본과 배포 EXE는 검증한0.4.11을 유지한다. 이 추가 수정은 소스에 준비하며 다음 후보에 포함한다. 작은 수정마다 새 설치 파일을 만들지 않는다. 사용자는 현재 Mac이 없다고 확인했으므로 가능한 Windows 검증을 계속한다. 카메라·마이크·Mac 실제 상대, ARM64, DPI·고대비/Mac 화면 대조, 설치본의 OS 알림 클릭과 업데이트 실패 복구는 전체 목표의 남은 항목이다.
+이 수정은 창 배치 개선과 함께 [0.4.12 설치 후보](2026-10-05-windows-0.4.12-candidate.ko.md)에 포함됐고, 실제 EXE 업데이트도 확인했다. 사용자는 현재 Mac이 없다고 확인했으므로 가능한 Windows 검증을 계속한다. 카메라·마이크·Mac 실제 상대, ARM64, DPI·고대비/Mac 화면 대조, 설치본의 OS 알림 클릭과 설치 중간 실패 복구는 전체 목표의 남은 항목이다.
