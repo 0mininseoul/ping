@@ -24,3 +24,7 @@ Supabase 연결 도구에서 고정 Ping 프로젝트 `qxjtprxvjmaxlbtljcjw` 조
 ## 산출물과 검증 상태
 
 Windows 버전 0.4.18.0. 이전 작업표시줄 아이콘 변경을 포함한다. 요청된 EXE 생성을 위한 build-only 패키징 범위만 수행하며 자동 테스트·검증 빌드·앱 실행·화면 확인·별도 리뷰는 수행하지 않는다. 채팅의 실제 표시/스크롤과 여러 PC 송수신은 미검증이다.
+
+- 소스 커밋 `9ddbf80`, `codex/windows-parity`에 push 완료.
+- [설치물 생성 37296259861](https://github.com/0mininseoul/ping/actions/runs/37296259861): build_only=true, 6m33s에 패키징 성공. 테스트 restore/실행은 skipped. 릴리즈와 웹 다운로드 게시는 하지 않았다.
+- EXE 다운로드 완료: `windows/dist/PingSetup-v0.4.18.exe`. 자동 설치/실행은 하지 않았다.
