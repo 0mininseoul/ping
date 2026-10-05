@@ -9,6 +9,7 @@
             <SolidColorBrush x:Key="PingMutedBrush" Color="#617286" />
             <SolidColorBrush x:Key="PingIdleBrush" Color="#CBD9E6" />
             <SolidColorBrush x:Key="PingAccentBrush" Color="#246EF2" />
+            <SolidColorBrush x:Key="PingUnreadTextBrush" Color="#FFFFFF" />
             <SolidColorBrush x:Key="PingAccentFillBrush" Color="#20246EF2" />
             <SolidColorBrush x:Key="PingInputBrush" Color="#FFFFFF" />
             <SolidColorBrush x:Key="PingReceivedBubbleBrush" Color="#E6E6E9" />
@@ -23,6 +24,7 @@
             <SolidColorBrush x:Key="PingMutedBrush" Color="#9AAFC2" />
             <SolidColorBrush x:Key="PingIdleBrush" Color="#334451" />
             <SolidColorBrush x:Key="PingAccentBrush" Color="#6BAEFF" />
+            <SolidColorBrush x:Key="PingUnreadTextBrush" Color="#0E1113" />
             <SolidColorBrush x:Key="PingAccentFillBrush" Color="#206BAEFF" />
             <SolidColorBrush x:Key="PingInputBrush" Color="#111A22" />
             <SolidColorBrush x:Key="PingReceivedBubbleBrush" Color="#2C3034" />
@@ -37,6 +39,7 @@
             <SolidColorBrush x:Key="PingMutedBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
             <SolidColorBrush x:Key="PingIdleBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
             <SolidColorBrush x:Key="PingAccentBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+            <SolidColorBrush x:Key="PingUnreadTextBrush" Color="{ThemeResource SystemColorHighlightTextColor}" />
             <SolidColorBrush x:Key="PingAccentFillBrush" Color="{ThemeResource SystemColorWindowColor}" />
             <SolidColorBrush x:Key="PingInputBrush" Color="{ThemeResource SystemColorWindowColor}" />
             <SolidColorBrush x:Key="PingReceivedBubbleBrush" Color="{ThemeResource SystemColorWindowColor}" />
@@ -49,6 +52,14 @@
     <FontFamily x:Key="ContentControlThemeFontFamily">ms-appx:///Assets/Fonts/PretendardVariable.ttf#Pretendard Variable, Malgun Gothic, Segoe UI Emoji</FontFamily>
     <x:Double x:Key="PingBodyFontSize">14</x:Double>
     <x:Double x:Key="PingCaptionFontSize">12</x:Double>
+    <Style TargetType="TextBox">
+        <Setter Property="FontFamily" Value="{StaticResource PingFontFamily}" />
+        <Setter Property="FontSize" Value="{StaticResource PingBodyFontSize}" />
+    </Style>
+    <Style TargetType="RichEditBox">
+        <Setter Property="FontFamily" Value="{StaticResource PingFontFamily}" />
+        <Setter Property="FontSize" Value="{StaticResource PingBodyFontSize}" />
+    </Style>
     <Style TargetType="TextBlock">
         <Setter Property="FontFamily" Value="{StaticResource PingFontFamily}" />
         <Setter Property="FontSize" Value="{StaticResource PingBodyFontSize}" />

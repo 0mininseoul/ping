@@ -41,7 +41,7 @@
                             </StackPanel>
                             <Border Grid.Column="1" Padding="7,3" CornerRadius="10" Background="{ThemeResource PingAccentBrush}"
                                 VerticalAlignment="Center" Visibility="{Binding UnreadCount, Converter={StaticResource UnreadVisibilityConverter}}">
-                                <TextBlock Text="{Binding UnreadCount}" Style="{StaticResource PingCaptionTextStyle}" Foreground="{ThemeResource PingBackgroundBrush}" />
+                                <TextBlock Text="{Binding UnreadCount}" Style="{StaticResource PingCaptionTextStyle}" Foreground="{ThemeResource PingUnreadTextBrush}" />
                             </Border>
                         </Grid>
                     </DataTemplate>
