@@ -42,5 +42,10 @@
 
 ## 산출물 생성
 
-- [ ] 설치 파일 요청을 이어서 0.4.16 EXE/MSIX를 `build_only=true`로 생성한다. 테스트·smoke·앱 실행은 수행하지 않는다.
-- [ ] GitHub `codex/windows-parity`에 커밋을 올린다. 운영 SMTP/Auth 설정 미적용 상태는 유지하여 보고한다.
+- [x] 0.4.16 EXE/MSIX를 `build_only=true`로 생성했다. [CI 37292289850](https://github.com/0mininseoul/ping/actions/runs/37292289850), source `7420561`, packaging success (5m40s). 테스트 restore/실행 단계 skipped. 테스트·smoke·앱 실행 없음.
+- [x] `windows/dist/PingSetup-v0.4.16.exe`와 `windows/dist/email-0.4.16/`의 MSIX artifacts를 내려받았다. 설치·실행·메일 발송 확인 없음.
+- [x] GitHub `codex/windows-parity`에 커밋을 올렸다. 운영 SMTP/Auth 설정은 미적용. 사용자 답변은 “모름 없을걸?”이며 관리 토큰/SMTP 정보가 없다.
+
+## 후속 논의
+
+사용자가 이메일 없이 `사용자이름#0000`만으로 로그인하는 안에 의견을 요청했다. 이는 아직 인증 방식 변경의 확정 지시가 아니다. 공개 식별자만으로 계정 소유권을 인정하지 않는다. 이름/태그+비밀번호 또는 기존 기기 승인 방식은 별도 설계·구현이 필요한 대안이며 현재 제공했다고 주장하지 않는다. 이메일 코드는 보존하고 운영 이메일 설정은 적용하지 않았다.
