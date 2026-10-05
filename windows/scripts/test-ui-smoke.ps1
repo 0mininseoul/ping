@@ -21,7 +21,8 @@ try {
     $route = if ($ConversationOnly) { '--ui-conversation-output' } else { '--ui-smoke-output' }
     $process = Start-Process -FilePath $executable -ArgumentList "$route `"$outputDirectory`"" -PassThru -WindowStyle Hidden
 } finally { $env:PING_UI_SMOKE_DISPLAY = $previousDisplay }
-if (-not $process.WaitForExit(60000)) {
+# The full suite includes native video encoding and window lifecycle checks.
+if (-not $process.WaitForExit(120000)) {
     Stop-Process -Id $process.Id -ErrorAction SilentlyContinue
     throw "Isolated UI fixture timed out. Diagnostics: $outputDirectory"
 }

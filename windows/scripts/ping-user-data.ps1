@@ -2,7 +2,7 @@
 # the current user's profile before unregistering the package.
 $script:PingRetainedFiles = @(
     'SupabaseSession.json', 'SupabaseSession.json.bak', 'Supabase.json',
-    'UserPreferences.json', 'MirrorPlacement.json', 'QuickSendSettings.json',
+    'UserPreferences.json', 'MirrorPlacement.json', 'QuickSendSettings.json', 'MessengerWindowPlacement.json',
     'NotifiedMessageIds.json', 'NotifiedChatIds.json'
 )
 

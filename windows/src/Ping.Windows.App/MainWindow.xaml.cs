@@ -1,7 +1,7 @@
-using System.Runtime.InteropServices;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Ping.Windows.App.History;
+using Ping.Windows.App.UI;
 
 namespace Ping.Windows.App;
 
@@ -10,8 +10,12 @@ public sealed partial class MainWindow : Window
     private AppWindow? appWindow;
     private bool allowClose;
     private HistoryWindow? messenger;
-    public MainWindow()
+    private readonly MessengerWindowPlacementStore? placementStore;
+    private MessengerWindowPlacementController? placement;
+    public MainWindow() : this(DefaultPlacementStore()) { }
+    internal MainWindow(MessengerWindowPlacementStore? placementStore)
     {
+        this.placementStore = placementStore;
         InitializeComponent();
         Ping.Windows.App.UI.PingAppearance.Register(this);
         Ping.Windows.App.UI.WindowCaptureExclusion.Apply(this);
@@ -19,6 +23,7 @@ public sealed partial class MainWindow : Window
         {
             if (allowClose) return;
             args.Handled = true;
+            placement?.Flush();
             appWindow?.Hide();
         };
     }
@@ -52,21 +57,18 @@ public sealed partial class MainWindow : Window
         appWindow = AppWindow.GetFromWindowId(Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hwnd));
         var iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Ping.ico");
         if (File.Exists(iconPath)) appWindow.SetIcon(iconPath);
-        var scale = GetDpiForWindow(hwnd) / 96.0;
-        if (appWindow.Presenter is OverlappedPresenter presenter)
-        {
-            presenter.PreferredMinimumWidth = (int)(560 * scale);
-            presenter.PreferredMinimumHeight = (int)(540 * scale);
-        }
-        appWindow.Resize(new((int)(640 * scale), (int)(620 * scale)));
+        placement = new(appWindow, hwnd, placementStore);
+        var restored = placement.Restore();
 #if PING_UI_SMOKE
-        Diagnostics.TestDisplayPlacement.Apply(this);
+        if (!restored) Diagnostics.TestDisplayPlacement.Apply(this);
+#else
+        _ = restored;
 #endif
         appWindow.Closing += HandleAppWindowClosing;
     }
 
     public void ShowShell() { appWindow?.Show(true); Activate(); }
-    public void CloseForQuit() { allowClose = true; Close(); }
+    public void CloseForQuit() { placement?.Dispose(); allowClose = true; Close(); }
     public void ReportStatus(string? message, bool canRetry = false) => messenger?.ReportConnectionStatus(message, canRetry);
     public void SetHotkeyStatus(string message) => messenger?.SetHotkeyStatus(message);
     public void ConfigureQuickSendSettings(bool isEnabled, string defaultRoomLabel) => messenger?.SetDefaultRoom(defaultRoomLabel);
@@ -74,7 +76,15 @@ public sealed partial class MainWindow : Window
     {
         if (allowClose) return;
         args.Cancel = true;
+        placement?.Flush();
         sender.Hide();
     }
-    [DllImport("user32.dll")] private static extern uint GetDpiForWindow(IntPtr hwnd);
+    private static MessengerWindowPlacementStore? DefaultPlacementStore()
+    {
+#if PING_UI_SMOKE
+        return null;
+#else
+        return new(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Ping", "MessengerWindowPlacement.json"));
+#endif
+    }
 }

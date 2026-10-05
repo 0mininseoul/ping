@@ -482,6 +482,7 @@ internal static partial class UiSmokeRunner
             Check(!shell.IsEnabled && window.Content is ContentControl { Content: HistoryWindow attached } && ReferenceEquals(attached, freshShell)
                 && hwnd == WinRT.Interop.WindowNative.GetWindowHandle(window), "runtime replacement detaches old messenger and keeps the main HWND");
             Check(((TextBox)freshShell.FindName("ChatBox")).Text == "", "runtime replacement creates a fresh composer without old drafts");
+            await VerifyMessengerWindowPlacementAsync();
             File.WriteAllText(Path.Combine(OutputDirectory!, "result.json"), JsonSerializer.Serialize(new { Success = true, Checks, FixtureOnly = true }, new JsonSerializerOptions { WriteIndented = true }));
             Step("DONE");
         }

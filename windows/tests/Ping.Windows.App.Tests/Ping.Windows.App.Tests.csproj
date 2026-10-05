@@ -15,6 +15,8 @@
     <ProjectReference Include="..\..\src\Ping.Windows.Core\Ping.Windows.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\..\src\Ping.Windows.App\UI\MessengerPlacementGeometry.cs" Link="UI\MessengerPlacementGeometry.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\UI\MessengerWindowPlacementStore.cs" Link="UI\MessengerWindowPlacementStore.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Onboarding\OnboardingViewModel.cs" Link="Onboarding\OnboardingViewModel.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Onboarding\GuidedSetupViewModel.cs" Link="Onboarding\GuidedSetupViewModel.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Onboarding\OnboardingStartupPolicy.cs" Link="Onboarding\OnboardingStartupPolicy.cs" />
