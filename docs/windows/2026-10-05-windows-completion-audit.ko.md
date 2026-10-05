@@ -34,3 +34,11 @@ Azure 등록·매핑의 기존 위치를 사용자에게 문의했다. 현재 �
 - ARM64 실행, 혼합 DPI/고대비/물리 입력, MSIX staging 중간 실패 복구와 앱 내 업데이트 전체 경로: 기존 fixture·서명 검사·EXE 성공 범위를 넘어서는 실기 검증이 남아 있다.
 
 확인된 새 결함 없이 후보를 반복 생성하지 않는다. 현재0.4.14를 유지하고 위 입력·실기 검증으로 다음 제품 변경을 결정한다. 전체 목표는 완료되지 않았다.
+
+## 현재 장치와 푸시 구성 재확인
+
+Windows의 present Camera class 장치는0개, AudioEndpoint는7개였다. 오디오 출력과 마이크 입력을 구별하기 위해 검증된 x64 MSIX에서 native DLL을 격리 추출하고 설치된 DLL과 SHA-256이 같음을 확인한 뒤, 실제 `PingCapture_EnumerateMicrophones`를 호출했다. 반환은0(정상), 활성 capture endpoint는0개였다. 장치를 활성화하거나 소리를 녹음하지 않았다. 이는 실제 입력 마이크가 없어 촬영/음성 검증을 진행할 수 없다는 현재 근거이며, 마이크 녹화 성공을 의미하지 않는다.
+
+설치 경로의 DLL을 외부 PowerShell 진단에서 직접 로드한 첫 시도는 `0x80070005`로 실패했다. 권한/보안 설정을 바꾸지 않았고 소유한 MSIX 추출본으로 위 읽기 전용 확인을 수행했다. 일반 설치 앱의 DLL 로드가 실패한 결과로 해석하지 않는다.
+
+GitHub Secret 이름만 조회해 WNS/Azure/Entra/Windows push에 해당하는 구성 이름0개를 확인했다. 비밀 값은 읽지 않았고 기존 Azure 등록이 다른 위치에 없다고 단정하지 않는다. 설정 위치에 관한 사용자 답변은 대기 상태다. 장치 및 읽기 전용 진단의 근거는 `windows/artifacts/device-availability-0414-ba63f5ff2580431da66836d0b19f0b73`의 `result.json`, `environment.json`이다. 원래 사용자 계정과 화면 입력은 사용하지 않았다.
