@@ -15,3 +15,10 @@
 자동 테스트·검증 빌드·앱 실행·수정 후 화면 확인·아이콘 캐시 초기화는 하지 않았다. 아이콘 리소스 생성은 구현에 필요한 산출물 작성이며 UI 검증 결과가 아니다. 이전에 고정한 바로가기의 아이콘 캐시 갱신 여부도 미확인이다.
 
 참고: [Microsoft Windows 아이콘 리소스 규격](https://learn.microsoft.com/en-us/windows/apps/design/iconography/app-icon-construction), [AppWindow.SetIcon](https://learn.microsoft.com/en-us/windows/windows-app-sdk/api/winrt/microsoft.ui.windowing.appwindow.seticon).
+
+## 설치 산출물
+
+- 소스 커밋: `0b6f289`, 브랜치 `codex/windows-parity`, GitHub push 완료.
+- [CI 37293775546](https://github.com/0mininseoul/ping/actions/runs/37293775546): `build_only=true`, 5m37s에 패키징 성공. 테스트 restore/실행 skipped, smoke 없음, 공개 릴리즈/웹 다운로드 게시 없음.
+- EXE 다운로드 완료: `windows/dist/PingSetup-v0.4.17.exe`.
+- 기존 앱 설치·실행·수정 후 화면 확인은 하지 않았다. 실제 작업표시줄 표시와 기존 고정 바로가기 캐시는 미검증이다.
