@@ -524,9 +524,23 @@ public sealed class AppCoordinator : IDisposable
                 return PairingQrRenderer.Render(await this.supabaseClient.ExportDeviceHandoffAsync(token));
             }, pairingUid: () => currentUid,
             loadAccounts: token => ((App)Application.Current).GetAccountsAsync(token),
-            changeAccount: (change, token) => ((App)Application.Current).ChangeAccountAsync(change, token)));
+            changeAccount: (change, token) => ((App)Application.Current).ChangeAccountAsync(change, token),
+            emailAccountActions: CreateEmailAccountActions()));
         settingsWindow.Closed += (_, _) => settingsWindow = null;
         settingsWindow.Activate();
+    }
+
+    private EmailAccountActions CreateEmailAccountActions()
+    {
+        var app = (App)Application.Current;
+        return new(
+            token => app.RunAccountAuthenticationAsync<EmailAccountStatus>(supabaseClient.GetEmailAccountStatusAsync, token),
+            (email, uid, token) => app.RunAccountAuthenticationAsync(cancellation => supabaseClient.RequestAccountEmailAsync(email, uid, cancellation), token),
+            (email, token) => app.RunAccountAuthenticationAsync(cancellation => supabaseClient.RequestEmailSignInAsync(email, cancellation), token),
+            (email, code, purpose, uid, token) => app.RunAccountAuthenticationAsync<EmailAuthenticationResult>(
+                cancellation => supabaseClient.VerifyEmailAccountAsync(email, code, purpose, uid, cancellation), token),
+            authentication => app.ChangeAccountAsync(new(AccountChangeKind.EmailSignIn, Authentication: authentication), CancellationToken.None),
+            () => app.PendingEmailAuthentication);
     }
 
     private void OpenOnboardingWindow()
@@ -1498,8 +1512,8 @@ public sealed class AppCoordinator : IDisposable
                 ConnectionState.Connecting => "연결하는 중…",
                 ConnectionState.Connected => "연결됨",
                 ConnectionState.Retrying => "연결이 끊겼습니다. 자동으로 다시 연결합니다.",
-                ConnectionState.SessionRejected when error is SupabaseAccountRequiredException => "저장된 계정이 없습니다. 설정에서 새 계정을 추가해 주세요.",
-                ConnectionState.SessionRejected => "기존 계정을 보존했습니다. 계정 연결 복구가 필요합니다.",
+                ConnectionState.SessionRejected when error is SupabaseAccountRequiredException => "저장된 계정이 없습니다. 설정에서 이메일로 로그인하거나 새 계정을 추가해 주세요.",
+                ConnectionState.SessionRejected => "기존 계정을 보존했습니다. 설정에서 연결한 이메일로 다시 로그인할 수 있어요.",
                 _ => "연결 설정을 확인해 주세요."
             };
             mainWindow.SetHotkeyStatus(status);

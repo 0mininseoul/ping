@@ -70,7 +70,8 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
         Func<CancellationToken, Task<PairingQrImage>>? pairingGenerator = null, Func<string?>? pairingUid = null,
         Func<CancellationToken, Task<IReadOnlyList<StoredAccountSummary>>>? loadAccounts = null,
         Func<AccountChange, CancellationToken, Task>? changeAccount = null,
-        UpdateSettingsViewModel? updates = null)
+        UpdateSettingsViewModel? updates = null,
+        EmailAccountActions? emailAccountActions = null)
     {
         this.nickname = NormalizeNickname(nickname);
         nicknameDraft = this.nickname;
@@ -85,8 +86,11 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
             this.saveSettings(this.settings);
         }, deviceCatalog);
         Pairing = new(pairingGenerator ?? (_ => throw new InvalidOperationException("Pairing session is unavailable.")), pairingUid ?? (() => null));
+        EmailAccount = new(emailAccountActions);
         Accounts = new(loadAccounts ?? (_ => Task.FromResult<IReadOnlyList<StoredAccountSummary>>([])),
-            changeAccount ?? ((_, _) => throw new InvalidOperationException("Account management is unavailable.")));
+            changeAccount ?? ((_, _) => throw new InvalidOperationException("Account management is unavailable.")),
+            () => !EmailAccount.IsBusy && !EmailAccount.HasPendingFlow);
+        EmailAccount.PropertyChanged += (_, _) => Accounts.RefreshActions();
 #if WINDOWS
         Updates = updates ?? WindowsUpdateController.CreateViewModel();
 #else
@@ -113,6 +117,7 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
     public DeviceSettingsViewModel Devices { get; }
     public DevicePairingViewModel Pairing { get; }
     public AccountSettingsViewModel Accounts { get; }
+    public EmailAccountViewModel EmailAccount { get; }
     public UpdateSettingsViewModel Updates { get; }
 
     public bool AutoPlayIncoming
@@ -640,8 +645,8 @@ public sealed partial class SettingsWindow : Window
         Ping.Windows.App.UI.WindowCaptureExclusion.Apply(this);
         Root.DataContext = viewModel;
         pairing = new(viewModel.Pairing, PairingImage);
-        Closed += (_, _) => { pairing.Dispose(); viewModel.Updates.Dispose(); deviceLifetime.Cancel(); deviceLifetime.Dispose(); };
-        Root.Loaded += (_, _) => { RefreshDevicesIfVisible(); _ = viewModel.Accounts.RefreshAsync(deviceLifetime.Token); };
+        Closed += (_, _) => { pairing.Dispose(); viewModel.Updates.Dispose(); viewModel.EmailAccount.Dispose(); deviceLifetime.Cancel(); deviceLifetime.Dispose(); };
+        Root.Loaded += (_, _) => { RefreshDevicesIfVisible(); _ = viewModel.Accounts.RefreshAsync(deviceLifetime.Token); _ = viewModel.EmailAccount.RefreshAsync(); };
         Ping.Windows.App.UI.SettingsWindowGeometry.Fit(this, 560, 440);
         _ = viewModel.RefreshStartupAsync();
     }
@@ -709,6 +714,11 @@ public sealed partial class SettingsWindow : Window
     }
 
     private async void RefreshAccountsButton_Click(object sender, RoutedEventArgs args) => await viewModel.Accounts.RefreshAsync(deviceLifetime.Token);
+    private async void LinkAccountEmailButton_Click(object sender, RoutedEventArgs args) => await viewModel.EmailAccount.LinkAsync();
+    private async void EmailSignInButton_Click(object sender, RoutedEventArgs args) => await viewModel.EmailAccount.SignInAsync();
+    private async void CompleteEmailButton_Click(object sender, RoutedEventArgs args) => await viewModel.EmailAccount.CompleteAsync();
+    private async void ResendEmailButton_Click(object sender, RoutedEventArgs args) => await viewModel.EmailAccount.ResendAsync();
+    private void ResetEmailButton_Click(object sender, RoutedEventArgs args) => viewModel.EmailAccount.Reset();
     private async void SwitchAccountButton_Click(object sender, RoutedEventArgs args) => await viewModel.Accounts.SwitchAsync();
     private async void CreateAccountButton_Click(object sender, RoutedEventArgs args)
     {
@@ -726,7 +736,7 @@ public sealed partial class SettingsWindow : Window
         var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
         {
             XamlRoot = Root.XamlRoot, Title = "선택한 저장 계정을 삭제할까요?",
-            Content = "이 PC의 저장 계정 목록에서 삭제합니다. 익명 계정은 이메일이나 비밀번호로 복구할 수 없어요. 다른 기기에 연결해 두지 않았다면 같은 계정으로 다시 연결하기 어려울 수 있습니다. 서버 계정과 다른 기기의 데이터는 삭제하지 않습니다.",
+            Content = "이 PC의 저장 계정 목록에서 삭제합니다. 이메일을 연결한 계정은 인증번호로 다시 로그인할 수 있어요. 이메일이 없는 계정은 다른 기기에 남아 있지 않으면 복구하기 어렵습니다. 서버 계정과 다른 기기의 데이터는 삭제하지 않습니다.",
             PrimaryButtonText = "삭제", CloseButtonText = "취소", DefaultButton = Microsoft.UI.Xaml.Controls.ContentDialogButton.Close
         };
         if (await dialog.ShowAsync() == Microsoft.UI.Xaml.Controls.ContentDialogResult.Primary) await viewModel.Accounts.RemoveAsync();

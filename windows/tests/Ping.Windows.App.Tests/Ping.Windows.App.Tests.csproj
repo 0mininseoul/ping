@@ -39,6 +39,7 @@
     <Compile Include="..\..\src\Ping.Windows.App\Capture\CaptureDeviceCatalog.cs" Link="Capture\CaptureDeviceCatalog.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Setup\DeviceSettingsViewModel.cs" Link="Setup\DeviceSettingsViewModel.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Setup\AccountSettingsViewModel.cs" Link="Setup\AccountSettingsViewModel.cs" />
+    <Compile Include="..\..\src\Ping.Windows.App\Setup\EmailAccountViewModel.cs" Link="Setup\EmailAccountViewModel.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Setup\UpdateSettingsViewModel.cs" Link="Setup\UpdateSettingsViewModel.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Setup\WindowsPowerShellEnvironment.cs" Link="Setup\WindowsPowerShellEnvironment.cs" />
     <Compile Include="..\..\src\Ping.Windows.App\Setup\DevicePairingViewModel.cs" Link="Setup\DevicePairingViewModel.cs" />

@@ -5,13 +5,14 @@ using Ping.Windows.Core.Backend;
 
 namespace Ping.Windows.App.Setup;
 
-public enum AccountChangeKind { Create, Switch, Remove }
-public sealed record AccountChange(AccountChangeKind Kind, string? UserId = null);
+public enum AccountChangeKind { Create, Switch, Remove, EmailSignIn }
+public sealed record AccountChange(AccountChangeKind Kind, string? UserId = null, EmailAuthenticationResult? Authentication = null);
 public sealed record AccountSettingRow(string UserId, string Label, bool IsActive);
 
 public sealed class AccountSettingsViewModel(
     Func<CancellationToken, Task<IReadOnlyList<StoredAccountSummary>>> load,
-    Func<AccountChange, CancellationToken, Task> change) : INotifyPropertyChanged
+    Func<AccountChange, CancellationToken, Task> change,
+    Func<bool>? canInteract = null) : INotifyPropertyChanged
 {
     private bool busy;
     private string status = "저장 계정을 확인하고 있어요…";
@@ -26,16 +27,16 @@ public sealed class AccountSettingsViewModel(
     public ObservableCollection<AccountSettingRow> Accounts { get; } = [];
     public string Status { get => status; private set { status = value; Notify(); } }
     public bool IsBusy { get => busy; private set { busy = value; Notify(); NotifyActions(); } }
-    public bool CanCreate => !IsBusy;
-    public bool CanSwitch => !IsBusy && SelectedAccount is { IsActive: false };
-    public bool CanRemove => !IsBusy && SelectedAccount is not null;
+    public bool CanCreate => !IsBusy && (canInteract?.Invoke() ?? true);
+    public bool CanSwitch => CanCreate && SelectedAccount is { IsActive: false };
+    public bool CanRemove => CanCreate && SelectedAccount is not null;
     public AccountSettingRow? SelectedAccount
     {
         get => selected;
         set { selected = value; Notify(); NotifyActions(); }
     }
     public Task RefreshAsync(CancellationToken token = default) => RunAsync(null, token);
-    public Task CreateAsync(CancellationToken token = default) => RunAsync(new(AccountChangeKind.Create), token);
+    public Task CreateAsync(CancellationToken token = default) => CanCreate ? RunAsync(new(AccountChangeKind.Create), token) : Task.CompletedTask;
     public Task SwitchAsync(CancellationToken token = default) => CanSwitch
         ? RunAsync(new(AccountChangeKind.Switch, SelectedAccount!.UserId), token) : Task.CompletedTask;
     public Task RemoveAsync(CancellationToken token = default) => CanRemove
@@ -69,5 +70,6 @@ public sealed class AccountSettingsViewModel(
         finally { IsBusy = false; }
     }
     private void NotifyActions() { Notify(nameof(CanCreate)); Notify(nameof(CanSwitch)); Notify(nameof(CanRemove)); }
+    internal void RefreshActions() => NotifyActions();
     private void Notify([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new(name));
 }
