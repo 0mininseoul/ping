@@ -91,8 +91,9 @@ public sealed partial class HistoryWindow : UserControl
             if (args.PropertyName is nameof(HistoryViewModel.SelectedRoom) or nameof(HistoryViewModel.DraftImagePath)) UpdateEmptyState();
             if (args.PropertyName == nameof(HistoryViewModel.SelectedRoom)) UpdateRoomActionButtons();
             if (args.PropertyName == nameof(HistoryViewModel.SelectedRoom) && photoRoomId != viewModel.SelectedRoom?.Id) ClosePhotoPreview();
+            if (args.PropertyName == nameof(HistoryViewModel.SelectedRoom) && inlineMessage?.RoomId != viewModel.SelectedRoom?.Id) CloseInlineFace();
         };
-        viewModel.Timeline.CollectionChanged += (_, _) => UpdateEmptyState();
+        viewModel.Timeline.CollectionChanged += (_, _) => { UpdateEmptyState(); SyncInlineFaceRows(); };
         removalPermissionTimer = DispatcherQueue.CreateTimer();
         removalPermissionTimer.Interval = TimeSpan.FromSeconds(1);
         removalPermissionTimer.Tick += (_, _) => viewModel.RefreshRemovalPermissions();
@@ -122,6 +123,7 @@ public sealed partial class HistoryWindow : UserControl
         detached = true; backendReady = false; IsEnabled = false;
         roomLifetime.Cancel();
         ClosePhotoPreview();
+        CloseInlineFace();
         MembersFlyout.Hide();
         owner.Closed -= HandleOwnerClosed; owner.Activated -= HandleOwnerActivated;
         Root.Loaded -= HandleLoaded;
@@ -222,6 +224,12 @@ public sealed partial class HistoryWindow : UserControl
         }
 
         viewModel.SelectedVideo = item;
+        if (sender is MenuFlyoutItem && inlineMessage?.Id == item.Message.Id && inlineFace is { } content && inlineLifetime is { } lifetime)
+        {
+            if (content.HasPlayer) content.Replay();
+            else await LoadInlineFaceAsync(content, item.Message, lifetime.Token);
+            return;
+        }
         await PlayVideoAsync(item.Message);
     }
 
@@ -466,6 +474,8 @@ public sealed partial class HistoryWindow : UserControl
 
     private async Task PlayVideoAsync(VideoMessage video)
     {
+        if (video.CaptureMode == CaptureMode.FaceOnly) { await ToggleInlineFaceAsync(video); return; }
+        CloseInlineFace();
         await RunAsync(async () =>
         {
             if (playVideoAsync is not null)
@@ -544,7 +554,7 @@ public sealed partial class HistoryWindow : UserControl
             args.Handled = true;
             await PlayVideoAsync(video.Message);
         }
-        else if (args.Key == VirtualKey.Escape) ChatBox.Focus(FocusState.Keyboard);
+        else if (args.Key == VirtualKey.Escape) { CloseInlineFace(); ChatBox.Focus(FocusState.Keyboard); }
     }
 
     private static bool IsWithinButton(object? source)
@@ -588,6 +598,7 @@ public sealed partial class HistoryWindow : UserControl
             var followNewest = scroll is not null && scroll.ScrollableHeight - scroll.VerticalOffset <= 2;
             await work();
             if (detached) return false;
+            SyncInlineFaceRows(closeIfMissing: true);
             if (offset is not null && viewModel.SelectedRoom?.Id == roomId
                 && !ReferenceEquals(previousLast, viewModel.Timeline.LastOrDefault()))
             {

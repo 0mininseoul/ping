@@ -53,6 +53,19 @@ public sealed class TimelineHistoryItem
 
 public sealed class VideoHistoryItem : INotifyPropertyChanged
 {
+    private bool isInlineExpanded;
+    public bool IsInlineExpanded
+    {
+        get => isInlineExpanded;
+        set { if (isInlineExpanded == value) return; isInlineExpanded = value; OnPropertyChanged(); OnPropertyChanged(nameof(InlineVisibility)); OnPropertyChanged(nameof(PreviewVisibility)); }
+    }
+#if WINDOWS
+    public Visibility InlineVisibility => IsInlineExpanded ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility PreviewVisibility => IsInlineExpanded ? Visibility.Collapsed : Visibility.Visible;
+#else
+    public bool InlineVisibility => IsInlineExpanded;
+    public bool PreviewVisibility => !IsInlineExpanded;
+#endif
     private readonly string? currentUid;
     private readonly Func<DateTimeOffset> nowProvider;
 #if WINDOWS

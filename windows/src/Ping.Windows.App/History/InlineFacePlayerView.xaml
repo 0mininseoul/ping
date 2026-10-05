@@ -1,0 +1,17 @@
+<UserControl x:Class="Ping.Windows.App.History.InlineFacePlayerView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel Spacing="4" Width="128">
+        <Grid x:Name="InlineFaceSurface" Width="128" Height="128" Background="{ThemeResource PingReceivedBubbleBrush}" Loaded="SurfaceLoaded">
+            <MediaPlayerElement x:Name="InlineFaceElement" AreTransportControlsEnabled="False" Stretch="UniformToFill" />
+            <ProgressRing x:Name="LoadingRing" IsActive="True" Width="24" Height="24" />
+            <Button x:Name="InlineFaceCollapseButton" Click="Collapse_Click" Background="Transparent" BorderThickness="0"
+                HorizontalAlignment="Stretch" VerticalAlignment="Stretch" AutomationProperties.Name="얼굴 영상 접기" ToolTipService.ToolTip="영상 접기" />
+        </Grid>
+        <Button x:Name="InlineFaceReplayButton" Click="Replay_Click" Background="Transparent" BorderThickness="0" Padding="0,2"
+            IsEnabled="False" HorizontalAlignment="Center" AutomationProperties.Name="얼굴 영상 다시 재생">
+            <TextBlock x:Name="InlineFaceStatus" Text="불러오는 중…" Style="{StaticResource PingCaptionTextStyle}"
+                Foreground="{ThemeResource PingMutedBrush}" TextWrapping="Wrap" TextAlignment="Center" />
+        </Button>
+    </StackPanel>
+</UserControl>

@@ -301,6 +301,10 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         StatusMessage = $"{Videos.Count} videos, {Chats.Count} chats, {Reactions.Count} reactions.";
     }
 
+    public Task MarkInlineVideoSeenAsync(VideoMessage message, CancellationToken token) =>
+        message.Id is not null && message.ReceiverUid == currentUidProvider() && message.RoomId == SelectedRoom?.Id
+            ? messageService.MarkSeenAsync(message.Id, token) : Task.CompletedTask;
+
     public void BeginReplyToChat(ChatHistoryItem item)
     {
         if (string.IsNullOrWhiteSpace(item.Message.Id))

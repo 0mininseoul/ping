@@ -10,6 +10,21 @@ public sealed class HistoryViewModelTests
 {
     private static readonly DateTimeOffset BaseTime = new(2026, 1, 1, 10, 0, 0, TimeSpan.Zero);
 
+    [Theory]
+    [InlineData("receiver", "room-1", true)]
+    [InlineData("sender", "room-1", false)]
+    [InlineData("third-party", "room-1", false)]
+    [InlineData("receiver", "room-2", false)]
+    [InlineData(null, "room-1", false)]
+    public async Task InlineCompletionMarksOnlyCurrentRecipientInViewedRoom(string? uid, string messageRoom, bool shouldMark)
+    {
+        var rpc = new RecordingHistoryRpcClient();
+        var vm = ViewModel(rpc, currentUidProvider: () => uid);
+        await vm.LoadAsync("room-1");
+        await vm.MarkInlineVideoSeenAsync(VideoMessage("inline-owned", messageRoom, BaseTime), CancellationToken.None);
+        Assert.Equal(shouldMark ? new[] { "inline-owned" } : Array.Empty<string>(), rpc.MarkedSeenMessageIds);
+    }
+
     [Fact]
     public async Task ApplyingIncomingRoomMetadataPreservesSelectedDraftAndDoesNotMarkRead()
     {
@@ -512,6 +527,7 @@ public sealed class HistoryViewModelTests
         public bool FailRefreshAfterSend { get; set; }
         public Exception? RemoveVideoException { get; set; }
         public List<string> MarkedReadRoomIds { get; } = [];
+        public List<string> MarkedSeenMessageIds { get; } = [];
 
         public List<object> SentChatBodies { get; } = [];
 
@@ -599,6 +615,10 @@ public sealed class HistoryViewModelTests
             if (function == "ping_mark_room_read")
             {
                 MarkedReadRoomIds.Add(RoomId(body));
+            }
+            else if (function == "ping_mark_message_seen")
+            {
+                MarkedSeenMessageIds.Add(MessageId(body));
             }
             else if (function == "ping_delete_chat")
             {

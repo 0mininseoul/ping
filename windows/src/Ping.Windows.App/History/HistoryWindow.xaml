@@ -134,12 +134,14 @@
                                                             <MenuFlyoutItem Text="{Binding Video.RemovalLabel}" Click="DeleteVideoButton_Click" Visibility="{Binding Video.DeleteVisibility}" />
                                                         </MenuFlyout>
                                                     </StackPanel.ContextFlyout>
-                                                    <Button Click="PlayVideoItemButton_Click" Background="Transparent" BorderThickness="0" Padding="0" AutomationProperties.Name="영상 재생">
+                                                    <Button Click="PlayVideoItemButton_Click" Visibility="{Binding Video.PreviewVisibility}" Background="Transparent" BorderThickness="0" Padding="0" AutomationProperties.Name="영상 재생">
                                                         <Grid Width="{Binding Video.ThumbnailWidth}" Height="{Binding Video.ThumbnailHeight}" Loaded="VideoThumbnail_Loaded" SizeChanged="VideoThumbnail_SizeChanged">
                                                             <Border Background="{ThemeResource PingReceivedBubbleBrush}" CornerRadius="8"><FontIcon Glyph="&#xE714;" Foreground="{ThemeResource PingMutedBrush}" FontSize="20" /></Border>
                                                             <Image Source="{Binding Video.ThumbnailSource}" Stretch="UniformToFill" Visibility="{Binding Video.ThumbnailVisibility}" />
                                                         </Grid>
                                                     </Button>
+                                                    <ContentControl x:Name="InlineFaceHost" Visibility="{Binding Video.InlineVisibility}" HorizontalContentAlignment="Left"
+                                                        Loaded="InlineHost_Loaded" Unloaded="InlineHost_Unloaded" DataContextChanged="InlineHost_DataContextChanged" />
                                                     <Grid ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                                         <TextBlock Grid.Column="1" Text="{Binding Video.AutoReplyLabel}" Style="{StaticResource PingCaptionTextStyle}" Foreground="{ThemeResource PingMutedBrush}" />
                                                     </Grid>

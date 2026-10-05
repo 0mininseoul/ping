@@ -63,6 +63,7 @@ internal static partial class UiSmokeRunner
             var root = (FrameworkElement)window.Content;
             TypographySmoke.Verify(root, Check);
             await VerifyChatImagePreviewAsync();
+            await VerifyInlineFaceAsync();
             Check(root.ActualWidth > 600 && root.ActualHeight > 500, "real compact main window has usable client area");
             Check(UI.WindowCaptureExclusion.IsApplied(window), "messenger declares exclusion from OS screen capture");
             Check(vm.Rooms.Count == 2 && vm.Timeline.Count == 4, "fixture rooms and mixed timeline loaded");
@@ -537,6 +538,9 @@ internal static partial class UiSmokeRunner
         public int TimelineReads;
         public bool IncludeHiddenArrival;
         public bool IncludePhoto;
+        public CaptureMode VideoMode = CaptureMode.FaceOnly;
+        public int SeenCalls;
+        public TaskCompletionSource? SeenGate;
         public bool RequireUiThread;
         public bool AllowRead;
         public Action? OnMarkRead;
@@ -551,7 +555,7 @@ internal static partial class UiSmokeRunner
             {
                 "ping_my_rooms" => new[] { Room("a", "디자인 이야기", 3), Room("b", "오늘의 작은 순간", 0) },
                 "ping_incoming_invitations" => Array.Empty<Invitation>(),
-                "ping_room_messages" => room == "a" ? new[] { Video() } : Array.Empty<VideoMessage>(),
+                "ping_room_messages" => room == "a" ? new[] { Video() with { CaptureMode = VideoMode } } : Array.Empty<VideoMessage>(),
                 "ping_room_chat_messages" => room == "a" ? new[]
                 {
                     Chat("c1", "peer", "안녕! Windows에서도 이제 가볍게 핑을 보낼 수 있겠네 😊", -3),
@@ -575,6 +579,7 @@ internal static partial class UiSmokeRunner
             if (function == "ping_rename_room") LastRename = (RenameRoomRpcBody?)body;
             if (function == "ping_leave_room") LeaveAttempts++;
             if (function == "ping_mark_room_read") OnMarkRead?.Invoke();
+            if (function == "ping_mark_message_seen") { SeenCalls++; return SeenGate?.Task ?? Task.CompletedTask; }
             return Task.CompletedTask;
         }
         private static Room Room(string id, string name, int unread) => new(id, name, name, "me", ["me", "peer"], new Dictionary<string, string> { ["me"] = "민", ["peer"] = "서연" }, RoomStatus.Open, UnreadCount: unread);
