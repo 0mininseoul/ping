@@ -1,4 +1,4 @@
-# Ping — 실시간 3초 영상 메시지 macOS/Windows 앱 기획서 (v2.9)
+# Ping — 실시간 3초 영상 메시지 macOS/Windows 앱 기획서 (v2.10)
 
 ## 프로젝트 개요
 
@@ -43,6 +43,13 @@
 macOS 26 이상에서는 `.pingGlassEffect()` wrapper가 SwiftUI 네이티브 `.glassEffect()`를 사용하고, macOS 13-25에서는 `PingDesign.Surface` 기반 fallback surface를 사용한다. 앱 코드는 `.pingGlassEffect()` wrapper만 호출한다.
 
 ## 핵심 기능
+
+### Windows 선택형 이메일 계정 (2026-10-05 사용자 승인)
+
+- Anonymous Auth 기본 진입을 유지하고 설정 → 일반 → 계정에서 현재 UID에 이메일을 연결한다. 이메일 인증번호 확인 뒤 같은 UID의 룸·메시지를 유지한다.
+- 다른 Windows PC는 연결한 이메일의 인증번호로 별도 Supabase Auth 세션을 만든다. 닉네임은 로그인 ID가 아니며 로그인 요청은 새 사용자 자동 생성을 금지한다.
+- 기존 계정을 삭제하거나 데이터를 자동 병합하지 않는다. 인증 실패 시 현재 계정을 유지하고 저장 실패 시 실행 중 메모리에 인증 결과를 보관하여 저장 재시도를 제공한다.
+- 기존 Supabase Auth의 이메일/manual-linking/확인/복수 세션/메일 템플릿 설정과 Custom SMTP가 필요하다. Vercel/DB/RPC 변경은 없다. 운영 설정은 아직 미적용이며 자동 검증하지 않았다. 상세 안내: `docs/windows/EMAIL_ACCOUNT_SETUP.ko.md`.
 
 ### 시스템 통합
 
@@ -459,7 +466,7 @@ ping/
 
 ---
 
-- **문서 버전**: 2.9
+- **문서 버전**: 2.10
 - **작성일**: 2026-05-17
-- **최종 수정일**: 2026-09-18
+- **최종 수정일**: 2026-10-05
 - **상태**: Supabase 기반 MVP 구현 기준
