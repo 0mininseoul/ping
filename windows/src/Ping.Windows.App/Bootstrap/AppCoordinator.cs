@@ -447,7 +447,7 @@ public sealed class AppCoordinator : IDisposable
                 messageService,
                 chatService,
                 reactionService,
-                storageService,
+                new ChatMediaStorageService(storageService),
                 () => currentUid,
                 canMarkRoomRead: roomId => historyWindow?.IsViewingRoom(roomId) == true),
             DownloadVideoForPlaybackAsync,

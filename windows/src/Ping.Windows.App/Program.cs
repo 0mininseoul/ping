@@ -30,6 +30,12 @@ public static class Program
             Diagnostics.UiSmokeRunner.ConversationOnly = true;
             diagnostic = true;
         }
+        else if (args is ["--ui-owned-live", var liveOutput, var config, var ownedSessions, var fixtures])
+        {
+            Diagnostics.UiSmokeRunner.OutputDirectory = Path.GetFullPath(liveOutput);
+            Diagnostics.UiSmokeRunner.OwnedLive = new(Path.GetFullPath(config), Path.GetFullPath(ownedSessions), Path.GetFullPath(fixtures));
+            diagnostic = true;
+        }
         else return 64; // A fixture executable must never launch the real account path.
 #endif
         WinRT.ComWrappersSupport.InitializeComWrappers();

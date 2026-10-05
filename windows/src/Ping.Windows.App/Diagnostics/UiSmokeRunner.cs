@@ -44,6 +44,12 @@ internal static partial class UiSmokeRunner
         MainWindow? window = null;
         try
         {
+            if (OwnedLive is not null)
+            {
+                await VerifyOwnedLiveAsync();
+                app.Exit();
+                return;
+            }
             if (ConversationOnly)
             {
                 await VerifyConversationTextAsync();
@@ -486,7 +492,7 @@ internal static partial class UiSmokeRunner
         Directory.CreateDirectory(OutputDirectory!);
         if (failureWritten) return;
         failureWritten = true;
-        File.WriteAllText(Path.Combine(OutputDirectory!, "result.json"), JsonSerializer.Serialize(new { Success = false, Error = error.ToString(), Checks }, new JsonSerializerOptions { WriteIndented = true }));
+        File.WriteAllText(Path.Combine(OutputDirectory!, "result.json"), JsonSerializer.Serialize(new { Success = false, Error = OwnedLive is null ? error.ToString() : SafeLiveError(error), Checks }, new JsonSerializerOptions { WriteIndented = true }));
         Step("FAILED " + error.GetType().Name);
     }
 
