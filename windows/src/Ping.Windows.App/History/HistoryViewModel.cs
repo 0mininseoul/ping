@@ -133,7 +133,14 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
     public string? DraftImagePath { get => composer.ImagePath; set => composer.ImagePath = value; }
     public string DraftImageName => DraftImagePath is null ? "" : Path.GetFileName(DraftImagePath);
     public bool IsSending => composer.IsSending;
-    public bool CanSend => CanCompose && composer.CanSend;
+    public IEnumerable<string> ImageDraftPaths => composer.ImagePaths;
+    private bool isImportingImage;
+    public bool IsImportingImage
+    {
+        get => isImportingImage;
+        set { if (isImportingImage == value) return; isImportingImage = value; OnPropertyChanged(); OnPropertyChanged(nameof(CanSend)); }
+    }
+    public bool CanSend => CanCompose && !IsImportingImage && composer.CanSend;
 
     private void NotifyComposerChanged()
     {
@@ -333,7 +340,7 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
 
     public async Task<ChatSendOutcome> SendFromComposerAsync(CancellationToken cancellationToken = default)
     {
-        if (!CanCompose || composer.BeginSend() is not { } ticket) return ChatSendOutcome.NoContent;
+        if (!CanCompose || IsImportingImage || composer.BeginSend() is not { } ticket) return ChatSendOutcome.NoContent;
         var sent = false;
         try
         {

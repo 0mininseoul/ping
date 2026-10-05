@@ -63,7 +63,8 @@
                 </Grid>
             </StackPanel>
         </Grid>
-        <Grid Grid.Column="1" RowSpacing="0" Background="{ThemeResource PingSurfaceBrush}">
+        <Grid x:Name="ConversationSurface" Grid.Column="1" RowSpacing="0" Background="{ThemeResource PingSurfaceBrush}"
+            AllowDrop="True" DragOver="Conversation_DragOver" DragLeave="Conversation_DragLeave" Drop="Conversation_Drop">
             <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
             <Grid ColumnSpacing="4" Padding="16,10" BorderBrush="{ThemeResource PingIdleBrush}" BorderThickness="0,0,0,1">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
@@ -206,29 +207,41 @@
                         <Button Grid.Column="1" Click="CancelReplyButton_Click" Content="×" Padding="6,0" AutomationProperties.Name="답장 취소" />
                     </Grid>
                     <Grid x:Name="AttachmentPreview" Visibility="Collapsed">
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                        <TextBlock x:Name="SelectedImageText" Text="{Binding DraftImageName}" FontSize="12" Foreground="{ThemeResource PingMutedBrush}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                        <Button Grid.Column="1" Click="ClearImageButton_Click" Content="×" Padding="6,0" AutomationProperties.Name="사진 첨부 취소" />
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                        <Border Width="48" Height="48" CornerRadius="10" Background="{ThemeResource PingReceivedBubbleBrush}" Margin="0,0,10,0">
+                            <Image x:Name="DraftPhotoImage" Stretch="Uniform" AutomationProperties.Name="첨부할 사진" />
+                        </Border>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                            <TextBlock x:Name="SelectedImageText" Text="{Binding DraftImageName}" FontSize="12" Foreground="{ThemeResource PingTextBrush}" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="Enter로 사진과 메시지 보내기" FontSize="12" Foreground="{ThemeResource PingMutedBrush}" />
+                        </StackPanel>
+                        <Button x:Name="ClearImageButton" Grid.Column="2" Click="ClearImageButton_Click" Content="×" Padding="6,0" AutomationProperties.Name="사진 첨부 취소" />
                     </Grid>
+                    <TextBlock x:Name="ImageInputStatus" Visibility="Collapsed" TextWrapping="Wrap" Style="{StaticResource PingCaptionTextStyle}" Foreground="{ThemeResource PingMutedBrush}" AutomationProperties.LiveSetting="Polite" />
                     <Grid ColumnSpacing="8">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                         <Button x:Name="ComposeMenuButton" Style="{StaticResource PingIconButtonStyle}" ToolTipService.ToolTip="사진 · 영상 보내기" AutomationProperties.Name="사진과 영상 보내기" VerticalAlignment="Bottom"><FontIcon Glyph="&#xE710;" FontSize="18" />
                             <Button.Flyout><MenuFlyout>
                                 <MenuFlyoutItem Text="사진 첨부" Click="AttachImageButton_Click"><MenuFlyoutItem.Icon><SymbolIcon Symbol="Pictures" /></MenuFlyoutItem.Icon></MenuFlyoutItem>
+                                <MenuFlyoutItem Text="사진 붙여넣기 (Ctrl+V)" Click="PastePhoto_Click"><MenuFlyoutItem.Icon><SymbolIcon Symbol="Paste" /></MenuFlyoutItem.Icon></MenuFlyoutItem>
                                 <MenuFlyoutItem Text="얼굴 핑 (Alt+P)" Click="FacePing_Click"><MenuFlyoutItem.Icon><SymbolIcon Symbol="Camera" /></MenuFlyoutItem.Icon></MenuFlyoutItem>
                                 <MenuFlyoutItem Text="화면 + 얼굴 (Alt+L)" Click="ScreenPing_Click" />
                                 <MenuFlyoutSeparator /><MenuFlyoutItem Text="대화 새로고침" Click="RefreshButton_Click"><MenuFlyoutItem.Icon><SymbolIcon Symbol="Refresh" /></MenuFlyoutItem.Icon></MenuFlyoutItem>
                             </MenuFlyout></Button.Flyout>
                         </Button>
                         <TextBox x:Name="ChatBox" Grid.Column="1" Text="{Binding DraftText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True"
-                            TextWrapping="Wrap" MinHeight="36" MaxHeight="120" PlaceholderText="메시지 입력…" KeyDown="ChatBox_KeyDown" KeyUp="ChatBox_KeyUp" MaxLength="2000"
-                            TextCompositionStarted="ChatCompositionStarted" TextCompositionEnded="ChatCompositionEnded" AutomationProperties.Name="메시지 입력"
+                            TextWrapping="Wrap" MinHeight="36" MaxHeight="120" PlaceholderText="메시지 입력…" PreviewKeyDown="ChatBox_KeyDown" KeyUp="ChatBox_KeyUp" MaxLength="2000"
+                            TextCompositionStarted="ChatCompositionStarted" TextCompositionEnded="ChatCompositionEnded" Paste="ChatBox_Paste" AutomationProperties.Name="메시지 입력"
                             BorderThickness="1" BorderBrush="{ThemeResource PingIdleBrush}" CornerRadius="16" Background="{ThemeResource PingInputBrush}" FontSize="{StaticResource PingBodyFontSize}" Padding="12,8" />
                         <Button x:Name="SendButton" Grid.Column="2" Click="SendChatButton_Click" IsEnabled="{Binding CanSend}" Style="{StaticResource PingIconButtonStyle}"
                             AutomationProperties.Name="메시지 전송" ToolTipService.ToolTip="전송 (Enter)" VerticalAlignment="Bottom"><FontIcon Glyph="&#xE724;" FontSize="18" /></Button>
                     </Grid>
                 </StackPanel>
                 </ContentControl>
+            </Border>
+            <Border x:Name="ImageDropOverlay" Grid.RowSpan="4" Visibility="Collapsed" IsHitTestVisible="False" Margin="10" CornerRadius="16"
+                BorderThickness="2" BorderBrush="{ThemeResource PingAccentBrush}" Background="{ThemeResource PingAccentFillBrush}">
+                <TextBlock Text="사진을 놓아 첨부하기" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{ThemeResource PingTextBrush}" />
             </Border>
         </Grid>
     </Grid>

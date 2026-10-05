@@ -8,6 +8,7 @@ public sealed class ComposerState
     public event Action? Changed;
     private Draft? Current => roomId is null ? null : drafts[roomId];
     public bool IsSending => pending is not null;
+    public IEnumerable<string> ImagePaths => drafts.Values.Select(d => d.ImagePath).Append(pending?.ImagePath).OfType<string>();
     public bool CanSend => !IsSending && Current is { } draft && draft.Text.Trim().Length <= 2000
         && (!string.IsNullOrWhiteSpace(draft.Text) || !string.IsNullOrWhiteSpace(draft.ImagePath));
     public string Text { get => Current?.Text ?? ""; set { if (Current is { } d && d.Text != value) { d.Text = value; d.TextRevision++; Changed?.Invoke(); } } }

@@ -63,6 +63,7 @@ internal static partial class UiSmokeRunner
             var root = (FrameworkElement)window.Content;
             TypographySmoke.Verify(root, Check);
             await VerifyChatImagePreviewAsync();
+            await VerifyImageInputAsync();
             await VerifyInlineFaceAsync();
             Check(root.ActualWidth > 600 && root.ActualHeight > 500, "real compact main window has usable client area");
             Check(UI.WindowCaptureExclusion.IsApplied(window), "messenger declares exclusion from OS screen capture");
@@ -535,6 +536,8 @@ internal static partial class UiSmokeRunner
         public RenameRoomRpcBody? LastRename { get; private set; }
         public int LeaveAttempts { get; private set; }
         public int Sent;
+        public bool FailSend;
+        public IReadOnlyDictionary<string, object?>? LastChatBody;
         public int TimelineReads;
         public bool IncludeHiddenArrival;
         public bool IncludePhoto;
@@ -572,6 +575,8 @@ internal static partial class UiSmokeRunner
         {
             if (function != "ping_send_chat") throw new NotSupportedException(function);
             Sent++;
+            LastChatBody = body as IReadOnlyDictionary<string, object?>;
+            if (FailSend) throw new InvalidOperationException("테스트 전송 실패");
             return Task.FromResult((T)(object)"fixture-sent-chat");
         }
         public Task RpcVoidAsync(string function, object? body = null, CancellationToken cancellationToken = default)
@@ -591,11 +596,18 @@ internal static partial class UiSmokeRunner
     private sealed class FixtureStorage : IStorageService, IChatMediaStorageService
     {
         public string? PhotoPath;
+        public int ImageUploads;
+        public int DeletedImages;
+        public byte[]? LastUploadedImage;
         public Task<string> UploadVideoAsync(string localVideoPath, string senderUid, string videoId, IReadOnlyCollection<string> authorizedReceiverUids, DateTimeOffset expiresAt, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task DeleteVideoAsync(string remotePath, CancellationToken cancellationToken = default) => Task.CompletedTask;
-        public Task<ChatImageUpload> UploadChatImageAsync(string localImagePath, string senderUid, string messageId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<ChatImageUpload> UploadChatImageAsync(string localImagePath, string senderUid, string messageId, CancellationToken cancellationToken = default)
+        {
+            ImageUploads++; LastUploadedImage = File.ReadAllBytes(localImagePath);
+            return Task.FromResult(new ChatImageUpload($"{senderUid}/chat-images/{messageId}.png", "image/png", 960, 640, Path.GetFileName(localImagePath)));
+        }
         public Task<string> DownloadChatMediaAsync(string remotePath, string fileExtension, CancellationToken cancellationToken = default) => PhotoPath is { } path ? Task.FromResult(path) : throw new NotSupportedException();
-        public Task DeleteChatMediaAsync(string remotePath, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task DeleteChatMediaAsync(string remotePath, CancellationToken cancellationToken = default) { DeletedImages++; return Task.CompletedTask; }
     }
     private sealed class FixtureLinks : ILinkPreviewService
     {

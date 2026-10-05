@@ -68,6 +68,7 @@ public sealed partial class HistoryWindow : UserControl
         this.initialRoomId = initialRoomId;
         this.initialChatId = initialChatId;
         InitializeComponent();
+        InitializeImageInput();
         uiDispatcher = new UiTaskDispatcher(() => DispatcherQueue.HasThreadAccess, action => DispatcherQueue.TryEnqueue(() => action()));
         Root.DataContext = viewModel;
         InitializeRoomActions(roomServices);
@@ -122,6 +123,9 @@ public sealed partial class HistoryWindow : UserControl
     {
         detached = true; backendReady = false; IsEnabled = false;
         roomLifetime.Cancel();
+        imageInputGeneration++;
+        DraftPhotoImage.Source = null;
+        ReleaseUnusedImages();
         ClosePhotoPreview();
         CloseInlineFace();
         MembersFlyout.Hide();
@@ -321,6 +325,13 @@ public sealed partial class HistoryWindow : UserControl
 
     private async void ChatBox_KeyDown(object sender, KeyRoutedEventArgs args)
     {
+        if ((args.Key == VirtualKey.V && (GetKeyState(0x11) & 0x8000) != 0 || args.Key == VirtualKey.Insert && IsShiftDown())
+            && TryGetClipboardImage(out var data))
+        {
+            args.Handled = true;
+            await ImportImageAsync(data!);
+            return;
+        }
         if (args.Key != global::Windows.System.VirtualKey.Enter || !ComposerKeyPolicy.ShouldSubmitEnter(isComposing || ignoreCurrentEnter, IsShiftDown()))
         {
             return;
@@ -385,6 +396,8 @@ public sealed partial class HistoryWindow : UserControl
 
     private async void AttachImageButton_Click(object sender, RoutedEventArgs args)
     {
+        var generation = imageInputGeneration;
+        var roomId = viewModel.SelectedRoom?.Id;
         var picker = new FileOpenPicker();
         var hwnd = WindowNative.GetWindowHandle(owner);
         InitializeWithWindow.Initialize(picker, hwnd);
@@ -394,12 +407,12 @@ public sealed partial class HistoryWindow : UserControl
         }
 
         var file = await picker.PickSingleFileAsync();
-        if (file is null)
+        if (file is null || detached || generation != imageInputGeneration || roomId != viewModel.SelectedRoom?.Id)
         {
             return;
         }
 
-        viewModel.DraftImagePath = file.Path;
+        await ImportImageFileAsync(file);
     }
 
     private void ClearImageButton_Click(object sender, RoutedEventArgs args)
@@ -422,6 +435,9 @@ public sealed partial class HistoryWindow : UserControl
 
     private void ClearSelectedImage()
     {
+        imageInputGeneration++;
+        viewModel.IsImportingImage = false;
+        ImageInputStatus.Visibility = Visibility.Collapsed;
         viewModel.DraftImagePath = null;
     }
 
@@ -429,9 +445,11 @@ public sealed partial class HistoryWindow : UserControl
     {
         var sentRoomId = viewModel.SelectedRoom?.Id;
         var outcome = ChatSendOutcome.NoContent;
-        await RunAsync(async () => { outcome = await viewModel.SendFromComposerAsync(); });
+        await RunAsync(async () => { outcome = await viewModel.SendFromComposerAsync(roomLifetime.Token); });
+        ReleaseUnusedImages();
         if (outcome == ChatSendOutcome.Sent && viewModel.SelectedRoom?.Id == sentRoomId)
         {
+            ReportConnectionStatus(null);
             pendingScrollItem = viewModel.Timeline.LastOrDefault();
             VideosList.InvalidateMeasure();
         }
