@@ -19,6 +19,11 @@ public static class Program
     {
         var diagnostic = false;
 #if PING_UI_SMOKE
+        if (args is ["--ui-activation-output", var activationOutput])
+        {
+            WinRT.ComWrappersSupport.InitializeComWrappers();
+            return Diagnostics.ActivationHandoffSmoke.Run(Path.GetFullPath(activationOutput));
+        }
         if (args is ["--ui-smoke-output", var output])
         {
             Diagnostics.UiSmokeRunner.OutputDirectory = Path.GetFullPath(output);
@@ -126,15 +131,16 @@ public static class Program
 
     private static void OnActivated(object? sender, AppActivationArguments args)
     {
-        var handler = Activated;
-        if (handler is null)
+        EventHandler<AppActivationArguments>? handler;
+        lock (ActivationLock)
         {
-            lock (ActivationLock)
+            // Read the handler under the same gate as the startup queue drain.
+            handler = Activated;
+            if (handler is null)
             {
                 pendingActivations.Add(args);
+                return;
             }
-
-            return;
         }
 
         handler.Invoke(sender, args);

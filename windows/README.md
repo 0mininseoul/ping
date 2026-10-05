@@ -132,6 +132,14 @@ The WinUI app is under `src/Ping.Windows.App`, shared product logic belongs in `
 
 ## Local Verification Status
 
+The native startup activation handoff can be checked without opening the real account or a UI window:
+
+```powershell
+.\scripts\test-activation-handoff.ps1
+```
+
+This builds an isolated diagnostic and checks the actual Program activation queue during handler registration. It does not simulate a successful shell toast click. See [handoff regression evidence](../docs/windows/2026-10-05-windows-activation-handoff.ko.md); this additional source fix is pending the next candidate, while the installed candidate remains0.4.11.
+
 Managed portable tests can run on macOS with .NET 10 and should be kept green there:
 
 ```bash
