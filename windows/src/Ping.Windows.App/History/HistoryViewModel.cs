@@ -81,6 +81,7 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
             var changedRoom = selectedRoom?.Id != value?.Id;
             if (changedRoom) selectionRevision++;
             selectedRoom = value;
+            foreach (var row in Timeline) row.ShowsSender = value?.MemberUids.Count >= 3;
             if (changedRoom)
             {
                 Interlocked.Increment(ref loadGeneration);
@@ -733,6 +734,7 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         DateTime? previousDay = null;
         foreach (var row in rows)
         {
+            row.ShowsSender = SelectedRoom?.MemberUids.Count >= 3;
             if (row.CreatedAt?.ToLocalTime() is { } timestamp && timestamp.Date != previousDay)
             {
                 row.DayHeading = timestamp.Date == nowProvider().ToLocalTime().Date ? "오늘" : timestamp.ToString("yyyy년 M월 d일");

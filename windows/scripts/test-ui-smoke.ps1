@@ -3,6 +3,7 @@ param(
     [ValidateSet('x64', 'ARM64')][string]$Platform = 'x64',
     [ValidateSet('Debug', 'Release')][string]$Configuration = 'Debug',
     [switch]$SkipBuild,
+    [switch]$ConversationOnly,
     [ValidatePattern('^\\\\\.\\DISPLAY[1-9][0-9]*$')][string]$MonitorDeviceName
 )
 
@@ -17,7 +18,8 @@ $outputDirectory = Join-Path $windowsRoot ('artifacts\ui-shell-' + [Guid]::NewGu
 $previousDisplay = $env:PING_UI_SMOKE_DISPLAY
 try {
     $env:PING_UI_SMOKE_DISPLAY = $MonitorDeviceName
-    $process = Start-Process -FilePath $executable -ArgumentList "--ui-smoke-output `"$outputDirectory`"" -PassThru -WindowStyle Hidden
+    $route = if ($ConversationOnly) { '--ui-conversation-output' } else { '--ui-smoke-output' }
+    $process = Start-Process -FilePath $executable -ArgumentList "$route `"$outputDirectory`"" -PassThru -WindowStyle Hidden
 } finally { $env:PING_UI_SMOKE_DISPLAY = $previousDisplay }
 if (-not $process.WaitForExit(60000)) {
     Stop-Process -Id $process.Id -ErrorAction SilentlyContinue

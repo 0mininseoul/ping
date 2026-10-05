@@ -21,6 +21,7 @@ namespace Ping.Windows.App.Diagnostics;
 internal static partial class UiSmokeRunner
 {
     public static string? OutputDirectory { get; set; }
+    public static bool ConversationOnly { get; set; }
     private static readonly List<string> Checks = [];
     private static bool failureWritten;
     private static void Step(string text) => File.AppendAllText(Path.Combine(OutputDirectory!, "phases.txt"), text + Environment.NewLine);
@@ -43,6 +44,13 @@ internal static partial class UiSmokeRunner
         MainWindow? window = null;
         try
         {
+            if (ConversationOnly)
+            {
+                await VerifyConversationTextAsync();
+                File.WriteAllText(Path.Combine(OutputDirectory!, "result.json"), JsonSerializer.Serialize(new { Success = true, Checks }));
+                app.Exit();
+                return;
+            }
             Step("Creating isolated fixture services — no production backend, user files, tray or camera. Pairing uses owned files and fake HTTP only.");
             var rpc = new FixtureRpc();
             var storage = new FixtureStorage();
@@ -62,6 +70,7 @@ internal static partial class UiSmokeRunner
             await Task.Delay(350);
             var root = (FrameworkElement)window.Content;
             TypographySmoke.Verify(root, Check);
+            await VerifyConversationTextAsync();
             await VerifyChatImagePreviewAsync();
             await VerifyImageInputAsync();
             await VerifyInlineFaceAsync();
@@ -537,6 +546,8 @@ internal static partial class UiSmokeRunner
         public int LeaveAttempts { get; private set; }
         public int Sent;
         public bool FailSend;
+        public int MemberCount = 2;
+        public string OwnChatBody = "응, 대화하면서 3초 얼굴 영상도 바로 보낼 수 있어.";
         public IReadOnlyDictionary<string, object?>? LastChatBody;
         public int TimelineReads;
         public bool IncludeHiddenArrival;
@@ -562,7 +573,7 @@ internal static partial class UiSmokeRunner
                 "ping_room_chat_messages" => room == "a" ? new[]
                 {
                     Chat("c1", "peer", "안녕! Windows에서도 이제 가볍게 핑을 보낼 수 있겠네 😊", -3),
-                    Chat("c2", "me", "응, 대화하면서 3초 얼굴 영상도 바로 보낼 수 있어.", -2),
+                    Chat("c2", "me", OwnChatBody, -2),
                     Chat("c3", "peer", "좋아. 자세한 이야기는 여기에서 이어가자!", -1)
                 }.Concat(IncludeHiddenArrival ? new[] { Chat("while-hidden", "peer", "다시 열면 바로 보여야 하는 메시지", 0) } : Array.Empty<ChatMessage>())
                 .Concat(IncludePhoto ? new[] { Chat("photo", "peer", "함께 본 순간", 0) with { MediaPath = "peer/owned.png", MediaFileName = "공유한 사진.png", MediaWidth = 960, MediaHeight = 640 } } : Array.Empty<ChatMessage>()).ToArray() : Array.Empty<ChatMessage>(),
@@ -587,7 +598,7 @@ internal static partial class UiSmokeRunner
             if (function == "ping_mark_message_seen") { SeenCalls++; return SeenGate?.Task ?? Task.CompletedTask; }
             return Task.CompletedTask;
         }
-        private static Room Room(string id, string name, int unread) => new(id, name, name, "me", ["me", "peer"], new Dictionary<string, string> { ["me"] = "민", ["peer"] = "서연" }, RoomStatus.Open, UnreadCount: unread);
+        private Room Room(string id, string name, int unread) => new(id, name, name, "me", MemberCount >= 3 ? ["me", "peer", "third"] : ["me", "peer"], new Dictionary<string, string> { ["me"] = "민", ["peer"] = "서연", ["third"] = "지민" }, RoomStatus.Open, UnreadCount: unread);
         private static ChatMessage Chat(string id, string sender, string text, int minutes) => new()
         { Id = id, RoomId = "a", SenderUid = sender, SenderNickname = sender == "me" ? "민" : "서연", Body = text, CreatedAt = DateTimeOffset.UtcNow.AddMinutes(minutes) };
         private static VideoMessage Video() => new()

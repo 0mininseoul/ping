@@ -10,8 +10,15 @@ using Microsoft.UI.Xaml.Media.Imaging;
 
 namespace Ping.Windows.App.History;
 
-public sealed class TimelineHistoryItem
+public sealed class TimelineHistoryItem : INotifyPropertyChanged
 {
+    public event PropertyChangedEventHandler? PropertyChanged;
+    private bool showsSender;
+    public bool ShowsSender
+    {
+        get => showsSender;
+        internal set { if (showsSender == value) return; showsSender = value; PropertyChanged?.Invoke(this, new(nameof(SenderVisibility))); }
+    }
     public TimelineHistoryItem(VideoHistoryItem video)
     {
         Video = video;
@@ -38,12 +45,13 @@ public sealed class TimelineHistoryItem
 
 #if WINDOWS
     public HorizontalAlignment BubbleAlignment => IsMine ? HorizontalAlignment.Right : HorizontalAlignment.Left;
-    public Visibility SenderVisibility => IsMine ? Visibility.Collapsed : Visibility.Visible;
+    public Visibility SenderVisibility => ShowsSender && !IsMine ? Visibility.Visible : Visibility.Collapsed;
     public Visibility DayHeadingVisibility => string.IsNullOrEmpty(DayHeading) ? Visibility.Collapsed : Visibility.Visible;
     public Visibility VideoVisibility => Video is null ? Visibility.Collapsed : Visibility.Visible;
 
     public Visibility ChatVisibility => Chat is null ? Visibility.Collapsed : Visibility.Visible;
 #else
+    public bool SenderVisibility => ShowsSender && !IsMine;
     public bool DayHeadingVisibility => !string.IsNullOrEmpty(DayHeading);
     public bool VideoVisibility => Video is not null;
 

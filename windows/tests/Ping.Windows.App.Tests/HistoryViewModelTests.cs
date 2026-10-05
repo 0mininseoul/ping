@@ -200,6 +200,21 @@ public sealed class HistoryViewModelTests
     }
 
     [Fact]
+    public async Task SenderNamesFollowLiveRoomMembershipWithoutReloadingMessages()
+    {
+        var vm = ViewModel(new RecordingHistoryRpcClient());
+        await vm.LoadAsync("room-1");
+        Assert.All(vm.Timeline, row => Assert.False(row.SenderVisibility));
+        var received = vm.Timeline.First();
+        vm.ApplyRoomMetadata(vm.Rooms.Select(room => room.Id == "room-1" ? room with { MemberUids = ["sender", "receiver", "third"] } : room).ToArray());
+        Assert.Same(received, vm.Timeline.First());
+        Assert.True(received.SenderVisibility);
+        Assert.False(vm.Timeline.Last().SenderVisibility);
+        vm.ApplyRoomMetadata(vm.Rooms.Select(room => room.Id == "room-1" ? room with { MemberUids = ["sender", "receiver"] } : room).ToArray());
+        Assert.All(vm.Timeline, row => Assert.False(row.SenderVisibility));
+    }
+
+    [Fact]
     public async Task CompletingSendInPreviousRoomCannotClearNewRoomReply()
     {
         var rpc = new RecordingHistoryRpcClient { SendGate = new(TaskCreationOptions.RunContinuationsAsynchronously) };

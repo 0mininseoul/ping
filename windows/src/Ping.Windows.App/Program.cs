@@ -24,6 +24,12 @@ public static class Program
             Diagnostics.UiSmokeRunner.OutputDirectory = Path.GetFullPath(output);
             diagnostic = true;
         }
+        else if (args is ["--ui-conversation-output", var conversationOutput])
+        {
+            Diagnostics.UiSmokeRunner.OutputDirectory = Path.GetFullPath(conversationOutput);
+            Diagnostics.UiSmokeRunner.ConversationOnly = true;
+            diagnostic = true;
+        }
         else return 64; // A fixture executable must never launch the real account path.
 #endif
         WinRT.ComWrappersSupport.InitializeComWrappers();

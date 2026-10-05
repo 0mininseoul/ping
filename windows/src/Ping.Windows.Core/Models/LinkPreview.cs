@@ -19,27 +19,49 @@ public sealed record LinkPreviewMetadata(
         : Title;
 }
 
+public sealed record DetectedLink(Uri Url, int Start, int Length);
+
 public static partial class LinkPreviewDetector
 {
-    private static readonly char[] TrailingPunctuation = ['.', ',', '!', '?', ';', ':', ')', ']', '}'];
+    private static readonly char[] TrailingPunctuation = ['.', ',', '!', '?', ';', ':', ')', ']', '}', '。', '，', '！', '？'];
 
-    public static Uri? FirstUrl(string? text)
+    public static Uri? FirstUrl(string? text) => Matches(text).FirstOrDefault(link => link.Url.Scheme is "http" or "https")?.Url;
+
+    public static IReadOnlyList<DetectedLink> Matches(string? text)
     {
         if (string.IsNullOrWhiteSpace(text))
         {
-            return null;
+            return [];
         }
 
+        var result = new List<DetectedLink>();
         foreach (Match match in UrlRegex().Matches(text))
         {
-            var raw = match.Value.TrimEnd(TrailingPunctuation);
-            if (TryNormalize(raw, out var url))
+            var raw = TrimPunctuation(match.Value);
+            if (match.Groups["email"].Success)
             {
-                return url;
+                if (Uri.TryCreate(raw.StartsWith("mailto:", StringComparison.OrdinalIgnoreCase) ? raw : "mailto:" + raw, UriKind.Absolute, out var email))
+                    result.Add(new(email, match.Index, raw.Length));
+            }
+            else if (TryNormalize(raw, out var url))
+            {
+                result.Add(new(url, match.Index, raw.Length));
             }
         }
 
-        return null;
+        return result;
+    }
+
+    private static string TrimPunctuation(string value)
+    {
+        while (value.Length > 0 && TrailingPunctuation.Contains(value[^1]))
+        {
+            var close = value[^1];
+            var open = close switch { ')' => '(', ']' => '[', '}' => '{', _ => '\0' };
+            if (open != '\0' && value.Count(c => c == close) <= value.Count(c => c == open)) break;
+            value = value[..^1];
+        }
+        return value;
     }
 
     public static string DisplayHost(Uri url)
@@ -52,7 +74,7 @@ public static partial class LinkPreviewDetector
 
     private static bool TryNormalize(string raw, out Uri url)
     {
-        var value = raw.StartsWith("www.", StringComparison.OrdinalIgnoreCase)
+        var value = !raw.Contains("://", StringComparison.Ordinal)
             ? $"https://{raw}"
             : raw;
 
@@ -67,7 +89,7 @@ public static partial class LinkPreviewDetector
         return false;
     }
 
-    [GeneratedRegex("""(https?://[^\s<>"']+|www\.[^\s<>"']+)""", RegexOptions.IgnoreCase)]
+    [GeneratedRegex("""https?://[^\s<>"']+|(?<![\p{L}\p{N}_@/:])(?:(?<email>(?:mailto:)?[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,63}(?:\?[^\s<>"']*)?)|(?:[\p{L}\p{N}](?:[\p{L}\p{N}-]*[\p{L}\p{N}])?\.)+[a-z]{2,63}(?::[0-9]+)?(?:[/\?#][^\s<>"']*)?)""", RegexOptions.IgnoreCase)]
     private static partial Regex UrlRegex();
 }
 

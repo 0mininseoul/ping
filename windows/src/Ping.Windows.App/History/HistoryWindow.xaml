@@ -166,7 +166,8 @@
                                                     <ui:MessageBubble IsMine="{Binding IsMine}" Visibility="{Binding Chat.BodyVisibility}" Style="{StaticResource PingMessageBubbleStyle}" Padding="11,6" CornerRadius="14" HorizontalContentAlignment="Stretch"
                                                         SentFill="{ThemeResource PingSentBubbleBrush}" ReceivedFill="{ThemeResource PingReceivedBubbleBrush}"
                                                         SentText="{ThemeResource PingSentTextBrush}" ReceivedText="{ThemeResource PingTextBrush}">
-                                                        <TextBlock Text="{Binding Chat.Body}" TextWrapping="Wrap" IsTextSelectionEnabled="True" Style="{StaticResource PingBodyTextStyle}" />
+                                                        <ui:LinkedMessageText Body="{Binding Chat.Body}" IsMine="{Binding IsMine}"
+                                                            SentText="{ThemeResource PingSentTextBrush}" ReceivedText="{ThemeResource PingTextBrush}" ReceivedLink="{ThemeResource PingAccentBrush}" />
                                                     </ui:MessageBubble>
                                                     <StackPanel Visibility="{Binding Chat.AttachmentVisibility}" Spacing="4">
                                                         <Button x:Name="PhotoButton" Click="ShowPhotoPreview_Click" IsEnabled="{Binding Chat.CanPreviewImage}" Visibility="{Binding Chat.ImageVisibility}"
