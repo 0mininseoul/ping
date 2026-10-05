@@ -35,3 +35,5 @@ Windows의 실시간 자동 재생·자동 얼굴 회신 시작 경계에 기존
 전체 UI304개도 `windows/artifacts/ui-shell-79fbfd455351453d9e17ac57ce894b2c/result.json`에서 통과했다. 실제 Ctrl+V/Shift+Insert, pointer drag/drop, 사진 입력/확대, 인라인 얼굴, 룸 관리, 설정과 첫 사용 안내를 포함한다. 앞선 foreground guard 실패는 이번에 재현되지 않았으며 원인을 게임이나 특정 외부 앱으로 단정하지 않는다. 테스트가 변경한 클립보드는 finally에서 복구한다. Literal shell toast 클릭과 설치본 cold activation은 이 결과에 포함하지 않는다.
 
 시작 경계의 제품 수정은0.4.11 소스에 준비했다. 현재 설치된0.4.10은 아직 이 수정을 포함하지 않는다. 후속 signed 패키지와 실제 설치 확인 전까지 새 버전 배포 완료로 표시하지 않는다.
+
+후속 [0.4.11 설치 후보](2026-10-05-windows-0.4.11-candidate.ko.md)는 동일 소스의 CI, 기존 인증서 서명, x64 패키지 Core 정책과 실제 EXE 업데이트까지 확인했다. 현재 이 PC의 설치본은0.4.11.0 / Status Ok이며 설치된 Core·App·native DLL·Pretendard·OFL은 검증 MSIX와 같다. 원래 세션·백업2개 파일도 그대로다. 위0.4.10 미교체 문구는 앞선 진단 작업의 역사이며 현재 설치 상태는 후보 문서를 따른다.
