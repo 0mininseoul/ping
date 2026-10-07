@@ -24,7 +24,7 @@ public sealed class TimelineHistoryItem : INotifyPropertyChanged
             PropertyChanged?.Invoke(this, new(nameof(SelectionOpacity)));
         }
     }
-    public double SelectionOpacity => isSelected ? 0.6 : 0;
+    public double SelectionOpacity => isSelected ? 1 : 0;
     private bool showsSender;
     public bool ShowsSender
     {

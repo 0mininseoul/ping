@@ -11,6 +11,7 @@
             <SolidColorBrush x:Key="PingAccentBrush" Color="#246EF2" />
             <SolidColorBrush x:Key="PingUnreadTextBrush" Color="#FFFFFF" />
             <SolidColorBrush x:Key="PingAccentFillBrush" Color="#20246EF2" />
+            <SolidColorBrush x:Key="PingMessageSelectionBorderBrush" Color="Transparent" />
             <SolidColorBrush x:Key="PingInputBrush" Color="#FFFFFF" />
             <SolidColorBrush x:Key="PingReceivedBubbleBrush" Color="#E6E6E9" />
             <SolidColorBrush x:Key="PingSentBubbleBrush" Color="#246EF2" />
@@ -26,6 +27,7 @@
             <SolidColorBrush x:Key="PingAccentBrush" Color="#6BAEFF" />
             <SolidColorBrush x:Key="PingUnreadTextBrush" Color="#0E1113" />
             <SolidColorBrush x:Key="PingAccentFillBrush" Color="#206BAEFF" />
+            <SolidColorBrush x:Key="PingMessageSelectionBorderBrush" Color="Transparent" />
             <SolidColorBrush x:Key="PingInputBrush" Color="#111A22" />
             <SolidColorBrush x:Key="PingReceivedBubbleBrush" Color="#2C3034" />
             <SolidColorBrush x:Key="PingSentTextBrush" Color="#FFFFFF" />
@@ -41,6 +43,7 @@
             <SolidColorBrush x:Key="PingAccentBrush" Color="{ThemeResource SystemColorHighlightColor}" />
             <SolidColorBrush x:Key="PingUnreadTextBrush" Color="{ThemeResource SystemColorHighlightTextColor}" />
             <SolidColorBrush x:Key="PingAccentFillBrush" Color="{ThemeResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="PingMessageSelectionBorderBrush" Color="{ThemeResource SystemColorHighlightColor}" />
             <SolidColorBrush x:Key="PingInputBrush" Color="{ThemeResource SystemColorWindowColor}" />
             <SolidColorBrush x:Key="PingReceivedBubbleBrush" Color="{ThemeResource SystemColorWindowColor}" />
             <SolidColorBrush x:Key="PingSentBubbleBrush" Color="{ThemeResource SystemColorHighlightColor}" />

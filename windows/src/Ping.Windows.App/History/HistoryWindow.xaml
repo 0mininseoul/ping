@@ -115,7 +115,11 @@
                             <DataTemplate>
                                 <StackPanel Spacing="3">
                                     <TextBlock Text="{Binding DayHeading}" Visibility="{Binding DayHeadingVisibility}" HorizontalAlignment="Center" Style="{StaticResource PingCaptionTextStyle}" Foreground="{ThemeResource PingMutedBrush}" Margin="0,8" />
-                                    <StackPanel HorizontalAlignment="{Binding BubbleAlignment}" MaxWidth="320" Spacing="2">
+                                    <Grid HorizontalAlignment="{Binding BubbleAlignment}" MaxWidth="332">
+                                        <Border x:Name="MessageSelectionBackground" Background="{ThemeResource PingAccentFillBrush}"
+                                            BorderBrush="{ThemeResource PingMessageSelectionBorderBrush}" BorderThickness="1" CornerRadius="16"
+                                            Opacity="{Binding SelectionOpacity}" IsHitTestVisible="False" />
+                                        <StackPanel Padding="6,4" Spacing="2">
                                         <Grid ColumnSpacing="8" MinHeight="22" Padding="3,1">
                                             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                             <TextBlock Text="{Binding SenderLabel}" Style="{StaticResource PingCaptionTextStyle}" Foreground="{ThemeResource PingMutedBrush}" TextWrapping="Wrap" LineHeight="20" LineStackingStrategy="MaxHeight" VerticalAlignment="Center" />
@@ -123,7 +127,6 @@
                                         </Grid>
                                         <Border Padding="3" HorizontalAlignment="{Binding BubbleAlignment}">
                                             <Grid>
-                                                <Border BorderBrush="{ThemeResource PingAccentBrush}" BorderThickness="1" CornerRadius="16" Margin="-3" Opacity="{Binding SelectionOpacity}" IsHitTestVisible="False" />
                                                 <StackPanel Spacing="8" Visibility="{Binding VideoVisibility}">
                                                     <StackPanel.ContextFlyout>
                                                         <MenuFlyout Opening="MessageMenu_Opening">
@@ -195,7 +198,8 @@
                                                 </StackPanel>
                                             </Grid>
                                         </Border>
-                                    </StackPanel>
+                                        </StackPanel>
+                                    </Grid>
                                 </StackPanel>
                             </DataTemplate>
                         </ListView.ItemTemplate>

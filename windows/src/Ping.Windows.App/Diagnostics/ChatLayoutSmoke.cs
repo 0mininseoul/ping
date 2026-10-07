@@ -42,9 +42,10 @@ internal static partial class UiSmokeRunner
             list.SelectedItem = newest;
             await Task.Delay(180);
             var container = (FrameworkElement)list.ContainerFromItem(newest);
-            var outline = Descendants(container).OfType<Border>().Single(b => b.Margin.Left == -3 && b.BorderThickness.Left == 1);
-            Check(outline.Opacity > 0 && outline.ActualWidth < list.ActualWidth - 40,
-                "selection outline follows message content instead of filling the timeline row");
+            var selection = Descendants(container).OfType<Border>().Single(b => b.Name == "MessageSelectionBackground");
+            Check(selection.Opacity > 0 && selection.ActualWidth < list.ActualWidth - 40
+                && selection.Background is SolidColorBrush selectionFill && selectionFill.Color.A > 0,
+                "filled selection follows the sender header and message content instead of the full timeline row");
             var presenter = Descendants(container).OfType<Microsoft.UI.Xaml.Controls.Primitives.ListViewItemPresenter>().Single();
             Check(presenter.SelectedBackground is SolidColorBrush brush && brush.Color.A == 0,
                 "selected timeline row has no full-width filled rectangle");
