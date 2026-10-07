@@ -22,6 +22,7 @@ internal static partial class UiSmokeRunner
 {
     public static string? OutputDirectory { get; set; }
     public static bool ConversationOnly { get; set; }
+    public static bool ChatLayoutOnly { get; set; }
     public static bool OwnedRuntime { get; set; }
     private static readonly List<string> Checks = [];
     private static bool failureWritten;
@@ -49,6 +50,13 @@ internal static partial class UiSmokeRunner
             {
                 if (OwnedRuntime) await VerifyOwnedRuntimeAsync();
                 else await VerifyOwnedLiveAsync();
+                app.Exit();
+                return;
+            }
+            if (ChatLayoutOnly)
+            {
+                await VerifyChatLayoutAsync();
+                File.WriteAllText(Path.Combine(OutputDirectory!, "result.json"), JsonSerializer.Serialize(new { Success = true, Checks }));
                 app.Exit();
                 return;
             }

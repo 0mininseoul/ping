@@ -45,6 +45,12 @@ public static class Program
             Diagnostics.AccountKeyPreview.OutputDirectory = Path.GetFullPath(previewOutput);
             diagnostic = true;
         }
+        else if (args is ["--ui-chat-layout-output", var chatLayoutOutput])
+        {
+            Diagnostics.UiSmokeRunner.OutputDirectory = Path.GetFullPath(chatLayoutOutput);
+            Diagnostics.UiSmokeRunner.ChatLayoutOnly = true;
+            diagnostic = true;
+        }
         else if (args is ["--ui-smoke-output", var output])
         {
             Diagnostics.UiSmokeRunner.OutputDirectory = Path.GetFullPath(output);
