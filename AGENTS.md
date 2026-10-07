@@ -26,7 +26,7 @@ Ping은 v0.1.4부터 **macOS 13 Ventura 이상**을 지원합니다. 학습 데�
 **Ping** — macOS 13 Ventura 이상에서 동작하는 3초 영상 메시지 메뉴바 앱. Option+P로 얼굴만 거울, Option+L로 화면+얼굴 거울이 뜨고, Enter로 녹화한 뒤 리뷰 화면에서 승인해 Supabase 경유로 파트너에게 전송. 수신자는 발신자가 지정한 위치에 그대로 재생한다.
 
 ### 핵심 문서 (반드시 모두 읽고 작업 시작)
-1. **`PING_PROJECT_SPECIFICATION.md`** — 기능/아키텍처/보안 명세 (v2.10)
+1. **`PING_PROJECT_SPECIFICATION.md`** — 기능/아키텍처/보안 명세 (v2.11)
 2. **`docs/superpowers/plans/2026-05-17-ping-mvp.md`** — Day 1~7 bite-sized 구현 플랜
 3. (본 파일) **`AGENTS.md`** — 본 에이전트 진입점
 
@@ -152,7 +152,7 @@ ping/
 
 ## 6. Supabase 권장 사항
 
-- **Anonymous Auth 기본 진입 유지**. 2026-10-05 사용자가 이메일 방식을 철회했다. 이메일/소셜 로그인은 추가하지 않는다. 가입 없이 시작하고 기존 기기의 승인으로 다른 PC를 연결하는 방향은 제안 단계이며 아직 구현되지 않았다. 여러 기기의 refresh token을 복사해 동시 사용 완료로 취급하지 않는다. 기존 계정을 임의로 병합하지 않는다.
+- **Anonymous Auth 기본 진입 유지**. 2026-10-07 사용자는 선택형 닉네임·직접 정한 비밀키 연결을 승인했다. 키 생성·변경은 설정에만 두고, 닉네임 온보딩 아래 작은 회색 `혹시 기존 계정이 있나요?` 링크로 기존 계정 연결을 연다. 공개 #번호, 사용자 이메일/소셜 로그인, SMTP는 추가하지 않는다. 기존 Vercel의 `api/account-key.ts`는 Supabase 내부 인증 식별자 `<uid>@accounts.ping.invalid`를 사용하되 실제 이메일을 받거나 보내지 않는다. 기존 UID·방·메시지를 유지하고 기기별 독립 Auth 세션을 발급한다. refresh token을 복사해 다중 기기 연결로 취급하거나 기존 계정을 임의 병합하지 않는다. 운영 적용 상태는 `docs/windows/OPTIONAL_ACCOUNT_KEY_SETUP.ko.md`를 따른다.
 - **Edge Functions 없음** — 무료 플랜 유지와 단순성을 위해 클라이언트 + Postgres RPC + RLS로 처리.
 - **Storage는 비공개 버킷** — `ping-videos` 객체는 소유자 prefix 업로드, 메시지 sender/receiver 읽기 정책으로 제한.
 - **마이그레이션 변경 시 즉시 적용**: `./scripts/supabase-ping.sh db push`.
@@ -254,7 +254,7 @@ A: v0.3.78 릴리즈 DMG는 Developer ID 서명과 Apple 공증/staple을 거치
 
 새 세션에서 코딩 시작 전 다음을 확인:
 
-- [ ] `PING_PROJECT_SPECIFICATION.md` (v2.10) 전체 읽음
+- [ ] `PING_PROJECT_SPECIFICATION.md` (v2.11) 전체 읽음
 - [ ] `docs/superpowers/plans/2026-05-17-ping-mvp.md` 의 해당 Day/Task 읽음
 - [ ] 본 `AGENTS.md` 의 "절대 하지 말 것" 4가지 숙지
 - [ ] `git status` 깨끗한가? 또는 어디까지 진행됐는가?

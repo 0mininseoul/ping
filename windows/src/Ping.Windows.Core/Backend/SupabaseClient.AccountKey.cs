@@ -53,7 +53,7 @@ public sealed partial class SupabaseClient
         check.Headers.Add("apikey", config.AnonKey);
         check.Headers.Authorization = new AuthenticationHeaderValue("Bearer", result.AccessToken);
         var owner = JsonSerializer.Deserialize<SupabaseAuthUser>(await SendAsync(check, token).ConfigureAwait(false), JsonOptions.Supabase);
-        if (owner?.Id != result.User!.Id) throw new AccountKeyException("계정 연결 응답이 올바르지 않아요.");
+        if (owner is null || owner.Id != result.User!.Id) throw new AccountKeyException("계정 연결 응답이 올바르지 않아요.");
         var expires = DateTimeOffset.FromUnixTimeSeconds(result.ExpiresAt.Value);
         if (expires <= DateTimeOffset.UtcNow) throw new AccountKeyException("연결 시간이 지났어요. 다시 입력해 주세요.");
         return new(new(result.AccessToken, result.RefreshToken, expires, owner.Id), result.Nickname);

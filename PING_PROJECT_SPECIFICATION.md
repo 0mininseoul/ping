@@ -1,4 +1,4 @@
-# Ping — 실시간 3초 영상 메시지 macOS/Windows 앱 기획서 (v2.10)
+# Ping — 실시간 3초 영상 메시지 macOS/Windows 앱 기획서 (v2.11)
 
 ## 프로젝트 개요
 
@@ -44,13 +44,16 @@ macOS 26 이상에서는 `.pingGlassEffect()` wrapper가 SwiftUI 네이티브 `.
 
 ## 핵심 기능
 
-### Windows 계정과 기기 연결 (2026-10-05 요구 갱신)
+### Windows 계정과 기기 연결 (2026-10-07 요구 갱신)
 
 - 가입 없이 Anonymous Auth로 시작하며 이메일 인증 UI/API와 운영 설정 스크립트는 사용자의 요청으로 제거했다. 운영 Auth/SMTP 설정은 적용한 적이 없다.
 - 현재 Windows에는 이 PC에 저장된 계정 생성/전환/제거가 있다. '이 PC에서 제거'는 서버 계정 삭제나 방 탈퇴가 아니다.
-- 다른 PC에서 같은 계정을 동시에 쓰는 기능은 아직 없다. 기존 기기 승인 + 일회성 연결 코드, 기기별 독립 세션과 연결 해제, 선택형 복구 키를 제안한다. 구체적인 권한 설계와 구현이 남았다.
-- 닉네임과 공개 네 자리 태그는 연락용 식별자이며 인증 수단이 아니다. 기존 UID와 방·메시지는 보존하고 임의 병합을 하지 않는다.
-- 기존 QR의 refresh-token 공유를 새로운 다중 기기 연결로 재사용하지 않는다. 기존 Supabase/Vercel을 유지하되 필요한 기기 연결·권한 변경은 별도 구현 범위로 명시한다.
+- 필요한 사용자만 설정에서 비밀 계정키를 직접 정하거나 바꾼다. 온보딩에는 키 생성 단계를 넣지 않는다. 기존 닉네임 화면 아래 작은 회색 `혹시 기존 계정이 있나요?` 링크를 누를 때만 닉네임·비밀키 연결 대화상자를 연다.
+- 공개 #번호는 추가하지 않는다. 기존 닉네임 검색과 초대 방식을 유지한다. 중복 닉네임은 허용하되 동일 닉네임·키 조합은 거부한다. 닉네임 변경은 로그인 이름에도 반영한다.
+- `api/account-key.ts`와 private registry migration, Windows 세션 수입/UI 코드를 추가했다. 운영 Supabase migration 및 기존 Vercel API 배포/환경 변수 적용은 아직 수행하지 못했다. 새 설치 파일도 생성하지 않았다. 코드 추가를 운영 완료로 해석하지 않는다.
+- 기존 UID·방·메시지를 보존하며 다른 PC에는 독립된 Supabase Auth 세션을 발급한다. 이메일 입력/메일 발송은 없으며 내부 인증 식별자만 서버에서 사용한다. 기존 QR의 refresh-token 공유를 다중 기기 연결로 재사용하지 않는다.
+- 비밀키는 12~128자이며 공백·대소문자를 구분한다. 키 변경은 이미 연결된 기기의 로그인을 취소하지 않는다. 접속된 기기가 남아 있으면 키를 다시 정할 수 있지만 모든 기기와 키를 잃으면 복구할 수 없다.
+- 이 PC에 로그인 상태를 저장하는 흐름이며, 공용 PC의 메모리 전용 로그인 및 원격 기기 철회 UI는 아직 없다. 운영 절차는 `docs/windows/OPTIONAL_ACCOUNT_KEY_SETUP.ko.md`를 따른다.
 
 ### 시스템 통합
 
@@ -240,7 +243,7 @@ Windows도 Settings > General의 닉네임 저장 시 `ping_upsert_profile`을 �
 
 ### 인증
 
-- Supabase Anonymous Auth만 사용한다.
+- 기본 진입은 Supabase Anonymous Auth다. Windows 선택형 계정 연결은 같은 UID에 서버 내부 password identity를 연결하고 기기별 독립 세션을 발급한다. macOS의 기본 진입은 그대로 유지한다.
 - `SupabaseClient`는 access/refresh token을 sandboxed Application Support의 `SupabaseSession.json`에 저장하고, legacy `UserDefaults` 세션만 fallback으로 읽는다.
 - Sparkle 업데이트나 `/Applications/Ping.app` 교체는 앱 번들만 바꾸며, bundle id `com.youngminpark.ping.Ping`과 위 세션 파일 경로를 유지해야 기존 익명 계정과 룸이 그대로 연결된다.
 - 릴리즈 앱을 교체 배포할 때 macOS Keychain ACL 승인 팝업이 재발하지 않도록 앱 런타임 세션 저장/갱신 경로에서 Keychain을 사용하지 않는다. Sparkle appcast 서명용 개인키 Keychain 사용과는 별개다.
@@ -467,7 +470,7 @@ ping/
 
 ---
 
-- **문서 버전**: 2.10
+- **문서 버전**: 2.11
 - **작성일**: 2026-05-17
-- **최종 수정일**: 2026-10-05
+- **최종 수정일**: 2026-10-07
 - **상태**: Supabase 기반 MVP 구현 기준

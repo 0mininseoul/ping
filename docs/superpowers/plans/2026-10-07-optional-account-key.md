@@ -21,22 +21,24 @@
 
 ### Task 1: Broker and database
 
-- [ ] Add private credentials/rate-limit tables and service-role-only registry, lookup, status, and limiter RPCs; sync nickname using a profile trigger.
-- [ ] Add `/api/account-key` actions `status`, `set`, `login`. Verify owner tokens on set/status; use standard Auth sign-in for new independent sessions.
-- [ ] Keep internal Auth password stable, protect pepper, bound requests, and fail closed when configuration is missing.
-- [ ] Commit as `feat(auth): add optional account key broker`.
+- [x] Add private credentials/rate-limit tables and service-role-only registry, lookup, status, and limiter RPCs; sync nickname using a profile trigger.
+- [x] Add `/api/account-key` actions `status`, `set`, `login`. Verify owner tokens on set/status; use standard Auth sign-in for new independent sessions.
+- [x] Keep internal Auth password stable, protect pepper, bound requests, and fail closed when configuration is missing.
+- [x] Commit as `feat(auth): add optional account key broker` (`6408fb9`).
 
 ### Task 2: Native account flow
 
-- [ ] Add Core broker calls and a redacted portable-session type, with UID/project checks and atomic session import.
-- [ ] Add a shared existing-account dialog; expose it through the small onboarding link and Settings.
-- [ ] Add Settings-only key setup/change dialog and status. Serialize account transitions; retain authenticated session on local persistence failure.
-- [ ] Commit as `feat(windows): add optional account key connection`.
+- [x] Add Core broker calls and a redacted portable-session type, with UID/project checks and atomic session import.
+- [x] Add a shared existing-account dialog; expose it through the small onboarding link and Settings.
+- [x] Add Settings-only key setup/change dialog and status. Serialize account transitions; retain authenticated session on local persistence failure.
+- [x] Commit as `feat(windows): add optional account key connection` (`db675af`).
 
 ### Task 3: Delivery record
 
-- [ ] Update AGENTS/spec and document required existing-project deployment/configuration.
-- [ ] Record actual deployment limitations and no-verification state, then commit documentation.
+- [x] Update AGENTS/spec and document required existing-project deployment/configuration.
+- [x] Record actual deployment limitations and no-verification state, then commit documentation.
+
+Operational activation remains blocked on access to the existing Ping Supabase/Vercel project. Migration source was authored offline after the pinned CLI wrapper failed; no remote schema or Auth configuration was changed. No new installer was requested/generated for this change. Source-task checkboxes do not claim live service availability or verification.
 
 ## Failure conditions carried into implementation
 
