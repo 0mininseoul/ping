@@ -2,7 +2,7 @@ import Foundation
 
 /// Supabase project endpoint + anon key. The anon key is the public client key
 /// (safe to ship); per-user authorization comes from the session access token.
-public struct PingConfiguration: Sendable, Equatable {
+public struct PingConfiguration: Sendable, Equatable, Decodable {
     public let url: URL
     public let anonKey: String
 

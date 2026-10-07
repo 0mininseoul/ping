@@ -39,6 +39,8 @@ public sealed class SupabaseClient : ISupabaseRpcClient, IDisposable
     private readonly SemaphoreSlim authLock = new(1, 1);
     private SupabaseConfiguration? configuration;
     private SupabaseSession? session;
+    private readonly SemaphoreSlim publicConfigLock = new(1, 1);
+    private DateTimeOffset publicConfigCheckedAt;
 
     public SupabaseClient(HttpClient? httpClient = null, string? configPath = null, string? sessionPath = null)
     {
@@ -154,9 +156,9 @@ public sealed class SupabaseClient : ISupabaseRpcClient, IDisposable
         return authenticated.AccessToken;
     }
 
-    private async Task<SupabaseSession> AuthenticatedSessionAsync(CancellationToken cancellationToken)
+    private async Task<SupabaseSession> AuthenticatedSessionAsync(CancellationToken cancellationToken, string? rejectedAccessToken = null)
     {
-        if (session is { NeedsRefresh: false })
+        if (session is { NeedsRefresh: false } && session.AccessToken != rejectedAccessToken)
         {
             return session;
         }
@@ -164,7 +166,7 @@ public sealed class SupabaseClient : ISupabaseRpcClient, IDisposable
         await authLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            if (session is { NeedsRefresh: false })
+            if (session is { NeedsRefresh: false } && session.AccessToken != rejectedAccessToken)
             {
                 return session;
             }
@@ -175,7 +177,7 @@ public sealed class SupabaseClient : ISupabaseRpcClient, IDisposable
             {
                 authenticated = await SignInAnonymouslyAsync(cancellationToken).ConfigureAwait(false);
             }
-            else if (session.NeedsRefresh)
+            else if (session.NeedsRefresh || session.AccessToken == rejectedAccessToken)
             {
                 try
                 {
@@ -254,7 +256,7 @@ public sealed class SupabaseClient : ISupabaseRpcClient, IDisposable
     {
         var request = new HttpRequestMessage(method, url);
         request.Headers.Add("apikey", config.AnonKey);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", config.AnonKey);
+        // Publishable API keys belong in apikey, not the JWT Authorization header.
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         request.Content = new ByteArrayContent(JsonSerializer.SerializeToUtf8Bytes(body, JsonOptions.Supabase));
         request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
@@ -292,16 +294,80 @@ public sealed class SupabaseClient : ISupabaseRpcClient, IDisposable
         return configuration;
     }
 
+    private async Task RefreshPublicConfigurationAsync(CancellationToken cancellationToken)
+    {
+        if (configuration?.Url.AbsoluteUri.TrimEnd('/') != "https://qxjtprxvjmaxlbtljcjw.supabase.co") return;
+        await publicConfigLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (DateTimeOffset.UtcNow - publicConfigCheckedAt < TimeSpan.FromSeconds(30)) return;
+            publicConfigCheckedAt = DateTimeOffset.UtcNow;
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeout.CancelAfter(TimeSpan.FromSeconds(5));
+            using var response = await httpClient.GetAsync("https://0minping.vercel.app/api/client-config", timeout.Token).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode) return;
+            var data = await response.Content.ReadAsByteArrayAsync(timeout.Token).ConfigureAwait(false);
+            var updated = JsonSerializer.Deserialize<SupabaseConfiguration>(data, JsonOptions.Supabase)?.Normalize();
+            if (updated?.Url.AbsoluteUri.TrimEnd('/') == "https://qxjtprxvjmaxlbtljcjw.supabase.co" &&
+                updated.AnonKey.StartsWith("sb_publishable_", StringComparison.Ordinal)) configuration = updated;
+        }
+        catch (Exception error) when (error is HttpRequestException or JsonException or InvalidOperationException or OperationCanceledException)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+        }
+        finally { publicConfigLock.Release(); }
+    }
+
+    private static async Task<HttpRequestMessage> CopyRequestAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        var retry = new HttpRequestMessage(request.Method, request.RequestUri);
+        foreach (var header in request.Headers) retry.Headers.TryAddWithoutValidation(header.Key, header.Value);
+        if (request.Content is not null)
+        {
+            retry.Content = new ByteArrayContent(await request.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false));
+            foreach (var header in request.Content.Headers) retry.Content.Headers.TryAddWithoutValidation(header.Key, header.Value);
+        }
+        return retry;
+    }
+
     private async Task<byte[]> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        using var response = await httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
-        var data = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
-        if (!response.IsSuccessStatusCode)
+        var response = await httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        try
         {
-            throw new HttpRequestException($"Supabase request failed ({(int)response.StatusCode}): {ErrorMessage(data)}");
+            var data = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
+            if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized && request.RequestUri?.Host == configuration?.Url.Host)
+            {
+                await RefreshPublicConfigurationAsync(cancellationToken).ConfigureAwait(false);
+                if (configuration is not null && request.Headers.TryGetValues("apikey", out var keys) && keys.Single() != configuration.AnonKey)
+                {
+                    using var retry = await CopyRequestAsync(request, cancellationToken).ConfigureAwait(false);
+                    retry.Headers.Remove("apikey");
+                    retry.Headers.Add("apikey", configuration.AnonKey);
+                    response.Dispose();
+                    response = await httpClient.SendAsync(retry, cancellationToken).ConfigureAwait(false);
+                    data = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
+                }
+                var rejection = System.Text.Encoding.UTF8.GetString(data);
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized && session is not null &&
+                    (rejection.Contains("PGRST301", StringComparison.Ordinal) || rejection.Contains("JWT", StringComparison.OrdinalIgnoreCase)) &&
+                    request.Headers.Authorization is { Scheme: "Bearer", Parameter: not null } authorization)
+                {
+                    var refreshed = await AuthenticatedSessionAsync(cancellationToken, authorization.Parameter).ConfigureAwait(false);
+                    using var retry = await CopyRequestAsync(request, cancellationToken).ConfigureAwait(false);
+                    retry.Headers.Remove("apikey");
+                    retry.Headers.Add("apikey", configuration!.AnonKey);
+                    retry.Headers.Authorization = new AuthenticationHeaderValue("Bearer", refreshed.AccessToken);
+                    response.Dispose();
+                    response = await httpClient.SendAsync(retry, cancellationToken).ConfigureAwait(false);
+                    data = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
+                }
+            }
+            if (!response.IsSuccessStatusCode)
+                throw new HttpRequestException($"Supabase request failed ({(int)response.StatusCode}): {ErrorMessage(data)}");
+            return data;
         }
-
-        return data;
+        finally { response.Dispose(); }
     }
 
     private static string PingLocalPath(string fileName)
@@ -354,6 +420,7 @@ public sealed class SupabaseClient : ISupabaseRpcClient, IDisposable
     public void Dispose()
     {
         authLock.Dispose();
+        publicConfigLock.Dispose();
         if (ownsHttpClient)
         {
             httpClient.Dispose();

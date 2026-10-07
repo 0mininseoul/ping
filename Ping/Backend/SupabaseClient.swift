@@ -35,7 +35,7 @@ enum SupabaseJSON {
     }()
 }
 
-struct SupabaseConfiguration: Equatable {
+struct SupabaseConfiguration: Equatable, Decodable {
     let url: URL
     let anonKey: String
 
@@ -117,6 +117,8 @@ final class SupabaseClient: ObservableObject {
     private var configuration: SupabaseConfiguration?
     private var session: SupabaseSession?
     private var authSessionTask: Task<SupabaseSession, Error>?
+    private var publicConfigTask: Task<SupabaseConfiguration?, Never>?
+    private var publicConfigCheckedAt: Date?
     private let urlSession: URLSession
     private let accountStore: AccountStore
 
@@ -311,10 +313,10 @@ final class SupabaseClient: ObservableObject {
         try await authenticatedSession().accessToken
     }
 
-    private func authenticatedSession() async throws -> SupabaseSession {
+    private func authenticatedSession(rejectedAccessToken: String? = nil) async throws -> SupabaseSession {
         try configureIfNeeded()
 
-        if let session, !session.needsRefresh {
+        if let session, !session.needsRefresh, session.accessToken != rejectedAccessToken {
             return session
         }
 
@@ -323,7 +325,7 @@ final class SupabaseClient: ObservableObject {
         }
 
         let task = Task { @MainActor in
-            let authenticated = try await self.resolveAuthenticatedSession()
+            let authenticated = try await self.resolveAuthenticatedSession(rejectedAccessToken: rejectedAccessToken)
             self.save(session: authenticated)
             return authenticated
         }
@@ -339,15 +341,15 @@ final class SupabaseClient: ObservableObject {
         }
     }
 
-    private func resolveAuthenticatedSession() async throws -> SupabaseSession {
-        if let session, !session.needsRefresh {
+    private func resolveAuthenticatedSession(rejectedAccessToken: String? = nil) async throws -> SupabaseSession {
+        if let session, !session.needsRefresh, session.accessToken != rejectedAccessToken {
             return session
         }
 
         if let session {
             return try await SupabaseSessionStore.withRefreshLock {
                 let refreshCandidate = reloadStoredSessionForRefresh(fallback: session)
-                if !refreshCandidate.needsRefresh {
+                if !refreshCandidate.needsRefresh, refreshCandidate.accessToken != rejectedAccessToken {
                     return refreshCandidate
                 }
 
@@ -441,7 +443,7 @@ final class SupabaseClient: ObservableObject {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue(config.anonKey, forHTTPHeaderField: "apikey")
-        request.setValue("Bearer \(config.anonKey)", forHTTPHeaderField: "Authorization")
+        // Public API keys identify the app; Auth returns the user JWT separately.
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
@@ -459,8 +461,54 @@ final class SupabaseClient: ObservableObject {
         )
     }
 
+    private func refreshedPublicConfiguration() async -> SupabaseConfiguration? {
+        guard configuration?.url.absoluteString == "https://qxjtprxvjmaxlbtljcjw.supabase.co" else { return nil }
+        if let publicConfigTask { return await publicConfigTask.value }
+        if let checkedAt = publicConfigCheckedAt, Date().timeIntervalSince(checkedAt) < 30 { return configuration }
+        publicConfigCheckedAt = Date()
+        let task = Task<SupabaseConfiguration?, Never> {
+            do {
+                let request = URLRequest(url: URL(string: "https://0minping.vercel.app/api/client-config")!,
+                                         cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 5)
+                let (data, response) = try await urlSession.data(for: request)
+                guard (response as? HTTPURLResponse)?.statusCode == 200,
+                      let config = try? JSONDecoder().decode(SupabaseConfiguration.self, from: data),
+                      config.url.absoluteString == "https://qxjtprxvjmaxlbtljcjw.supabase.co",
+                      config.anonKey.hasPrefix("sb_publishable_") else { return nil }
+                return config
+            } catch { return nil }
+        }
+        publicConfigTask = task
+        let config = await task.value
+        if let config { configuration = config }
+        publicConfigTask = nil
+        return config
+    }
+
     private func send(_ request: URLRequest) async throws -> Data {
-        let (data, response) = try await urlSession.data(for: request)
+        var (data, response) = try await urlSession.data(for: request)
+        // Retry a rejected API key with public configuration, preserving the user's identity.
+        if (response as? HTTPURLResponse)?.statusCode == 401,
+           request.url?.host == configuration?.url.host,
+           let config = await refreshedPublicConfiguration(),
+           config.anonKey != request.value(forHTTPHeaderField: "apikey") {
+            var retry = request
+            retry.setValue(config.anonKey, forHTTPHeaderField: "apikey")
+            (data, response) = try await urlSession.data(for: retry)
+        }
+        let rejection = String(data: data, encoding: .utf8) ?? ""
+        if (response as? HTTPURLResponse)?.statusCode == 401,
+           rejection.contains("PGRST301") || rejection.localizedCaseInsensitiveContains("JWT"),
+           request.url?.host == configuration?.url.host,
+           let authorization = request.value(forHTTPHeaderField: "Authorization"),
+           authorization.hasPrefix("Bearer "), session != nil {
+            let rejectedToken = String(authorization.dropFirst(7))
+            let refreshed = try await authenticatedSession(rejectedAccessToken: rejectedToken)
+            var retry = request
+            retry.setValue(try requireConfiguration().anonKey, forHTTPHeaderField: "apikey")
+            retry.setValue("Bearer \(refreshed.accessToken)", forHTTPHeaderField: "Authorization")
+            (data, response) = try await urlSession.data(for: retry)
+        }
         guard let httpResponse = response as? HTTPURLResponse else {
             throw PingError.supabaseUnavailable
         }
