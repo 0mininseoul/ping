@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set +x
+set +v
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -7,6 +9,8 @@ EXPECTED_PROJECT_REF="${PING_SUPABASE_PROJECT_REF:-qxjtprxvjmaxlbtljcjw}"
 EXPECTED_ORG_ID="${PING_SUPABASE_ORG_ID:-nvyhcwxyemylsqjlbdpo}"
 EXPECTED_PROJECT_NAME="${PING_SUPABASE_PROJECT_NAME:-Ping}"
 SUPABASE_PROFILE="${PING_SUPABASE_PROFILE:-supabase}"
+KEYCHAIN_SERVICE="Ping Supabase Management (local)"
+KEYCHAIN_ACCOUNT="qxjtprxvjmaxlbtljcjw"
 
 fail() {
   printf 'supabase-ping: %s\n' "$*" >&2
@@ -17,15 +21,16 @@ show_usage() {
   cat <<EOF
 Usage: ./scripts/supabase-ping.sh <supabase-subcommand> [args...]
 
-Runs Supabase CLI for this repo through the pinned Ping account/project guard.
+Runs Supabase CLI using this Mac's local Keychain token and the pinned Ping project guard.
 
 Pinned project:
   ref:  ${EXPECTED_PROJECT_REF}
   org:  ${EXPECTED_ORG_ID}
   name: ${EXPECTED_PROJECT_NAME}
 
-Pinned CLI profile:
-  ${SUPABASE_PROFILE}
+Credential source:
+  macOS login Keychain / ${KEYCHAIN_SERVICE}
+  The Ping token must not be stored in GitHub Secrets, .env files, or account-wide connectors.
 
 Override only for deliberate local maintenance:
   PING_SUPABASE_PROFILE=<profile> ./scripts/supabase-ping.sh ...
@@ -53,7 +58,7 @@ for arg in "$@"; do
 done
 
 if [[ -n "${SUPABASE_ACCESS_TOKEN:-}" ]]; then
-  fail "SUPABASE_ACCESS_TOKEN is set and could override the pinned profile; unset it before running this repo's Supabase commands"
+  fail "SUPABASE_ACCESS_TOKEN is set; unset it so this repo uses only this Mac's local Ping Keychain token"
 fi
 
 linked_ref_file="${REPO_ROOT}/supabase/.temp/project-ref"
@@ -102,6 +107,14 @@ if [[ -f "$runtime_plist" ]]; then
   fi
 fi
 
+[[ "$(uname -s)" == "Darwin" ]] || fail "Ping administration requires the authorized Mac's local Keychain token"
+local_token="$(/usr/bin/security find-generic-password -s "$KEYCHAIN_SERVICE" -a "$KEYCHAIN_ACCOUNT" -w 2>/dev/null)" ||
+  fail "this Mac has no Ping management token in its local Keychain; do not fall back to another account or shared credential"
+[[ -n "$local_token" ]] || fail "the local Ping management token is empty"
+# The CLI's default login belongs to other projects; only this child process uses Ping's token.
+export SUPABASE_ACCESS_TOKEN="$local_token"
+unset local_token
+
 projects_json="$(
   cd "$REPO_ROOT"
   npx supabase --profile "$SUPABASE_PROFILE" projects list --output-format json
@@ -120,7 +133,7 @@ match = next((p for p in projects if p.get("ref") == expected_ref), None)
 if match is None:
     print(
         f"supabase-ping: profile cannot access pinned project {expected_ref}; "
-        "log into the Ping Supabase account for this profile",
+        "renew the scoped Ping token in this Mac's local Keychain",
         file=sys.stderr,
     )
     sys.exit(1)
