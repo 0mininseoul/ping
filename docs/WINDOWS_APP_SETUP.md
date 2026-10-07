@@ -15,8 +15,11 @@ Ping for Windows is a native WinUI 3 client that shares the same Supabase backen
 
 **일반 사용자는 별도 설정이 필요 없습니다.** 배포되는 MSIX에는 공유 백엔드의
 `Supabase.json`(공개 URL + 공개 anon 키)이 함께 들어 있어 설치 직후 바로 동작합니다.
-CI가 빌드 시 `PING_SUPABASE_URL` / `PING_SUPABASE_ANON_KEY` 시크릿으로 이 파일을
-생성해 패키지에 포함합니다(`SupabaseConfigLocator` 참조).
+CI는 `https://0minping.vercel.app/api/client-config`의 공개 앱 설정으로 이 파일을
+생성해 패키지에 포함합니다(`SupabaseConfigLocator` 참조). Supabase URL/키를 GitHub
+Secrets 또는 Variables에 등록하지 마세요. 빌드 설정 오류를 해결하기 위해 삭제한 키를
+재등록하는 것도 금지합니다. 관리자 PAT는 관리 Mac의 로컬 Keychain에만 보관하며,
+서버 secret 키는 Vercel 서버 환경에만 보관합니다.
 
 다른 백엔드를 가리키려는 파워유저/개발자는 아래 위치에 오버라이드 파일을 두면
 동봉본보다 우선 적용됩니다:

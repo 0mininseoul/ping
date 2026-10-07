@@ -21,7 +21,7 @@ Windows 사용자는 랜딩페이지(`0minping.vercel.app`)에서 `PingSetup-v*.
 
 ## 결정 사항
 
-- **설정 동봉**: CI 시크릿(`PING_SUPABASE_URL`, `PING_SUPABASE_ANON_KEY`)으로 빌드 시
+- **설정 동봉**: Vercel 공개 `/api/client-config` 설정으로 빌드 시
   `Supabase.json`을 MSIX에 주입. git 히스토리에 키를 남기지 않음. (시크릿은 등록 완료)
 - **UX 우선**: 구현 복잡도가 올라가더라도 사용자 경험이 더 좋은 방향 선택.
 
