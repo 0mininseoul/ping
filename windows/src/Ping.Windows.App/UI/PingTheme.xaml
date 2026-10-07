@@ -93,6 +93,7 @@
     </Style>
     <Style x:Key="PingTimelineItemStyle" TargetType="ListViewItem">
         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="UseSystemFocusVisuals" Value="False" />
         <Setter Property="Padding" Value="0" />
         <Setter Property="Margin" Value="0,0,0,3" />
         <Setter Property="Template">
@@ -102,9 +103,12 @@
                         ContentTemplateSelector="{TemplateBinding ContentTemplateSelector}" HorizontalContentAlignment="Stretch"
                         ContentMargin="{TemplateBinding Padding}" CornerRadius="10" Background="Transparent"
                         PointerOverBackground="Transparent" PressedBackground="Transparent"
-                        SelectedBackground="{ThemeResource PingAccentFillBrush}"
-                        SelectedPointerOverBackground="{ThemeResource PingAccentFillBrush}"
-                        SelectedPressedBackground="{ThemeResource PingAccentFillBrush}"
+                        SelectedBackground="Transparent" SelectedPointerOverBackground="Transparent"
+                        SelectedPressedBackground="Transparent" SelectedDisabledBackground="Transparent"
+                        FocusBorderBrush="Transparent" FocusSecondaryBorderBrush="Transparent"
+                        SelectedBorderBrush="Transparent" SelectedInnerBorderBrush="Transparent"
+                        SelectedPointerOverBorderBrush="Transparent" SelectedPressedBorderBrush="Transparent"
+                        SelectedBorderThickness="0" SelectionIndicatorVisualEnabled="False"
                         SelectedForeground="{ThemeResource PingTextBrush}" SelectionCheckMarkVisualEnabled="False" />
                 </ControlTemplate>
             </Setter.Value>

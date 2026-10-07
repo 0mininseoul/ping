@@ -107,6 +107,8 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
         }
     }
 
+    internal string? TimelineRoomId => timelineRoomId;
+
     public TimelineHistoryItem? SelectedTimelineItem
     {
         get => selectedTimelineItem;
@@ -117,7 +119,9 @@ public sealed class HistoryViewModel : INotifyPropertyChanged
                 return;
             }
 
+            if (selectedTimelineItem is not null) selectedTimelineItem.IsSelected = false;
             selectedTimelineItem = value;
+            if (selectedTimelineItem is not null) selectedTimelineItem.IsSelected = true;
             OnPropertyChanged();
             SelectedVideo = value?.Video;
         }

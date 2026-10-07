@@ -115,13 +115,15 @@
                             <DataTemplate>
                                 <StackPanel Spacing="3">
                                     <TextBlock Text="{Binding DayHeading}" Visibility="{Binding DayHeadingVisibility}" HorizontalAlignment="Center" Style="{StaticResource PingCaptionTextStyle}" Foreground="{ThemeResource PingMutedBrush}" Margin="0,8" />
-                                    <StackPanel HorizontalAlignment="{Binding BubbleAlignment}" MaxWidth="280" Spacing="2">
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <TextBlock Text="{Binding SenderLabel}" Style="{StaticResource PingCaptionTextStyle}" Foreground="{ThemeResource PingMutedBrush}" TextTrimming="CharacterEllipsis" MaxWidth="190" />
-                                            <TextBlock Text="{Binding TimeLabel}" Style="{StaticResource PingCaptionTextStyle}" Foreground="{ThemeResource PingMutedBrush}" Opacity="0.75" AutomationProperties.Name="전송 시간" />
-                                        </StackPanel>
-                                        <Border>
+                                    <StackPanel HorizontalAlignment="{Binding BubbleAlignment}" MaxWidth="320" Spacing="2">
+                                        <Grid ColumnSpacing="8" MinHeight="22" Padding="3,1">
+                                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding SenderLabel}" Style="{StaticResource PingCaptionTextStyle}" Foreground="{ThemeResource PingMutedBrush}" TextWrapping="Wrap" LineHeight="20" LineStackingStrategy="MaxHeight" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{Binding TimeLabel}" Style="{StaticResource PingCaptionTextStyle}" Foreground="{ThemeResource PingMutedBrush}" LineHeight="20" LineStackingStrategy="MaxHeight" VerticalAlignment="Center" Opacity="0.75" AutomationProperties.Name="전송 시간" />
+                                        </Grid>
+                                        <Border Padding="3" HorizontalAlignment="{Binding BubbleAlignment}">
                                             <Grid>
+                                                <Border BorderBrush="{ThemeResource PingAccentBrush}" BorderThickness="1" CornerRadius="16" Margin="-3" Opacity="{Binding SelectionOpacity}" IsHitTestVisible="False" />
                                                 <StackPanel Spacing="8" Visibility="{Binding VideoVisibility}">
                                                     <StackPanel.ContextFlyout>
                                                         <MenuFlyout Opening="MessageMenu_Opening">

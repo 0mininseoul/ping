@@ -13,6 +13,18 @@ namespace Ping.Windows.App.History;
 public sealed class TimelineHistoryItem : INotifyPropertyChanged
 {
     public event PropertyChangedEventHandler? PropertyChanged;
+    private bool isSelected;
+    internal bool IsSelected
+    {
+        get => isSelected;
+        set
+        {
+            if (isSelected == value) return;
+            isSelected = value;
+            PropertyChanged?.Invoke(this, new(nameof(SelectionOpacity)));
+        }
+    }
+    public double SelectionOpacity => isSelected ? 0.6 : 0;
     private bool showsSender;
     public bool ShowsSender
     {
