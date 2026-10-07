@@ -10,8 +10,8 @@ internal static class AccountKeyDialogs
     public static async Task ConnectAsync(FrameworkElement root, CancellationToken token)
     {
         var app = (App)Application.Current;
-        var nickname = new TextBox { PlaceholderText = "기존 계정의 현재 닉네임", MaxLength = 256 };
-        var key = new PasswordBox { PlaceholderText = "설정에서 직접 만든 비밀키", MaxLength = 128 };
+        var nickname = new TextBox { PlaceholderText = "기존 계정의 현재 닉네임", MaxLength = 256, CornerRadius = new(10), MinHeight = 42 };
+        var key = KeyInput("설정에서 직접 만든 비밀키");
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(nickname, "기존 계정 닉네임");
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(key, "기존 계정 비밀키");
         var content = Panel();
@@ -58,8 +58,8 @@ internal static class AccountKeyDialogs
 
     public static async Task SetKeyAsync(FrameworkElement root, string nickname, AccountKeySettingsViewModel model, CancellationToken token)
     {
-        var key = new PasswordBox { PlaceholderText = "직접 정할 비밀키 · 12~128자", MaxLength = 128 };
-        var confirm = new PasswordBox { PlaceholderText = "비밀키 다시 입력", MaxLength = 128 };
+        var key = KeyInput("직접 정할 비밀키 · 12~128자");
+        var confirm = KeyInput("비밀키 다시 입력");
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(key, "새 비밀키");
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(confirm, "새 비밀키 확인");
         var content = Panel();
@@ -95,16 +95,19 @@ internal static class AccountKeyDialogs
     }
 
     private static StackPanel Panel() => new() { Spacing = 12, MaxWidth = 360 };
+    private static PasswordBox KeyInput(string placeholder) => new()
+    {
+        PlaceholderText = placeholder, MaxLength = 128, CornerRadius = new(10), MinHeight = 42, FontSize = 14,
+        FontFamily = (FontFamily)Application.Current.Resources["PingFontFamily"]
+    };
     private static TextBlock Detail(string text) => new()
     {
-        Text = text, FontSize = 13, TextWrapping = TextWrapping.WrapWholeWords,
-        FontFamily = (FontFamily)Application.Current.Resources["PingFontFamily"],
-        Foreground = (Brush)Application.Current.Resources["PingMutedBrush"]
+        Text = text, Style = (Style)Application.Current.Resources["PingAccountDetailTextStyle"]
     };
     private static ContentDialog Dialog(FrameworkElement root, string title, string action, object content) => new()
     {
         XamlRoot = root.XamlRoot, RequestedTheme = root.ActualTheme,
         Title = title, Content = content, PrimaryButtonText = action, CloseButtonText = "취소",
-        DefaultButton = ContentDialogButton.Primary, FontFamily = (FontFamily)Application.Current.Resources["PingFontFamily"]
+        DefaultButton = ContentDialogButton.Primary, CornerRadius = new(16), FontFamily = (FontFamily)Application.Current.Resources["PingFontFamily"]
     };
 }

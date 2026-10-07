@@ -10,6 +10,10 @@ public partial class App
 
     internal async Task<ConnectedPingAccount> AuthenticateAccountKeyAsync(string nickname, string key, CancellationToken token)
     {
+#if PING_UI_SMOKE
+        if (Diagnostics.AccountKeyPreview.OutputDirectory is not null)
+            throw new AccountKeyException("스크린샷 미리보기에서는 계정을 연결하지 않아요.");
+#endif
         await accountTransition.WaitAsync(token);
         try
         {

@@ -119,6 +119,11 @@ public partial class App : Application
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
 #if PING_UI_SMOKE
+        if (Diagnostics.AccountKeyPreview.OutputDirectory is not null)
+        {
+            _ = Diagnostics.AccountKeyPreview.RunAsync(this);
+            return;
+        }
         if (Diagnostics.UiSmokeRunner.OutputDirectory is not null)
         {
             _ = Diagnostics.UiSmokeRunner.RunAsync(this);

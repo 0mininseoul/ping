@@ -40,7 +40,12 @@ public static class Program
             WinRT.ComWrappersSupport.InitializeComWrappers();
             return Diagnostics.ActivationHandoffSmoke.Run(Path.GetFullPath(activationOutput));
         }
-        if (args is ["--ui-smoke-output", var output])
+        if (args is ["--ui-account-key-preview", var previewOutput])
+        {
+            Diagnostics.AccountKeyPreview.OutputDirectory = Path.GetFullPath(previewOutput);
+            diagnostic = true;
+        }
+        else if (args is ["--ui-smoke-output", var output])
         {
             Diagnostics.UiSmokeRunner.OutputDirectory = Path.GetFullPath(output);
             diagnostic = true;
