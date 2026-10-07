@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import LandingPage from "./pages/LandingPage";
 import InviteView from "./components/invite/InviteView";
 
-export const MAC_APP_VERSION = "v0.3.80";
-export const WINDOWS_APP_VERSION = "v0.3.46";
-export const MAC_DOWNLOAD_URL = "/downloads/Ping-v0.3.80.dmg";
-export const WINDOWS_DOWNLOAD_URL = "/downloads/windows/PingSetup-v0.3.46.exe";
+export const MAC_APP_VERSION = "v0.3.81";
+export const WINDOWS_APP_VERSION = "v0.3.47";
+export const MAC_DOWNLOAD_URL = "/downloads/Ping-v0.3.81.dmg";
+export const WINDOWS_DOWNLOAD_URL = "/downloads/windows/PingSetup-v0.3.47.exe";
 
 function matchInvite(pathname: string): string | null {
   const m = pathname.match(/^\/invite\/([^/]+)\/?$/);
