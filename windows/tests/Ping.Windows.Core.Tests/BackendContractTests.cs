@@ -89,6 +89,53 @@ public sealed class BackendContractTests
         Assert.Equal(expected, JsonSerializer.Deserialize<RoomStatus>(payload, JsonOptions.Supabase));
     }
 
+    [Theory]
+    [InlineData("sb_publishable_new", "https://qxjtprxvjmaxlbtljcjw.supabase.co", true)]
+    [InlineData("sb_secret_private", "https://qxjtprxvjmaxlbtljcjw.supabase.co", false)]
+    [InlineData("sb_publishable_new", "https://other.supabase.co", false)]
+    public async Task RotatedPublicKeyPreservesSessionAndRejectsUnsafeConfiguration(string key, string url, bool accepted)
+    {
+        using var files = new SupabaseTestFiles();
+        await File.WriteAllTextAsync(files.ConfigPath, """{"url":"https://qxjtprxvjmaxlbtljcjw.supabase.co","anonKey":"old-key"}""");
+        await files.SaveSessionAsync(new SupabaseSession("user-jwt", "user-refresh", DateTimeOffset.UtcNow.AddHours(1), "same-user"));
+        var handler = new RecordingHttpMessageHandler(request =>
+        {
+            if (request.RequestUri?.Host == "0minping.vercel.app")
+                return JsonResponse(JsonSerializer.Serialize(new {url, anonKey = key}));
+            Assert.Equal("Bearer", request.Headers.Authorization?.Scheme);
+            Assert.Equal("user-jwt", request.Headers.Authorization?.Parameter);
+            Assert.Equal("""{"value":"unchanged"}""", request.Content?.ReadAsStringAsync().GetAwaiter().GetResult());
+            return request.Headers.GetValues("apikey").Single() == "sb_publishable_new"
+                ? JsonResponse("\"ok\"") : JsonResponse("{}", HttpStatusCode.Unauthorized);
+        });
+        using var client = files.CreateClient(handler);
+        if (accepted) Assert.Equal("ok", await client.RpcValueAsync<string>("test", new { value = "unchanged" }));
+        else await Assert.ThrowsAsync<HttpRequestException>(() => client.RpcValueAsync<string>("test", new { value = "unchanged" }));
+        Assert.Equal(accepted ? 3 : 2, handler.Requests.Count);
+        Assert.Equal("same-user", client.CurrentUid);
+    }
+
+    [Fact]
+    public async Task RevokedSigningKeyRefreshesExistingIdentityWithoutSignup()
+    {
+        using var files = new SupabaseTestFiles();
+        await files.SaveSessionAsync(new SupabaseSession("old-jwt", "same-refresh", DateTimeOffset.UtcNow.AddHours(1), "same-user"));
+        var handler = new RecordingHttpMessageHandler(request =>
+        {
+            if (request.RequestUri?.AbsolutePath.EndsWith("/token", StringComparison.Ordinal) == true)
+            {
+                Assert.Null(request.Headers.Authorization);
+                return JsonResponse("""{"access_token":"new-jwt","refresh_token":"new-refresh","expires_in":3600,"user":{"id":"same-user"}}""");
+            }
+            return request.Headers.Authorization?.Parameter == "new-jwt"
+                ? JsonResponse("\"ok\"") : JsonResponse("""{"code":"PGRST301","message":"JWT signature invalid"}""", HttpStatusCode.Unauthorized);
+        });
+        using var client = files.CreateClient(handler);
+        Assert.Equal("ok", await client.RpcValueAsync<string>("test"));
+        Assert.Equal(3, handler.Requests.Count);
+        Assert.Equal("same-user", client.CurrentUid);
+    }
+
     [Fact]
     public async Task BootstrapWithoutSessionPostsAnonymousSignupAndSavesSession()
     {
@@ -98,8 +145,7 @@ public sealed class BackendContractTests
             Assert.Equal(HttpMethod.Post, request.Method);
             Assert.Equal("https://example.supabase.co/auth/v1/signup", request.RequestUri?.ToString());
             Assert.Equal("anon-key", request.Headers.GetValues("apikey").Single());
-            Assert.Equal("Bearer", request.Headers.Authorization?.Scheme);
-            Assert.Equal("anon-key", request.Headers.Authorization?.Parameter);
+            Assert.Null(request.Headers.Authorization);
 
             return JsonResponse("""
                 {

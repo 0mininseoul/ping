@@ -7,7 +7,7 @@ import Foundation
 /// the access token with the refresh token when needed and reports the new
 /// session through `onSessionUpdate` so the host app can persist it.
 public actor PingSupabaseClient {
-    private let configuration: PingConfiguration
+    private var configuration: PingConfiguration
     private var session: SupabaseSession
     private let urlSession: URLSession
     private let onSessionUpdate: (@Sendable (SupabaseSession) -> Void)?
@@ -84,6 +84,8 @@ public actor PingSupabaseClient {
     /// the second fail with `refresh_token_already_used`. Coalescing collapses
     /// them into one network call that consumes the refresh token exactly once.
     private var refreshTask: Task<SupabaseSession, Error>?
+    private var publicConfigTask: Task<PingConfiguration?, Never>?
+    private var publicConfigCheckedAt: Date?
 
     /// Paces retries after a recoverable refresh failure.
     private var backoff = PingAuthBackoff()
@@ -107,9 +109,9 @@ public actor PingSupabaseClient {
         return try await refreshedSession().accessToken
     }
 
-    private func refreshedSession() async throws -> SupabaseSession {
+    private func refreshedSession(rejectedAccessToken: String? = nil) async throws -> SupabaseSession {
         // A coalesced refresh may have completed while this caller was suspended.
-        if !session.needsRefresh { return session }
+        if !session.needsRefresh, session.accessToken != rejectedAccessToken { return session }
 
         // Join an in-flight refresh instead of starting a competing one.
         if let refreshTask {
@@ -177,7 +179,7 @@ public actor PingSupabaseClient {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue(configuration.anonKey, forHTTPHeaderField: "apikey")
-        request.setValue("Bearer \(configuration.anonKey)", forHTTPHeaderField: "Authorization")
+        // Public API keys identify the app; Auth returns the user JWT separately.
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: ["refresh_token": refreshToken])
@@ -197,8 +199,52 @@ public actor PingSupabaseClient {
         )
     }
 
+    private func refreshedPublicConfiguration() async -> PingConfiguration? {
+        guard configuration.url.absoluteString == "https://qxjtprxvjmaxlbtljcjw.supabase.co" else { return nil }
+        if let publicConfigTask { return await publicConfigTask.value }
+        if let checkedAt = publicConfigCheckedAt, Date().timeIntervalSince(checkedAt) < 30 { return configuration }
+        publicConfigCheckedAt = Date()
+        let task = Task<PingConfiguration?, Never> {
+            do {
+                let request = URLRequest(url: URL(string: "https://0minping.vercel.app/api/client-config")!,
+                                         cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 5)
+                let (data, response) = try await urlSession.data(for: request)
+                guard (response as? HTTPURLResponse)?.statusCode == 200,
+                      let config = try? JSONDecoder().decode(PingConfiguration.self, from: data),
+                      config.url.absoluteString == "https://qxjtprxvjmaxlbtljcjw.supabase.co",
+                      config.anonKey.hasPrefix("sb_publishable_") else { return nil }
+                return config
+            } catch { return nil }
+        }
+        publicConfigTask = task
+        let config = await task.value
+        if let config { configuration = config }
+        publicConfigTask = nil
+        return config
+    }
+
     private func send(_ request: URLRequest) async throws -> Data {
-        let (data, response) = try await urlSession.data(for: request)
+        var (data, response) = try await urlSession.data(for: request)
+        if (response as? HTTPURLResponse)?.statusCode == 401,
+           request.url?.host == configuration.url.host,
+           let config = await refreshedPublicConfiguration(),
+           config.anonKey != request.value(forHTTPHeaderField: "apikey") {
+            var retry = request
+            retry.setValue(config.anonKey, forHTTPHeaderField: "apikey")
+            (data, response) = try await urlSession.data(for: retry)
+        }
+        let rejection = String(data: data, encoding: .utf8) ?? ""
+        if (response as? HTTPURLResponse)?.statusCode == 401,
+           rejection.contains("PGRST301") || rejection.localizedCaseInsensitiveContains("JWT"),
+           request.url?.host == configuration.url.host,
+           let authorization = request.value(forHTTPHeaderField: "Authorization"),
+           authorization.hasPrefix("Bearer ") {
+            let refreshed = try await refreshedSession(rejectedAccessToken: String(authorization.dropFirst(7)))
+            var retry = request
+            retry.setValue(configuration.anonKey, forHTTPHeaderField: "apikey")
+            retry.setValue("Bearer \(refreshed.accessToken)", forHTTPHeaderField: "Authorization")
+            (data, response) = try await urlSession.data(for: retry)
+        }
         guard let http = response as? HTTPURLResponse else { throw PingKitError.unavailable }
         guard (200..<300).contains(http.statusCode) else {
             throw PingKitError.requestFailed(
