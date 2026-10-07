@@ -46,7 +46,7 @@ Bundle ID는 macOS 권한과 앱 식별의 기준이므로 임의 변경하지 �
 ### Supabase 설정
 현재 구현은 Supabase Free 플랜 기준입니다. 앱 런타임에는 `Resources/Supabase.plist`가 필요하고, 이 파일은 git에 커밋하지 않습니다. 형식은 `Resources/Supabase.example.plist`를 따릅니다.
 
-Supabase CLI 작업은 반드시 `./scripts/supabase-ping.sh` wrapper로 수행합니다. 이 wrapper는 현재 Ping 원격 프로젝트 `qxjtprxvjmaxlbtljcjw` / org `nvyhcwxyemylsqjlbdpo` / 프로젝트명 `Ping`에 접근 가능한 `supabase` CLI profile만 허용하고, 다른 project ref로 `link`하거나 `SUPABASE_ACCESS_TOKEN`으로 계정을 덮어쓰는 실행을 차단합니다. 새 계정/프로젝트에 링크해야 하는 예외 상황은 먼저 사용자에게 명시적으로 확인받고, 이 wrapper의 pinned 값을 함께 변경하세요.
+Supabase CLI 작업은 반드시 `./scripts/supabase-ping.sh` wrapper로 수행합니다. 관리 자격 증명은 이 Mac의 로컬 login Keychain service `Ping Supabase Management (local)` / account `qxjtprxvjmaxlbtljcjw`에서만 읽습니다. wrapper는 해당 토큰으로 Ping 원격 프로젝트 `qxjtprxvjmaxlbtljcjw` / org `nvyhcwxyemylsqjlbdpo` / 프로젝트명 `Ping`을 확인하고, 다른 project ref로 `link`하거나 외부 `SUPABASE_ACCESS_TOKEN`으로 계정을 덮어쓰는 실행을 차단합니다. Keychain 항목이 없거나 만료되면 실패해야 하며 기본 CLI 로그인, `.env.local`, GitHub Secrets, 계정 공유 connector로 대체하지 마세요. 새 계정/프로젝트에 링크해야 하는 예외 상황은 먼저 사용자에게 명시적으로 확인받고 wrapper의 pinned 값을 함께 변경하세요. 이 설정은 토큰 보관 경로를 제한하며, Supabase 자체의 기기 바인딩을 제공하지는 않습니다.
 
 ### Supabase Free 저장소
 영상은 Supabase Storage의 비공개 `ping-videos` 버킷에 `<senderUid>/<videoId>.mp4` 경로로 저장합니다. 테이블/RLS/RPC/Storage 정책은 `supabase/migrations/20260517000100_create_ping_backend.sql`이 단일 진실 출처입니다. 서버 예약 작업 없이 앱 실행 시 `ping_cleanup_expired_data()` RPC로 만료 데이터를 best-effort 정리합니다.
@@ -205,11 +205,15 @@ Day 4 Task 4.3 에서 임시 EmptyView로 윈도우를 만든 뒤 `contentView` 
 `LegacyProfileLoadError: failed to read profile: Unsupported Config Type ""`로 죽는다.
 `~/.supabase/<name>.yaml|toml|json` 어느 형식으로 만들어도 같고, 기존에 있던
 `connectum-admin` 프로필도 마찬가지다. 즉 wrapper의 `PING_SUPABASE_PROFILE` 탈출구는
-현재 쓸 수 없다. 별도 계정으로 붙어야 하면 `.env.local`의 `SUPABASE_ACCESS_TOKEN`을
-export해 CLI를 직접 부르고, **wrapper가 하던 프로젝트 검증을 반드시 손으로 대신하라**:
-`projects list`에서 ref `qxjtprxvjmaxlbtljcjw` / org `nvyhcwxyemylsqjlbdpo` / name `Ping`을
-확인한 뒤에만 `link`/`db push`를 실행할 것. wrapper 자체는 `SUPABASE_ACCESS_TOKEN`이
-export된 셸에서 실행을 거부하므로 두 방식을 한 셸에서 섞지 말 것.
+현재 쓸 수 없다. Ping 작업은 wrapper가 로컬 Keychain에서 읽은 프로젝트 범위 토큰을
+CLI 자식 프로세스에만 `SUPABASE_ACCESS_TOKEN`으로 전달하는 방식으로 수행한다.
+직접 CLI 로그인은 계정 전체에 접근하는 Legacy 토큰을 만들 수 있으므로 사용하지 않는다.
+토큰이 만료되면 사용자가 Supabase Dashboard에서 Ping 프로젝트 범위로 새 토큰을 발급하고
+동일한 로컬 Keychain 항목을 갱신해야 한다. 토큰 값을 채팅, 명령행 인자, 로그, `.env.local`,
+GitHub Secrets 또는 계정 공유 connector에 넣지 말 것. 다른 기기에서 복사한 Keychain 항목을
+사용하는 것도 금지한다. `service_role`/secret API 키는 별도의 서버 자격 증명이며, 관리 PAT를
+폐기해도 무효화되지 않는다. 서버 키 교체 시 `docs/PUSH_BACKEND_SETUP.md`에 따라
+Vercel 환경 변수와 배포를 먼저 갱신하고 기존 키를 폐기해야 한다.
 
 ### Sandbox + 글로벌 단축키
 `KeyboardShortcuts` 는 Sandbox 안에서 동작합니다. 만약 단축키가 안 잡히면 entitlements 의 `com.apple.security.app-sandbox` 를 의심하기 전에 **시스템 설정 → 개인정보 보호 및 보안 → 입력 모니터링** 권한을 먼저 확인하세요.
