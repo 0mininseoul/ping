@@ -48,6 +48,8 @@ Bundle ID는 macOS 권한과 앱 식별의 기준이므로 임의 변경하지 �
 
 Supabase CLI 작업은 반드시 `./scripts/supabase-ping.sh` wrapper로 수행합니다. 관리 자격 증명은 이 Mac의 로컬 login Keychain service `Ping Supabase Management (local)` / account `qxjtprxvjmaxlbtljcjw`에서만 읽습니다. wrapper는 해당 토큰으로 Ping 원격 프로젝트 `qxjtprxvjmaxlbtljcjw` / org `nvyhcwxyemylsqjlbdpo` / 프로젝트명 `Ping`을 확인하고, 다른 project ref로 `link`하거나 외부 `SUPABASE_ACCESS_TOKEN`으로 계정을 덮어쓰는 실행을 차단합니다. Keychain 항목이 없거나 만료되면 실패해야 하며 기본 CLI 로그인, `.env.local`, GitHub Secrets, 계정 공유 connector로 대체하지 마세요. 새 계정/프로젝트에 링크해야 하는 예외 상황은 먼저 사용자에게 명시적으로 확인받고 wrapper의 pinned 값을 함께 변경하세요. 이 설정은 토큰 보관 경로를 제한하며, Supabase 자체의 기기 바인딩을 제공하지는 않습니다.
 
+로컬 Postgres 관리 비밀번호도 `Ping Supabase database (local)` Keychain 항목에만 보관합니다. wrapper는 `db`/`link` 작업에만 이 비밀번호를 주입합니다. 외부 `SUPABASE_DB_PASSWORD`로 덮어쓰거나 GitHub에 등록하지 마세요.
+
 ### GitHub 자격 증명 재등록 금지
 Supabase URL, 공개 앱 키, service-role/secret 키, 관리 PAT를 GitHub repository/environment/organization Secrets 또는 Variables에 등록하지 마세요. CI 오류를 복구하는 명목으로 삭제한 값을 다시 업로드하는 것도 금지합니다. Windows 빌드는 Vercel의 공개 `/api/client-config`에서 publishable 앱 키만 받아 패키지에 포함합니다. 관리 PAT는 로컬 Keychain에만, 서버 secret 키는 Vercel에만 저장합니다. GitHub 관리자 권한에 대한 서버 측 차단 규칙은 이 지침과 별개이며 이 저장소의 검사로 대신할 수 없습니다.
 

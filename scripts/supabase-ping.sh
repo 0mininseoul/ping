@@ -57,6 +57,10 @@ for arg in "$@"; do
   esac
 done
 
+if [[ -n "${SUPABASE_DB_PASSWORD:-}" ]]; then
+  fail "SUPABASE_DB_PASSWORD is set; use only this Mac's local Ping database Keychain entry"
+fi
+
 if [[ -n "${SUPABASE_ACCESS_TOKEN:-}" ]]; then
   fail "SUPABASE_ACCESS_TOKEN is set; unset it so this repo uses only this Mac's local Ping Keychain token"
 fi
@@ -154,4 +158,10 @@ if match.get("name") != expected_name:
 PY
 
 cd "$REPO_ROOT"
+if [[ "$1" == "db" || "$1" == "link" ]]; then
+  local_database_password="$(/usr/bin/security find-generic-password -s "Ping Supabase database (local)" -a "$KEYCHAIN_ACCOUNT" -w 2>/dev/null)" ||
+    fail "this Mac has no Ping database password in its local Keychain"
+  export SUPABASE_DB_PASSWORD="$local_database_password"
+  unset local_database_password
+fi
 exec npx supabase --profile "$SUPABASE_PROFILE" "$@"
