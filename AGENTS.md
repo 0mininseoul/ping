@@ -50,6 +50,9 @@ Supabase CLI 작업은 반드시 `./scripts/supabase-ping.sh` wrapper로 수행�
 
 로컬 Postgres 관리 비밀번호도 `Ping Supabase database (local)` Keychain 항목에만 보관합니다. wrapper는 `db`/`link` 작업에만 이 비밀번호를 주입합니다. 외부 `SUPABASE_DB_PASSWORD`로 덮어쓰거나 GitHub에 등록하지 마세요.
 
+### 운영 서버 배포 권한
+Vercel 프로젝트 `ping`의 GitHub 자동 배포 연결은 보안을 위해 해제했습니다. GitHub push나 Windows CI의 배포물 commit만으로 운영 서버를 배포하지 마세요. 이 Mac에서 main과 배포물을 검토한 뒤 `vercel deploy --prod --scope 0minseouls-projects`로 배포합니다. 사용자 명시적 요청 없이 Git 저장소 연결이나 deploy hook을 다시 만들지 마세요.
+
 ### GitHub 자격 증명 재등록 금지
 Supabase URL, 공개 앱 키, service-role/secret 키, 관리 PAT를 GitHub repository/environment/organization Secrets 또는 Variables에 등록하지 마세요. CI 오류를 복구하는 명목으로 삭제한 값을 다시 업로드하는 것도 금지합니다. Windows 빌드는 Vercel의 공개 `/api/client-config`에서 publishable 앱 키만 받아 패키지에 포함합니다. 관리 PAT는 로컬 Keychain에만, 서버 secret 키는 Vercel에만 저장합니다. GitHub 관리자 권한에 대한 서버 측 차단 규칙은 이 지침과 별개이며 이 저장소의 검사로 대신할 수 없습니다.
 
