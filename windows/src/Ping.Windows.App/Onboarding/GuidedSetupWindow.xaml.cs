@@ -55,6 +55,13 @@ public sealed partial class GuidedSetupWindow : Window
         await model.NextAsync();
     }
     private void Back_Click(object sender, RoutedEventArgs args) { if (!checking) model.Back(); }
+    private async void ExistingAccount_Click(object sender, RoutedEventArgs args)
+    {
+        if (closed || !model.CanEdit) return;
+        try { await Setup.AccountKeyDialogs.ConnectAsync(Root, lifetime.Token); }
+        catch (OperationCanceledException) { }
+        catch { /* The connection dialog displays authentication errors inline. */ }
+    }
     private void CreateChoice_Click(object sender, RoutedEventArgs args) => model.ChooseCreateRoom();
     private void JoinChoice_Click(object sender, RoutedEventArgs args) => model.ChooseJoinRoom();
     private void Later_Click(object sender, RoutedEventArgs args) => model.StartLater();

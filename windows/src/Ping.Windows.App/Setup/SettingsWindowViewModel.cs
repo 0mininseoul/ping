@@ -70,7 +70,9 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
         Func<CancellationToken, Task<PairingQrImage>>? pairingGenerator = null, Func<string?>? pairingUid = null,
         Func<CancellationToken, Task<IReadOnlyList<StoredAccountSummary>>>? loadAccounts = null,
         Func<AccountChange, CancellationToken, Task>? changeAccount = null,
-        UpdateSettingsViewModel? updates = null)
+        UpdateSettingsViewModel? updates = null,
+        Func<CancellationToken, Task<bool>>? loadAccountKey = null,
+        Func<string, CancellationToken, Task>? saveAccountKey = null)
     {
         this.nickname = NormalizeNickname(nickname);
         nicknameDraft = this.nickname;
@@ -87,6 +89,8 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
         Pairing = new(pairingGenerator ?? (_ => throw new InvalidOperationException("Pairing session is unavailable.")), pairingUid ?? (() => null));
         Accounts = new(loadAccounts ?? (_ => Task.FromResult<IReadOnlyList<StoredAccountSummary>>([])),
             changeAccount ?? ((_, _) => throw new InvalidOperationException("Account management is unavailable.")));
+        AccountKey = new(loadAccountKey ?? (_ => throw new InvalidOperationException("Account connection is unavailable.")),
+            saveAccountKey ?? ((_, _) => throw new InvalidOperationException("Account connection is unavailable.")));
 #if WINDOWS
         Updates = updates ?? WindowsUpdateController.CreateViewModel();
 #else
@@ -113,6 +117,7 @@ public sealed class SettingsWindowViewModel : INotifyPropertyChanged
     public DeviceSettingsViewModel Devices { get; }
     public DevicePairingViewModel Pairing { get; }
     public AccountSettingsViewModel Accounts { get; }
+    public AccountKeySettingsViewModel AccountKey { get; }
     public UpdateSettingsViewModel Updates { get; }
 
     public bool AutoPlayIncoming
@@ -641,7 +646,13 @@ public sealed partial class SettingsWindow : Window
         Root.DataContext = viewModel;
         pairing = new(viewModel.Pairing, PairingImage);
         Closed += (_, _) => { pairing.Dispose(); viewModel.Updates.Dispose(); deviceLifetime.Cancel(); deviceLifetime.Dispose(); };
-        Root.Loaded += (_, _) => { RefreshDevicesIfVisible(); _ = viewModel.Accounts.RefreshAsync(deviceLifetime.Token); };
+        Root.Loaded += (_, _) =>
+        {
+            RefreshDevicesIfVisible();
+            _ = viewModel.Accounts.RefreshAsync(deviceLifetime.Token);
+            _ = viewModel.AccountKey.RefreshAsync(deviceLifetime.Token);
+            if (((App)Application.Current).HasPendingConnectedAccount) ReportAccountKeyImportFailure();
+        };
         Ping.Windows.App.UI.SettingsWindowGeometry.Fit(this, 560, 440);
         _ = viewModel.RefreshStartupAsync();
     }
@@ -679,6 +690,34 @@ public sealed partial class SettingsWindow : Window
     public void ClearDevicePairing() => pairing.Clear();
     internal void ReportAccountTransitionFailure() => viewModel.Accounts.ReportTransitionFailure();
     internal void ReportUpdateFailure() => viewModel.Updates.ReportFailure();
+    internal void ReportAccountKeyImportFailure() => AccountConnectionRetry.Visibility = Visibility.Visible;
+    private async void RefreshAccountKeyButton_Click(object sender, RoutedEventArgs args)
+        => await viewModel.AccountKey.RefreshAsync(deviceLifetime.Token);
+    private async void SetAccountKeyButton_Click(object sender, RoutedEventArgs args)
+    {
+        if (!viewModel.AccountKey.CanEdit) return;
+        try { await AccountKeyDialogs.SetKeyAsync(Root, viewModel.Nickname, viewModel.AccountKey, deviceLifetime.Token); }
+        catch (OperationCanceledException) { }
+        catch { if (!deviceLifetime.IsCancellationRequested) await viewModel.AccountKey.RefreshAsync(deviceLifetime.Token); }
+    }
+    private async void ConnectExistingAccountButton_Click(object sender, RoutedEventArgs args)
+    {
+        try { await AccountKeyDialogs.ConnectAsync(Root, deviceLifetime.Token); }
+        catch (OperationCanceledException) { }
+        catch { }
+    }
+    private async void RetryAccountConnectionButton_Click(object sender, RoutedEventArgs args)
+    {
+        if (sender is not Microsoft.UI.Xaml.Controls.Button button) return;
+        button.IsEnabled = false;
+        try { await ((App)Application.Current).CompleteAccountConnectionAsync(); }
+        catch
+        {
+            if (!deviceLifetime.IsCancellationRequested)
+                AccountConnectionRetryStatus.Text = "아직 저장하지 못했어요. PC 저장 공간과 폴더 권한을 확인하고 다시 시도해 주세요.";
+        }
+        finally { if (!deviceLifetime.IsCancellationRequested) button.IsEnabled = true; }
+    }
     private async void CheckUpdateButton_Click(object sender, RoutedEventArgs args) => await viewModel.Updates.CheckAsync();
     private void CancelUpdateButton_Click(object sender, RoutedEventArgs args) => viewModel.Updates.Cancel();
     private async void InstallUpdateButton_Click(object sender, RoutedEventArgs args)

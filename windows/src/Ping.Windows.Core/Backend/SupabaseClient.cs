@@ -406,6 +406,7 @@ public sealed record SupabaseSession(
     [property: JsonPropertyName("expires_at")] DateTimeOffset ExpiresAt,
     [property: JsonPropertyName("user_id")] string UserId)
 {
+    public override string ToString() => "Supabase session (redacted)";
     [JsonIgnore]
     public bool NeedsRefresh => ExpiresAt <= DateTimeOffset.UtcNow.AddSeconds(90);
 }

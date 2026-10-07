@@ -107,6 +107,9 @@
                                     <TextBlock Text="{Binding NicknameHint}" Style="{StaticResource SetupDetail}" />
                                     <TextBlock Grid.Column="1" Text="{Binding NicknameCount}" Style="{StaticResource SetupDetail}" />
                                 </Grid>
+                                <HyperlinkButton Content="혹시 기존 계정이 있나요?" Click="ExistingAccount_Click"
+                                    FontFamily="{StaticResource PingFontFamily}" FontSize="12" Foreground="{ThemeResource PingMutedBrush}"
+                                    HorizontalAlignment="Center" Padding="4,4" />
                             </StackPanel>
                         </Border>
                     </StackPanel>

@@ -93,6 +93,17 @@ public sealed class AppCoordinator : IDisposable
 #endif
     internal void ReportAccountTransitionFailure() => settingsWindow?.ReportAccountTransitionFailure();
     internal void ReportUpdateFailure() => settingsWindow?.ReportUpdateFailure();
+    internal void ReportAccountKeyImportFailure() => settingsWindow?.ReportAccountKeyImportFailure();
+    internal async Task<bool> GetAccountKeyStatusAsync(CancellationToken token)
+    {
+        if (disposed || changingAccount || currentUid is null) throw new AccountKeyException("현재 계정이 아직 준비되지 않았어요. 연결된 후 ‘상태 확인’을 눌러 주세요.");
+        return await supabaseClient.GetAccountKeyStatusAsync(token);
+    }
+    internal async Task SetAccountKeyAsync(string key, CancellationToken token)
+    {
+        if (disposed || changingAccount || currentUid is null) throw new AccountKeyException("현재 계정이 아직 준비되지 않았어요. 연결된 후 다시 시도해 주세요.");
+        await supabaseClient.SetAccountKeyAsync(key, token);
+    }
     internal Task<IReadOnlyList<StoredAccountSummary>> GetAccountsAsync(CancellationToken token) => supabaseClient.GetAccountsAsync(token);
 
     internal async Task ShutdownForAccountChangeAsync()
@@ -524,7 +535,9 @@ public sealed class AppCoordinator : IDisposable
                 return PairingQrRenderer.Render(await this.supabaseClient.ExportDeviceHandoffAsync(token));
             }, pairingUid: () => currentUid,
             loadAccounts: token => ((App)Application.Current).GetAccountsAsync(token),
-            changeAccount: (change, token) => ((App)Application.Current).ChangeAccountAsync(change, token)));
+            changeAccount: (change, token) => ((App)Application.Current).ChangeAccountAsync(change, token),
+            loadAccountKey: token => ((App)Application.Current).GetAccountKeyStatusAsync(this, token),
+            saveAccountKey: (key, token) => ((App)Application.Current).SetAccountKeyAsync(this, key, token)));
         settingsWindow.Closed += (_, _) => settingsWindow = null;
         settingsWindow.Activate();
     }
