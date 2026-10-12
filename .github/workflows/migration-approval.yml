@@ -1,0 +1,33 @@
+name: Supabase migration approval
+on:
+  pull_request_target:
+    types: [closed]
+    branches: [main]
+permissions:
+  contents: read
+  pull-requests: read
+  issues: write
+concurrency:
+  group: migration-issue-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+jobs:
+  assign:
+    if: github.event.pull_request.merged == true && github.event.pull_request.merged_by.id != 229801971
+    runs-on: ubuntu-latest
+    steps:
+      # No checkout: repository code never receives a management credential.
+      - uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea
+        with:
+          script: |
+            const {owner,repo}=context.repo;
+            const pr=context.payload.pull_request;
+            if (context.payload.repository.id !== 1241650801 || pr.base.ref !== 'main') throw new Error('Wrong repository');
+            const changed=await github.paginate(github.rest.pulls.listFiles,{owner,repo,pull_number:pr.number,per_page:100});
+            const files=changed.filter(f=>/^supabase\/migrations\/[0-9]{14}_[A-Za-z0-9_-]+\.sql$/.test(f.filename));
+            if (!files.length) return;
+            const marker=`<!-- ping-migration-pr:${pr.number} -->`;
+            const existing=await github.paginate(github.rest.issues.listForRepo,{owner,repo,state:'all',per_page:100});
+            const found=existing.find(i=>!i.pull_request && i.body?.includes(marker));
+            if (found) return;
+            const body=[marker,'Supabase 마이그레이션은 자동 적용되지 않았습니다.',`PR: #${pr.number}`,`머지 사용자: ${pr.merged_by?.login ?? 'unknown'}`,`커밋: ${pr.merge_commit_sha}`,'',...files.map(f=>`- \`${f.filename}\` (${f.status})`),'','이 Mac의 실행기가 SQL 내용 해시와 승인 명령을 이 Issue에 추가합니다. Issue를 닫는 것만으로 승인되지 않습니다. 관리 키는 GitHub에 등록하지 마세요.'].join('\n');
+            await github.rest.issues.create({owner,repo,title:`Supabase 마이그레이션 승인 대기 — PR #${pr.number}`,body,assignees:['0mininseoul']});

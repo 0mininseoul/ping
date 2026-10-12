@@ -65,3 +65,6 @@ design/screenshots/
 
 # Subagent-driven-development scratch (ledger, briefs, review packages)
 .superpowers/
+
+# Local release coordinator test bytecode
+scripts/**/__pycache__/
