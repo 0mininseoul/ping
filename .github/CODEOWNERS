@@ -1,0 +1,10 @@
+# Release policy and cloud gate changes require the migration owner to review.
+/.github/ @0mininseoul
+/vercel.json @0mininseoul
+/vercel.ts @0mininseoul
+/vercel.toml @0mininseoul
+/scripts/release_policy/ @0mininseoul
+/scripts/supabase-ping.sh @0mininseoul
+/scripts/vercel-merge-gate.mjs @0mininseoul
+/scripts/install-release-coordinator.py @0mininseoul
+/scripts/check-supabase-credential-policy.py @0mininseoul

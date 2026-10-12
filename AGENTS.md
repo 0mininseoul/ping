@@ -50,8 +50,12 @@ Supabase CLI 작업은 반드시 `./scripts/supabase-ping.sh` wrapper로 수행�
 
 로컬 Postgres 관리 비밀번호도 `Ping Supabase database (local)` Keychain 항목에만 보관합니다. wrapper는 `db`/`link` 작업에만 이 비밀번호를 주입합니다. 외부 `SUPABASE_DB_PASSWORD`로 덮어쓰거나 GitHub에 등록하지 마세요.
 
-### 운영 서버 배포 권한
-Vercel 프로젝트 `ping`의 GitHub 자동 배포 연결은 보안을 위해 해제했습니다. GitHub push나 Windows CI의 배포물 commit만으로 운영 서버를 배포하지 마세요. 이 Mac에서 main과 배포물을 검토한 뒤 `vercel deploy --prod --scope 0minseouls-projects`로 배포합니다. 사용자 명시적 요청 없이 Git 저장소 연결이나 deploy hook을 다시 만들지 마세요.
+### 머지 사용자별 운영 릴리즈 정책
+`0mininseoul`(GitHub user ID `229801971`)이 main에 PR을 머지하면 이 Mac의 고정 실행기가 승인된 Supabase 마이그레이션 성공을 확인한 후 Vercel에 배포합니다. 다른 사용자가 머지하면 Vercel Git 배포가 이 Mac과 무관하게 실행되고, SQL 변경은 `0mininseoul`에게 GitHub Issue로 할당됩니다. 커밋 작성자/Co-authored-by가 아니라 GitHub API의 실제 `merged_by.id`를 사용합니다.
+
+보류 마이그레이션은 Issue의 내용 해시를 확인한 후 본인이 `/ping-approve-migrations <merge SHA> <manifest SHA256>` 댓글을 작성해야 적용됩니다. Issue 닫기나 다음 본인 머지는 기존 보류 SQL의 승인이 아닙니다. 앞선 미승인 SQL 때문에 적용 순서가 막히면 본인 배포도 보류합니다. 적용된 SQL 파일을 수정/삭제하지 마세요.
+
+관리 실행기는 `~/Library/Application Support/Ping Release Coordinator/`에 검토된 코드만 고정 설치합니다. 저장소 코드를 이 Mac에서 임의 실행하거나 실행기를 Git에서 자동 갱신하지 마세요. Vercel Ignore Build Step은 본인 머지의 즉시 Git 배포를 보류하도록 설정되어 있습니다. `ignoreCommand`/`vercel.ts` 등으로 이 단계를 우회하지 마세요. 자세한 설치·운영 및 승인 절차는 `docs/MERGE_RELEASE_POLICY.md`를 따릅니다. 이 정책은 웹/서버와 DB 릴리즈용이며 네이티브 앱 서명/공증/스토어 배포를 대체하지 않습니다.
 
 ### GitHub 자격 증명 재등록 금지
 Supabase URL, 공개 앱 키, service-role/secret 키, 관리 PAT를 GitHub repository/environment/organization Secrets 또는 Variables에 등록하지 마세요. CI 오류를 복구하는 명목으로 삭제한 값을 다시 업로드하는 것도 금지합니다. Windows 빌드는 Vercel의 공개 `/api/client-config`에서 publishable 앱 키만 받아 패키지에 포함합니다. 관리 PAT는 로컬 Keychain에만, 서버 secret 키는 Vercel에만 저장합니다. GitHub 관리자 권한에 대한 서버 측 차단 규칙은 이 지침과 별개이며 이 저장소의 검사로 대신할 수 없습니다.
@@ -59,7 +63,7 @@ Supabase URL, 공개 앱 키, service-role/secret 키, 관리 PAT를 GitHub repo
 ### Supabase Free 저장소
 영상은 Supabase Storage의 비공개 `ping-videos` 버킷에 `<senderUid>/<videoId>.mp4` 경로로 저장합니다. 테이블/RLS/RPC/Storage 정책은 `supabase/migrations/20260517000100_create_ping_backend.sql`이 단일 진실 출처입니다. 서버 예약 작업 없이 앱 실행 시 `ping_cleanup_expired_data()` RPC로 만료 데이터를 best-effort 정리합니다.
 
-### App 버전 — `0.3.79` (빌드 번호 `91`)
+### App 버전 — `0.3.81` (빌드 번호 `93`)
 - `project.yml` → `settings.base.MARKETING_VERSION`
 - `project.yml` → `settings.base.CURRENT_PROJECT_VERSION` — **함께 올려야 한다.**
   Sparkle은 `CFBundleShortVersionString`이 아니라 **`CFBundleVersion`(빌드 번호)로**
@@ -163,7 +167,7 @@ ping/
 - **Anonymous Auth 만 사용** — 이메일/소셜 로그인 추가 금지 (v0.2 이후).
 - **Edge Functions 없음** — 무료 플랜 유지와 단순성을 위해 클라이언트 + Postgres RPC + RLS로 처리.
 - **Storage는 비공개 버킷** — `ping-videos` 객체는 소유자 prefix 업로드, 메시지 sender/receiver 읽기 정책으로 제한.
-- **마이그레이션 변경 시 즉시 적용**: `./scripts/supabase-ping.sh db push`.
+- **마이그레이션 적용**: 머지/Issue 승인 정책에 따라 고정 실행기가 wrapper를 호출합니다. 승인 목록을 건너뛰는 일괄 `db push`를 자동 실행하지 마세요.
 - **RPC 인자 이름을 Swift 호출과 맞출 것** — PostgREST named args라 SQL 인자명 변경은 런타임 오류로 이어집니다.
 
 ---

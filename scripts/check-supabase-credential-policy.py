@@ -2,6 +2,7 @@
 """Fail CI if a workflow consumes Supabase GitHub secrets or scripts restore them."""
 from pathlib import Path
 import re
+import json
 import sys
 
 root = Path(__file__).resolve().parent.parent
@@ -16,8 +17,11 @@ for folder in (root / '.github/workflows', root / 'scripts'):
             continue
         if (re.search(r"(?:secrets|vars)\s*(?:\.\s*\w*supabase\w*|\[\s*['\"][^'\"]*supabase[^'\"]*['\"])", text, re.I)
             or (re.search(r'gh\s+(?:secret|variable)\s+set\b', text, re.I) and 'supabase' in text.lower())
-            or re.search(r'vercel\s+git\s+connect\b', text, re.I)):
+):
             violations.append(str(path.relative_to(root)))
+config = json.loads((root / 'vercel.json').read_text())
+if 'ignoreCommand' in config or (root / 'vercel.ts').exists() or (root / 'vercel.toml').exists():
+    violations.append('Vercel merge gate must remain in trusted Project Settings')
 if violations:
     print('Supabase GitHub credential storage is forbidden: ' + ', '.join(violations), file=sys.stderr)
     sys.exit(1)
