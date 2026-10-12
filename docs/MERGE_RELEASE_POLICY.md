@@ -42,10 +42,19 @@ Codex 자동화 `Ping 머지·마이그레이션 승인 처리`가 매일 오전
 
 Mac이 꺼지거나 잠자기 상태이면 본인 마이그레이션/후속 배포는 대기한다. 다른 사용자 Vercel Git 배포와 Issue 생성은 클라우드에서 계속 동작한다. 관리 토큰 만료/Keychain 오류/SQL 실패 시 본인 배포를 진행하지 않는다. 원격 이력으로 성공을 확인한 SQL은 배포 전에 적용 상태를 저장하고 재실행하지 않는다. 새 PR 처리 전과 SQL 실행 후 원격 이력을 기존 승인 해시와 대조한다. 알 수 없는 버전, 승인 없는 원격 적용, 이미 적용된 SQL 수정 또는 이력 소실을 발견하면 자동 진행을 중단한다. Vercel 실패는 마이그레이션을 반복하지 않고 배포만 재시도한다. 새 main이 이미 있으면 오래된 본인 커밋으로 운영을 되돌리지 않는다.
 
-Supabase 관리 토큰은 2026-10-14 만료 예정이며, 갱신도 이 Mac Keychain에서만 해야 한다. 키를 `.env`, 로그, GitHub Secrets/Variables, 공유 connector로 옮기지 않는다. 실행기는 raw CLI/auth 출력을 GitHub에 게시하지 않는다.
+Supabase 관리 토큰은 2026-10-12에 Ping 프로젝트 범위로 갱신했으며 2027-01-10 만료 예정이다. 갱신도 이 Mac의 비동기화 login Keychain에서만 해야 한다. 키를 `.env`, 로그, GitHub Secrets/Variables, 공유 connector로 옮기지 않는다. 실행기는 raw CLI/auth 출력을 GitHub에 게시하지 않는다.
 
 다른 사용자 변경은 새 DB 스키마가 적용되기 전에도 기존 스키마에서 동작해야 한다. 이 정책은 마이그레이션 권한을 제한하며 Vercel의 서버 secret 키를 사용하는 코드의 데이터 권한까지 개인에게 독점시키지는 않는다. 다른 기기에서 같은 GitHub 계정으로 머지해도 같은 사용자로 판단한다.
 
 ## 네이티브 앱 릴리즈
 
 이 정책은 Vercel 웹·푸시 서버와 Supabase 변경용이다. Mac 변경은 서명/공증/DMG·Sparkle 배포, Windows 변경은 설치파일 CI 게시, iPhone/Watch 변경은 App Store 업로드/심사/출시가 별도로 필요하다. Cloudflare/OCI 배포는 현재 저장소의 릴리즈 단계에 없다.
+
+## 2026-10-12 관리 토큰 갱신 검증
+
+- 토큰 이름: `ping-this-mac-2026-10-12`, 리소스는 0MIN 조직의 Ping (`qxjtprxvjmaxlbtljcjw`) 하나만 선택했다. 유효 기간은 90일이다.
+- 권한은 Project Settings·API Keys·API Key Secrets·Connection Pooling의 읽기, Database·Migrations의 읽기/쓰기로 제한했다. CLI guard에 필요한 Projects (account-wide) 읽기는 목록 API 용도이며 실제 목록은 Ping 한 프로젝트만 반환하는 것을 확인했다. 조직 설정·멤버 관리 권한은 없다.
+- 관리 API에서 Ping 프로젝트/조직 확인 및 기존 마이그레이션 53개 조회에 성공했다. 다른 프로젝트 접근은 HTTP 403으로 거부됐다.
+- 새 토큰은 기존 로컬 login Keychain 항목을 갱신했다. 토큰 값을 파일·명령행 인자·GitHub·Vercel·공유 connector에 보관하지 않았다.
+- 기존 `ping-this-mac-2026-10-07` 토큰을 새 토큰 검증 후 폐기했고, Dashboard에는 새 토큰만 남아 있음을 확인했다. 설치된 실행기도 정상 종료했으며 보류 SQL/본인 릴리즈는 모두 0건이다.
+- 공개 앱 키와 서버 API 키는 변경하지 않았다. macOS 운영 appcast 및 이 Mac의 설치 버전은 0.3.81(빌드 93)이며, 그 배포 이후 Mac 런타임 변경이 없어 신규 앱 릴리즈는 필요하지 않다.

@@ -13,8 +13,8 @@
 - [x] scripts/release_policy/github.py·repository.py·infrastructure.py: GitHub API, bare Git 캐시, 안전한 파일 추출, 로컬 Keychain API 조회, 승인된 SQL만 포함하는 임시 CLI 작업 경로 및 Vercel 원격 배포.
 - [x] scripts/release_policy/runner.py: 로컬 승인 목록/재시도 상태를 저장하고 Mac 재시작 후 이어서 처리. GitHub Issue를 닫는 것만으로 승인하지 않는다.
 - [x] 로컬 설치 및 Codex heartbeat: 관리 실행기와 wrapper를 Application Support에 복사해 고정. 저장소에서 자동 업데이트하지 않음. 잠자기/오프라인일 때 본인 마이그레이션·배포는 대기.
-- [ ] GitHub/Vercel 연결 활성화, 실제 본인 PR 머지로 배포 보류→마이그레이션 확인→배포 흐름 검증. 다른 사용자 분기는 위조 계정을 사용하지 않고 테스트 fixture로 검증.
-- [ ] AGENTS.md 및 운영 가이드 갱신, commit/push, 운영 URL 검증.
+- [x] GitHub/Vercel 연결 활성화, 실제 본인 PR 머지로 배포 보류→마이그레이션 확인→배포 흐름 검증. 다른 사용자 분기는 위조 계정을 사용하지 않고 테스트 fixture로 검증.
+- [x] AGENTS.md 및 운영 가이드 갱신, commit/push, 운영 URL 검증.
 
 보류 승인: Issue에 표시된 `/ping-approve-migrations <merge SHA> <manifest SHA256>`를 0mininseoul 계정으로 댓글 작성. 파일 내용이 바뀌면 승인은 무효. 앞선 미승인 SQL이 뒤의 승인 SQL보다 오래되면 뒤 SQL 및 본인 배포를 보류하고 GitHub 커밋 상태에 사유 기록.
 
@@ -23,3 +23,5 @@
 한계: GitHub 계정 기준이며 물리적 기기를 구분하지 않는다. 서버 코드 배포 권한을 가진 co-author는 서버 secret 키의 권한을 간접적으로 사용할 수 있다. 이 정책은 관리자 키와 마이그레이션 실행을 통제한다. 새 스키마가 없는 동안에도 동작하는 서버 코드만 다른 사용자 자동 배포에 사용해야 한다. 네이티브 앱 서명/공증/스토어 심사 과정은 이 웹·DB 정책과 별개다.
 
 검증: Python 23개·Node 5개 테스트 및 자격 증명 정책 검사가 통과했다. 독립 코드 검토의 DB 성공 후 배포 실패 복구 문제와 실행 중 원격 이력 변경 문제를 수정했다. SQL 성공 이력을 배포 전에 원자적으로 저장하며, 새 PR 처리 전 및 SQL 실행 후 원격 적용 이력을 승인 목록과 대조한다.
+
+운영 검증 완료: PR #50을 본인 계정으로 머지한 커밋 `3a64429f1577041123db376b726140a1ef15e90a`의 Git 배포는 CANCELED로 보류되었다. 고정 Mac 실행기는 DB 적용 이력 53개를 확인한 후 CLI 배포 `dpl_6e8UiJAa99h1HDvXSPCdhFKTAKsX`를 운영으로 승격했고, `0minping.vercel.app`의 alias가 해당 배포를 가리키는 것과 `/`, `/appcast.xml`, `/api/client-config`의 HTTP 200을 확인했다. 자동화 주기는 사용자 설정대로 매일 오전 9시다. 관리 토큰은 운영 가이드의 2026-10-12 갱신 기록을 따른다.
