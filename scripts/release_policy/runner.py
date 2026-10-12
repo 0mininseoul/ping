@@ -53,8 +53,9 @@ def tick(home,initialize=False):
             pending=[e for n,e in state['ledger'].items() if e['approved'] and n[:14] not in applied]
             jobs=[j for j in state['jobs'].values() if j['status']=='pending']
             if pending or jobs:
+                before=json.dumps(state,sort_keys=True)
                 applied=infra.history();state['applied']=sorted(applied)
-                applied=engine.release(state,inventory,applied,infra);state['applied']=sorted(applied);changed=True;save(statefile,state)
+                applied=engine.release(state,inventory,applied,infra);state['applied']=sorted(applied);changed=changed or before!=json.dumps(state,sort_keys=True);save(statefile,state)
                 for issue in {e.get('issue') for e in state['ledger'].values()}-{None}:
                     entries=[(n,e) for n,e in state['ledger'].items() if e.get('issue')==issue]
                     if entries and all(e['approved'] and n[:14] in applied for n,e in entries):
