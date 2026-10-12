@@ -21,6 +21,49 @@ class EngineTests(unittest.TestCase):
     def test_owner_migration_finishes_before_deployment(self):
         s=self.state();f=Effects();self.e.ingest(s,self.pr(),{NAME:'hash'},{NAME},set(),f);self.e.release(s,{NAME:'hash'},set(),f)
         self.assertEqual([x[0] for x in f.calls],['migrate','deploy'])
+    def test_migration_success_is_retained_when_deploy_fails(self):
+        s=self.state();f=Effects();self.e.ingest(s,self.pr(),{NAME:'hash'},{NAME},set(),f)
+        def failed_deploy(sha):raise RuntimeError('Vercel unavailable')
+        f.deploy=failed_deploy
+        with self.assertRaises(RuntimeError):self.e.release(s,{NAME:'hash'},set(),f)
+        self.assertEqual(s.get('applied'),[NAME[:14]])
+        with self.assertRaises(ValueError):self.e.ingest(s,self.pr(),{NAME:'changed'},{NAME},set(s['applied']),f)
+
+    def test_remote_success_reconciles_before_applied_sql_modification(self):
+        s=self.state();f=Effects();self.e.ingest(s,self.pr(),{NAME:'hash'},{NAME},set(),f)
+        s['applied']=[]
+        applied=self.e.reconcile_history(s,{NAME[:14]})
+        with self.assertRaises(ValueError):self.e.ingest(s,self.pr(),{NAME:'changed'},{NAME},applied,f)
+        self.assertEqual(s['ledger'][NAME]['sha256'],'hash')
+
+    def test_unknown_or_unapproved_remote_migration_is_rejected(self):
+        s=self.state()
+        with self.assertRaises(ValueError):self.e.reconcile_history(s,{NAME[:14]})
+        self.e.ingest(s,self.pr(False),{NAME:'hash'},{NAME},set(),Effects())
+        with self.assertRaises(ValueError):self.e.reconcile_history(s,{NAME[:14]})
+
+    def test_history_cannot_silently_lose_applied_versions(self):
+        s=self.state();s['applied']=[NAME[:14]]
+        with self.assertRaises(ValueError):self.e.reconcile_history(s,set())
+
+    def test_migration_checkpoint_precedes_deployment(self):
+        s=self.state();f=Effects();self.e.ingest(s,self.pr(),{NAME:'hash'},{NAME},set(),f)
+        def checkpoint():
+            self.assertEqual(s['applied'],[NAME[:14]])
+            f.calls.append(('persist',))
+        self.e.release(s,{NAME:'hash'},set(),f,checkpoint)
+        self.assertEqual([x[0] for x in f.calls],['migrate','persist','deploy'])
+
+    def test_post_migration_history_rejects_unapproved_or_missing_versions(self):
+        for remote,prior in (({NAME[:14],'20261013000000'},set()),({NAME[:14]},{'20261011000000'})):
+            with self.subTest(remote=remote):
+                s=self.state();s['applied']=sorted(prior);f=Effects()
+                self.e.ingest(s,self.pr(),{NAME:'hash'},{NAME},prior,f)
+                f.migrate=lambda names,inventory:remote
+                with self.assertRaises(ValueError):self.e.release(s,{NAME:'hash'},prior,f)
+                self.assertEqual(s['applied'],sorted(prior))
+                self.assertNotIn('deploy',[x[0] for x in f.calls])
+
     def test_other_merger_never_runs_sql_or_local_deploy(self):
         s=self.state();f=Effects();self.e.ingest(s,self.pr(False),{NAME:'hash'},{NAME},set(),f);self.e.release(s,{NAME:'hash'},set(),f)
         self.assertEqual(f.calls,[('issue',1)])

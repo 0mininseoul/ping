@@ -35,8 +35,11 @@ def tick(home,initialize=False):
         state=json.loads(statefile.read_text());infra=Infrastructure(config,home,repo,github,state);applied=set(state['applied'])
         changed=False
         try:
-            for pr in github.merged_since(state['cutoff']):
-                if pr['number'] in state['seen']:continue
+            new_prs=[pr for pr in github.merged_since(state['cutoff']) if pr['number'] not in state['seen']]
+            if new_prs:
+                applied=engine.reconcile_history(state,infra.history())
+                save(statefile,state)
+            for pr in new_prs:
                 snapshot=repo.inventory(pr['merge_commit_sha'])
                 engine.ingest(state,pr,snapshot,github.changed(pr['number']),applied,infra)
                 state['seen'].append(pr['number']);changed=True;save(statefile,state)
@@ -54,8 +57,9 @@ def tick(home,initialize=False):
             jobs=[j for j in state['jobs'].values() if j['status']=='pending']
             if pending or jobs:
                 before=json.dumps(state,sort_keys=True)
-                applied=infra.history();state['applied']=sorted(applied)
-                applied=engine.release(state,inventory,applied,infra);state['applied']=sorted(applied);changed=changed or before!=json.dumps(state,sort_keys=True);save(statefile,state)
+                applied=engine.reconcile_history(state,infra.history())
+                save(statefile,state)
+                applied=engine.release(state,inventory,applied,infra,lambda:save(statefile,state));state['applied']=sorted(applied);changed=changed or before!=json.dumps(state,sort_keys=True);save(statefile,state)
                 for issue in {e.get('issue') for e in state['ledger'].values()}-{None}:
                     entries=[(n,e) for n,e in state['ledger'].items() if e.get('issue')==issue]
                     if entries and all(e['approved'] and n[:14] in applied for n,e in entries):

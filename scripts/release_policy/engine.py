@@ -1,5 +1,16 @@
 """Idempotent state transitions separated from network and credentials."""
-from .policy import applicable, approved_comment, carry_approval, check_unique_versions, is_owner, manifest_digest
+from .policy import applicable, approved_comment, check_unique_versions, is_owner, manifest_digest
+
+
+def reconcile_history(state, remote):
+    cached = set(state.get('applied', []))
+    if not cached.issubset(remote):
+        raise ValueError('Remote history lost applied migrations; manual review required')
+    approved = {n[:14] for n,e in state['ledger'].items() if e['approved']}
+    if not (remote - cached).issubset(approved):
+        raise ValueError('Remote history includes unapproved or unknown SQL; manual review required')
+    state['applied'] = sorted(remote)
+    return set(remote)
 
 
 def ingest(state, pr, inventory, changed, applied, effects):
@@ -40,7 +51,7 @@ def approve(state, commit, manifest, comment):
     return True
 
 
-def release(state, inventory, applied, effects):
+def release(state, inventory, applied, effects, checkpoint=None):
     ready, blocked = applicable(state['ledger'], applied)
     pending = [(sha,j) for sha,j in state['jobs'].items() if j['status'] == 'pending']
     if blocked:
@@ -52,7 +63,11 @@ def release(state, inventory, applied, effects):
         required = {n[:14] for n in ready}
         if not required.issubset(migrated):
             raise RuntimeError('Remote migration history did not confirm success')
-        applied = applied | migrated
+        if not applied.issubset(migrated):
+            raise ValueError('Remote history lost applied migrations; manual review required')
+        applied = reconcile_history(state, migrated)
+        if checkpoint:
+            checkpoint()
     for sha, job in pending:
         if any(inventory.get(n) != digest for n,digest in job['files'].items()):
             effects.status(sha, 'failure', 'Migration contents changed after this merge')
