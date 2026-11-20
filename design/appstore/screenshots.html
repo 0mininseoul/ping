@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ping App Store screenshots</title>
+<!--
+  App Store 프리뷰 이미지 소스. 렌더링: design/appstore/render.sh
+  ?s=1..7 로 슬라이드 선택, ?w=414&h=896 으로 6.5" 비율(1242x2688) 렌더.
+  UI 재현은 PingMobile/*.swift (InboxView, ThreadView, DesktopInstallGuideView)를 따른다.
+-->
+<style>
+  :root {
+    --ping-blue: #2E6CF6;
+    --wash: #E9F1FE;
+    --ink: #16191F;
+    --slate: #5B6472;
+    --ios-blue: #007AFF;
+    --ios-green: #34C759;
+    --ios-red: #FF3B30;
+    --ios-gray: #8E8E93;
+    --ios-grouped: #F2F2F7;
+    --ios-fill: #E9E9EB;
+    --headline: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", sans-serif;
+    --ui: -apple-system, "SF Pro Text", "Apple SD Gothic Neo", sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 440px; height: 956px; overflow: hidden; background: var(--wash); }
+  body { font-family: var(--ui); color: var(--ink); -webkit-font-smoothing: antialiased; }
+  .slide { position: relative; width: 440px; height: 956px; overflow: hidden; background: var(--wash); }
+  .slide[hidden] { display: none; }
+
+  /* ---------- Clova-style headline (slides 2~7) ---------- */
+  .head { position: absolute; top: 74px; left: 0; right: 0; text-align: center; font-family: var(--headline); letter-spacing: -0.035em; }
+  .head h2 { font-size: 34px; line-height: 1.32; color: var(--ink); }
+  .head h2 .l1 { display: block; font-weight: 500; }
+  .head h2 .l2 { display: block; font-weight: 700; }
+  .head p { margin-top: 16px; font-size: 16px; font-weight: 500; color: var(--slate); letter-spacing: -0.02em; }
+
+  /* ---------- white app card, cropped at canvas bottom ---------- */
+  .card {
+    position: absolute; left: 38px; right: 38px; top: 262px; bottom: -40px;
+    background: #fff; border-radius: 38px; overflow: hidden;
+    box-shadow: 0 18px 50px rgba(31, 79, 209, 0.10), 0 2px 6px rgba(22, 25, 31, 0.04);
+  }
+  .card.flush { bottom: 0; border-radius: 38px 38px 0 0; }
+  .card.grouped { background: var(--ios-grouped); }
+
+  /* ---------- iOS chrome ---------- */
+  .glass {
+    background: rgba(255,255,255,0.78); border: 0.5px solid rgba(0,0,0,0.06);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+  }
+  .navbar { position: relative; height: 62px; display: flex; align-items: center; justify-content: center; padding: 0 14px; }
+  .navbar .title { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+  .navbar .back { position: absolute; left: 14px; top: 9px; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; }
+  .back svg { width: 13px; height: 22px; }
+
+  /* inbox */
+  .inbox-top { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px 0; }
+  .pill { height: 44px; border-radius: 22px; display: flex; align-items: center; gap: 18px; padding: 0 18px; font-size: 17px; }
+  .pill .edit { color: var(--ios-blue); }
+  .pill .disc { color: var(--ios-red); }
+  .pill.status { gap: 5px; padding: 0 14px; font-size: 11px; font-weight: 500; color: var(--ios-green); }
+  .pill.status svg { width: 15px; height: 15px; }
+  .large-title { font-size: 34px; font-weight: 700; letter-spacing: 0.01em; padding: 14px 20px 10px; }
+  .list { margin: 0 16px; background: #fff; border-radius: 26px; overflow: hidden; }
+  .row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; position: relative; }
+  .row + .row::before { content: ""; position: absolute; top: 0; left: 72px; right: 0; height: 0.5px; background: rgba(60,60,67,0.18); }
+  .avatar { width: 44px; height: 44px; border-radius: 50%; background: rgba(0,122,255,0.15); color: var(--ios-blue); display: grid; place-items: center; font-size: 17px; font-weight: 600; flex: none; }
+  .row .meta { flex: 1; min-width: 0; }
+  .row .name { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+  .row .sub { font-size: 12px; color: var(--ios-gray); margin-top: 2px; }
+  .badge { min-width: 22px; height: 20px; padding: 0 7px; border-radius: 10px; background: var(--ios-red); color: #fff; font-size: 11px; font-weight: 700; display: grid; place-items: center; }
+  .chev { width: 8px; height: 14px; flex: none; }
+  .list-footer { padding: 8px 36px; font-size: 13px; line-height: 1.38; color: var(--ios-gray); }
+
+  /* thread */
+  .thread { position: absolute; left: 0; right: 0; top: 62px; bottom: 62px; padding: 6px 14px; display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; }
+  .msg { display: flex; flex-direction: column; gap: 3px; max-width: 80%; }
+  .msg.in { align-self: flex-start; align-items: flex-start; }
+  .msg.out { align-self: flex-end; align-items: flex-end; }
+  .sender { font-size: 11px; color: var(--ios-gray); padding-left: 2px; }
+  .bubble { font-size: 17px; line-height: 1.29; padding: 8px 12px; border-radius: 18px; letter-spacing: -0.01em; }
+  .in .bubble { background: var(--ios-fill); color: #000; }
+  .out .bubble { background: var(--ios-blue); color: #fff; }
+  .clip { border-radius: 16px; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.06); position: relative; }
+  .clip.face { width: 150px; height: 150px; }
+  .clip.screen { width: 190px; height: 107px; }
+  .reacts { display: flex; gap: 4px; }
+  .react { font-size: 12px; padding: 3px 7px; border-radius: 12px; background: var(--ios-grouped); display: flex; gap: 2px; align-items: center; }
+  .react.mine { background: rgba(0,122,255,0.20); }
+  .react b { font-size: 11px; font-weight: 500; }
+  .quote { font-size: 12px; color: var(--ios-gray); padding: 5px 10px; border-left: 2px solid rgba(0,122,255,0.5); background: rgba(118,118,128,0.08); border-radius: 8px; max-width: 220px; }
+  .quote strong { font-weight: 600; margin-right: 4px; }
+
+  .replybar { position: absolute; left: 0; right: 0; bottom: 0; height: 62px; display: flex; align-items: center; gap: 10px; padding: 0 12px 8px; background: rgba(249,249,249,0.94); border-top: 0.5px solid rgba(0,0,0,0.08); }
+  .field { flex: 1; height: 38px; border-radius: 19px; background: var(--ios-grouped); display: flex; align-items: center; padding: 0 14px; font-size: 17px; color: #C4C4C8; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; }
+  .field.typed { color: #000; }
+  .send { width: 30px; height: 30px; flex: none; }
+
+  /* floating, breaking out of the card (Clova search-bar move) */
+  .float { position: absolute; z-index: 5; }
+  .notif {
+    width: 384px; border-radius: 26px; padding: 13px 14px; display: flex; gap: 11px; align-items: center;
+    background: #fff;
+    box-shadow: 0 22px 48px rgba(22,25,31,0.16);
+  }
+  .notif .icon { width: 40px; height: 40px; border-radius: 10px; flex: none; }
+  .notif .txt { flex: 1; min-width: 0; }
+  .notif .t { font-size: 15px; font-weight: 600; display: flex; justify-content: space-between; letter-spacing: -0.01em; }
+  .notif .t span { font-size: 13px; font-weight: 400; color: var(--ios-gray); }
+  .notif .b { font-size: 15px; margin-top: 1px; letter-spacing: -0.01em; }
+  .notif .thumb { width: 40px; height: 40px; border-radius: 8px; overflow: hidden; flex: none; }
+
+  .picker { display: flex; gap: 16px; padding: 10px 18px; border-radius: 40px; background: rgba(255,255,255,0.94); border: 0.5px solid rgba(0,0,0,0.04); box-shadow: 0 16px 36px rgba(22,25,31,0.18); }
+  .picker span { font-size: 31px; width: 38px; height: 38px; display: grid; place-items: center; line-height: 1; }
+
+  .dictation { display: flex; align-items: center; gap: 12px; padding: 12px 20px 12px 14px; border-radius: 34px; background: #fff; box-shadow: 0 16px 36px rgba(31,79,209,0.18); }
+  .dictation .mic { width: 40px; height: 40px; border-radius: 50%; background: var(--ios-blue); display: grid; place-items: center; }
+  .dictation .mic svg { width: 16px; height: 22px; }
+  .wave { display: flex; gap: 3px; align-items: center; height: 26px; }
+  .wave i { width: 3px; border-radius: 2px; background: var(--ios-blue); }
+  .dictation em { white-space: nowrap; font-style: normal; font-size: 15px; font-weight: 600; color: var(--ios-blue); }
+
+  /* ---------- hero ---------- */
+  .hero { background: var(--ping-blue); }
+  .hero .ring { position: absolute; width: 560px; height: 560px; left: 70px; top: 420px; border-radius: 50%;
+    border: 46px solid rgba(255,255,255,0.10); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18), 0 0 0 1px rgba(255,255,255,0.12); }
+  .hero .ring::after { content: ""; position: absolute; inset: -46px; border-radius: 50%; border: 3px solid transparent;
+    border-right-color: #9CC2FF; border-bottom-color: #9CC2FF; transform: rotate(10deg); filter: drop-shadow(0 0 8px #7FB0FF); opacity: .9; }
+  .hero-copy { position: absolute; left: 34px; right: 30px; top: 72px; font-family: var(--headline); color: #fff; letter-spacing: -0.04em; }
+  .hero-copy h1 { font-size: 44px; line-height: 1.24; font-weight: 700; }
+  .hero-copy p { margin-top: 22px; font-size: 17px; line-height: 1.55; font-weight: 500; color: rgba(255,255,255,0.86); letter-spacing: -0.02em; }
+  .phone { position: absolute; width: 330px; height: 690px; border-radius: 56px; background: #000; padding: 11px;
+    box-shadow: 0 0 0 2px #2b2f36, 0 40px 80px rgba(8, 26, 80, 0.45); }
+  .phone .screen { width: 100%; height: 100%; border-radius: 46px; overflow: hidden; background: #000; position: relative; color: #fff; }
+  .hero .phone { left: 128px; top: 356px; transform: rotate(-16deg); }
+
+  .dark .navbar .title { color: #fff; }
+  .dark .back { background: rgba(255,255,255,0.12); }
+  .dark .in .bubble { background: #26262A; color: #fff; }
+  .dark .sender { color: #98989F; }
+  .dark .replybar { background: rgba(22,22,24,0.94); border-top-color: rgba(255,255,255,0.08); }
+  .dark .field { background: #1C1C1E; color: #5A5A5F; }
+  .dark .react { background: #1C1C1E; color: #fff; }
+
+  /* watch */
+  .watch { position: absolute; left: 50%; transform: translateX(-50%); width: 292px; height: 352px; border-radius: 84px;
+    background: linear-gradient(145deg, #3a3f47, #15181d); padding: 16px; box-shadow: 0 36px 70px rgba(31,79,209,0.22), inset 0 0 0 2px rgba(255,255,255,0.10); }
+  .watch .crown { position: absolute; right: -14px; top: 92px; width: 16px; height: 62px; border-radius: 8px; background: linear-gradient(90deg, #2b2f36, #555b65); }
+  .watch .button { position: absolute; right: -9px; top: 182px; width: 10px; height: 54px; border-radius: 5px; background: #2b2f36; }
+  .watch .face { width: 100%; height: 100%; border-radius: 68px; background: #000; overflow: hidden; position: relative; }
+  .strap { position: absolute; left: 50%; transform: translateX(-50%); width: 212px; background: linear-gradient(90deg, #c9d6ec, #dfe8f7 50%, #c9d6ec); }
+  .strap.top { top: 230px; height: 120px; border-radius: 30px 30px 0 0; }
+  .strap.bottom { top: 660px; height: 340px; }
+
+  /* qr */
+  .guide { padding: 64px 26px 0; text-align: center; }
+  .guide .mb { width: 72px; height: 50px; margin: 0 auto 20px; display: block; }
+  .guide h3 { font-size: 22px; line-height: 1.3; font-weight: 700; letter-spacing: -0.02em; }
+  .guide .gsub { margin-top: 8px; font-size: 14px; color: var(--ios-gray); }
+  .install { margin-top: 20px; background: #F2F2F7; border-radius: 16px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; text-align: left; }
+  .install .k { font-size: 12px; color: var(--ios-gray); }
+  .install .v { font-size: 16px; font-weight: 600; color: var(--ios-blue); margin-top: 3px; }
+  .install .act { width: 40px; height: 40px; border-radius: 50%; background: rgba(0,122,255,0.12); display: grid; place-items: center; flex: none; }
+  .install .act svg { width: 18px; height: 18px; }
+  .qr-btn { margin-top: 20px; height: 50px; border-radius: 25px; background: var(--ios-blue); color: #fff; font-size: 17px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .qr-btn svg { width: 20px; height: 20px; }
+  .guide .hint { margin-top: 8px; font-size: 13px; color: var(--ios-gray); }
+  .qr-float { width: 168px; height: 168px; border-radius: 30px; background: #fff; padding: 20px; box-shadow: 0 22px 48px rgba(31,79,209,0.20); }
+  .qr-float svg { width: 100%; height: 100%; display: block; }
+</style>
+</head>
+<body>
+
+<!-- 1. Hero ------------------------------------------------------------->
+<section class="slide hero" data-s="1">
+  <div class="hero-copy">
+    <h1>말보다 빠른 안부,<br>3초 영상 메시지<br>Ping</h1>
+    <p>Mac·PC에서 단축키 한 번으로 찍은 3초 영상이<br>iPhone과 Apple Watch로 바로 도착해요.</p>
+  </div>
+  <div class="ring"></div>
+  <div class="phone"><div class="screen dark">
+    <div style="height:54px"></div>
+    <div class="navbar"><div class="back"><svg viewBox="0 0 13 22"><path d="M11 2 2 11l9 9" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="title">지민</div></div>
+    <div class="thread" style="top:116px">
+      <div class="msg in"><div class="sender">지민</div><div class="clip face" data-art="jimin-cafe"></div><div class="reacts"><div class="react">❤️</div></div></div>
+      <div class="msg in"><div class="bubble">회의 끝!! 오늘 저녁 뭐 먹지?</div></div>
+      <div class="msg out"><div class="clip screen" data-art="me-code"></div></div>
+      <div class="msg out"><div class="bubble">배포만 끝내고 갈게 7시!</div></div>
+    </div>
+    <div class="replybar"><div class="field">메시지 입력 (마이크로 받아쓰기)</div><svg class="send" data-icon="send-off"></svg></div>
+  </div></div>
+</section>
+
+<!-- 2. Notification ----------------------------------------------------->
+<section class="slide" data-s="2" hidden>
+  <div class="head"><h2><span class="l1">ping이 도착하면</span><span class="l2">알림으로 바로 확인</span></h2><p>보내는 건 Mac·PC, 받는 건 iPhone에서</p></div>
+  <div class="card grouped" style="top:352px">
+    <div class="inbox-top">
+      <div class="pill glass"><span class="edit">편집</span><span class="disc">연결 해제</span></div>
+      <div class="pill glass status"><svg data-icon="seal"></svg>연결됨</div>
+    </div>
+    <div class="large-title">Ping</div>
+    <div class="list">
+      <div class="row"><div class="avatar">지</div><div class="meta"><div class="name">지민</div><div class="sub">받은 ping과 대화 보기</div></div><div class="badge">2</div><svg class="chev" data-icon="chev"></svg></div>
+      <div class="row"><div class="avatar">우</div><div class="meta"><div class="name">우리 가족</div><div class="sub">받은 ping과 대화 보기</div></div><svg class="chev" data-icon="chev"></svg></div>
+      <div class="row"><div class="avatar">주</div><div class="meta"><div class="name">주말 러닝 크루</div><div class="sub">받은 ping과 대화 보기</div></div><div class="badge">5</div><svg class="chev" data-icon="chev"></svg></div>
+      <div class="row"><div class="avatar">민</div><div class="meta"><div class="name">민수</div><div class="sub">받은 ping과 대화 보기</div></div><svg class="chev" data-icon="chev"></svg></div>
+    </div>
+    <div class="list-footer">ping 영상은 Mac·PC에서 보내요. 여기선 받은 ping을 보고 빠르게 답할 수 있어요.</div>
+  </div>
+  <div class="float notif" style="left:28px; top:262px; transform: translateY(14px) scale(0.93); background:#F4F7FD; box-shadow: 0 12px 30px rgba(22,25,31,0.10)">
+    <img class="icon" src="../../PingMobile/Assets.xcassets/AppIcon.appiconset/AppIcon1024.png" alt="">
+    <div class="txt"><div class="t">엄마<span>5분 전</span></div><div class="b">ping 영상 메시지</div></div>
+    <div class="thumb" data-art="mom-kitchen"></div>
+  </div>
+  <div class="float notif" style="left:28px; top:262px">
+    <img class="icon" src="../../PingMobile/Assets.xcassets/AppIcon.appiconset/AppIcon1024.png" alt="">
+    <div class="txt"><div class="t">지민<span>지금</span></div><div class="b">ping 영상 메시지</div></div>
+    <div class="thumb" data-art="jimin-cafe"></div>
+  </div>
+</section>
+
+<!-- 3. Thread / playback ------------------------------------------------>
+<section class="slide" data-s="3" hidden>
+  <div class="head"><h2><span class="l1">받은 3초 영상은</span><span class="l2">탭 한 번에 바로 재생</span></h2><p>얼굴만, 또는 화면과 얼굴을 함께 담아요</p></div>
+  <div class="card flush">
+    <div class="navbar"><div class="back glass"><svg viewBox="0 0 13 22"><path d="M11 2 2 11l9 9" fill="none" stroke="#000" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="title">지민</div></div>
+    <div class="thread">
+      <div class="msg in"><div class="sender">지민</div><div class="clip face" data-art="jimin-cafe"></div></div>
+      <div class="msg in"><div class="bubble">회의 끝!! 오늘 저녁 뭐 먹지?</div></div>
+      <div class="msg out"><div class="clip screen" data-art="me-code"></div><div class="reacts"><div class="react">😂</div></div></div>
+      <div class="msg out"><div class="bubble">배포만 끝내고 갈게 7시!</div></div>
+      <div class="msg in"><div class="sender">지민</div><div class="clip screen" data-art="jimin-slides"></div><div class="reacts"><div class="react mine">❤️</div></div></div>
+    </div>
+    <div class="replybar"><div class="field">메시지 입력 (마이크로 받아쓰기)</div><svg class="send" data-icon="send-off"></svg></div>
+  </div>
+  <div class="float" style="left:250px; top:240px; width:158px; height:158px; border-radius:50%; overflow:hidden; box-shadow: 0 0 0 5px #fff, 0 20px 44px rgba(31,79,209,0.25);" data-art="jimin-wave"></div>
+  <svg class="float" style="left:240px; top:230px; width:178px; height:178px" viewBox="0 0 178 178"><circle cx="89" cy="89" r="86" fill="none" stroke="#2E6CF6" stroke-width="5" stroke-linecap="round" stroke-dasharray="540" stroke-dashoffset="190" transform="rotate(-90 89 89)"/></svg>
+</section>
+
+<!-- 4. Dictation reply -------------------------------------------------->
+<section class="slide" data-s="4" hidden>
+  <div class="head"><h2><span class="l1">말로 하면 글로,</span><span class="l2">받아쓰기로 빠른 답장</span></h2><p>영상은 책상에서, 답장은 손안에서</p></div>
+  <div class="card flush">
+    <div class="navbar"><div class="back glass"><svg viewBox="0 0 13 22"><path d="M11 2 2 11l9 9" fill="none" stroke="#000" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="title">우리 가족</div></div>
+    <div class="thread" style="bottom:176px">
+      <div class="msg in"><div class="sender">엄마</div><div class="clip face" data-art="mom-kitchen"></div><div class="reacts"><div class="react">❤️ <b>2</b></div></div></div>
+      <div class="msg out"><div class="bubble">엄마 머리 자르셨네! 잘 어울려요 😍</div></div>
+      <div class="msg in"><div class="sender">엄마</div><div class="bubble">이번 주말에 밥 먹으러 올 거지?</div></div>
+      <div class="msg in"><div class="sender">아빠</div><div class="bubble">김치찌개 끓여놓는다 👍</div></div>
+    </div>
+    <div class="replybar"><div class="field typed">당연하죠! 토요일 점심에 갈게요</div><svg class="send" data-icon="send-on"></svg></div>
+  </div>
+  <div class="float dictation" style="left:50%; transform: translateX(-50%); top:796px">
+    <div class="mic"><svg viewBox="0 0 16 22"><rect x="4" y="0" width="8" height="14" rx="4" fill="#fff"/><path d="M1 10a7 7 0 0 0 14 0M8 17v4" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></div>
+    <div class="wave" id="wave"></div>
+    <em>받아쓰는 중</em>
+  </div>
+</section>
+
+<!-- 5. Reactions & reply ------------------------------------------------>
+<section class="slide" data-s="5" hidden>
+  <div class="head"><h2><span class="l1">길게 눌러서</span><span class="l2">이모지 반응과 답장</span></h2><p>영상에도, 메시지에도 바로 반응해요</p></div>
+  <div class="card flush">
+    <div class="navbar"><div class="back glass"><svg viewBox="0 0 13 22"><path d="M11 2 2 11l9 9" fill="none" stroke="#000" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="title">주말 러닝 크루</div></div>
+    <div class="thread">
+      <div class="msg in"><div class="sender">도윤</div><div class="bubble">다들 이번 주 몇 km 뛰었어?</div></div>
+      <div class="msg out"><div class="bubble">난 아직 12km… 반성 중</div></div>
+      <div class="msg in"><div class="sender">서연</div><div class="bubble">일요일 7시 한강 10km 가능?</div><div class="reacts"><div class="react mine">👍 <b>3</b></div></div></div>
+      <div class="msg in"><div class="sender">도윤</div><div class="clip face" data-art="doyun-run"></div><div class="reacts"><div class="react">😂 <b>2</b></div><div class="react">🔥</div></div></div>
+      <div class="msg out"><div class="quote"><strong>도윤</strong>ping 영상</div><div class="bubble">기록 미쳤다 ㅋㅋ 나도 갈게</div></div>
+    </div>
+    <div class="replybar"><div class="field">메시지 입력 (마이크로 받아쓰기)</div><svg class="send" data-icon="send-off"></svg></div>
+  </div>
+  <div class="float picker" style="left:14px; top:600px"><span>👍</span><span>❤️</span><span>😂</span><span>😮</span><span>😢</span><span>🙏</span></div>
+</section>
+
+<!-- 6. Apple Watch ------------------------------------------------------>
+<section class="slide" data-s="6" hidden>
+  <div class="head"><h2><span class="l1">Apple Watch에서도</span><span class="l2">손목 위로 바로 재생</span></h2><p>휴대폰을 꺼내지 않아도 표정이 보여요</p></div>
+  <div class="strap top"></div>
+  <div class="strap bottom"></div>
+  <div class="watch" style="top:330px">
+    <div class="crown"></div><div class="button"></div>
+    <div class="face">
+      <div style="position:absolute; inset:0" data-art="jimin-tall"></div>
+      <div style="position:absolute; left:0; right:0; top:0; height:70px; background:linear-gradient(#000a,#0000)"></div>
+      <div style="position:absolute; left:30px; top:20px; color:#fff; font-size:15px; font-weight:600">지민</div>
+      <div style="position:absolute; right:30px; top:20px; color:#fff; font-size:15px; font-weight:600">7:12</div>
+      <div style="position:absolute; left:44px; right:44px; bottom:24px; height:4px; border-radius:2px; background:rgba(255,255,255,0.35)"><div style="width:62%; height:100%; border-radius:2px; background:#fff"></div></div>
+    </div>
+  </div>
+  <div class="float notif" style="left:28px; top:740px">
+    <img class="icon" src="../../PingMobile/Assets.xcassets/AppIcon.appiconset/AppIcon1024.png" alt="">
+    <div class="txt"><div class="t">지민<span>지금</span></div><div class="b">ping 영상 메시지</div></div>
+    <div class="thumb" data-art="jimin-cafe"></div>
+  </div>
+</section>
+
+<!-- 7. QR pairing ------------------------------------------------------->
+<section class="slide" data-s="7" hidden>
+  <div class="head"><h2><span class="l1">QR 한 번이면</span><span class="l2">Mac·PC와 연결 끝</span></h2><p>이메일·전화번호 없이 익명으로 시작해요</p></div>
+  <div class="card">
+    <div class="guide">
+      <svg class="mb" data-icon="macbook"></svg>
+      <h3>Mac용 Ping과 연결해서 사용하는<br>iPhone 컴패니언 앱이에요</h3>
+      <div class="gsub">Mac 앱을 설치한 뒤, QR 코드를 열고 스캔하세요</div>
+      <div class="install">
+        <div style="flex:1"><div class="k">Mac 앱 설치 페이지</div><div class="v">0minping.vercel.app</div></div>
+        <div class="act"><svg data-icon="copy"></svg></div><div class="act"><svg data-icon="share"></svg></div>
+      </div>
+      <div class="qr-btn"><svg data-icon="qr"></svg>QR 스캔</div>
+      <div class="hint">Mac Ping &gt; 설정 &gt; 기기</div>
+    </div>
+  </div>
+  <div class="float qr-float" style="left:136px; top:742px">
+    <svg id="qr" viewBox="0 0 25 25" shape-rendering="crispEdges"></svg>
+  </div>
+</section>
+
+<script>
+const params = new URLSearchParams(location.search);
+const s = params.get('s') || '1';
+document.querySelectorAll('.slide').forEach(el => el.hidden = el.dataset.s !== s);
+const w = Number(params.get('w') || 440);
+if (w !== 440) {
+  const z = w / 440, h = Number(params.get('h') || 956) / z;
+  document.documentElement.style.zoom = z;
+  document.documentElement.style.height = document.body.style.height = h + 'px';
+  document.querySelectorAll('.slide').forEach(el => el.style.height = h + 'px');
+}
+
+// ---- icons (SF Symbol stand-ins) ----
+const icons = {
+  'send-off': `<svg viewBox="0 0 30 30"><circle cx="15" cy="15" r="15" fill="#AEAEB2"/><path d="M15 22V9M9.5 14 15 8.5l5.5 5.5" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  'send-on': `<svg viewBox="0 0 30 30"><circle cx="15" cy="15" r="15" fill="#007AFF"/><path d="M15 22V9M9.5 14 15 8.5l5.5 5.5" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  chev: `<svg viewBox="0 0 8 14"><path d="m1.5 1.5 5 5.5-5 5.5" fill="none" stroke="#C4C4C7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  seal: `<svg viewBox="0 0 24 24"><path fill="#34C759" d="M12 1.5l2.3 1.9 3-.3 1 2.8 2.7 1.4-.6 3 1.6 2.6-2.1 2.2.1 3-2.9.8-1.4 2.7-3-.7L12 22.5l-2.3-1.6-3 .7-1.4-2.7-2.9-.8.1-3L.4 13l1.6-2.6-.6-3 2.7-1.4 1-2.8 3 .3z"/><path d="m7.5 12.3 3 3 6-6.3" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  macbook: `<svg viewBox="0 0 72 50"><rect x="8" y="4" width="44" height="30" rx="3" fill="none" stroke="#007AFF" stroke-width="4"/><path d="M2 40h58" stroke="#007AFF" stroke-width="5" stroke-linecap="round"/><rect x="50" y="16" width="20" height="32" rx="4" fill="#fff" stroke="#007AFF" stroke-width="4"/></svg>`,
+  copy: `<svg viewBox="0 0 20 20"><rect x="6" y="6" width="11" height="12" rx="2.5" fill="none" stroke="#007AFF" stroke-width="2"/><path d="M4 13V4.5A2.5 2.5 0 0 1 6.5 2H13" fill="none" stroke="#007AFF" stroke-width="2" stroke-linecap="round"/></svg>`,
+  share: `<svg viewBox="0 0 20 20"><path d="M10 12V1.5M6 5l4-4 4 4M6 8H4.5A1.5 1.5 0 0 0 3 9.5v8A1.5 1.5 0 0 0 4.5 19h11a1.5 1.5 0 0 0 1.5-1.5v-8A1.5 1.5 0 0 0 15.5 8H14" fill="none" stroke="#007AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  qr: `<svg viewBox="0 0 20 20"><path d="M1 6V3a2 2 0 0 1 2-2h3M14 1h3a2 2 0 0 1 2 2v3M19 14v3a2 2 0 0 1-2 2h-3M6 19H3a2 2 0 0 1-2-2v-3" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/><rect x="5" y="5" width="4" height="4" fill="#fff"/><rect x="11" y="5" width="4" height="4" fill="#fff"/><rect x="5" y="11" width="4" height="4" fill="#fff"/><rect x="11.5" y="11.5" width="3" height="3" fill="#fff"/></svg>`,
+};
+document.querySelectorAll('svg[data-icon]').forEach(el => { el.outerHTML = icons[el.dataset.icon].replace('<svg', `<svg class="${el.getAttribute('class') || ''}"`); });
+
+// ---- illustrated clip frames (flat portraits; no real people) ----
+let uid = 0;
+function person({ x = 150, y = 0, scale = 1, skin, hair, style, top, collar }) {
+  const s = scale;
+  const t = (dx, dy) => `${x + dx * s},${y + dy * s}`;
+  const hairBack = style === 'long'
+    ? `<path d="M${t(-62,-10)} C${t(-70,-90)} ${t(70,-90)} ${t(62,-10)} L${t(70,95)} C${t(30,110)} ${t(-30,110)} ${t(-70,95)} Z" fill="${hair}"/>`
+    : style === 'bob'
+    ? `<path d="M${t(-60,-5)} C${t(-66,-88)} ${t(66,-88)} ${t(60,-5)} L${t(64,55)} C${t(30,66)} ${t(-30,66)} ${t(-64,55)} Z" fill="${hair}"/>`
+    : '';
+  const hairFront = style === 'short'
+    ? `<path d="M${t(-54,-8)} C${t(-62,-78)} ${t(40,-96)} ${t(58,-30)} C${t(60,-18)} ${t(56,-6)} ${t(54,0)} C${t(40,-36)} ${t(0,-46)} ${t(-40,-30)} C${t(-46,-24)} ${t(-50,-14)} ${t(-54,-8)} Z" fill="${hair}"/>`
+    : style === 'cap'
+    ? `<path d="M${t(-56,-14)} C${t(-58,-80)} ${t(58,-80)} ${t(56,-14)} Z" fill="${hair}"/><path d="M${t(-10,-22)} L${t(78,-16)} C${t(80,-8)} ${t(60,-6)} ${t(40,-10)} Z" fill="${hair}"/>`
+    : `<path d="M${t(-56,-4)} C${t(-60,-80)} ${t(60,-80)} ${t(56,-4)} C${t(30,-44)} ${t(-20,-46)} ${t(-56,-4)} Z" fill="${hair}"/>`;
+  return `
+    <path d="M${t(-112,170)} C${t(-104,92)} ${t(-60,78)} ${t(0,78)} C${t(60,78)} ${t(104,92)} ${t(112,170)} Z" fill="${top}"/>
+    ${collar ? `<path d="M${t(-26,80)} L${t(0,108)} L${t(26,80)}" fill="none" stroke="${collar}" stroke-width="${6*s}" stroke-linejoin="round"/>` : ''}
+    <rect x="${x-18*s}" y="${y+30*s}" width="${36*s}" height="${56*s}" rx="${14*s}" fill="${skin}" style="filter:brightness(.9)"/>
+    ${hairBack}
+    <ellipse cx="${x-50*s}" cy="${y+4*s}" rx="${9*s}" ry="${13*s}" fill="${skin}" style="filter:brightness(.95)"/>
+    <ellipse cx="${x+50*s}" cy="${y+4*s}" rx="${9*s}" ry="${13*s}" fill="${skin}" style="filter:brightness(.95)"/>
+    <ellipse cx="${x}" cy="${y}" rx="${50*s}" ry="${58*s}" fill="${skin}"/>
+    ${hairFront}
+    <path d="M${t(-27,-6)} q${8*s},${-6*s} ${16*s},0 M${t(11,-6)} q${8*s},${-6*s} ${16*s},0" stroke="#3a2a24" stroke-width="${3*s}" fill="none" stroke-linecap="round" opacity=".7"/>
+    <ellipse cx="${x-19*s}" cy="${y+8*s}" rx="${4.6*s}" ry="${5.6*s}" fill="#2a1f1b"/>
+    <ellipse cx="${x+19*s}" cy="${y+8*s}" rx="${4.6*s}" ry="${5.6*s}" fill="#2a1f1b"/>
+    <circle cx="${x-33*s}" cy="${y+24*s}" r="${8*s}" fill="#ff8a8a" opacity=".28"/>
+    <circle cx="${x+33*s}" cy="${y+24*s}" r="${8*s}" fill="#ff8a8a" opacity=".28"/>
+    <path d="M${t(-14,30)} Q${t(0,44)} ${t(14,30)}" stroke="#7a3a32" stroke-width="${3.4*s}" fill="none" stroke-linecap="round"/>`;
+}
+function room(bg1, bg2, lights) {
+  const id = 'r' + (uid++);
+  return `<defs><linearGradient id="${id}g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${bg1}"/><stop offset="1" stop-color="${bg2}"/></linearGradient>
+    <filter id="${id}b"><feGaussianBlur stdDeviation="6"/></filter></defs>
+    <rect width="100%" height="100%" fill="url(#${id}g)"/>
+    <g filter="url(#${id}b)">${lights.map(([cx, cy, r, c, o]) => `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${c}" opacity="${o}"/>`).join('')}</g>`;
+}
+const people = {
+  jimin: { skin: '#F4C9A8', hair: '#3B2A26', style: 'long', top: '#F2E6D6' },
+  me:    { skin: '#EDBF9C', hair: '#1F1B1A', style: 'short', top: '#3E5C8A' },
+  mom:   { skin: '#F1C3A0', hair: '#4A332B', style: 'bob', top: '#E07A6A', collar: '#fff' },
+  doyun: { skin: '#E3AE87', hair: '#22262E', style: 'cap', top: '#2FB37A' },
+};
+const cafeLights = [[50, 60, 26, '#FFE3A8', .9], [250, 40, 34, '#FFD993', .7], [200, 120, 18, '#FFF1CF', .6], [30, 200, 30, '#6F4F3A', .6]];
+const hand = (x, y, skin) => `<g transform="translate(${x} ${y}) rotate(-14)"><ellipse cx="24" cy="44" rx="25" ry="28" fill="${skin}"/><rect x="0" y="4" width="12" height="42" rx="6" fill="${skin}"/><rect x="12" y="-4" width="12" height="46" rx="6" fill="${skin}"/><rect x="24" y="-1" width="12" height="44" rx="6" fill="${skin}"/><rect x="36" y="6" width="11" height="38" rx="5.5" fill="${skin}"/><rect x="-10" y="34" width="12" height="26" rx="6" fill="${skin}" transform="rotate(-40 -4 47)"/></g>`;
+const art = {
+  'jimin-cafe': () => `<svg viewBox="0 0 300 300" preserveAspectRatio="xMidYMid slice">${room('#C8A27C', '#8D6A4E', cafeLights)}${person({ ...people.jimin, x: 150, y: 150, scale: 1.25 })}</svg>`,
+  'jimin-wave': () => `<svg viewBox="0 0 300 300" preserveAspectRatio="xMidYMid slice">${room('#C8A27C', '#8D6A4E', cafeLights)}${person({ ...people.jimin, x: 140, y: 160, scale: 1.2 })}${hand(214, 150, '#F4C9A8')}</svg>`,
+  'jimin-tall': () => `<svg viewBox="0 0 300 360" preserveAspectRatio="xMidYMid slice">${room('#C8A27C', '#8D6A4E', cafeLights)}${person({ ...people.jimin, x: 150, y: 185, scale: 1.4 })}</svg>`,
+  'mom-kitchen': () => `<svg viewBox="0 0 300 300" preserveAspectRatio="xMidYMid slice">${room('#EAF4F0', '#BFD8CF', [[60, 50, 40, '#ffffff', .9], [250, 90, 24, '#FFF7D6', .8], [240, 230, 40, '#9CC3B4', .5]])}${person({ ...people.mom, x: 150, y: 150, scale: 1.25 })}</svg>`,
+  'doyun-run': () => `<svg viewBox="0 0 300 300" preserveAspectRatio="xMidYMid slice">${room('#9FD3F5', '#E5F2FB', [[60, 40, 40, '#ffffff', .9], [240, 60, 30, '#FFF6D8', .9]])}<path d="M0 230 C80 205 220 205 300 230 V300 H0Z" fill="#7FB86E"/>${person({ ...people.doyun, x: 150, y: 150, scale: 1.25 })}</svg>`,
+  'me-code': () => screen('#1E2230', code(), people.me, '#4B6FA8'),
+  'jimin-slides': () => screen('#F5F6F8', slides(), people.jimin, '#D9C3AA'),
+};
+function code() {
+  const rows = [[24, 70, '#C792EA'], [24, 120, '#82AAFF'], [40, 90, '#C3E88D'], [40, 140, '#89DDFF'], [56, 60, '#F78C6C'], [40, 110, '#82AAFF'], [24, 40, '#C792EA'], [24, 130, '#C3E88D'], [40, 80, '#89DDFF']];
+  return `<rect x="0" y="0" width="380" height="18" fill="#2A2F40"/><circle cx="12" cy="9" r="4" fill="#FF5F57"/><circle cx="24" cy="9" r="4" fill="#FEBC2E"/><circle cx="36" cy="9" r="4" fill="#28C840"/>
+    <rect x="0" y="18" width="70" height="196" fill="#191C27"/>${[34, 50, 66, 82, 98].map(y => `<rect x="10" y="${y}" width="${30 + (y % 3) * 10}" height="6" rx="3" fill="#3A4157"/>`).join('')}
+    ${rows.map(([dx, w, c], i) => `<rect x="${70 + dx}" y="${32 + i * 18}" width="${w}" height="7" rx="3.5" fill="${c}" opacity=".85"/>`).join('')}`;
+}
+function slides() {
+  return `<rect x="0" y="0" width="380" height="18" fill="#E4E6EA"/><circle cx="12" cy="9" r="4" fill="#FF5F57"/><circle cx="24" cy="9" r="4" fill="#FEBC2E"/><circle cx="36" cy="9" r="4" fill="#28C840"/>
+    <rect x="0" y="18" width="62" height="196" fill="#EBEDF0"/>${[28, 76, 124].map(y => `<rect x="10" y="${y}" width="42" height="38" rx="3" fill="#fff" stroke="${y === 28 ? '#2E6CF6' : '#D5D8DD'}" stroke-width="2"/>`).join('')}
+    <rect x="80" y="32" width="270" height="160" rx="4" fill="#fff"/><rect x="100" y="54" width="150" height="14" rx="4" fill="#16191F"/><rect x="100" y="78" width="100" height="8" rx="4" fill="#B9BEC7"/>
+    <rect x="100" y="130" width="22" height="44" fill="#2E6CF6"/><rect x="130" y="110" width="22" height="64" fill="#2E6CF6"/><rect x="160" y="140" width="22" height="34" fill="#9CC2FF"/><rect x="190" y="100" width="22" height="74" fill="#2E6CF6"/>`;
+}
+function screen(bg, content, who, faceBg) {
+  // Option+L 모드: 화면 녹화 위에 원형 얼굴 거울(흰 보더)
+  const id = 'c' + (uid++);
+  return `<svg viewBox="0 0 380 214" preserveAspectRatio="xMidYMid slice"><rect width="380" height="214" fill="${bg}"/>${content}
+    <defs><clipPath id="${id}"><circle cx="318" cy="152" r="50"/></clipPath></defs>
+    <g clip-path="url(#${id})"><rect x="260" y="96" width="120" height="120" fill="${faceBg}"/>${person({ ...who, x: 318, y: 150, scale: 0.62 })}</g>
+    <circle cx="318" cy="152" r="50" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="3"/></svg>`;
+}
+document.querySelectorAll('[data-art]').forEach(el => {
+  el.innerHTML = art[el.dataset.art]();
+  const svg = el.querySelector('svg'); svg.style.width = '100%'; svg.style.height = '100%'; svg.style.display = 'block';
+});
+
+const wave = document.getElementById('wave');
+[8, 14, 22, 12, 26, 18, 10, 20, 14, 8, 16, 24, 12].forEach(h => { const i = document.createElement('i'); i.style.height = h + 'px'; wave.appendChild(i); });
+
+// decorative QR (finder patterns + deterministic modules)
+(function () {
+  const n = 25, el = document.getElementById('qr'); let out = '';
+  const finder = (x, y) => `<rect x="${x}" y="${y}" width="7" height="7" fill="#16191F"/><rect x="${x + 1}" y="${y + 1}" width="5" height="5" fill="#fff"/><rect x="${x + 2}" y="${y + 2}" width="3" height="3" fill="#16191F"/>`;
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+    const inFinder = (x < 8 && y < 8) || (x > 16 && y < 8) || (x < 8 && y > 16);
+    if (!inFinder && rnd() > 0.52) out += `<rect x="${x}" y="${y}" width="1" height="1" fill="#16191F"/>`;
+  }
+  el.innerHTML = out + finder(0, 0) + finder(18, 0) + finder(0, 18) + `<rect x="9.5" y="9.5" width="6" height="6" rx="1.4" fill="#fff"/><image href="../../PingMobile/Assets.xcassets/AppIcon.appiconset/AppIcon1024.png" x="10" y="10" width="5" height="5"/>`;
+})();
+</script>
+</body>
+</html>

@@ -384,8 +384,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.youngminpark.ping.PingMobile
         DEVELOPMENT_TEAM: "878FAHTFQJ"
         PRODUCT_NAME: PingMobile
-        MARKETING_VERSION: "0.1.2"
-        CURRENT_PROJECT_VERSION: "33"
+        MARKETING_VERSION: "0.1.3"
+        CURRENT_PROJECT_VERSION: "34"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SWIFT_STRICT_CONCURRENCY: minimal
         CODE_SIGN_STYLE: Automatic
@@ -424,8 +424,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.youngminpark.ping.PingMobile.PushService
         DEVELOPMENT_TEAM: "878FAHTFQJ"
         PRODUCT_NAME: PingPushService
-        MARKETING_VERSION: "0.1.2"
-        CURRENT_PROJECT_VERSION: "33"
+        MARKETING_VERSION: "0.1.3"
+        CURRENT_PROJECT_VERSION: "34"
         SWIFT_VERSION: "5.0"
         SWIFT_STRICT_CONCURRENCY: minimal
         CODE_SIGN_STYLE: Automatic
@@ -453,8 +453,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.youngminpark.ping.PingMobile.watchkitapp
         DEVELOPMENT_TEAM: "878FAHTFQJ"
         PRODUCT_NAME: PingWatch
-        MARKETING_VERSION: "0.1.2"
-        CURRENT_PROJECT_VERSION: "33"
+        MARKETING_VERSION: "0.1.3"
+        CURRENT_PROJECT_VERSION: "34"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SWIFT_STRICT_CONCURRENCY: minimal
         CODE_SIGN_STYLE: Automatic
